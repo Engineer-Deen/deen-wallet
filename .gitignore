@@ -7,6 +7,7 @@ firebase-service-account*.json
 
 # Build output
 target/
+src/main/resources/build-commit.txt
 *.class
 
 # IDE

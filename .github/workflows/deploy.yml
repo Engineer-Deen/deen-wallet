@@ -20,6 +20,9 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Stamp build commit
+        run: echo "${{ github.sha }}" > src/main/resources/build-commit.txt
+
       - name: Build Executable JAR with Maven
         run: mvn clean package -DskipTests
 
@@ -40,5 +43,11 @@ jobs:
           username: ${{ secrets.OCI_USERNAME }}
           key: ${{ secrets.OCI_SSH_KEY }}
           script: |
+            set -euxo pipefail
+            ls -la /tmp/deen-wallet-0.1.0.jar
             sudo mv /tmp/deen-wallet-0.1.0.jar /var/www/deenwallet/deenwallet.jar
+            ls -la /var/www/deenwallet/deenwallet.jar
             sudo systemctl restart deenwallet
+            sleep 2
+            sudo systemctl is-active --quiet deenwallet
+            echo "Deployed and running: $(date)"
