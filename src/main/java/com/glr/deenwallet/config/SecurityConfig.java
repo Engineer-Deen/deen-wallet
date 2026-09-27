@@ -26,7 +26,7 @@ public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
 
-    @Value("${app.cors.allowed-origins:http://localhost:8081,http://127.0.0.1:8081,https://deenwallapp.com}")
+    @Value("${app.cors.allowed-origins:http://localhost:8081,http://127.0.0.1:8081,https://deenwallapp.com,https://api.deenwallapp.com}")
     private String origins;
 
     @Bean
