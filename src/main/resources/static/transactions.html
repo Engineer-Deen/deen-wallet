@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
+  <title>DeenWallet — Transaction history</title>
+  <style>
+    :root {
+      --bg: #FFFFFF;
+      --card: #F7FAFB;
+      --border: #E4ECEF;
+      --text: #12242B;
+      --muted: #6E7C82;
+      --primary: #1C7A91;
+      --primary-light: #2E9FB0;
+      --error: #C0392B;
+      --warning-bg: #FFF7E6;
+      --warning-text: #B9770E;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      height: 100%;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text);
+      background: #EEF2F4;
+    }
+
+    @media (max-width: 460px) {
+      body {
+        background: var(--bg);
+      }
+    }
+
+    #app {
+      max-width: 420px;
+      margin: 0 auto;
+      min-height: 100vh;
+      max-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+      overflow: hidden;
+    }
+
+    @media (min-width: 461px) {
+      #app {
+        box-shadow: 0 0 40px rgba(0, 0, 0, 0.06);
+        max-height: 100vh;
+      }
+    }
+
+    .screen {
+      display: none;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      height: 100%;
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    .top-nav {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 20px 20px 8px;
+      flex-shrink: 0;
+    }
+
+    .back-btn {
+      background: none;
+      border: none;
+      font-size: 22px;
+      cursor: pointer;
+      color: var(--text);
+      padding: 0;
+    }
+
+    h1.title {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .list {
+      padding: 12px 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .list::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .list::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .list::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+
+    .txn-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .txn-card:hover {
+      border-color: var(--primary-light);
+      box-shadow: 0 2px 8px rgba(46, 159, 176, 0.1);
+    }
+
+    .txn-card:active {
+      transform: scale(0.98);
+    }
+
+    .txn-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .txn-name {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .txn-amount {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .txn-meta {
+      font-size: 13px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .txn-meta .txn-code {
+      font-family: monospace;
+      font-size: 11px;
+      background: var(--bg);
+      padding: 0 6px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+
+    .status-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 12px;
+    }
+
+    .status-badge.awaiting {
+      background: #FFF7E6;
+      color: #B9770E;
+    }
+
+    .status-badge.progress {
+      background: #EAF6F8;
+      color: var(--primary);
+    }
+
+    .status-badge.success {
+      background: #E7F7EC;
+      color: #1E8449;
+    }
+
+    .status-badge.failed {
+      background: #FBEAEA;
+      color: var(--error);
+    }
+
+    .status-badge.canceled {
+      background: #EDEFF1;
+      color: var(--muted);
+    }
+
+    .empty-state,
+    .loading-state,
+    .error-state {
+      padding: 40px 20px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .error-state {
+      color: var(--error);
+    }
+
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(46, 159, 176, 0.25);
+      border-top-color: var(--primary-light);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto 10px;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* ---------- Receipt detail screen ---------- */
+    .receipt-page {
+      flex: 1;
+      background: var(--bg);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .receipt-back {
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 22px;
+      cursor: pointer;
+      padding: 0 0 16px;
+      align-self: flex-start;
+      flex-shrink: 0;
+    }
+
+    .receipt-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
+    }
+
+    .receipt-header {
+      background: linear-gradient(135deg, #2E9FB0, #1C7A91);
+      padding: 22px;
+      text-align: center;
+    }
+
+    .receipt-header h2 {
+      color: #fff;
+      margin: 0;
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+    }
+
+    .receipt-body {
+      padding: 26px 22px 22px;
+      text-align: center;
+    }
+
+    .receipt-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      margin: 0 auto 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+    }
+
+    .receipt-icon.success {
+      background: #E7F7EC;
+      color: #1E8449;
+    }
+
+    .receipt-icon.pending {
+      background: var(--warning-bg);
+      color: var(--warning-text);
+    }
+
+    .receipt-icon.failed {
+      background: #FBEAEA;
+      color: var(--error);
+    }
+
+    .receipt-icon.canceled {
+      background: var(--card);
+      color: var(--muted);
+    }
+
+    .receipt-title {
+      color: var(--text);
+      font-size: 20px;
+      font-weight: 800;
+      margin: 0 0 8px;
+      line-height: 26px;
+    }
+
+    .receipt-txn-id {
+      color: var(--muted);
+      font-size: 13px;
+      margin: 0 0 22px;
+      font-family: monospace;
+      word-break: break-all;
+    }
+
+    .receipt-rows {
+      border-top: 1px solid var(--border);
+      margin-top: 4px;
+    }
+
+    .receipt-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 4px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+
+    .receipt-row .label {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .receipt-row .value {
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 700;
+      text-align: right;
+    }
+
+    .receipt-note {
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+      margin-top: 18px;
+      line-height: 16px;
+    }
+  </style>
+
+</head>
+
+<body>
+
+<div id="app">
+
+  <!-- ===================== LIST SCREEN ===================== -->
+  <div class="screen active" id="screen-list">
+    <div class="top-nav">
+      <button class="back-btn" onclick="window.location.href='index.html'">&#8592;</button>
+      <h1 class="title">Transaction history</h1>
+    </div>
+
+    <div id="loading-state" class="loading-state">
+      <div class="spinner"></div>
+      Loading your transactions…
+    </div>
+
+    <div id="error-state" class="error-state hidden"></div>
+
+    <div id="empty-state" class="empty-state hidden">
+      You haven't sent any transfers yet.
+    </div>
+
+    <div id="list" class="list hidden"></div>
+  </div>
+
+  <!-- ===================== RECEIPT DETAIL SCREEN ===================== -->
+  <div class="screen" id="screen-receipt">
+    <div class="receipt-page">
+      <button class="receipt-back" id="receipt-back-btn">&#8592;</button>
+
+      <div id="receipt-loading" class="loading-state" style="color:#8B98A5;">
+        <div class="spinner"></div>
+        Loading transaction…
+      </div>
+
+      <div id="receipt-error" class="error-state hidden" style="color:#E74C3C;"></div>
+
+      <div id="receipt-card" class="receipt-card hidden">
+        <div class="receipt-header">
+          <h2>Deen Wallet</h2>
+        </div>
+        <div class="receipt-body">
+          <div class="receipt-icon" id="receipt-icon">&#9989;</div>
+          <p class="receipt-title" id="receipt-title"></p>
+          <p class="receipt-txn-id" id="receipt-txn-id"></p>
+
+          <div class="receipt-rows">
+            <div class="receipt-row">
+              <span class="label">Amount sent</span>
+              <span class="value" id="receipt-amount"></span>
+            </div>
+            <div class="receipt-row">
+              <span class="label">Total charged</span>
+              <span class="value" id="receipt-total"></span>
+            </div>
+            <div class="receipt-row">
+              <span class="label">Operator</span>
+              <span class="value" id="receipt-operator"></span>
+            </div>
+            <div class="receipt-row">
+              <span class="label">Recipient name</span>
+              <span class="value" id="receipt-recipient-name"></span>
+            </div>
+            <div class="receipt-row" style="border-bottom:none;">
+              <span class="label">Recipient number</span>
+              <span class="value" id="receipt-recipient-phone"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="receipt-note" id="receipt-canceled-note" hidden>
+        This shows as canceled because the payment window passed without a payment being received.
+      </p>
+      <div id="receipt-failure-reason" hidden style="margin-top:14px;padding:14px 16px;border-radius:12px;background:#FEF2F2;border:1px solid #F5C2C2;color:#8B1E1E;font-size:13px;line-height:1.55;">
+        <strong>Reason for failure</strong>
+        <div id="receipt-failure-reason-text" style="margin-top:5px;"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="config.js"></script>
+<script src="deenwallet-client.js"></script>
+<script>
+  (function () {
+    if (!requireAuth()) return;
+
+    const screenList = document.getElementById('screen-list');
+    const screenReceipt = document.getElementById('screen-receipt');
+
+    const loadingState = document.getElementById('loading-state');
+    const errorState = document.getElementById('error-state');
+    const emptyState = document.getElementById('empty-state');
+    const listEl = document.getElementById('list');
+
+    const receiptLoading = document.getElementById('receipt-loading');
+    const receiptError = document.getElementById('receipt-error');
+    const receiptCard = document.getElementById('receipt-card');
+    const receiptIcon = document.getElementById('receipt-icon');
+    const receiptTitle = document.getElementById('receipt-title');
+    const receiptTxnId = document.getElementById('receipt-txn-id');
+    const receiptAmount = document.getElementById('receipt-amount');
+    const receiptTotal = document.getElementById('receipt-total');
+    const receiptOperator = document.getElementById('receipt-operator');
+    const receiptRecipientName = document.getElementById('receipt-recipient-name');
+    const receiptRecipientPhone = document.getElementById('receipt-recipient-phone');
+    const receiptCanceledNote = document.getElementById('receipt-canceled-note');
+    const receiptFailureReason = document.getElementById('receipt-failure-reason');
+    const receiptFailureReasonText = document.getElementById('receipt-failure-reason-text');
+    const receiptBackBtn = document.getElementById('receipt-back-btn');
+
+    function statusBadgeClass(status) {
+      if (status === 'AWAITING_PAYMENT') return 'awaiting';
+      if (status === 'COMPLETED') return 'success';
+      if (status === 'FAILED') return 'failed';
+      if (status === 'CANCELED') return 'canceled';
+      return 'progress';
+    }
+
+    async function loadList() {
+      try {
+        const raw = await apiRequest('/api/transactions');
+        const transactions = (raw || []).map(normalizeTransaction);
+        hide(loadingState);
+
+        if (transactions.length === 0) {
+          show(emptyState);
+          return;
+        }
+
+        renderList(transactions);
+        show(listEl);
+      } catch (error) {
+        hide(loadingState);
+        errorState.textContent = error.message || "Couldn't load your transaction history.";
+        show(errorState);
+      }
+    }
+
+    // ==============================================================
+    // ✅ RENDER LIST - SHOW TRANSACTION CODE
+    // ==============================================================
+    function renderList(transactions) {
+      listEl.innerHTML = '';
+      transactions.forEach((txn) => {
+        const status = effectiveStatus(txn);
+        // ✅ Use transaction code if available
+        var txnDisplay = txn.transactionCode || txn.id;
+
+        const card = document.createElement('div');
+        card.className = 'txn-card';
+        card.addEventListener('click', () => openReceipt(txn.id));
+
+        const top = document.createElement('div');
+        top.className = 'txn-top';
+        const name = document.createElement('span');
+        name.className = 'txn-name';
+        name.textContent = txn.destinationHolderName || txn.destinationPhone || 'Transfer';
+        const amount = document.createElement('span');
+        amount.className = 'txn-amount';
+        amount.textContent = txn.amount !== null ? formatMoney(txn.amount) + ' SLE' : '—';
+        top.appendChild(name);
+        top.appendChild(amount);
+
+        const meta = document.createElement('div');
+        meta.className = 'txn-meta';
+
+        // ✅ Show transaction code
+        const codeSpan = document.createElement('span');
+        codeSpan.className = 'txn-code';
+        codeSpan.textContent = txnDisplay;
+
+        const dateSpan = document.createElement('span');
+        dateSpan.textContent = formatDateTime(txn.createdAt);
+
+        const badge = document.createElement('span');
+        badge.className = 'status-badge ' + statusBadgeClass(status);
+        badge.textContent = statusLabel(status);
+
+        meta.appendChild(codeSpan);
+        meta.appendChild(dateSpan);
+        meta.appendChild(badge);
+
+        card.appendChild(top);
+        card.appendChild(meta);
+        listEl.appendChild(card);
+      });
+    }
+
+    // ==============================================================
+    // RECEIPT DETAIL
+    // ==============================================================
+    async function openReceipt(id) {
+      screenList.classList.remove('active');
+      screenReceipt.classList.add('active');
+
+      show(receiptLoading);
+      hide(receiptError);
+      hide(receiptCard);
+      receiptCanceledNote.hidden = true;
+
+      try {
+        const raw = await apiRequest('/api/transactions/' + id);
+        const txn = normalizeTransaction(raw);
+        renderReceipt(txn);
+        show(receiptCard);
+      } catch (error) {
+        receiptError.textContent = error.message || "Couldn't load this transaction.";
+        show(receiptError);
+      } finally {
+        hide(receiptLoading);
+      }
+    }
+
+    // ==============================================================
+    // ✅ RENDER RECEIPT - SHOW TRANSACTION CODE
+    // ==============================================================
+    function renderReceipt(txn) {
+      const status = effectiveStatus(txn);
+      // ✅ Use transaction code if available
+      var txnDisplay = txn.transactionCode || txn.id;
+
+      const titleByStatus = {
+        AWAITING_PAYMENT: 'Waiting for Payment',
+        PAID_IN: 'Payment Received',
+        PAYING_OUT: 'Processing Transfer',
+        COMPLETED: 'Transfer Completed Successfully',
+        FAILED: 'Transfer Failed',
+        CANCELED: 'Payment Canceled',
+      };
+      const iconByStatus = {
+        AWAITING_PAYMENT: { icon: '\u23F3', cls: 'pending' },
+        PAID_IN: { icon: '\u2705', cls: 'success' },
+        PAYING_OUT: { icon: '\u23F3', cls: 'pending' },
+        COMPLETED: { icon: '\u2705', cls: 'success' },
+        FAILED: { icon: '\u26A0\uFE0F', cls: 'failed' },
+        CANCELED: { icon: '\u2716', cls: 'canceled' },
+      };
+
+      receiptTitle.textContent = titleByStatus[status] || status;
+      const iconInfo = iconByStatus[status] || { icon: '\u2139\uFE0F', cls: 'pending' };
+      receiptIcon.textContent = iconInfo.icon;
+      receiptIcon.className = 'receipt-icon ' + iconInfo.cls;
+
+      // ✅ Show transaction code
+      receiptTxnId.textContent = 'Transaction ID: ' + txnDisplay;
+      receiptAmount.textContent = txn.amount !== null ? formatMoney(txn.amount) + ' SLE' : '—';
+      receiptTotal.textContent = txn.totalCharged !== null ? formatMoney(txn.totalCharged) + ' SLE' : '—';
+      receiptOperator.textContent = providerName(txn.destinationProviderId);
+      receiptRecipientName.textContent = txn.destinationHolderName || '—';
+      receiptRecipientPhone.textContent = maskPhone(txn.destinationPhone);
+
+      receiptCanceledNote.hidden = status !== 'CANCELED';
+      const failureReason = txn.failureReason || '';
+      if (receiptFailureReason && receiptFailureReasonText) {
+        receiptFailureReason.hidden = !failureReason || (status !== 'FAILED' && status !== 'CANCELED');
+        receiptFailureReasonText.textContent = failureReason;
+      }
+    }
+
+    receiptBackBtn.addEventListener('click', () => {
+      screenReceipt.classList.remove('active');
+      screenList.classList.add('active');
+    });
+
+    loadList();
+
+    window.dwOnPullToRefresh = loadList;
+
+    window.dwOnBackButton = function () {
+      if (screenReceipt.classList.contains('active')) {
+        receiptBackBtn.click();
+        return true;
+      }
+      return false; // on the list screen - let it go back to index.html
+    };
+  })();
+</script>
+
+</body>
+
+</html>

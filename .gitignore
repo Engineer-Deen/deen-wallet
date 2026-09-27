@@ -1,0 +1,21 @@
+# Secrets - never commit real credentials
+.env
+.env.*
+!.env.example
+firebase-service-account*.json
+*firebase-adminsdk*.json
+
+# Build output
+target/
+*.class
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+
+# Logs
+*.log

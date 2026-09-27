@@ -1,0 +1,44 @@
+name: Deploy Deen Wallet to OCI
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build Executable JAR with Maven
+        run: mvn clean package -DskipTests
+
+      - name: Copy JAR to OCI Server via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.OCI_HOST }}
+          username: ${{ secrets.OCI_USERNAME }}
+          key: ${{ secrets.OCI_SSH_KEY }}
+          source: "target/deen-wallet-0.1.0.jar"
+          target: "/tmp"
+          strip_components: 2
+
+      - name: Restart Deen Wallet Service via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.OCI_HOST }}
+          username: ${{ secrets.OCI_USERNAME }}
+          key: ${{ secrets.OCI_SSH_KEY }}
+          script: |
+            sudo mv /tmp/deen-wallet-0.1.0.jar /var/www/deenwallet/deenwallet.jar
+            sudo systemctl restart deenwallet

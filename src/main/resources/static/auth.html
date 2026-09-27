@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
+  <title>DeenWallet — Sign in</title>
+  <style>
+    #deenwallet-splash {
+      position: fixed; inset: 0; z-index: 9999; display:flex; align-items:center; justify-content:center;
+      background:linear-gradient(145deg,#FFFFFF 0%,#F1F8FA 100%); transition:opacity .35s ease,visibility .35s ease;
+    }
+    #deenwallet-splash.hide { opacity:0; visibility:hidden; pointer-events:none; }
+    .splash-brand { text-align:center; animation:dwSplashIn .55s ease-out both; }
+    .splash-logo { width:min(300px,82vw);height:auto;margin:0 auto 16px;border-radius:18px;display:block;box-shadow:0 18px 40px rgba(0,0,0,.18); }
+    .splash-wordmark { font-size:30px;font-weight:850;letter-spacing:-1px;color:#1C7A91; }
+    .splash-tagline { margin-top:7px;font-size:13px;color:#6E7C82; }
+    .splash-loader { width:38px;height:3px;margin:20px auto 0;border-radius:99px;overflow:hidden;background:#D9EAEE; }
+    .splash-loader::after { content:"";display:block;width:45%;height:100%;background:#2E9FB0;border-radius:99px;animation:dwSplashLoad 1s ease-in-out infinite; }
+    @keyframes dwSplashIn { from{opacity:0;transform:translateY(8px) scale(.97)} to{opacity:1;transform:none} }
+    @keyframes dwSplashLoad { 0%{transform:translateX(-120%)} 100%{transform:translateX(240%)} }
+    :root {
+      --bg: #FFFFFF;
+      --card: #F7FAFB;
+      --border: #E4ECEF;
+      --text: #12242B;
+      --muted: #6E7C82;
+      --primary: #1C7A91;
+      --primary-light: #2E9FB0;
+      --primary-disabled: #BFE0E6;
+      --error: #C0392B;
+      --success: #2E9FB0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      height: 100%;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text);
+      background: #EEF2F4;
+    }
+
+    @media (max-width: 460px) {
+      body {
+        background: var(--bg);
+      }
+    }
+
+    #app {
+      max-width: 420px;
+      margin: 0 auto;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+    }
+
+    @media (min-width: 461px) {
+      #app {
+        box-shadow: 0 0 40px rgba(0, 0, 0, 0.06);
+      }
+    }
+
+    .screen {
+      display: none;
+      flex-direction: column;
+      flex: 1;
+      padding: 28px 20px;
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    .brand {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 40px;
+    }
+
+    h1.title {
+      font-size: 24px;
+      font-weight: 700;
+      margin: 0 0 6px;
+    }
+
+    p.subtitle {
+      font-size: 14px;
+      color: var(--muted);
+      margin: 0 0 28px;
+      line-height: 20px;
+    }
+
+    label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      display: block;
+      margin: 14px 0 6px;
+    }
+
+    label:first-of-type {
+      margin-top: 0;
+    }
+
+    .text-input {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: var(--card);
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 15px;
+      color: var(--text);
+      outline: none;
+    }
+
+    .text-input::placeholder {
+      color: #A9B7BC;
+    }
+
+    .text-input:focus {
+      border-color: var(--primary-light);
+    }
+
+    .otp-input {
+      text-align: center;
+      letter-spacing: 6px;
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .inline-error {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--error);
+    }
+
+    .inline-success {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--success);
+    }
+
+    .btn-primary {
+      background: var(--primary-light);
+      border: none;
+      border-radius: 28px;
+      padding: 16px;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .btn-primary:disabled {
+      background: var(--primary-disabled);
+      cursor: not-allowed;
+    }
+
+    .switch-row {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .switch-row button {
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .field-note {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 6px;
+      line-height: 16px;
+    }
+
+    .password-strength {
+      margin-top: 10px;
+    }
+
+    .strength-bar {
+      height: 5px;
+      border-radius: 3px;
+      background: var(--border);
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+
+    .strength-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: #C0392B;
+      transition: width 0.2s ease, background 0.2s ease;
+    }
+
+    .strength-checklist {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .strength-checklist li {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .strength-checklist li.met {
+      color: #1E8449;
+    }
+
+    .strength-checklist li .dot {
+      width: 14px;
+      text-align: center;
+    }
+
+    .login-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .login-tab {
+      flex: 1;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .login-tab.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+
+    .login-tab.frozen {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .phone-card {
+      display: flex;
+      align-items: center;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .phone-prefix {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px;
+      border-right: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    .phone-prefix span {
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    .flag-badge {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .flag-badge div {
+      flex: 1;
+    }
+
+    .phone-card input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      padding: 14px;
+      font-size: 15px;
+      color: var(--text);
+      outline: none;
+      min-width: 0;
+    }
+
+    .phone-card input::placeholder {
+      color: #A9B7BC;
+    }
+
+    .support-chip { display:flex; align-items:center; justify-content:center; gap:7px; min-height:38px; padding:8px 12px; border:1px solid #D7E3E7; border-radius:10px; background:#fff; color:#1C7A91; font-size:12px; font-weight:700; cursor:pointer; transition:transform .12s ease, background .12s ease, border-color .12s ease; }
+    .support-chip:hover { background:#F5FAFB; border-color:#BFD0D5; }
+    .support-chip:active { transform:scale(.98); }
+    .whatsapp-chip { color:#15803D; border-color:#CFEAD8; background:#F7FCF8; }
+    .password-field-wrap {
+      position: relative;
+    }
+    .password-field-wrap .text-input {
+      padding-right: 44px;
+    }
+    .password-toggle-btn {
+      position: absolute;
+      right: 4px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      font-size: 18px;
+      line-height: 1;
+      padding: 8px;
+      cursor: pointer;
+      opacity: 0.6;
+    }
+    .password-toggle-btn:hover {
+      opacity: 1;
+    }
+  </style>
+</head>
+
+<body>
+<div id="deenwallet-splash" aria-label="DeenWallet loading">
+  <div class="splash-brand">
+    <img class="splash-logo" src="deenwallet-logo.png" alt="DeenWallet" />
+    <div class="splash-tagline">Secure. Simple. Yours.</div>
+    <div class="splash-loader" aria-hidden="true"></div>
+  </div>
+</div>
+
+<div id="app">
+
+  <!-- ===================== REGISTER ===================== -->
+  <div class="screen" id="screen-register">
+    <div class="brand">DeenWallet</div>
+    <h1 class="title">Create your account</h1>
+    <p class="subtitle">Register to start converting between Orange Money, Africell, and QMoney.</p>
+
+    <label for="reg-full-name">Full name</label>
+    <input class="text-input" id="reg-full-name" type="text" placeholder="Abdul Deen Kamara" />
+
+    <label for="reg-username">Username</label>
+    <input class="text-input" id="reg-username" type="text" placeholder="Choose a username" />
+
+    <label for="reg-phone">Phone number</label>
+    <div class="phone-card">
+      <div class="phone-prefix">
+        <div class="flag-badge">
+          <div style="background:#1EB53A"></div>
+          <div style="background:#fff"></div>
+          <div style="background:#0072C6"></div>
+        </div>
+        <span>+232</span>
+      </div>
+      <input id="reg-phone" type="tel" inputmode="numeric" maxlength="9" placeholder="80 613600" />
+    </div>
+
+    <label for="reg-email">Email</label>
+    <input class="text-input" id="reg-email" type="email" placeholder="you@example.com" />
+
+    <label for="reg-password">Password</label>
+    <div class="password-field-wrap">
+      <input class="text-input" id="reg-password" type="password" placeholder="At least 8 characters" />
+      <button type="button" class="password-toggle-btn" data-target="reg-password" aria-label="Show password">&#128065;</button>
+    </div>
+
+    <label for="reg-pin" style="margin-top:16px;">Session PIN</label>
+    <p style="font-size:12px;color:var(--muted);margin:-4px 0 8px 0;">
+      4-digit PIN. This is not your password.
+    </p>
+    <div style="display:flex;gap:8px;">
+      <input class="text-input" id="reg-pin" type="password" maxlength="4" placeholder="PIN" inputmode="numeric"
+             style="flex:1;" />
+      <input class="text-input" id="reg-pin-confirm" type="password" maxlength="4" placeholder="Confirm PIN"
+             inputmode="numeric" style="flex:1;" />
+    </div>
+    <div id="pin-error" class="inline-error hidden">
+      <span>&#9888;</span><span id="pin-error-text"></span>
+    </div>
+
+    <div id="terms-section" style="margin:16px 0 4px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:#F7FAFB;">
+      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:12px;line-height:1.5;color:var(--muted);">
+        <input id="terms-checkbox" type="checkbox" style="margin-top:3px;accent-color:var(--primary);" />
+        <span>I agree to DeenWallet's <button type="button" id="terms-link" style="border:0;background:none;padding:0;color:var(--primary);font-weight:700;cursor:pointer;">Terms &amp; Conditions</button>.</span>
+      </label>
+    </div>
+    <div id="terms-modal" class="hidden" style="position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.45);align-items:center;justify-content:center;padding:20px;">
+      <div style="background:#fff;border-radius:16px;max-width:390px;width:100%;padding:22px;max-height:80vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+        <h3 style="margin:0 0 10px;color:var(--text);">Terms &amp; Conditions</h3>
+        <p style="font-size:13px;line-height:1.6;color:var(--muted);">By creating a DeenWallet account, you agree to provide accurate information, keep your password and PIN confidential, use the service lawfully, and accept responsibility for activity performed through your account. DeenWallet may suspend access where required for security, fraud prevention, or violation of these terms.</p>
+        <button type="button" id="terms-close" class="btn-primary" style="width:100%;">Close</button>
+      </div>
+    </div>
+
+    <div class="password-strength" id="password-strength">
+      <div class="strength-bar">
+        <div class="strength-bar-fill" id="strength-bar-fill"></div>
+      </div>
+      <ul class="strength-checklist">
+        <li id="crit-length"><span class="dot">&#9675;</span> At least 8 characters</li>
+        <li id="crit-upper"><span class="dot">&#9675;</span> An uppercase letter</li>
+        <li id="crit-lower"><span class="dot">&#9675;</span> A lowercase letter</li>
+        <li id="crit-symbol"><span class="dot">&#9675;</span> A symbol (e.g. ! @ # $)</li>
+      </ul>
+    </div>
+
+    <div id="register-error" class="inline-error hidden">
+      <span>&#9888;</span><span id="register-error-text"></span>
+    </div>
+
+    <button class="btn-primary" id="register-btn">Create account</button>
+
+    <div class="switch-row">
+      Already have an account?
+      <button id="go-to-login-from-register">Log in</button>
+    </div>
+  </div>
+
+  <!-- ===================== CONFIRM EMAIL ===================== -->
+  <div class="screen" id="screen-confirm">
+    <div class="brand">DeenWallet</div>
+    <h1 class="title">Verify your email</h1>
+    <p class="subtitle" id="confirm-subtitle">
+      Enter the verification code we sent to <strong id="confirm-email-masked">your email</strong>.
+    </p>
+
+    <input type="hidden" id="confirm-email-input" />
+
+    <div id="confirm-email-fallback" class="hidden">
+      <label for="confirm-email-fallback-input">Email</label>
+      <input class="text-input" id="confirm-email-fallback-input" type="email" placeholder="you@example.com" />
+    </div>
+
+    <label for="confirm-code-input">Verification code</label>
+    <input class="text-input otp-input" id="confirm-code-input" type="text" inputmode="numeric" placeholder="000000"
+           maxlength="6" />
+
+    <div class="switch-row" style="margin-top:14px;">
+      Didn't get a code?
+      <button id="resend-code-btn">Resend code</button>
+    </div>
+    <div id="otp-countdown" class="hidden" style="text-align:center;font-size:12px;color:var(--muted);margin-top:7px;"></div>
+    <div id="resend-error" class="inline-error hidden"><span>&#9888;</span><span id="resend-error-text"></span></div>
+    <div id="resend-success" class="inline-success hidden"><span>&#10003;</span><span>A new code has been sent.</span>
+    </div>
+
+    <div id="confirm-error" class="inline-error hidden"><span>&#9888;</span><span id="confirm-error-text"></span>
+    </div>
+    <div id="confirm-success" class="inline-success hidden"><span>&#10003;</span><span>Email verified — you can log in
+          now.</span></div>
+
+    <button class="btn-primary" id="confirm-btn">Verify email</button>
+
+    <div class="switch-row">
+      Back to
+      <button id="go-to-register-from-confirm">registration</button>
+      or
+      <button id="go-to-login-from-confirm">log in</button>
+    </div>
+  </div>
+
+  <!-- ===================== LOGIN ===================== -->
+  <div class="screen active" id="screen-login">
+    <div class="brand">DeenWallet</div>
+    <h1 class="title">Welcome back</h1>
+    <p class="subtitle">Log in to send and convert money.</p>
+
+    <div class="login-tabs">
+      <button class="login-tab active" id="login-tab-email" type="button">Email</button>
+      <button class="login-tab frozen" id="login-tab-phone" type="button">Phone (coming soon)</button>
+    </div>
+
+    <div id="login-phone-note" class="field-note hidden">
+      Phone login will be available once SMS verification is added. Please use email for now.
+    </div>
+
+    <div id="login-email-fields">
+      <label for="login-email">Email</label>
+      <input class="text-input" id="login-email" type="email" placeholder="you@example.com" />
+
+      <label for="login-password">Password</label>
+      <div class="password-field-wrap">
+        <input class="text-input" id="login-password" type="password" placeholder="Your password" />
+        <button type="button" class="password-toggle-btn" data-target="login-password" aria-label="Show password">&#128065;</button>
+      </div>
+
+      <div id="login-error" class="inline-error hidden"><span>&#9888;</span><span id="login-error-text"></span></div>
+      <div id="login-rate-status" class="field-note hidden" style="margin-top:8px;color:#B9770E;text-align:center;"></div>
+      <div id="login-recovery" class="hidden" style="margin-top:10px;padding:12px;border:1px solid #E4ECEF;border-radius:12px;background:#F7FAFB;font-size:13px;line-height:1.5;">
+        <button type="button" id="login-verify-email" class="support-chip" style="width:100%;margin-bottom:8px;">✉ Verify / resend email code</button>
+        <a id="login-support-whatsapp" class="support-chip whatsapp-chip" style="display:flex;text-align:center;text-decoration:none;justify-content:center;align-items:center;" target="_blank" rel="noopener">◉ Contact support on WhatsApp</a>
+      </div>
+
+      <button class="btn-primary" id="login-btn">Log in</button>
+    </div>
+
+    <div class="switch-row">
+      New to DeenWallet?
+      <button id="go-to-register-from-login">Create an account</button>
+    </div>
+  </div>
+
+</div>
+
+<div id="account-lock-modal" class="modal-overlay" style="position:fixed;inset:0;background:rgba(18,36,43,.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:9999;">
+  <div style="width:100%;max-width:380px;background:#fff;border-radius:16px;padding:24px;box-shadow:0 20px 50px rgba(0,0,0,.18);">
+    <h2 style="margin:0 0 8px;font-size:20px;">Account blocked</h2>
+    <p style="margin:0 0 18px;color:#6E7C82;line-height:1.5;">Your account has been blocked because of multiple incorrect PIN attempts. Please contact Deen Wallet Support to have an administrator unlock your account.</p>
+    <a id="account-lock-whatsapp" class="btn-primary" style="display:block;text-align:center;text-decoration:none;margin-bottom:8px;" target="_blank" rel="noopener">Contact support on WhatsApp</a>
+    <button type="button" id="account-lock-close" class="btn-secondary" style="width:100%;">Close</button>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="deenwallet-client.js"></script>
+<script>
+  (function () {
+    const splash = document.getElementById('deenwallet-splash');
+    window.setTimeout(function () { if (splash) splash.classList.add('hide'); }, 900);
+    // ==============================================================
+    // FIX: Wait for DOM to be ready
+    // ==============================================================
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+
+    function init() {
+      // -------------------------------------------------------------------
+      // Config
+      // -------------------------------------------------------------------
+      const AFTER_LOGIN_REDIRECT = 'index.html';
+
+      // -------------------------------------------------------------------
+      // DOM Elements
+      // -------------------------------------------------------------------
+      const registerBtn = document.getElementById('register-btn');
+      const registerError = document.getElementById('register-error');
+      const registerErrorText = document.getElementById('register-error-text');
+      const regFullName = document.getElementById('reg-full-name');
+      const regUsername = document.getElementById('reg-username');
+      const regPhone = document.getElementById('reg-phone');
+      const regEmail = document.getElementById('reg-email');
+      const regPassword = document.getElementById('reg-password');
+
+      const confirmBtn = document.getElementById('confirm-btn');
+      const confirmError = document.getElementById('confirm-error');
+      const confirmErrorText = document.getElementById('confirm-error-text');
+      const confirmSuccess = document.getElementById('confirm-success');
+      const confirmCodeInput = document.getElementById('confirm-code-input');
+      const confirmEmailInput = document.getElementById('confirm-email-input');
+      const confirmEmailMasked = document.getElementById('confirm-email-masked');
+      const confirmFallback = document.getElementById('confirm-email-fallback');
+      const confirmFallbackInput = document.getElementById('confirm-email-fallback-input');
+
+      const loginBtn = document.getElementById('login-btn');
+      const loginError = document.getElementById('login-error');
+      const loginErrorText = document.getElementById('login-error-text');
+      const loginEmail = document.getElementById('login-email');
+      const loginPassword = document.getElementById('login-password');
+      const loginRecovery = document.getElementById('login-recovery');
+      const loginVerifyEmail = document.getElementById('login-verify-email');
+      const loginSupportWhatsApp = document.getElementById('login-support-whatsapp');
+      const loginRateStatus = document.getElementById('login-rate-status');
+      const accountLockModal = document.getElementById('account-lock-modal');
+      const accountLockWhatsApp = document.getElementById('account-lock-whatsapp');
+      const accountLockClose = document.getElementById('account-lock-close');
+
+      const resendBtn = document.getElementById('resend-code-btn');
+      const termsCheckbox = document.getElementById('terms-checkbox');
+      const termsLink = document.getElementById('terms-link');
+      const termsModal = document.getElementById('terms-modal');
+      const termsClose = document.getElementById('terms-close');
+      const otpCountdown = document.getElementById('otp-countdown');
+      const resendError = document.getElementById('resend-error');
+      const resendErrorText = document.getElementById('resend-error-text');
+      const resendSuccess = document.getElementById('resend-success');
+
+      const loginTabEmail = document.getElementById('login-tab-email');
+      const loginTabPhone = document.getElementById('login-tab-phone');
+      const loginPhoneNote = document.getElementById('login-phone-note');
+
+      // ==============================================================
+      // LOGIN BUTTON
+      // ==============================================================
+      if (loginBtn) {
+        loginBtn.addEventListener('click', function (e) {
+          e.preventDefault();
+          handleLogin();
+        });
+      }
+
+      if (loginPassword) {
+        loginPassword.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            handleLogin();
+          }
+        });
+      }
+
+      if (loginEmail) {
+        loginEmail.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            loginPassword.focus();
+          }
+        });
+      }
+
+      if (loginVerifyEmail) {
+        loginVerifyEmail.addEventListener('click', function () {
+          const email = loginEmail ? loginEmail.value.trim() : '';
+          if (confirmEmailInput) confirmEmailInput.value = email;
+          if (confirmEmailMasked) confirmEmailMasked.textContent = maskEmail(email);
+          if (confirmFallback) confirmFallback.classList.add('hidden');
+          if (email) {
+            apiRequest('/api/auth/resend-otp', { method: 'POST', body: { email } })
+                    .then(function(){ startResendCooldown(60); })
+                    .catch(function(error){ if (resendErrorText) resendErrorText.textContent = error.message || 'Please wait before requesting another code.'; if (resendError) resendError.classList.remove('hidden'); });
+          }
+          goToScreen('screen-confirm');
+        });
+      }
+
+      if (accountLockClose) accountLockClose.addEventListener('click', function () { accountLockModal.style.display = 'none'; });
+      function showAccountLockModal() {
+        const number = String(window.DEENWALLET_SUPPORT_WHATSAPP || '').replace(/\D/g, '');
+        if (accountLockWhatsApp) accountLockWhatsApp.href = number ? 'https://wa.me/' + number + '?text=' + encodeURIComponent('Hello Deen Wallet Support, my account was blocked after incorrect PIN attempts.') : '#';
+        if (accountLockModal) accountLockModal.style.display = 'flex';
+      }
+
+      // ==============================================================
+      // LOGIN FUNCTION
+      // ==============================================================
+      let loginRateTimer = null;
+
+      function startLoginRateCountdown(retryAfterSeconds) {
+        const seconds = Math.max(1, Number(retryAfterSeconds) || 300);
+        if (loginRateTimer) clearInterval(loginRateTimer);
+        let remaining = seconds;
+        if (loginRateStatus) {
+          loginRateStatus.classList.remove('hidden');
+          loginRateStatus.textContent = 'Login temporarily paused. Try again in ' + remaining + ' seconds.';
+        }
+        if (loginBtn) loginBtn.disabled = true;
+        loginRateTimer = setInterval(function () {
+          remaining -= 1;
+          if (remaining <= 0) {
+            clearInterval(loginRateTimer);
+            loginRateTimer = null;
+            if (loginRateStatus) loginRateStatus.classList.add('hidden');
+            if (loginBtn) { loginBtn.disabled = false; loginBtn.textContent = 'Log in'; }
+            return;
+          }
+          if (loginRateStatus) loginRateStatus.textContent = 'Login temporarily paused. Try again in ' + remaining + ' seconds.';
+        }, 1000);
+      }
+
+      async function handleLogin() {
+        if (!loginEmail || !loginPassword) return;
+        let rateLimitedThisAttempt = false;
+
+        const email = loginEmail.value.trim();
+        const password = loginPassword.value;
+
+        if (loginError) loginError.classList.add('hidden');
+
+        if (!email || !password) {
+          if (loginErrorText) loginErrorText.textContent = 'Enter your email and password.';
+          if (loginError) loginError.classList.remove('hidden');
+          return;
+        }
+
+        if (loginBtn) {
+          loginBtn.disabled = true;
+          loginBtn.innerHTML = '<div class="spinner"></div>';
+        }
+
+        try {
+          const data = await apiRequest('/api/auth/login', {
+            method: 'POST',
+            body: { email, password }
+          });
+
+          const accessToken = data.accessToken || data.token;
+          const refreshToken = data.refreshToken;
+          if (!accessToken || !refreshToken) throw new Error('Login response is missing authentication tokens.');
+          setTokens(accessToken, refreshToken);
+          sessionStorage.removeItem('deenwallet_account_locked');
+          localStorage.setItem(DEENWALLET_CONFIG.TOKEN_STORAGE_KEY, accessToken);
+          localStorage.setItem(DEENWALLET_CONFIG.USER_STORAGE_KEY, JSON.stringify({
+            firstName: data.firstName,
+            accountNumber: data.accountNumber,
+            role: data.role
+          }));
+
+          window.location.href = AFTER_LOGIN_REDIRECT;
+        } catch (error) {
+          const msg = error.message || 'Login failed. Check your email and password.';
+          if (loginErrorText) loginErrorText.textContent = msg;
+          if (loginError) loginError.classList.remove('hidden');
+          if (loginRecovery) loginRecovery.classList.add('hidden');
+          const lower = msg.toLowerCase();
+          const rateLimited = error.status === 429 && Number(error.retryAfter) > 0;
+          if (rateLimited) {
+            rateLimitedThisAttempt = true;
+            if (loginRecovery) loginRecovery.classList.remove('hidden');
+            if (loginVerifyEmail) loginVerifyEmail.style.display = 'none';
+            startLoginRateCountdown(error.retryAfter);
+          } else if (loginRateStatus) {
+            loginRateStatus.classList.add('hidden');
+            if (loginRateTimer) { clearInterval(loginRateTimer); loginRateTimer = null; }
+          }
+          const unverified = lower.includes('verify your email') || lower.includes('email before logging');
+          const locked = lower.includes('account locked') || lower.includes('multiple failed') || lower.includes('contact support');
+          if (loginRecovery && (unverified || locked)) loginRecovery.classList.remove('hidden');
+          if (locked) showAccountLockModal();
+          if (loginVerifyEmail) loginVerifyEmail.style.display = unverified ? 'block' : 'none';
+          if (loginSupportWhatsApp) {
+            const number = String(window.DEENWALLET_SUPPORT_WHATSAPP || '').replace(/\D/g, '');
+            loginSupportWhatsApp.href = number ? 'https://wa.me/' + number + '?text=' + encodeURIComponent('Hello Deen Wallet Support, I need help with my account.') : '#';
+          }
+          console.error('Login error:', error);
+        } finally {
+          if (loginBtn) {
+            loginBtn.textContent = 'Log in';
+            if (!rateLimitedThisAttempt && !loginRateTimer) loginBtn.disabled = false;
+          }
+        }
+      }
+
+      // ==============================================================
+      // REGISTER – with phone sanitization
+      // ==============================================================
+      if (registerBtn) {
+        registerBtn.addEventListener('click', async function () {
+          const fullName = regFullName ? regFullName.value.trim() : '';
+          const username = regUsername ? regUsername.value.trim() : '';
+          let localPhone = regPhone ? onlyDigits(regPhone.value) : '';
+          const email = regEmail ? regEmail.value.trim() : '';
+          const password = regPassword ? regPassword.value : '';
+
+          // ✅ SANITIZE PHONE: remove spaces, ensure +232
+          if (localPhone.startsWith('0')) {
+            localPhone = localPhone.substring(1);
+          }
+          let phone = '+232' + localPhone; // e.g., +23274132162
+
+          // Get PIN values
+          const pin = document.getElementById('reg-pin') ? document.getElementById('reg-pin').value.trim() : '';
+          const pinConfirm = document.getElementById('reg-pin-confirm') ? document.getElementById('reg-pin-confirm')
+                  .value.trim() : '';
+          const pinError = document.getElementById('pin-error');
+          const pinErrorText = document.getElementById('pin-error-text');
+
+          if (registerError) registerError.classList.add('hidden');
+          if (pinError) pinError.classList.add('hidden');
+
+          // Validate PIN
+          if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+            if (pinErrorText) pinErrorText.textContent = 'PIN must be exactly 4 digits.';
+            if (pinError) pinError.classList.remove('hidden');
+            return;
+          }
+
+          if (pin !== pinConfirm) {
+            if (pinErrorText) pinErrorText.textContent = 'PINs do not match.';
+            if (pinError) pinError.classList.remove('hidden');
+            return;
+          }
+
+          if (termsCheckbox && !termsCheckbox.checked) {
+            if (registerErrorText) registerErrorText.textContent = 'Please accept the Terms & Conditions before creating your account.';
+            if (registerError) registerError.classList.remove('hidden');
+            return;
+          }
+
+          if (!fullName || !username || localPhone.length < 8 || !email || !password) {
+            if (registerErrorText) registerErrorText.textContent =
+                    'Please fill in every field with a valid phone number.';
+            if (registerError) registerError.classList.remove('hidden');
+            return;
+          }
+
+          if (!checkPasswordStrength(password).isValid) {
+            if (registerErrorText) registerErrorText.textContent =
+                    'Password must be at least 8 characters and include an uppercase letter, a lowercase letter, and a symbol.';
+            if (registerError) registerError.classList.remove('hidden');
+            return;
+          }
+
+          registerBtn.disabled = true;
+          registerBtn.innerHTML = '<div class="spinner"></div>';
+
+          try {
+            await apiRequest('/api/auth/register', {
+              method: 'POST',
+              body: {
+                fullName,
+                username,
+                phone: phone,      // ✅ sanitized phone
+                email,
+                password,
+                pin: pin
+              },
+            });
+
+            if (confirmEmailInput) confirmEmailInput.value = email;
+            if (confirmEmailMasked) confirmEmailMasked.textContent = maskEmail(email);
+            if (confirmFallback) confirmFallback.classList.add('hidden');
+
+            goToScreen('screen-confirm');
+            startResendCooldown(60);
+          } catch (error) {
+            if (registerErrorText) registerErrorText.textContent = error.message ||
+                    'Registration failed. Please try again.';
+            if (registerError) registerError.classList.remove('hidden');
+          } finally {
+            registerBtn.disabled = false;
+            registerBtn.textContent = 'Create account';
+          }
+        });
+      }
+
+      // ==============================================================
+      // CONFIRM EMAIL
+      // ==============================================================
+      if (confirmBtn) {
+        confirmBtn.addEventListener('click', async function () {
+          let email = confirmEmailInput ? confirmEmailInput.value.trim() : '';
+          if (!email) {
+            email = confirmFallbackInput ? confirmFallbackInput.value.trim() : '';
+          }
+          const code = confirmCodeInput ? confirmCodeInput.value.trim() : '';
+
+          if (confirmError) confirmError.classList.add('hidden');
+          if (confirmSuccess) confirmSuccess.classList.add('hidden');
+
+          if (!email || !code) {
+            if (confirmErrorText) confirmErrorText.textContent = 'Enter your email and the code you received.';
+            if (confirmError) confirmError.classList.remove('hidden');
+            return;
+          }
+
+          confirmBtn.disabled = true;
+          confirmBtn.innerHTML = '<div class="spinner"></div>';
+
+          try {
+            await apiRequest('/api/auth/confirm-email', { method: 'POST', body: { email, code } });
+            if (confirmSuccess) confirmSuccess.classList.remove('hidden');
+            if (loginEmail) loginEmail.value = email;
+            setTimeout(() => goToScreen('screen-login'), 800);
+          } catch (error) {
+            if (confirmErrorText) confirmErrorText.textContent = error.message ||
+                    'Could not verify that code. Please try again.';
+            if (confirmError) confirmError.classList.remove('hidden');
+          } finally {
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = 'Verify email';
+          }
+        });
+      }
+
+      // ==============================================================
+      // RESEND OTP
+      // ==============================================================
+      if (resendBtn) {
+        resendBtn.addEventListener('click', async function () {
+          let email = confirmEmailInput ? confirmEmailInput.value.trim() : '';
+          if (!email) {
+            email = confirmFallbackInput ? confirmFallbackInput.value.trim() : '';
+          }
+
+          if (resendError) resendError.classList.add('hidden');
+          if (resendSuccess) resendSuccess.classList.add('hidden');
+
+          if (!email) {
+            if (resendErrorText) resendErrorText.textContent = 'Enter your email first.';
+            if (resendError) resendError.classList.remove('hidden');
+            return;
+          }
+
+          resendBtn.disabled = true;
+
+          try {
+            await apiRequest('/api/auth/resend-otp', { method: 'POST', body: { email } });
+            if (resendSuccess) resendSuccess.classList.remove('hidden');
+            startResendCooldown(60);
+          } catch (error) {
+            if (resendErrorText) resendErrorText.textContent = error.message || "Couldn't resend the code right now.";
+            if (resendError) resendError.classList.remove('hidden');
+            resendBtn.disabled = false;
+          }
+        });
+      }
+
+      // ==============================================================
+      // OTP COOLDOWN — shared 60-second server cooldown
+      // ==============================================================
+      let resendCooldownInterval = null;
+      const OTP_COOLDOWN_SECONDS = 60;
+
+      function startResendCooldown(seconds) {
+        if (!resendBtn) return;
+        if (resendCooldownInterval) clearInterval(resendCooldownInterval);
+        resendBtn.disabled = true;
+        let remaining = Math.max(1, Number(seconds) || OTP_COOLDOWN_SECONDS);
+        const render = () => {
+          resendBtn.textContent = 'Resend code (' + remaining + 's)';
+          if (otpCountdown) { otpCountdown.classList.remove('hidden'); otpCountdown.textContent = 'You can request another code in ' + remaining + ' seconds.'; }
+        };
+        render();
+        resendCooldownInterval = setInterval(() => {
+          remaining -= 1;
+          if (remaining <= 0) {
+            clearInterval(resendCooldownInterval); resendCooldownInterval = null;
+            resendBtn.disabled = false; resendBtn.textContent = 'Resend code';
+            if (otpCountdown) { otpCountdown.classList.add('hidden'); otpCountdown.textContent = ''; }
+          } else render();
+        }, 1000);
+      }
+
+      if (termsLink) termsLink.addEventListener('click', function(){ if (termsModal) { termsModal.classList.remove('hidden'); termsModal.style.display='flex'; } });
+      if (termsClose) termsClose.addEventListener('click', function(){ if (termsModal) { termsModal.classList.add('hidden'); termsModal.style.display='none'; } });
+      if (termsModal) termsModal.addEventListener('click', function(e){ if (e.target === termsModal) { termsModal.classList.add('hidden'); termsModal.style.display='none'; } });
+
+      // ==============================================================
+      // SCREEN SWITCHING
+      // ==============================================================
+      function goToScreen(id) {
+        document.querySelectorAll('.screen').forEach((el) => el.classList.remove('active'));
+        const target = document.getElementById(id);
+        if (target) target.classList.add('active');
+      }
+
+      // Login tabs
+      if (loginTabPhone) {
+        loginTabPhone.addEventListener('click', function () {
+          if (loginPhoneNote) loginPhoneNote.classList.remove('hidden');
+        });
+      }
+      if (loginTabEmail) {
+        loginTabEmail.addEventListener('click', function () {
+          if (loginPhoneNote) loginPhoneNote.classList.add('hidden');
+        });
+      }
+
+      // Screen switching links
+      const goToLoginFromRegister = document.getElementById('go-to-login-from-register');
+      const goToRegisterFromConfirm = document.getElementById('go-to-register-from-confirm');
+      const goToLoginFromConfirm = document.getElementById('go-to-login-from-confirm');
+      const goToRegisterFromLogin = document.getElementById('go-to-register-from-login');
+
+      if (goToLoginFromRegister) goToLoginFromRegister.addEventListener('click', function () {
+        goToScreen('screen-login');
+      });
+      if (goToRegisterFromConfirm) goToRegisterFromConfirm.addEventListener('click', function () {
+        goToScreen('screen-register');
+      });
+      if (goToLoginFromConfirm) goToLoginFromConfirm.addEventListener('click', function () {
+        goToScreen('screen-login');
+      });
+      if (goToRegisterFromLogin) goToRegisterFromLogin.addEventListener('click', function () {
+        goToScreen('screen-register');
+      });
+
+      // ==============================================================
+      // PHONE INPUT – only digits
+      // ==============================================================
+      if (regPhone) {
+        regPhone.addEventListener('input', function (e) {
+          e.target.value = onlyDigits(e.target.value).slice(0, 9);
+        });
+      }
+
+      if (confirmCodeInput) {
+        confirmCodeInput.addEventListener('input', function (e) {
+          e.target.value = onlyDigits(e.target.value).slice(0, 6);
+        });
+      }
+
+      // ==============================================================
+      // PASSWORD STRENGTH
+      // ==============================================================
+      if (regPassword) {
+        const strengthBarFill = document.getElementById('strength-bar-fill');
+        const critEls = {
+          length: document.getElementById('crit-length'),
+          upper: document.getElementById('crit-upper'),
+          lower: document.getElementById('crit-lower'),
+          symbol: document.getElementById('crit-symbol'),
+        };
+        const strengthColors = ['#C0392B', '#E67E22', '#E9C46A', '#2ECC71'];
+
+        regPassword.addEventListener('input', function (e) {
+          const password = e.target.value;
+          const { criteria, metCount, total } = checkPasswordStrength(password);
+          Object.keys(critEls).forEach((key) => {
+            if (critEls[key]) {
+              const met = criteria[key];
+              critEls[key].classList.toggle('met', met);
+              const dot = critEls[key].querySelector('.dot');
+              if (dot) dot.textContent = met ? '\u25CF' : '\u25CB';
+            }
+          });
+          if (strengthBarFill) {
+            strengthBarFill.style.width = (metCount / total) * 100 + '%';
+            strengthBarFill.style.background = strengthColors[Math.max(0, metCount - 1)];
+          }
+        });
+      }
+
+      // ==============================================================
+      // CONFIRM FALLBACK
+      // ==============================================================
+      function maybeShowConfirmFallback() {
+        const knownEmail = confirmEmailInput ? confirmEmailInput.value.trim() : '';
+        if (!knownEmail) {
+          if (confirmEmailMasked) confirmEmailMasked.textContent = 'your email';
+          if (confirmFallback) confirmFallback.classList.remove('hidden');
+        }
+      }
+      maybeShowConfirmFallback();
+
+      // ==============================================================
+      // CHECK IF ALREADY LOGGED IN
+      // ==============================================================
+      if (localStorage.getItem(DEENWALLET_CONFIG.TOKEN_STORAGE_KEY)) {
+        window.location.href = AFTER_LOGIN_REDIRECT;
+      }
+
+      // ==============================================================
+      // PASSWORD SHOW/HIDE TOGGLE
+      // ==============================================================
+      document.querySelectorAll('.password-toggle-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          const input = document.getElementById(btn.dataset.target);
+          if (!input) return;
+          const isHidden = input.type === 'password';
+          input.type = isHidden ? 'text' : 'password';
+          btn.textContent = isHidden ? '\u{1F576}\uFE0F' : '\u{1F441}\uFE0F';
+          btn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+        });
+      });
+
+      console.log('Auth page initialized successfully');
+    }
+  })();
+</script>
+
+</body>
+
+</html>

@@ -1,0 +1,3228 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>DeenWallet — Send money</title>
+  <style>
+    :root {
+      --bg: #FFFFFF;
+      --card: #F7FAFB;
+      --border: #E4ECEF;
+      --text: #12242B;
+      --muted: #6E7C82;
+      --primary: #1C7A91;
+      --primary-light: #2E9FB0;
+      --primary-disabled: #BFE0E6;
+      --warning-bg: #FFF7E6;
+      --warning-text: #B9770E;
+      --error: #C0392B;
+      --success: #2E9FB0;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html {
+      height: 100%;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100%;
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text);
+      background: #EEF2F4;
+      overflow: hidden;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 460px) {
+      body {
+        background: var(--bg);
+      }
+    }
+
+    #app {
+      max-width: 420px;
+      margin: 0 auto;
+      min-height: 100vh;
+      max-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+      position: relative;
+      overflow: hidden;
+    }
+
+    @media (min-width: 461px) {
+      #app {
+        min-height: 100vh;
+        max-height: 100vh;
+        box-shadow: 0 0 40px rgba(0, 0, 0, 0.06);
+      }
+    }
+
+    .screen {
+      display: none;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      height: 100%;
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    .scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      padding-bottom: 8px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .scroll::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .scroll::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+
+    .scroll::-webkit-scrollbar-thumb:hover {
+      background: var(--muted);
+    }
+
+    /* ============================================================ */
+    /* TOP BAR */
+    /* ============================================================ */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-shrink: 0;
+    }
+
+    .app-brand-logo { width:88px; height:48px; object-fit:cover; border-radius:10px; box-shadow:0 6px 16px rgba(0,0,0,.12); margin-bottom:8px; }
+
+    .greeting-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .greeting-sub {
+      font-size: 13px;
+      color: var(--muted);
+      margin: 4px 0 0;
+    }
+
+    .menu-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      width: 38px;
+      height: 38px;
+      font-size: 18px;
+      cursor: pointer;
+      color: var(--text);
+      flex-shrink: 0;
+    }
+
+    .menu-dropdown {
+      position: absolute;
+      top: 62px;
+      right: 20px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+      overflow: hidden;
+      z-index: 20;
+      min-width: 170px;
+    }
+
+    .menu-dropdown button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 12px 16px;
+      background: none;
+      border: none;
+      font-size: 14px;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .menu-dropdown button:hover {
+      background: var(--card);
+    }
+
+    .menu-dropdown button.danger {
+      color: var(--error);
+    }
+
+    .menu-divider {
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ============================================================ */
+    /* CONVERT CARD */
+    /* ============================================================ */
+    .convert-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 20px;
+      margin-top: 18px;
+    }
+
+    .convert-card-title {
+      font-size: 17px;
+      font-weight: 800;
+      margin: 0 0 2px;
+    }
+
+    .convert-card-sub {
+      font-size: 13px;
+      color: var(--muted);
+      margin: 0 0 16px;
+    }
+
+    .section-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin: 16px 0 8px;
+    }
+
+    .section-label.with-action {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .text-link {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--primary);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .phone-card {
+      display: flex;
+      align-items: center;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    .phone-prefix {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px;
+      border-right: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    .phone-prefix span {
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    .flag-badge {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .flag-badge div {
+      flex: 1;
+    }
+
+    .phone-card input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      padding: 14px;
+      font-size: 16px;
+      color: var(--text);
+      outline: none;
+      min-width: 0;
+    }
+
+    .phone-card input::placeholder {
+      color: #A9B7BC;
+    }
+
+    .phone-card input:disabled {
+      color: var(--text);
+      opacity: 1;
+      background: #f5f7f8;
+    }
+
+    .detect-status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-top: 10px;
+      font-size: 13px;
+    }
+
+    .detect-status.loading {
+      background: var(--card);
+      color: var(--muted);
+    }
+
+    .detect-status.frozen {
+      background: #EDEFF1;
+      color: var(--muted);
+    }
+
+    .detect-status.unsupported {
+      background: #FBEAEA;
+      color: var(--error);
+    }
+
+    .detect-status .name {
+      font-weight: 700;
+    }
+
+    .detect-status.ok-fields {
+      display: block;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 4px 14px;
+      margin-top: 10px;
+    }
+
+    .detect-field {
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .detect-field:last-child {
+      border-bottom: none;
+    }
+
+    .detect-field-label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
+
+    .detect-field-value {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .recipient-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .recipient-option {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .recipient-option:active {
+      transform: scale(0.98);
+    }
+
+    .recipient-option.selected {
+      border-color: var(--primary-light);
+      background: #EAF6F8;
+    }
+
+    .recipient-option .info {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .recipient-option .info .name {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .recipient-option .info .meta {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .recipient-option .actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .icon-btn {
+      background: none;
+      border: none;
+      font-size: 15px;
+      cursor: pointer;
+      color: var(--muted);
+      padding: 4px;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+
+    .icon-btn:active {
+      background: var(--card);
+    }
+
+    .icon-btn.danger:hover {
+      color: var(--error);
+    }
+
+    .recipient-option .check {
+      color: var(--success);
+      font-size: 16px;
+      visibility: hidden;
+    }
+
+    .recipient-option.selected .check {
+      visibility: visible;
+    }
+
+    .add-recipient-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      background: transparent;
+      color: var(--primary);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 8px;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .add-recipient-btn:active {
+      transform: scale(0.98);
+    }
+
+    .add-recipient-btn:hover {
+      background: var(--card);
+      border-color: var(--primary-light);
+    }
+
+    .recipient-loading {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 14px;
+      padding: 4px 0;
+    }
+
+    .add-recipient-form {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      margin-top: 8px;
+      background: #fff;
+    }
+
+    .text-input {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 12px;
+      padding: 13px 14px;
+      font-size: 15px;
+      color: var(--text);
+      outline: none;
+      margin-top: 10px;
+    }
+
+    .text-input::placeholder {
+      color: #A9B7BC;
+    }
+
+    .text-input:focus {
+      border-color: var(--primary-light);
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .btn-outline {
+      flex: 1;
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 22px;
+      padding: 11px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-outline:active {
+      transform: scale(0.98);
+    }
+
+    .btn-fill {
+      flex: 1;
+      border: none;
+      background: var(--primary-light);
+      border-radius: 22px;
+      padding: 11px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.2s;
+    }
+
+    .btn-fill:active {
+      transform: scale(0.98);
+    }
+
+    .btn-fill:disabled {
+      background: var(--primary-disabled);
+      cursor: not-allowed;
+    }
+
+    .warning-banner {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      background: var(--warning-bg);
+      border-radius: 12px;
+      padding: 10px 12px;
+      margin-top: 10px;
+    }
+
+    .warning-banner .icon {
+      color: var(--warning-text);
+      font-size: 15px;
+      line-height: 18px;
+    }
+
+    .warning-banner p {
+      margin: 0;
+      font-size: 13px;
+      color: var(--warning-text);
+      line-height: 18px;
+    }
+
+    .inline-error {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--error);
+    }
+
+    .amount-card {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 4px 16px;
+    }
+
+    .amount-card span.currency {
+      font-size: 14px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .amount-card input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--text);
+      padding: 14px 0;
+      outline: none;
+      min-width: 0;
+    }
+
+    .amount-card input::placeholder {
+      color: #A9B7BC;
+    }
+
+    .fee-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      margin-top: 12px;
+    }
+
+    .fee-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 14px;
+    }
+
+    .fee-row .label {
+      color: var(--muted);
+    }
+
+    .fee-row .value {
+      font-weight: 500;
+    }
+
+    .fee-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 8px 0;
+    }
+
+    .fee-row.total .label,
+    .fee-row.total .value {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .footer {
+      padding: 16px 20px 20px;
+      border-top: 1px solid var(--border);
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .btn-primary {
+      background: var(--primary-light);
+      border: none;
+      border-radius: 28px;
+      padding: 16px;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.2s;
+    }
+
+    .btn-primary:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary:disabled {
+      background: var(--primary-disabled);
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      border: none;
+      color: var(--primary);
+      font-size: 14px;
+      font-weight: 600;
+      padding: 10px;
+      cursor: pointer;
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    .spinner.dark {
+      border: 2px solid rgba(46, 159, 176, 0.25);
+      border-top-color: var(--primary-light);
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* ============================================================ */
+    /* USSD CONFIRMATION SCREEN */
+    /* ============================================================ */
+    .ussd-back {
+      padding: 20px 20px 8px;
+      background: transparent;
+      border: none;
+      font-size: 22px;
+      align-self: flex-start;
+      cursor: pointer;
+      color: var(--text);
+      flex-shrink: 0;
+    }
+
+    .ussd-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px 20px 0;
+      text-align: center;
+      overflow-y: auto;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .status-pill.awaiting {
+      background: var(--warning-bg);
+      color: var(--warning-text);
+    }
+
+    .status-pill.progress {
+      background: #EAF6F8;
+      color: var(--primary);
+    }
+
+    .status-pill.success {
+      background: #E7F7EC;
+      color: #1E8449;
+    }
+
+    .status-pill.failed {
+      background: #FBEAEA;
+      color: var(--error);
+    }
+
+    .ussd-code-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      margin-bottom: 8px;
+      width: 100%;
+      padding: 8px 12px;
+    }
+
+    .ussd-code-row:hover {
+      background: var(--card);
+      border-radius: 12px;
+    }
+
+    .ussd-code {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--primary-light);
+      letter-spacing: 0.5px;
+      text-align: center;
+      font-family: monospace;
+    }
+
+    .ussd-countdown-label {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 12px;
+      text-align: center;
+    }
+
+    .ussd-countdown {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+      margin-top: 2px;
+      text-align: center;
+    }
+
+    .ussd-summary {
+      width: 100%;
+      background: var(--card);
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-top: 20px;
+      text-align: left;
+    }
+
+    .ussd-summary .fee-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 13px;
+    }
+
+    .ussd-summary .fee-row .label {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .ussd-summary .fee-row .value {
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .ussd-summary .fee-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 6px 0;
+    }
+
+    .ussd-summary .fee-row.total .label,
+    .ussd-summary .fee-row.total .value {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .result-icon {
+      font-size: 36px;
+      margin-bottom: 6px;
+    }
+
+    .result-note {
+      font-size: 14px;
+      color: var(--muted);
+      margin: 0;
+    }
+
+    /* ============================================================ */
+    /* STEP INDICATOR */
+    /* ============================================================ */
+    .step-indicator {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin: 8px 0 16px;
+    }
+
+    .step-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: background 0.3s;
+    }
+
+    .step-dot.active {
+      background: var(--primary-light);
+    }
+
+    .step-dot.done {
+      background: var(--success);
+    }
+
+    .recipient-step-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin: 0 0 4px;
+    }
+
+    .recipient-step-sub {
+      font-size: 13px;
+      color: var(--muted);
+      margin: 0 0 12px;
+    }
+
+    .step-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .btn-back {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 12px 24px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-back:active {
+      transform: scale(0.98);
+    }
+
+    .btn-back:hover {
+      background: var(--card);
+    }
+
+    .amount-display {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 16px;
+      margin-top: 4px;
+      text-align: center;
+    }
+
+    .amount-display .label {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .amount-display .value {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    /* ============================================================ */
+    /* TOAST */
+    /* ============================================================ */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--text);
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 20px;
+      font-size: 13px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+      z-index: 30;
+      white-space: nowrap;
+      max-width: 90%;
+    }
+
+    .toast.show {
+      opacity: 1;
+    }
+
+    /* ============================================================ */
+    /* MODALS */
+    /* ============================================================ */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      padding: 20px;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-box {
+      background: #fff;
+      border-radius: 20px;
+      max-width: 380px;
+      width: 100%;
+      padding: 28px 24px 20px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      animation: modalSlideIn 0.3s ease;
+    }
+
+    @keyframes modalSlideIn {
+      from {
+        transform: translateY(30px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    .modal-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+
+    .modal-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0 0 8px;
+      color: var(--text);
+    }
+
+    .modal-message {
+      font-size: 15px;
+      color: var(--muted);
+      line-height: 1.6;
+      margin: 0 0 20px;
+    }
+
+    .modal-btn {
+      background: var(--primary-light);
+      border: none;
+      border-radius: 28px;
+      padding: 14px 40px;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.2s;
+    }
+
+    .modal-btn:active {
+      transform: scale(0.98);
+    }
+
+    .modal-btn:hover {
+      background: var(--primary);
+    }
+
+    .modal-btn.danger {
+      background: var(--error);
+    }
+
+    .modal-btn.danger:hover {
+      background: #a93226;
+    }
+
+    /* ============================================================ */
+    /* PIN MODAL - FULLY FUNCTIONAL */
+    /* ============================================================ */
+    #pin-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999 !important;
+      padding: 20px;
+      /* Accounts for the Android status bar/notch overlapping fixed-position
+         content in the wrapped app - without this, the top of the modal
+         (icon/title) can render partly hidden behind system UI. */
+      padding-top: max(20px, env(safe-area-inset-top, 20px));
+      padding-bottom: max(20px, env(safe-area-inset-bottom, 20px));
+      pointer-events: auto !important;
+    }
+
+    #pin-modal-overlay.active {
+      display: flex !important;
+    }
+
+    #pin-modal-overlay .modal-box {
+      background: #fff;
+      border-radius: 20px;
+      max-width: 380px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 28px 24px 20px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      animation: modalSlideIn 0.3s ease;
+      position: relative;
+      pointer-events: auto !important;
+    }
+
+    #pin-modal-overlay .modal-box * {
+      pointer-events: auto !important;
+    }
+
+    #pin-modal-overlay button,
+    #pin-modal-overlay .pin-key,
+    #pin-modal-overlay .btn-outline,
+    #pin-modal-overlay .btn-fill,
+    #pin-modal-overlay .btn-secondary {
+      pointer-events: auto !important;
+      cursor: pointer !important;
+      position: relative;
+      z-index: 10000;
+    }
+
+    .pin-dots {
+      display: flex !important;
+      flex-direction: row !important;
+      justify-content: center;
+      gap: 12px;
+      margin: 20px 0;
+    }
+
+    .pin-dot {
+      width: 50px;
+      height: 55px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text);
+      background: var(--card);
+      transition: border-color 0.2s;
+    }
+
+    .pin-dot.filled {
+      border-color: var(--primary-light);
+      background: #EAF6F8;
+    }
+
+    .pin-dot.active {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(46, 159, 176, 0.2);
+    }
+
+    .pin-dot.error {
+      border-color: var(--error);
+      animation: shake 0.3s ease;
+    }
+
+    @keyframes shake {
+
+      0%,
+      100% {
+        transform: translateX(0);
+      }
+
+      25% {
+        transform: translateX(-8px);
+      }
+
+      75% {
+        transform: translateX(8px);
+      }
+    }
+
+    .pin-error-msg {
+      color: var(--error);
+      font-size: 13px;
+      margin: 4px 0 16px;
+      min-height: 20px;
+    }
+
+    .pin-hidden-input {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+      pointer-events: none;
+    }
+
+    /* ============================================================ */
+    /* LOCKED MODAL - STAYS OPEN */
+    /* ============================================================ */
+    #locked-modal-overlay {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      background: rgba(0, 0, 0, 0.7) !important;
+      display: none !important;
+      justify-content: center !important;
+      align-items: center !important;
+      z-index: 99999 !important;
+      padding: 20px !important;
+      pointer-events: auto !important;
+    }
+
+    #locked-modal-overlay.active {
+      display: flex !important;
+    }
+
+    #locked-modal-overlay .modal-box {
+      background: #fff !important;
+      border-radius: 20px !important;
+      max-width: 380px !important;
+      width: 100% !important;
+      padding: 28px 24px 20px !important;
+      text-align: center !important;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
+      animation: modalSlideIn 0.3s ease !important;
+      pointer-events: auto !important;
+      position: relative !important;
+    }
+
+    #locked-modal-overlay .modal-box * {
+      pointer-events: auto !important;
+    }
+
+    #locked-modal-overlay button {
+      pointer-events: auto !important;
+      cursor: pointer !important;
+    }
+
+    #locked-modal-overlay .modal-btn {
+      background: #25D366 !important;
+      border: none !important;
+      border-radius: 28px !important;
+      padding: 14px 40px !important;
+      color: #fff !important;
+      font-size: 16px !important;
+      font-weight: 600 !important;
+      cursor: pointer !important;
+      width: 100% !important;
+      transition: background 0.2s !important;
+    }
+
+    #locked-modal-overlay .modal-btn:hover {
+      background: #1da851 !important;
+    }
+
+    .locked-modal .modal-icon {
+      color: var(--error) !important;
+    }
+
+    .locked-modal .modal-title {
+      color: var(--error) !important;
+    }
+
+    @keyframes modalSlideIn {
+      from {
+        transform: translateY(30px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    /* ============================================================ */
+    /* PROFILE */
+    /* ============================================================ */
+    .profile-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .profile-row .label {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .profile-row .value {
+      font-size: 15px;
+      font-weight: 600;
+      text-align: right;
+    }
+
+    .profile-section-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin: 20px 0 12px;
+      color: var(--text);
+    }
+
+    .profile-pin-section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      margin-top: 12px;
+    }
+
+    .profile-pin-section .pin-display {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .profile-pin-section .pin-display .pin-code {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary-light);
+      letter-spacing: 4px;
+      font-family: monospace;
+    }
+
+    .profile-pin-section .pin-display .pin-status {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .pin-change-form {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .pin-change-form .pin-input-group {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .pin-change-form .pin-input-group input {
+      flex: 1;
+      min-width: 80px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 18px;
+      font-weight: 600;
+      text-align: center;
+      letter-spacing: 4px;
+      font-family: monospace;
+      outline: none;
+      background: #fff;
+    }
+
+    .pin-change-form .pin-input-group input:focus {
+      border-color: var(--primary-light);
+    }
+
+    .pin-change-form .pin-input-group .btn-small {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--primary-light);
+      color: #fff;
+      transition: background 0.2s;
+    }
+
+    .pin-change-form .pin-input-group .btn-small:active {
+      transform: scale(0.95);
+    }
+
+    .pin-change-form .pin-input-group .btn-small:hover {
+      background: var(--primary);
+    }
+
+    .pin-change-form .pin-input-group .btn-small:disabled {
+      background: var(--primary-disabled);
+      cursor: not-allowed;
+    }
+
+    .pin-change-form .pin-error {
+      color: var(--error);
+      font-size: 13px;
+      margin-top: 8px;
+    }
+
+    .pin-change-form .pin-success {
+      color: var(--success);
+      font-size: 13px;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div id="app">
+
+  <!-- ===================== STEP 1: FROM + AMOUNT ===================== -->
+  <div class="screen active" id="screen-step1">
+    <div class="scroll">
+      <div class="top-bar">
+        <div>
+          <img class="app-brand-logo" src="deenwallet-logo.png" alt="DeenWallet" />
+          <h1 class="greeting-title" id="greeting-title">Hello</h1>
+          <p class="greeting-sub" id="greeting-account"></p>
+        </div>
+        <button class="menu-btn" id="menu-btn">&#8942;</button>
+      </div>
+
+      <div class="step-indicator">
+        <div class="step-dot active" id="step1-dot"></div>
+        <div class="step-dot" id="step2-dot"></div>
+        <div class="step-dot" id="step3-dot"></div>
+      </div>
+
+      <div class="convert-card">
+        <p class="convert-card-title">Convert Money</p>
+        <p class="convert-card-sub">Between Orange Money and Africell, instantly.</p>
+
+        <div style="display:none;height:0;width:0;overflow:hidden;">
+          <input type="text" autocomplete="off" />
+          <input type="email" autocomplete="off" />
+          <input type="password" autocomplete="off" />
+          <input type="tel" autocomplete="off" />
+        </div>
+
+        <div class="section-label">From</div>
+        <div class="phone-card">
+          <div class="phone-prefix">
+            <div class="flag-badge">
+              <div style="background:#1EB53A"></div>
+              <div style="background:#fff"></div>
+              <div style="background:#0072C6"></div>
+            </div>
+            <span>+232</span>
+          </div>
+          <input id="source-phone" type="tel" inputmode="numeric" maxlength="9" placeholder="Your mobile money number"
+                 autocomplete="off" name="phone" />
+        </div>
+        <div id="source-detect-status" class="hidden"></div>
+
+        <div class="section-label" style="margin-top:20px;">Amount</div>
+        <div class="amount-card">
+          <span class="currency">SLE</span>
+          <input id="amount" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off" name="amount" />
+          <div id="fee-loading" class="spinner dark hidden"></div>
+        </div>
+
+        <div id="fee-error" class="inline-error hidden">
+          <span>&#9888;</span><span id="fee-error-text"></span>
+        </div>
+        <div id="fee-card" class="fee-card hidden">
+          <div class="fee-row"><span class="label">Amount sent</span><span class="value" id="fee-amount"></span></div>
+          <div class="fee-row"><span class="label">Fee</span><span class="value" id="fee-value"></span></div>
+          <div class="fee-divider"></div>
+          <div class="fee-row total"><span class="label">Debited amount</span><span class="value"
+                                                                                    id="fee-total"></span></div>
+        </div>
+
+        <div id="step1-error" class="inline-error hidden">
+          <span>&#9888;</span><span id="step1-error-text"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <button class="btn-primary" id="step1-continue-btn" disabled>Continue</button>
+    </div>
+  </div>
+
+  <!-- ===================== STEP 2: SELECT RECIPIENT ===================== -->
+  <div class="screen" id="screen-step2">
+    <div class="scroll">
+      <div class="top-bar">
+        <div>
+          <h1 class="greeting-title">Select Recipient</h1>
+          <p class="greeting-sub" id="step2-amount-display"></p>
+        </div>
+      </div>
+
+      <div class="step-indicator">
+        <div class="step-dot done" id="step1-dot2"></div>
+        <div class="step-dot active" id="step2-dot2"></div>
+        <div class="step-dot" id="step3-dot2"></div>
+      </div>
+
+      <div class="convert-card">
+        <p class="recipient-step-title">Choose a recipient</p>
+        <p class="recipient-step-sub">Select from your saved contacts or add a new one.</p>
+
+        <div id="recipient-list-loading" class="recipient-loading">
+          <div class="spinner dark"></div>
+          <span>Loading saved recipients…</span>
+        </div>
+        <div id="recipient-list-error" class="inline-error hidden">
+          <span>&#9888;</span><span id="recipient-list-error-text"></span>
+        </div>
+        <div id="recipient-list" class="recipient-list hidden"></div>
+        <button class="add-recipient-btn hidden" id="add-recipient-btn-empty">+ Add a recipient</button>
+
+        <div id="add-recipient-form" class="add-recipient-form hidden">
+          <div class="phone-card" id="new-recipient-phone-wrap">
+            <div class="phone-prefix">
+              <div class="flag-badge">
+                <div style="background:#1EB53A"></div>
+                <div style="background:#fff"></div>
+                <div style="background:#0072C6"></div>
+              </div>
+              <span>+232</span>
+            </div>
+            <input id="new-recipient-phone" type="tel" inputmode="numeric" maxlength="9" placeholder="80 613600"
+                   autocomplete="off" name="phone" />
+          </div>
+          <div id="recipient-detect-status" class="hidden"></div>
+
+          <input class="text-input" id="new-recipient-label" type="text" placeholder="Label (optional)"
+                 autocomplete="off" />
+
+          <div id="save-recipient-error" class="inline-error hidden">
+            <span>&#9888;</span><span id="save-recipient-error-text"></span>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn-outline" id="cancel-add-recipient">Cancel</button>
+            <button class="btn-fill" id="save-recipient-btn" disabled>Save recipient</button>
+          </div>
+        </div>
+
+        <div class="warning-banner">
+          <span class="icon">&#9888;</span>
+          <p>Double check the recipient. Transactions to the wrong number cannot be reversed.</p>
+        </div>
+
+        <div id="step2-error" class="inline-error hidden">
+          <span>&#9888;</span><span id="step2-error-text"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="step-actions">
+        <button class="btn-back" id="step2-back-btn">&#8592; Back</button>
+        <button class="btn-primary" id="step2-continue-btn" disabled style="flex:1;">Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== STEP 3: USSD CONFIRMATION ===================== -->
+  <div class="screen" id="screen-step3">
+    <button class="ussd-back" id="step3-back-btn">&#8592;</button>
+    <div class="ussd-body">
+      <div class="status-pill awaiting" id="status-pill">Waiting for payment</div>
+
+      <div class="step-indicator">
+        <div class="step-dot done" id="step1-dot3"></div>
+        <div class="step-dot done" id="step2-dot3"></div>
+        <div class="step-dot active" id="step3-dot3"></div>
+      </div>
+
+      <div id="ussd-pay-block">
+        <button class="ussd-code-row" id="ussd-code-btn">
+          <span class="ussd-code" id="ussd-code-text"></span>
+          <span style="font-size:18px;">&#128203;</span>
+        </button>
+        <div class="ussd-countdown-label" id="ussd-countdown-label">USSD code expires in</div>
+        <div class="ussd-countdown" id="ussd-countdown"></div>
+        <div class="warning-banner">
+          <span class="icon">&#9888;</span>
+          <p>Double check the recipient before paying. Transactions to the wrong number cannot be reversed.</p>
+        </div>
+      </div>
+
+      <div id="ussd-result-block" class="hidden">
+        <div class="result-icon" id="result-icon">&#8987;</div>
+        <p class="result-note" id="result-note"></p>
+        <div id="transaction-failure-reason" class="hidden" style="margin-top:14px;padding:13px 15px;border-radius:12px;background:#FEF2F2;border:1px solid #F5C2C2;color:#8B1E1E;font-size:13px;line-height:1.55;">
+          <strong>Reason</strong>
+          <div id="transaction-failure-reason-text" style="margin-top:4px;"></div>
+        </div>
+      </div>
+
+      <div class="ussd-summary">
+        <div class="fee-row">
+          <span class="label">Recipient</span>
+          <span class="value" id="ussd-recipient-name"></span>
+        </div>
+        <div class="fee-row">
+          <span class="label">Number</span>
+          <span class="value" id="ussd-recipient-phone"></span>
+        </div>
+        <div class="fee-divider"></div>
+        <div class="fee-row total">
+          <span class="label">Debited amount</span>
+          <span class="value" id="ussd-total"></span>
+        </div>
+      </div>
+    </div>
+    <div class="footer" id="ussd-footer">
+      <button class="btn-primary" id="pay-btn">Pay</button>
+      <button class="btn-secondary" id="copy-btn">Copy USSD code</button>
+    </div>
+  </div>
+
+  <!-- ===================== PROFILE SCREEN ===================== -->
+  <div class="screen" id="screen-profile">
+    <div class="scroll">
+      <button class="ussd-back" id="profile-back-btn" style="padding-left:0;">&#8592;</button>
+      <h1 class="greeting-title">Profile</h1>
+      <div style="margin-top:10px;">
+        <div class="profile-row"><span class="label">Account number</span><span class="value"
+                                                                                id="profile-account"></span></div>
+        <div class="profile-row"><span class="label">Name</span><span class="value" id="profile-name"></span></div>
+        <div class="profile-row"><span class="label">Username</span><span class="value" id="profile-username"></span>
+        </div>
+        <div class="profile-row"><span class="label">Phone</span><span class="value" id="profile-phone"></span></div>
+        <div class="profile-row"><span class="label">Email</span><span class="value" id="profile-email"><span
+                id="profile-email-text"></span><span id="profile-email-badge" class="hidden" title="Verified"
+                                                     style="color:#2ECC71;margin-left:6px;">&#10003;</span></span></div>
+      </div>
+
+      <div class="profile-section-title">Login Protection</div>
+      <div class="profile-pin-section" style="padding:16px;">
+        <div id="profile-login-limit-status" style="font-size:13px;color:var(--muted);">No login waiting period is active.</div>
+      </div>
+
+      <div class="profile-section-title">Session Security</div>
+      <div class="profile-pin-section">
+        <div class="pin-display">
+          <div>
+            <div style="font-size:13px;color:var(--muted);margin-bottom:4px;">Current Session PIN</div>
+            <div class="pin-code" id="profile-pin-display">****</div>
+          </div>
+          <div class="pin-status" id="profile-pin-status">Active</div>
+        </div>
+
+        <div class="pin-change-form">
+          <div style="font-size:14px;font-weight:600;margin-bottom:8px;">Change PIN</div>
+          <input type="password" id="pin-current-password-input" placeholder="Current account password"
+                 autocomplete="current-password" style="margin-bottom:8px;" />
+          <div class="pin-input-group">
+            <input type="password" id="new-pin-input" maxlength="4" placeholder="New PIN" inputmode="numeric"
+                   autocomplete="off" />
+            <input type="password" id="confirm-pin-input" maxlength="4" placeholder="Confirm" inputmode="numeric"
+                   autocomplete="off" />
+            <button class="btn-small" id="update-pin-btn">Update</button>
+          </div>
+          <div id="pin-update-error" class="pin-error hidden"></div>
+          <div id="pin-update-success" class="pin-success hidden">PIN updated successfully!</div>
+        </div>
+      </div>
+
+      <div class="profile-section-title">Profile Details</div>
+      <div style="padding:12px 0;">
+        <label for="profile-full-name" style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Full name</label>
+        <input class="text-input" id="profile-full-name" type="text" maxlength="120" autocomplete="name" />
+        <label for="profile-username-edit" style="font-size:13px;font-weight:600;display:block;margin:14px 0 6px;">Username</label>
+        <input class="text-input" id="profile-username-edit" type="text" maxlength="50" autocomplete="username" />
+        <button class="btn-primary" id="profile-save-btn" style="margin-top:12px;">Save profile</button>
+        <div id="profile-save-error" class="pin-error hidden"></div>
+        <div id="profile-save-success" class="pin-success hidden">Profile updated successfully!</div>
+        <p style="font-size:12px;color:#6E7C82;margin-top:12px;">Email and phone number can only be changed by an administrator.</p>
+      </div>
+      <p class="field-note" style="margin-top:14px;font-size:12px;color:#6E7C82;" id="profile-note"></p>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===================== MODALS ===================== -->
+<!-- ===== MODAL: CONFIRM ===== -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-icon" id="modal-icon" aria-hidden="true">&#9888;</div>
+    <h3 id="modal-title">Notice</h3>
+    <p id="modal-message">Are you sure?</p>
+    <div style="display:flex;gap:8px;">
+      <button class="modal-btn hidden" id="modal-cancel-btn" type="button" style="background:var(--surface-2,#f0f0f0);color:var(--text,#111);">Cancel</button>
+      <button class="modal-btn" id="modal-btn" type="button">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== PIN MODAL ===================== -->
+<div class="modal-overlay" id="pin-modal-overlay">
+  <div class="modal-box">
+    <div class="modal-icon">&#128274;</div>
+    <h3 class="modal-title">Session Locked</h3>
+    <p class="modal-message" id="pin-modal-message">Enter your 4-digit PIN to continue</p>
+
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot" data-index="0">·</div>
+      <div class="pin-dot" data-index="1">·</div>
+      <div class="pin-dot" data-index="2">·</div>
+      <div class="pin-dot" data-index="3">·</div>
+    </div>
+
+    <div class="pin-error-msg" id="pin-error-msg"></div>
+
+    <input class="pin-hidden-input" id="pin-hidden-input" type="password" inputmode="numeric" maxlength="4" readonly />
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px;">
+      <button class="btn-outline pin-key" data-value="1">1</button>
+      <button class="btn-outline pin-key" data-value="2">2</button>
+      <button class="btn-outline pin-key" data-value="3">3</button>
+      <button class="btn-outline pin-key" data-value="4">4</button>
+      <button class="btn-outline pin-key" data-value="5">5</button>
+      <button class="btn-outline pin-key" data-value="6">6</button>
+      <button class="btn-outline pin-key" data-value="7">7</button>
+      <button class="btn-outline pin-key" data-value="8">8</button>
+      <button class="btn-outline pin-key" data-value="9">9</button>
+      <button class="btn-outline pin-key" data-value="clear" style="grid-column:span 1;">⌫</button>
+      <button class="btn-outline pin-key" data-value="0">0</button>
+      <button class="btn-fill pin-key" data-value="submit" style="grid-column:span 1;">↵</button>
+    </div>
+
+    <button class="btn-secondary" id="pin-logout-btn" style="margin-top:12px;width:100%;">Log out instead</button>
+  </div>
+</div>
+
+<!-- ===================== LOCKED ACCOUNT MODAL ===================== -->
+<div class="modal-overlay locked-modal" id="locked-modal-overlay">
+  <div class="modal-box">
+    <div class="modal-icon" style="font-size:48px;color:var(--error);">&#128274;</div>
+    <h3 class="modal-title" style="color:var(--error);">Account Locked</h3>
+    <p class="modal-message" id="locked-modal-message">
+      Your account has been locked due to multiple failed PIN attempts.
+      Please contact support to unlock your account.
+    </p>
+    <button class="modal-btn" id="locked-whatsapp-btn" style="background:#25D366;">&#128222; Contact Support on
+      WhatsApp</button>
+    <button class="btn-outline" id="locked-check-btn" style="margin-top:10px;width:100%;">↻ Check account status</button>
+    <button class="btn-secondary" id="locked-logout-btn" style="margin-top:8px;width:100%;">Log out</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="config.js"></script>
+<script src="deenwallet-client.js"></script>
+<script>
+  // SECURITY: escape any server-supplied string (holder names, error
+  // messages, recipient labels, etc.) before it is placed into innerHTML.
+  // Never interpolate such values raw - see renderDetectStatus() below.
+  function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+  }
+
+  (function () {
+    // Try to require auth, but if no token, we show modal instead of redirecting.
+    // We'll handle it gracefully.
+    try {
+      requireAuth();
+    } catch (e) {
+      // No token – show login modal and stop execution.
+      document.getElementById('app').innerHTML = `
+          <div style="display:flex;flex:1;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center;">
+            <div style="font-size:48px;margin-bottom:16px;">🔒</div>
+            <h2>Session Expired</h2>
+            <p style="color:var(--muted);">Please log in to continue using DeenWallet.</p>
+            <button onclick="logout()" class="btn-primary" style="margin-top:20px;">Log in</button>
+          </div>
+        `;
+      return;
+    }
+
+    let currentUser = getStoredUser();
+
+    if (sessionStorage.getItem('deenwallet_session_expired')) {
+      sessionStorage.removeItem('deenwallet_session_expired');
+      showToast('Your session expired — please log in again to continue.');
+    }
+
+    // ==============================================================
+    // CLEAR CHROME AUTOFILL
+    // ==============================================================
+    const amountEl = document.getElementById('amount');
+    const sourcePhoneEl = document.getElementById('source-phone');
+    const newPhoneEl = document.getElementById('new-recipient-phone');
+
+    if (amountEl) amountEl.value = '';
+    if (sourcePhoneEl) sourcePhoneEl.value = '';
+    if (newPhoneEl) newPhoneEl.value = '';
+
+    let checks = 0;
+    const maxChecks = 10;
+    const clearIntervalId = setInterval(() => {
+      checks++;
+      const amount = document.getElementById('amount');
+      if (amount && amount.value && (amount.value.includes('@') || amount.value.includes('mail'))) {
+        amount.value = '';
+      }
+      const source = document.getElementById('source-phone');
+      if (source && source.value && (source.value.includes('@') || source.value.includes('mail'))) {
+        source.value = '';
+      }
+      const newPhone = document.getElementById('new-recipient-phone');
+      if (newPhone && newPhone.value && (newPhone.value.includes('@') || newPhone.value.includes('mail'))) {
+        newPhone.value = '';
+      }
+      if (checks >= maxChecks) {
+        clearInterval(clearIntervalId);
+      }
+    }, 500);
+
+    // ==============================================================
+    // SESSION PIN INIT
+    // ==============================================================
+    const SESSION_TIMEOUT_MS = 20000;
+    updateSessionLastActive();
+
+    // ==============================================================
+    // STATE
+    // ==============================================================
+    let sourceProviderId = null;
+    let savedRecipients = [];
+    let selectedRecipient = null;
+    let recipientProviderId = null;
+    let recipientHolderName = null;
+    let editingRecipientId = null;
+    let currentFeePreview = null;
+    let transaction = null;
+    let countdownInterval = null;
+    let pollInterval = null;
+    window.DEENWALLET_TRANSACTION_ACTIVE = false;
+    const USSD_TTL_SECONDS = 10 * 60;
+    let sessionTimeoutId = null;
+    let pinModalActive = false;
+    let pinVerifyInFlight = false;
+    let pinAttempts = 0;
+    const MAX_PIN_ATTEMPTS = 3;
+    let supportWhatsApp = '+23280613600';
+
+    // ==============================================================
+    // ELEMENTS - STEP 1
+    // ==============================================================
+    const menuBtn = document.getElementById('menu-btn');
+    const greetingTitle = document.getElementById('greeting-title');
+    const greetingAccount = document.getElementById('greeting-account');
+    const sourcePhoneInput = document.getElementById('source-phone');
+    const sourceDetectStatus = document.getElementById('source-detect-status');
+    const amountInput = document.getElementById('amount');
+    const feeLoading = document.getElementById('fee-loading');
+    const feeError = document.getElementById('fee-error');
+    const feeErrorText = document.getElementById('fee-error-text');
+    const feeCard = document.getElementById('fee-card');
+    const feeAmountEl = document.getElementById('fee-amount');
+    const feeValueEl = document.getElementById('fee-value');
+    const feeTotalEl = document.getElementById('fee-total');
+    const step1Error = document.getElementById('step1-error');
+    const step1ErrorText = document.getElementById('step1-error-text');
+    const step1ContinueBtn = document.getElementById('step1-continue-btn');
+
+    // ==============================================================
+    // ELEMENTS - STEP 2
+    // ==============================================================
+    const screenStep1 = document.getElementById('screen-step1');
+    const screenStep2 = document.getElementById('screen-step2');
+    const screenStep3 = document.getElementById('screen-step3');
+    const screenProfile = document.getElementById('screen-profile');
+    const step2AmountDisplay = document.getElementById('step2-amount-display');
+    const recipientListLoading = document.getElementById('recipient-list-loading');
+    const recipientListError = document.getElementById('recipient-list-error');
+    const recipientListErrorText = document.getElementById('recipient-list-error-text');
+    const recipientListEl = document.getElementById('recipient-list');
+    const addRecipientBtnEmpty = document.getElementById('add-recipient-btn-empty');
+    const addRecipientForm = document.getElementById('add-recipient-form');
+    const newRecipientPhone = document.getElementById('new-recipient-phone');
+    const recipientDetectStatus = document.getElementById('recipient-detect-status');
+    const newRecipientLabel = document.getElementById('new-recipient-label');
+    const saveRecipientError = document.getElementById('save-recipient-error');
+    const saveRecipientErrorText = document.getElementById('save-recipient-error-text');
+    const cancelAddRecipientBtn = document.getElementById('cancel-add-recipient');
+    const saveRecipientBtn = document.getElementById('save-recipient-btn');
+    const step2Error = document.getElementById('step2-error');
+    const step2ErrorText = document.getElementById('step2-error-text');
+    const step2ContinueBtn = document.getElementById('step2-continue-btn');
+    const step2BackBtn = document.getElementById('step2-back-btn');
+
+    // ==============================================================
+    // ELEMENTS - STEP 3
+    // ==============================================================
+    const statusPill = document.getElementById('status-pill');
+    const ussdPayBlock = document.getElementById('ussd-pay-block');
+    const ussdResultBlock = document.getElementById('ussd-result-block');
+    const resultIcon = document.getElementById('result-icon');
+    const resultNote = document.getElementById('result-note');
+    const transactionFailureReason = document.getElementById('transaction-failure-reason');
+    const transactionFailureReasonText = document.getElementById('transaction-failure-reason-text');
+    const ussdCodeText = document.getElementById('ussd-code-text');
+    const ussdCodeBtn = document.getElementById('ussd-code-btn');
+    const ussdCountdownLabel = document.getElementById('ussd-countdown-label');
+    const ussdCountdownEl = document.getElementById('ussd-countdown');
+    const ussdRecipientName = document.getElementById('ussd-recipient-name');
+    const ussdRecipientPhone = document.getElementById('ussd-recipient-phone');
+    const ussdTotalEl = document.getElementById('ussd-total');
+    const ussdFooter = document.getElementById('ussd-footer');
+    const payBtn = document.getElementById('pay-btn');
+    const copyBtn = document.getElementById('copy-btn');
+    const step3BackBtn = document.getElementById('step3-back-btn');
+
+    // ==============================================================
+    // ELEMENTS - MODALS
+    // ==============================================================
+    const modalOverlay = document.getElementById('modal-overlay');
+    const modalIcon = document.getElementById('modal-icon');
+    const modalTitle = document.getElementById('modal-title');
+    const modalMessage = document.getElementById('modal-message');
+    const modalBtn = document.getElementById('modal-btn');
+    const modalCancelBtn = document.getElementById('modal-cancel-btn');
+
+    const pinModalOverlay = document.getElementById('pin-modal-overlay');
+    const pinDots = document.querySelectorAll('.pin-dot');
+    const pinHiddenInput = document.getElementById('pin-hidden-input');
+    const pinErrorMsg = document.getElementById('pin-error-msg');
+    const pinLogoutBtn = document.getElementById('pin-logout-btn');
+    const pinKeys = document.querySelectorAll('.pin-key');
+
+    const lockedModalOverlay = document.getElementById('locked-modal-overlay');
+    const lockedModalMessage = document.getElementById('locked-modal-message');
+    const lockedWhatsappBtn = document.getElementById('locked-whatsapp-btn');
+    const lockedLogoutBtn = document.getElementById('locked-logout-btn');
+    const lockedCheckBtn = document.getElementById('locked-check-btn');
+
+    // ==============================================================
+    // ELEMENTS - PROFILE
+    // ==============================================================
+    const profileBackBtn = document.getElementById('profile-back-btn');
+    const profilePinDisplay = document.getElementById('profile-pin-display');
+    const profileSaveBtn = document.getElementById('profile-save-btn');
+    const profileFullNameInput = document.getElementById('profile-full-name');
+    const profileUsernameEdit = document.getElementById('profile-username-edit');
+    const profileSaveError = document.getElementById('profile-save-error');
+    const profileSaveSuccess = document.getElementById('profile-save-success');
+    const profileLoginLimitStatus = document.getElementById('profile-login-limit-status');
+    const newPinInput = document.getElementById('new-pin-input');
+    const confirmPinInput = document.getElementById('confirm-pin-input');
+    const updatePinBtn = document.getElementById('update-pin-btn');
+    const pinUpdateError = document.getElementById('pin-update-error');
+    const pinUpdateSuccess = document.getElementById('pin-update-success');
+
+    // ==============================================================
+    // GREETING
+    // ==============================================================
+    greetingTitle.textContent = 'Hello, ' + ((currentUser && currentUser.firstName) || 'there');
+    greetingAccount.textContent = 'Account: ' + ((currentUser && currentUser.accountNumber) || '—');
+
+    // ==============================================================
+    // TOAST & MODAL FUNCTIONS
+    // ==============================================================
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    function showModal(icon, title, message, buttonText = 'OK', isDanger = false) {
+      modalIcon.textContent = icon || '⚠️';
+      modalTitle.textContent = title || 'Notice';
+      modalMessage.textContent = message || '';
+      modalBtn.textContent = buttonText || 'OK';
+      modalBtn.className = 'modal-btn' + (isDanger ? ' danger' : '');
+      modalBtn.onclick = null;
+      modalCancelBtn.classList.add('hidden');
+      modalOverlay.classList.add('active');
+    }
+
+    // Proper in-app confirm dialog (replaces the browser-native confirm(),
+    // which looks like a jarring native OS popup inside the wrapped app
+    // and can't be styled). Resolves true on confirm, false on cancel or
+    // dismissing via the backdrop.
+    function showConfirmModal(icon, title, message, confirmText = 'Confirm', isDanger = true) {
+      return new Promise((resolve) => {
+        modalIcon.textContent = icon || '⚠️';
+        modalTitle.textContent = title || 'Are you sure?';
+        modalMessage.textContent = message || '';
+        modalBtn.textContent = confirmText;
+        modalBtn.className = 'modal-btn' + (isDanger ? ' danger' : '');
+        modalBtn.onclick = null;
+        modalCancelBtn.textContent = 'Cancel';
+        modalCancelBtn.classList.remove('hidden');
+        modalOverlay.classList.add('active');
+
+        function cleanup(result) {
+          modalOverlay.classList.remove('active');
+          modalBtn.removeEventListener('click', onConfirm);
+          modalCancelBtn.removeEventListener('click', onCancel);
+          modalOverlay.removeEventListener('click', onBackdrop);
+          resolve(result);
+        }
+        function onConfirm() { cleanup(true); }
+        function onCancel() { cleanup(false); }
+        function onBackdrop(e) { if (e.target === modalOverlay) cleanup(false); }
+
+        modalBtn.addEventListener('click', onConfirm);
+        modalCancelBtn.addEventListener('click', onCancel);
+        modalOverlay.addEventListener('click', onBackdrop);
+      });
+    }
+
+    modalBtn.addEventListener('click', () => modalOverlay.classList.remove('active'));
+    modalOverlay.addEventListener('click', (e) => {
+      if (e.target === modalOverlay) modalOverlay.classList.remove('active');
+    });
+
+    // ==============================================================
+    // SHOW AUTH REQUIRED MODAL (no redirect)
+    // ==============================================================
+    function showAuthRequiredModal(message) {
+      showModal(
+              '🔒',
+              'Session Expired',
+              message || 'Your session has expired. Please log in again to continue.',
+              'Log in again',
+              false
+      );
+      // Override button to log out (which redirects to auth page)
+      modalBtn.textContent = 'Log in again';
+      modalBtn.onclick = function () {
+        modalOverlay.classList.remove('active');
+        logout();
+      };
+    }
+
+    // ==============================================================
+    // LOCKED ACCOUNT MODAL
+    // ==============================================================
+    function showLockedModal(message) {
+      console.log('🔒 Showing locked modal:', message);
+      if (lockedModalMessage) {
+        lockedModalMessage.textContent = message || 'Your account has been locked due to multiple failed PIN attempts. Please contact support to unlock your account.';
+      }
+      if (lockedModalOverlay) {
+        lockedModalOverlay.style.display = 'flex';
+        lockedModalOverlay.style.pointerEvents = 'auto';
+        lockedModalOverlay.style.zIndex = '99999';
+        lockedModalOverlay.classList.add('active');
+        if (window.lockedModalTimeout) {
+          clearTimeout(window.lockedModalTimeout);
+          window.lockedModalTimeout = null;
+        }
+        console.log('🔒 Locked modal is now visible and will stay open');
+      }
+    }
+
+    function hideLockedModal() {
+      if (lockedModalOverlay) {
+        lockedModalOverlay.style.display = 'none';
+        lockedModalOverlay.classList.remove('active');
+      }
+    }
+
+    if (lockedWhatsappBtn) {
+      lockedWhatsappBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        e.preventDefault();
+        const number = '+23280613600';
+        const cleanNumber = number.replace(/[^0-9+]/g, '');
+        window.open('https://wa.me/' + cleanNumber, '_blank');
+      });
+    }
+
+    if (lockedCheckBtn) {
+      lockedCheckBtn.addEventListener('click', async function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        lockedCheckBtn.disabled = true;
+        lockedCheckBtn.textContent = 'Checking…';
+        try {
+          const fresh = await apiRequest('/api/users/me');
+          localStorage.setItem(DEENWALLET_CONFIG.USER_STORAGE_KEY, JSON.stringify({
+            firstName: fresh.firstName, accountNumber: fresh.accountNumber, role: fresh.role, locked: fresh.locked
+          }));
+          if (!fresh.locked && fresh.active) {
+            sessionStorage.removeItem('deenwallet_account_locked');
+            hideLockedModal();
+            pinAttempts = 0;
+            pinHiddenInput.value = '';
+            updatePinDots();
+            showToast('Account restored. You can continue.');
+            if (!pinModalActive) showPinModal('Your account is active again. Enter your PIN to continue.');
+          } else {
+            lockedModalMessage.textContent = 'Your account is still blocked. Please wait for an administrator to unlock it.';
+          }
+        } catch (error) {
+          lockedModalMessage.textContent = error.message || 'Unable to check account status right now.';
+        } finally {
+          lockedCheckBtn.disabled = false;
+          lockedCheckBtn.textContent = '↻ Check account status';
+        }
+      });
+    }
+
+    if (lockedLogoutBtn) {
+      lockedLogoutBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        e.preventDefault();
+        console.log('🔒 User clicked logout from locked modal');
+        if (lockedModalOverlay) {
+          lockedModalOverlay.style.display = 'none';
+          lockedModalOverlay.classList.remove('active');
+        }
+        logout();
+      });
+    }
+
+    if (lockedModalOverlay) {
+      lockedModalOverlay.addEventListener('click', function (e) {
+        if (e.target === lockedModalOverlay) {
+          console.log('🔒 Overlay clicked - keeping modal open');
+        }
+      });
+    }
+
+    console.log('✅ Locked modal initialized');
+
+    // ==============================================================
+    // PIN MODAL FUNCTIONS
+    // ==============================================================
+    function showPinModal(message) {
+      pinModalActive = true;
+      pinAttempts = 0;
+      pinErrorMsg.textContent = '';
+      pinHiddenInput.value = '';
+      updatePinDots();
+
+      pinModalOverlay.style.display = 'flex';
+      pinModalOverlay.classList.add('active');
+
+      if (message) {
+        document.querySelector('#pin-modal-overlay .modal-message').textContent = message;
+      }
+
+      setTimeout(() => {
+        pinHiddenInput.focus();
+      }, 200);
+    }
+
+    function hidePinModal() {
+      pinModalActive = false;
+      pinModalOverlay.style.display = 'none';
+      pinModalOverlay.classList.remove('active');
+      if (sessionTimeoutId) {
+        clearInterval(sessionTimeoutId);
+        sessionTimeoutId = null;
+      }
+      if (typeof updateSessionLastActive === 'function') {
+        updateSessionLastActive();
+      }
+    }
+
+    function updatePinDots() {
+      const value = pinHiddenInput.value;
+      pinDots.forEach((dot, index) => {
+        const filled = index < value.length;
+        dot.textContent = filled ? '●' : '·';
+        dot.className = 'pin-dot';
+        if (filled) dot.classList.add('filled');
+        if (index === value.length) dot.classList.add('active');
+      });
+    }
+
+    // ==============================================================
+    // HELPER: get user ID from token
+    // ==============================================================
+    function getUserIdFromToken() {
+      const token = getAccessToken();
+      if (!token) return null;
+      const payload = decodeJwtPayload(token);
+      return payload?.sub || payload?.userId || null;
+    }
+
+    // ==============================================================
+    // SECURITY: verify the user's real PIN on the backend.
+    // Never obtain or embed an admin credential in the user frontend.
+    // ==============================================================
+    async function verifyPin(enteredPin) {
+      if (pinVerifyInFlight || !pinModalActive) return;
+      pinVerifyInFlight = true;
+      pinKeys.forEach(btn => btn.disabled = true);
+      pinHiddenInput.disabled = true;
+      try {
+        await apiRequest('/api/users/me/verify-pin', { method: 'POST', body: { pin: enteredPin } });
+        pinAttempts = 0;
+        pinErrorMsg.textContent = '';
+        sessionStorage.removeItem('deenwallet_account_locked');
+        hidePinModal();
+        showToast('Session unlocked');
+        if (typeof updateSessionLastActive === 'function') updateSessionLastActive();
+      } catch (error) {
+        if (isNetworkError(error)) {
+          // The PIN was never actually checked - the request never
+          // reached the server. Don't touch the attempt counter or
+          // suggest the PIN was wrong.
+          pinErrorMsg.textContent = 'No internet connection. Please check your connection and try again.';
+          pinHiddenInput.value = '';
+          updatePinDots();
+          return;
+        }
+        const locked = error.status === 423 || (error.message || '').toLowerCase().includes('locked');
+        if (locked) {
+          pinAttempts = MAX_PIN_ATTEMPTS;
+          sessionStorage.setItem('deenwallet_account_locked', 'true');
+          hidePinModal();
+          showLockedModal('Your account has been blocked because the PIN was entered incorrectly 3 times. Contact support or wait for an administrator to unlock it.');
+        } else if (error.status === 401) {
+          // The session itself is dead (token expired and refresh also
+          // failed/unavailable) - this is not a wrong PIN, so don't burn
+          // an attempt. Send them back to a full login instead.
+          hidePinModal();
+          clearTokens();
+          pinErrorMsg.textContent = '';
+          window.location.href = 'auth.html';
+        } else {
+          pinAttempts = Math.min(MAX_PIN_ATTEMPTS, pinAttempts + 1);
+          const remaining = Math.max(0, MAX_PIN_ATTEMPTS - pinAttempts);
+          pinErrorMsg.textContent = `Incorrect PIN. ${remaining} attempt(s) remaining.`;
+          pinDots.forEach(dot => dot.classList.add('error'));
+          setTimeout(() => pinDots.forEach(dot => dot.classList.remove('error')), 250);
+          pinHiddenInput.value = '';
+          updatePinDots();
+        }
+      } finally {
+        pinVerifyInFlight = false;
+        pinKeys.forEach(btn => btn.disabled = false);
+        pinHiddenInput.disabled = false;
+        if (pinModalActive) setTimeout(() => pinHiddenInput.focus(), 20);
+      }
+    }
+
+    // ==============================================================
+    // SESSION MANAGEMENT
+    // ==============================================================
+    function handleVisibilityChange() {
+      if (document.hidden) {
+        if (typeof updateSessionLastActive === 'function') {
+          updateSessionLastActive();
+        }
+      } else {
+        // Always re-verify with PIN on returning to the app, regardless
+        // of how briefly it was backgrounded - this is deliberate, not
+        // just the inactivity-timeout check below.
+        if (!pinModalActive && getAccessToken()) {
+          showPinModal('Enter your PIN to continue.');
+        } else if (typeof updateSessionLastActive === 'function') {
+          updateSessionLastActive();
+        }
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    window.addEventListener('blur', () => {
+      if (typeof updateSessionLastActive === 'function') {
+        updateSessionLastActive();
+      }
+    });
+
+    window.addEventListener('focus', () => {
+      if (!pinModalActive && getAccessToken()) {
+        showPinModal('Enter your PIN to continue.');
+      } else if (typeof updateSessionLastActive === 'function') {
+        updateSessionLastActive();
+      }
+    });
+
+    let idleTimeout = null;
+
+    function resetIdleTimer() {
+      if (typeof updateSessionLastActive === 'function') {
+        updateSessionLastActive();
+      }
+      if (idleTimeout) clearTimeout(idleTimeout);
+      if (pinModalActive) return;
+      idleTimeout = setTimeout(() => {
+        const expired = typeof isSessionExpired === 'function' ? isSessionExpired(SESSION_TIMEOUT_MS) : false;
+        if (expired && !pinModalActive) {
+          showPinModal('Your session timed out. Enter your PIN to continue.');
+        }
+      }, SESSION_TIMEOUT_MS + 5000);
+    }
+
+    document.addEventListener('mousemove', resetIdleTimer);
+    document.addEventListener('keydown', resetIdleTimer);
+    document.addEventListener('touchstart', resetIdleTimer);
+
+    // ==============================================================
+    // MENU
+    // ==============================================================
+    let menuOpen = false;
+
+    function closeMenu() {
+      const existing = document.getElementById('menu-dropdown');
+      if (existing) existing.remove();
+      menuOpen = false;
+    }
+
+    menuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (menuOpen) { closeMenu(); return; }
+      const dropdown = document.createElement('div');
+      dropdown.className = 'menu-dropdown';
+      dropdown.id = 'menu-dropdown';
+      dropdown.innerHTML =
+              '<button id="menu-profile">Profile</button>' +
+              '<div class="menu-divider"></div>' +
+              '<button id="menu-history">History</button>' +
+              '<div class="menu-divider"></div>' +
+              '<button id="menu-logout" class="danger">Log out</button>';
+      document.getElementById('app').appendChild(dropdown);
+      menuOpen = true;
+
+      document.getElementById('menu-profile').addEventListener('click', () => {
+        closeMenu();
+        openProfile();
+      });
+      document.getElementById('menu-history').addEventListener('click', () => {
+        window.location.href = 'transactions.html';
+      });
+      document.getElementById('menu-logout').addEventListener('click', () => {
+        closeMenu();
+        logout();
+      });
+    });
+
+    document.addEventListener('click', closeMenu);
+
+    // ==============================================================
+    // PROFILE - OPTIMISED WITH LOADING STATE
+    // ==============================================================
+    async function openProfile() {
+      document.getElementById('profile-account').textContent = (currentUser && currentUser.accountNumber) || '—';
+      document.getElementById('profile-name').textContent = (currentUser && currentUser.firstName) || '—';
+      document.getElementById('profile-username').textContent = 'Loading…';
+      document.getElementById('profile-phone').textContent = 'Loading…';
+      document.getElementById('profile-email-text').textContent = 'Loading…';
+      document.getElementById('profile-note').textContent = '';
+      if (profileLoginLimitStatus) profileLoginLimitStatus.textContent = 'Loading login protection…';
+
+      document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+      screenProfile.classList.add('active');
+
+      if (profilePinDisplay) profilePinDisplay.textContent = '••••';
+
+      try {
+        const profile = await apiRequest('/api/users/me');
+        document.getElementById('profile-account').textContent = profile.accountNumber || '—';
+        document.getElementById('profile-name').textContent = profile.fullName || profile.firstName || '—';
+        document.getElementById('profile-username').textContent = profile.username || '—';
+        if (profileFullNameInput) profileFullNameInput.value = profile.fullName || '';
+        if (profileUsernameEdit) profileUsernameEdit.value = profile.username || '';
+        document.getElementById('profile-phone').textContent = profile.phone || '—';
+        document.getElementById('profile-email-text').textContent = profile.email || '—';
+        document.getElementById('profile-email-badge').classList.toggle('hidden', !profile.emailVerified);
+        if (profileLoginLimitStatus) {
+          if (profile.loginLockedUntil && new Date(profile.loginLockedUntil).getTime() > Date.now()) {
+            profileLoginLimitStatus.textContent = 'Login temporarily paused until ' + new Date(profile.loginLockedUntil).toLocaleString() + '. Please try again later or contact support.';
+          } else {
+            profileLoginLimitStatus.textContent = 'No login waiting period is active. Failed attempts recorded: ' + (profile.loginFailedAttempts || 0) + '.';
+          }
+        }
+        document.getElementById('profile-note').textContent = '';
+      } catch (error) {
+        console.error('Profile load error:', error);
+        document.getElementById('profile-username').textContent = '—';
+        document.getElementById('profile-phone').textContent = '—';
+        document.getElementById('profile-email-text').textContent = '—';
+        if (error.status === 401 || error.status === 403) {
+          showAuthRequiredModal('Your session has expired. Please log in again.');
+        } else {
+          let msg = error.message || "Couldn't load profile.";
+          document.getElementById('profile-note').textContent = msg;
+        }
+      }
+    }
+
+    if (profileSaveBtn) {
+      profileSaveBtn.addEventListener('click', async function () {
+        const fullName = profileFullNameInput ? profileFullNameInput.value.trim() : '';
+        const username = profileUsernameEdit ? profileUsernameEdit.value.trim() : '';
+        if (profileSaveError) profileSaveError.classList.add('hidden');
+        if (profileSaveSuccess) profileSaveSuccess.classList.add('hidden');
+        if (!fullName || !username) {
+          if (profileSaveError) { profileSaveError.textContent = 'Full name and username are required.'; profileSaveError.classList.remove('hidden'); }
+          return;
+        }
+        profileSaveBtn.disabled = true; profileSaveBtn.textContent = 'Saving...';
+        try {
+          const updated = await apiRequest('/api/users/me/profile', { method: 'PUT', body: { fullName, username } });
+          document.getElementById('profile-name').textContent = updated.fullName || updated.firstName || '—';
+          document.getElementById('profile-username').textContent = updated.username || '—';
+          if (profileSaveSuccess) profileSaveSuccess.classList.remove('hidden');
+          showToast('Profile updated successfully');
+        } catch (error) {
+          if (profileSaveError) { profileSaveError.textContent = error.message || 'Failed to update profile.'; profileSaveError.classList.remove('hidden'); }
+        } finally { profileSaveBtn.disabled = false; profileSaveBtn.textContent = 'Save profile'; }
+      });
+    }
+
+    profileBackBtn.addEventListener('click', () => {
+      screenProfile.classList.remove('active');
+      screenStep1.classList.add('active');
+      if (profilePinDisplay) profilePinDisplay.textContent = '••••';
+    });
+
+    // ==============================================================
+    // PROFILE PIN MANAGEMENT
+    // ==============================================================
+    function updateProfilePinDisplay() {
+      if (profilePinDisplay) profilePinDisplay.textContent = '••••';
+    }
+    updateProfilePinDisplay();
+
+    const pinCurrentPasswordInput = document.getElementById('pin-current-password-input');
+
+    updatePinBtn.addEventListener('click', async function () {
+      const newPin = newPinInput.value.trim();
+      const confirmPin = confirmPinInput.value.trim();
+      const currentPassword = pinCurrentPasswordInput ? pinCurrentPasswordInput.value : '';
+
+      pinUpdateError.classList.add('hidden');
+      pinUpdateSuccess.classList.add('hidden');
+
+      if (!currentPassword) {
+        pinUpdateError.textContent = 'Enter your current account password to change your PIN.';
+        pinUpdateError.classList.remove('hidden');
+        return;
+      }
+
+      if (newPin.length !== 4 || !/^\d{4}$/.test(newPin)) {
+        pinUpdateError.textContent = 'PIN must be exactly 4 digits.';
+        pinUpdateError.classList.remove('hidden');
+        return;
+      }
+
+      if (newPin !== confirmPin) {
+        pinUpdateError.textContent = 'PINs do not match.';
+        pinUpdateError.classList.remove('hidden');
+        return;
+      }
+
+      try {
+        await apiRequest('/api/users/me/pin', { method: 'POST', body: { pin: newPin, currentPassword: currentPassword } });
+      } catch (error) {
+        pinUpdateError.textContent = error.message || 'Failed to update PIN.';
+        pinUpdateError.classList.remove('hidden');
+        return;
+      }
+      if (profilePinDisplay) profilePinDisplay.textContent = '••••';
+      pinUpdateSuccess.textContent = 'PIN updated successfully!';
+      pinUpdateSuccess.classList.remove('hidden');
+      newPinInput.value = '';
+      confirmPinInput.value = '';
+      if (pinCurrentPasswordInput) pinCurrentPasswordInput.value = '';
+      setTimeout(() => {
+        pinUpdateSuccess.classList.add('hidden');
+      }, 3000);
+      showToast('Session PIN updated successfully');
+    });
+
+    newPinInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') confirmPinInput.focus();
+    });
+    confirmPinInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') updatePinBtn.click();
+    });
+    newPinInput.addEventListener('input', function () {
+      this.value = this.value.replace(/[^0-9]/g, '').slice(0, 4);
+    });
+    confirmPinInput.addEventListener('input', function () {
+      this.value = this.value.replace(/[^0-9]/g, '').slice(0, 4);
+    });
+
+    // ==============================================================
+    // STEP 1: FROM + AMOUNT
+    // ==============================================================
+    let sourceDetectDebounce = null;
+    let sourceDetectRequestId = 0;
+    let feeDebounce = null;
+    let feeRequestId = 0;
+
+    sourcePhoneInput.addEventListener('input', (e) => {
+      e.target.value = onlyDigits(e.target.value).slice(0, 9);
+      sourceProviderId = null;
+      hide(sourceDetectStatus);
+      updateStep1State();
+
+      if (sourceDetectDebounce) clearTimeout(sourceDetectDebounce);
+      const localPhone = e.target.value;
+      if (localPhone.length < 8) return;
+      sourceDetectDebounce = setTimeout(() => runSourceDetect(localPhone), 600);
+    });
+
+    async function runSourceDetect(localPhone) {
+      const requestId = ++sourceDetectRequestId;
+      renderDetectStatus(sourceDetectStatus, { status: 'loading' });
+
+      try {
+        const result = await detectProviderAndName(localPhone);
+        if (requestId !== sourceDetectRequestId) return;
+        if (result.status === 'ok') {
+          sourceProviderId = result.providerId;
+        } else {
+          sourceProviderId = null;
+        }
+        renderDetectStatus(sourceDetectStatus, result, { context: 'source' });
+        updateStep1State();
+      } catch (error) {
+        if (error.status === 401 || error.status === 403) {
+          showAuthRequiredModal(error.message || 'Session expired. Please log in again.');
+        } else {
+          // other errors – show in status
+          renderDetectStatus(sourceDetectStatus, { status: 'error', message: error.message || 'Could not check number.' });
+        }
+      }
+    }
+
+    amountInput.addEventListener('focus', function () {
+      const val = this.value;
+      if (val && (val.includes('@') || val.includes('mail') || isNaN(val.replace('.', '')))) {
+        this.value = '';
+      }
+    });
+
+    amountInput.addEventListener('input', (e) => {
+      e.target.value = e.target.value.replace(/[^\d.]/g, '');
+      if (e.target.value.includes('@') || e.target.value.includes('mail')) {
+        e.target.value = '';
+      }
+
+      currentFeePreview = null;
+      hide(feeCard);
+      hide(feeError);
+      updateStep1State();
+
+      if (feeDebounce) clearTimeout(feeDebounce);
+      const val = e.target.value;
+      if (val && val.length > 0 && !isNaN(val) && Number(val) >= 1) {
+        feeDebounce = setTimeout(maybePreviewFee, 500);
+      }
+    });
+
+    async function maybePreviewFee() {
+      const amount = Number(amountInput.value);
+      const validAmount = amountInput.value.trim().length > 0 && Number.isFinite(amount) && amount >= 1;
+      if (!validAmount) return;
+
+      const requestId = ++feeRequestId;
+      show(feeLoading);
+      hide(feeError);
+
+      try {
+        const result = await previewFee(amount);
+        if (requestId !== feeRequestId) return;
+        currentFeePreview = result;
+        feeAmountEl.textContent = formatMoney(result.amount) + ' SLE';
+        feeValueEl.textContent = formatMoney(result.fee) + ' SLE';
+        feeTotalEl.textContent = formatMoney(result.totalCharged) + ' SLE';
+        show(feeCard);
+      } catch (error) {
+        if (requestId !== feeRequestId) return;
+        currentFeePreview = null;
+        if (error.status === 401 || error.status === 403) {
+          showAuthRequiredModal(error.message || 'Your session has expired. Please log in again.');
+        } else {
+          feeErrorText.textContent = error.message || "Couldn't calculate fees right now.";
+          show(feeError);
+        }
+      } finally {
+        if (requestId === feeRequestId) hide(feeLoading);
+        updateStep1State();
+      }
+    }
+
+    function updateStep1State() {
+      step1ContinueBtn.disabled = !(sourceProviderId && currentFeePreview);
+    }
+
+    step1ContinueBtn.addEventListener('click', () => {
+      if (!sourceProviderId || !currentFeePreview) return;
+
+      step2AmountDisplay.textContent = 'Amount: SLE ' + formatMoney(currentFeePreview.totalCharged);
+
+      screenStep1.classList.remove('active');
+      screenStep2.classList.add('active');
+
+      loadRecipients();
+    });
+
+    // ==============================================================
+    // STEP 2: RECIPIENT SELECTION
+    // ==============================================================
+    async function loadRecipients() {
+      show(recipientListLoading);
+      hide(recipientListError);
+      hide(recipientListEl);
+      hide(addRecipientBtnEmpty);
+
+      try {
+        const data = await apiRequest('/api/recipients');
+        savedRecipients = data || [];
+        renderRecipientList();
+      } catch (error) {
+        if (error.status === 401 || error.status === 403) {
+          showAuthRequiredModal(error.message || 'Your session has expired. Please log in again.');
+        } else {
+          recipientListErrorText.textContent = error.message || "Couldn't load your saved recipients.";
+          show(recipientListError);
+          show(addRecipientBtnEmpty);
+          addRecipientBtnEmpty.textContent = '+ Add a recipient';
+        }
+      } finally {
+        hide(recipientListLoading);
+      }
+    }
+
+    function renderRecipientList() {
+      recipientListEl.innerHTML = '';
+
+      if (savedRecipients.length === 0) {
+        show(addRecipientBtnEmpty);
+        addRecipientBtnEmpty.textContent = '+ Add a recipient';
+        hide(recipientListEl);
+        return;
+      }
+
+      show(addRecipientBtnEmpty);
+      addRecipientBtnEmpty.textContent = '+ Add a recipient';
+      show(recipientListEl);
+
+      savedRecipients.forEach((recipient) => {
+        const row = document.createElement('div');
+        row.className = 'recipient-option' + (selectedRecipient && selectedRecipient.id === recipient.id ? ' selected' : '');
+
+        const info = document.createElement('div');
+        info.className = 'info';
+        const name = document.createElement('span');
+        name.className = 'name';
+        name.textContent = recipient.label || recipient.holderName || recipient.phoneNumber;
+        const meta = document.createElement('span');
+        meta.className = 'meta';
+        meta.textContent = recipient.phoneNumber + ' · ' + providerName(recipient.providerId);
+        info.appendChild(name);
+        info.appendChild(meta);
+
+        const check = document.createElement('span');
+        check.className = 'check';
+        check.textContent = '\u2713';
+
+        const actions = document.createElement('div');
+        actions.className = 'actions';
+
+        const editBtn = document.createElement('button');
+        editBtn.className = 'icon-btn';
+        editBtn.title = 'Edit label';
+        editBtn.textContent = '\u270E';
+        editBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openEditRecipient(recipient);
+        });
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'icon-btn danger';
+        deleteBtn.title = 'Delete recipient';
+        deleteBtn.textContent = '\u2716';
+        deleteBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          deleteRecipient(recipient);
+        });
+
+        actions.appendChild(editBtn);
+        actions.appendChild(deleteBtn);
+        actions.appendChild(check);
+
+        row.appendChild(info);
+        row.appendChild(actions);
+
+        row.addEventListener('click', () => {
+          selectedRecipient = recipient;
+          renderRecipientList();
+          updateStep2State();
+        });
+
+        recipientListEl.appendChild(row);
+      });
+    }
+
+    function updateStep2State() {
+      step2ContinueBtn.disabled = !selectedRecipient;
+    }
+
+    step2BackBtn.addEventListener('click', () => {
+      screenStep2.classList.remove('active');
+      screenStep1.classList.add('active');
+    });
+
+    step2ContinueBtn.addEventListener('click', async () => {
+      if (!selectedRecipient || !currentFeePreview) return;
+
+      hide(step2Error);
+      step2ContinueBtn.disabled = true;
+      step2ContinueBtn.innerHTML = '<div class="spinner"></div>';
+
+      const sourceLocalPhone = onlyDigits(sourcePhoneInput.value);
+
+      const payload = {
+        amount: currentFeePreview.amount,
+        sourceProviderId: sourceProviderId,
+        sourcePhone: toE164SL(sourceLocalPhone),
+        destinationProviderId: selectedRecipient.providerId,
+        destinationPhone: selectedRecipient.phoneNumber,
+        recipientId: selectedRecipient.id,
+      };
+
+      try {
+        window.DEENWALLET_TRANSACTION_ACTIVE = true;
+        const data = await apiRequest('/api/transactions', { method: 'POST', body: payload });
+        transaction = normalizeTransaction(data);
+        openStep3();
+      } catch (error) {
+        window.DEENWALLET_TRANSACTION_ACTIVE = false;
+        if (error.status === 401 || error.status === 403) {
+          showAuthRequiredModal(error.message || 'Your session has expired. Please log in again.');
+        } else {
+          step2ErrorText.textContent = error.message || 'Something went wrong. Please try again.';
+          show(step2Error);
+        }
+      } finally {
+        step2ContinueBtn.disabled = false;
+        step2ContinueBtn.textContent = 'Continue';
+      }
+    });
+
+    // ==============================================================
+    // RECIPIENT CRUD
+    // ==============================================================
+    let recipientDetectDebounce = null;
+    let recipientDetectRequestId = 0;
+
+    addRecipientBtnEmpty.addEventListener('click', openAddRecipientForm);
+
+    function openAddRecipientForm() {
+      editingRecipientId = null;
+      hide(recipientListEl);
+      hide(addRecipientBtnEmpty);
+      hide(saveRecipientError);
+      hide(recipientDetectStatus);
+      newRecipientPhone.value = '';
+      newRecipientLabel.value = '';
+      newRecipientPhone.disabled = false;
+      document.getElementById('new-recipient-phone-wrap').style.opacity = '1';
+      recipientProviderId = null;
+      recipientHolderName = null;
+      saveRecipientBtn.disabled = true;
+      saveRecipientBtn.textContent = 'Save recipient';
+      show(addRecipientForm);
+    }
+
+    function openEditRecipient(recipient) {
+      editingRecipientId = recipient.id;
+      hide(recipientListEl);
+      hide(addRecipientBtnEmpty);
+      hide(saveRecipientError);
+      hide(recipientDetectStatus);
+
+      newRecipientPhone.value = onlyDigits(recipient.phoneNumber.replace('+232', ''));
+      newRecipientPhone.disabled = true;
+      document.getElementById('new-recipient-phone-wrap').style.opacity = '1';
+
+      newRecipientLabel.value = recipient.label || '';
+      recipientProviderId = recipient.providerId;
+      recipientHolderName = recipient.holderName;
+      saveRecipientBtn.disabled = false;
+      saveRecipientBtn.textContent = 'Save changes';
+      show(addRecipientForm);
+    }
+
+    cancelAddRecipientBtn.addEventListener('click', () => {
+      hide(addRecipientForm);
+      renderRecipientList();
+    });
+
+    newRecipientPhone.addEventListener('input', (e) => {
+      e.target.value = onlyDigits(e.target.value).slice(0, 9);
+      recipientProviderId = null;
+      recipientHolderName = null;
+      hide(recipientDetectStatus);
+      saveRecipientBtn.disabled = true;
+
+      if (recipientDetectDebounce) clearTimeout(recipientDetectDebounce);
+      const localPhone = e.target.value;
+      if (localPhone.length < 8) return;
+      recipientDetectDebounce = setTimeout(() => runRecipientDetect(localPhone), 600);
+    });
+
+    async function runRecipientDetect(localPhone) {
+      const requestId = ++recipientDetectRequestId;
+      renderDetectStatus(recipientDetectStatus, { status: 'loading' });
+
+      try {
+        const result = await detectProviderAndName(localPhone);
+        if (requestId !== recipientDetectRequestId) return;
+        if (result.status === 'ok') {
+          recipientProviderId = result.providerId;
+          recipientHolderName = result.holderName;
+          saveRecipientBtn.disabled = false;
+        } else {
+          recipientProviderId = null;
+          recipientHolderName = null;
+          saveRecipientBtn.disabled = true;
+        }
+        renderDetectStatus(recipientDetectStatus, result, { context: 'recipient' });
+      } catch (error) {
+        if (error.status === 401 || error.status === 403) {
+          showAuthRequiredModal(error.message || 'Session expired. Please log in again.');
+        } else {
+          renderDetectStatus(recipientDetectStatus, { status: 'error', message: error.message || 'Could not check number.' });
+        }
+      }
+    }
+
+    saveRecipientBtn.addEventListener('click', async () => {
+      hide(saveRecipientError);
+
+      if (editingRecipientId) {
+        const label = newRecipientLabel.value.trim();
+        saveRecipientBtn.disabled = true;
+        saveRecipientBtn.innerHTML = '<div class="spinner"></div>';
+        try {
+          const updated = await apiRequest('/api/recipients/' + editingRecipientId, {
+            method: 'PUT',
+            body: { label: label || null },
+          });
+          const idx = savedRecipients.findIndex((r) => r.id === editingRecipientId);
+          if (idx !== -1) savedRecipients[idx] = updated;
+          hide(addRecipientForm);
+          renderRecipientList();
+          showToast('Recipient updated successfully');
+        } catch (error) {
+          if (error.status === 401 || error.status === 403) {
+            showAuthRequiredModal(error.message || 'Session expired. Please log in again.');
+          } else {
+            saveRecipientErrorText.textContent = error.message || "Couldn't update this recipient.";
+            show(saveRecipientError);
+          }
+        } finally {
+          saveRecipientBtn.disabled = false;
+          saveRecipientBtn.textContent = 'Save changes';
+        }
+        return;
+      }
+
+      if (!recipientProviderId) {
+        saveRecipientErrorText.textContent = 'Enter a valid Orange Money or Africell number first.';
+        show(saveRecipientError);
+        return;
+      }
+
+      const localPhone = onlyDigits(newRecipientPhone.value);
+      const label = newRecipientLabel.value.trim();
+
+      saveRecipientBtn.disabled = true;
+      saveRecipientBtn.innerHTML = '<div class="spinner"></div>';
+
+      try {
+        const payload = {
+          phoneNumber: toE164SL(localPhone),
+          providerId: recipientProviderId,
+          holderName: recipientHolderName || undefined,
+          label: label || undefined,
+        };
+        const saved = await apiRequest('/api/recipients', { method: 'POST', body: payload });
+        savedRecipients.push(saved);
+        selectedRecipient = saved;
+        hide(addRecipientForm);
+        renderRecipientList();
+        updateStep2State();
+        showToast('Recipient saved successfully');
+      } catch (error) {
+        if (error.status === 401 || error.status === 403) {
+          showAuthRequiredModal(error.message || 'Session expired. Please log in again.');
+        } else {
+          saveRecipientErrorText.textContent = error.message || "Couldn't save this recipient.";
+          show(saveRecipientError);
+        }
+      } finally {
+        saveRecipientBtn.disabled = false;
+        saveRecipientBtn.textContent = 'Save recipient';
+      }
+    });
+
+    async function deleteRecipient(recipient) {
+      const displayName = recipient.label || recipient.holderName || recipient.phoneNumber;
+      const confirmed = await showConfirmModal(
+              '🗑️',
+              'Remove Recipient',
+              'Remove ' + displayName + ' from your saved recipients? This cannot be undone.',
+              'Remove',
+              true
+      );
+      if (!confirmed) return;
+
+      try {
+        await apiRequest('/api/recipients/' + recipient.id, { method: 'DELETE' });
+        savedRecipients = savedRecipients.filter((r) => r.id !== recipient.id);
+        if (selectedRecipient && selectedRecipient.id === recipient.id) selectedRecipient = null;
+        renderRecipientList();
+        updateStep2State();
+        showToast('Recipient removed successfully');
+      } catch (error) {
+        if (error.status === 401 || error.status === 403) {
+          showAuthRequiredModal(error.message || 'Session expired. Please log in again.');
+        } else {
+          const errorMsg = error.message || "Couldn't delete this recipient.";
+          if (errorMsg.toLowerCase().includes('transaction')) {
+            showModal('🔒', 'Cannot Delete Recipient',
+                    'This recipient has transaction history and cannot be deleted.',
+                    'OK', true);
+          } else {
+            showModal('⚠️', 'Delete Failed', errorMsg, 'OK', true);
+          }
+        }
+      }
+    }
+
+    // ==============================================================
+    // HELPER: renderDetectStatus
+    // ==============================================================
+    function renderDetectStatus(container, result, opts) {
+      opts = opts || {};
+      show(container);
+      if (result.status === 'loading') {
+        container.className = 'detect-status loading';
+        container.innerHTML = '<div class="spinner dark"></div><span>Checking this number…</span>';
+        return;
+      }
+      if (result.status === 'ok') {
+        container.className = 'detect-status ok-fields';
+        let html = '<div class="detect-field"><div class="detect-field-label">Provider</div><div class="detect-field-value">' +
+                escapeHtml(providerName(result.providerId)) + '</div></div>';
+        if (opts.context !== 'source' && result.holderName) {
+          html += '<div class="detect-field"><div class="detect-field-label">Recipient Name</div><div class="detect-field-value">' +
+                  escapeHtml(result.holderName) + '</div></div>';
+        }
+        container.innerHTML = html;
+        return;
+      }
+      if (result.status === 'frozen') {
+        container.className = 'detect-status frozen';
+        container.innerHTML = '<span>&#8987;</span><span>' + escapeHtml(result.message) + '</span>';
+        return;
+      }
+      container.className = 'detect-status unsupported';
+      container.innerHTML = '<span>&#9888;</span><span>' + escapeHtml(result.message) + '</span>';
+    }
+
+    // ==============================================================
+    // STEP 3: USSD
+    // ==============================================================
+    function openStep3() {
+      screenStep2.classList.remove('active');
+      screenStep3.classList.add('active');
+      renderTransactionState();
+      if (transaction.status === 'AWAITING_PAYMENT') startCountdown();
+      startPolling();
+    }
+
+    function renderTransactionState() {
+      const txnDisplay = transaction.transactionCode || transaction.id;
+
+      ussdRecipientName.textContent = transaction.destinationHolderName || '—';
+      ussdRecipientPhone.textContent = transaction.destinationPhone || '—';
+      ussdTotalEl.textContent = formatMoney(transaction.totalCharged) + ' SLE';
+      ussdCodeText.textContent = transaction.ussdCode || '';
+
+      const status = transaction.status;
+      statusPill.textContent = statusLabel(status);
+      statusPill.className = 'status-pill ' + (
+              status === 'AWAITING_PAYMENT' ? 'awaiting' :
+                      status === 'COMPLETED' ? 'success' :
+                              status === 'FAILED' ? 'failed' : 'progress'
+      );
+
+      if (status === 'AWAITING_PAYMENT') {
+        show(ussdPayBlock);
+        hide(ussdResultBlock);
+        show(ussdFooter);
+        payBtn.classList.remove('hidden');
+      } else {
+        hide(ussdPayBlock);
+        show(ussdResultBlock);
+        if (status === 'PAID_IN') {
+          resultIcon.textContent = '\u2705';
+          resultNote.textContent = 'Payment received. Preparing the transfer…';
+        } else if (status === 'PAYING_OUT') {
+          resultIcon.textContent = '\u23F3';
+          resultNote.textContent = "Sending funds to the recipient's mobile money account…";
+        } else if (status === 'COMPLETED') {
+          resultIcon.textContent = '\u2705';
+          resultNote.textContent = 'Done — the recipient has received the funds.';
+        } else if (status === 'FAILED') {
+          resultIcon.textContent = '\u26A0\uFE0F';
+          resultNote.textContent = 'This transfer could not be completed. Contact support if funds were debited.';
+          if (transactionFailureReason && transactionFailureReasonText) {
+            transactionFailureReasonText.textContent = transaction.failureReason || 'The transfer could not be completed by the payment provider.';
+            transactionFailureReason.classList.remove('hidden');
+          }
+        } else if (transactionFailureReason) {
+          transactionFailureReason.classList.add('hidden');
+        }
+        if (status === 'COMPLETED' || status === 'FAILED') {
+          hide(ussdFooter);
+        } else {
+          show(ussdFooter);
+          payBtn.classList.add('hidden');
+          copyBtn.classList.add('hidden');
+        }
+      }
+    }
+
+    function startCountdown() {
+      let secondsLeft = USSD_TTL_SECONDS;
+      renderCountdown(secondsLeft);
+      if (countdownInterval) clearInterval(countdownInterval);
+      countdownInterval = setInterval(() => {
+        secondsLeft -= 1;
+        renderCountdown(secondsLeft);
+        if (secondsLeft <= 0) clearInterval(countdownInterval);
+      }, 1000);
+    }
+
+    function renderCountdown(secondsLeft) {
+      const expired = secondsLeft <= 0;
+      ussdCountdownLabel.textContent = expired ? 'USSD code has expired' : 'USSD code expires in';
+      ussdCountdownEl.textContent = expired ? '' : formatCountdown(secondsLeft);
+      payBtn.disabled = expired;
+    }
+
+    function startPolling() {
+      if (pollInterval) clearInterval(pollInterval);
+
+      async function poll() {
+        if (!transaction) return;
+        try {
+          const data = await apiRequest('/api/transactions/' + transaction.id);
+          transaction = normalizeTransaction(data);
+          renderTransactionState();
+          if (transaction.status === 'COMPLETED' || transaction.status === 'FAILED') {
+            window.DEENWALLET_TRANSACTION_ACTIVE = false;
+            clearInterval(pollInterval);
+            if (countdownInterval) clearInterval(countdownInterval);
+          }
+        } catch (error) {
+          if (error.status === 401 || error.status === 403) {
+            clearInterval(pollInterval);
+            if (countdownInterval) clearInterval(countdownInterval);
+            showAuthRequiredModal('Your session has expired. Please log in again.');
+          }
+        }
+      }
+
+      poll(); // don't wait a full interval for the first check
+      pollInterval = setInterval(poll, DEENWALLET_CONFIG.TRANSACTION_POLL_INTERVAL_MS);
+    }
+
+    copyBtn.addEventListener('click', () => {
+      if (!transaction || !transaction.ussdCode) return;
+      navigator.clipboard.writeText(transaction.ussdCode).then(() => {
+        showToast('Copied USSD code to clipboard');
+      }).catch(() => {
+        showToast('Could not copy — copy it manually');
+      });
+    });
+
+    ussdCodeBtn.addEventListener('click', () => {
+      copyBtn.click();
+    });
+
+    payBtn.addEventListener('click', () => {
+      if (!transaction || !transaction.ussdCode) return;
+      window.location.href = 'tel:' + encodeURIComponent(transaction.ussdCode);
+    });
+
+    step3BackBtn.addEventListener('click', () => {
+      window.DEENWALLET_TRANSACTION_ACTIVE = false;
+      if (countdownInterval) clearInterval(countdownInterval);
+      if (pollInterval) clearInterval(pollInterval);
+      screenStep3.classList.remove('active');
+      screenStep2.classList.add('active');
+    });
+
+    // ==============================================================
+    // STARTUP CHECK – locked account
+    // ==============================================================
+    if (sessionStorage.getItem('deenwallet_account_locked') === 'true') {
+      showLockedModal('Your account has been locked. Please contact support.');
+    }
+
+    // ==============================================================
+    // INIT
+    // ==============================================================
+    updateStep1State();
+    updateStep2State();
+    if (getAccessToken() && !pinModalActive) {
+      showPinModal('Enter your PIN to continue.');
+    }
+    resetIdleTimer();
+
+    console.log('DeenWallet initialized successfully');
+
+    // ==============================================================
+    // ✅ PIN MODAL EVENT LISTENERS
+    // ==============================================================
+    pinKeys.forEach(btn => {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const val = this.dataset.value;
+
+        if (val === 'clear') {
+          pinHiddenInput.value = pinHiddenInput.value.slice(0, -1);
+          pinErrorMsg.textContent = '';
+          updatePinDots();
+          pinHiddenInput.focus();
+        } else if (val === 'submit') {
+          const entered = pinHiddenInput.value;
+          if (entered.length === 4) {
+            verifyPin(entered);
+          } else {
+            pinErrorMsg.textContent = 'Please enter exactly 4 digits.';
+          }
+        } else {
+          if (pinHiddenInput.value.length < 4) {
+            pinHiddenInput.value += val;
+            updatePinDots();
+            pinErrorMsg.textContent = '';
+            if (pinHiddenInput.value.length === 4) {
+              verifyPin(pinHiddenInput.value);
+            }
+          }
+          pinHiddenInput.focus();
+        }
+      });
+    });
+
+    pinLogoutBtn.addEventListener('click', function () {
+      logout();
+    });
+
+    pinHiddenInput.addEventListener('keydown', function (e) {
+      if (e.key >= '0' && e.key <= '9') {
+        e.preventDefault();
+        if (pinHiddenInput.value.length < 4) {
+          pinHiddenInput.value += e.key;
+          updatePinDots();
+          pinErrorMsg.textContent = '';
+          if (pinHiddenInput.value.length === 4) {
+            verifyPin(pinHiddenInput.value);
+          }
+        }
+      } else if (e.key === 'Backspace') {
+        e.preventDefault();
+        pinHiddenInput.value = pinHiddenInput.value.slice(0, -1);
+        pinErrorMsg.textContent = '';
+        updatePinDots();
+      } else if (e.key === 'Enter' && pinHiddenInput.value.length === 4) {
+        e.preventDefault();
+        verifyPin(pinHiddenInput.value);
+      } else {
+        // Block every other key (letters, paste-triggering combos, etc.)
+        // from doing anything to a readonly field.
+        e.preventDefault();
+      }
+    });
+
+    console.log('✅ PIN modal event listeners attached');
+
+    // ==============================================================
+    // ANDROID BACK BUTTON HOOK (see deenwallet-client.js)
+    // ==============================================================
+    window.dwOnBackButton = function () {
+      if (pinModalOverlay && pinModalOverlay.classList.contains('active')) {
+        // Never let the hardware back button bypass the security PIN lock.
+        return true;
+      }
+      if (lockedModalOverlay && lockedModalOverlay.style.display === 'flex') {
+        // Never let it bypass the account-locked screen either.
+        return true;
+      }
+      if (modalOverlay.classList.contains('active')) {
+        modalOverlay.classList.remove('active');
+        return true;
+      }
+      if (screenProfile.classList.contains('active')) {
+        profileBackBtn.click();
+        return true;
+      }
+      if (document.getElementById('screen-step3').classList.contains('active')) {
+        step3BackBtn.click();
+        return true;
+      }
+      if (document.getElementById('screen-step2').classList.contains('active')) {
+        step2BackBtn.click();
+        return true;
+      }
+      return false; // on the home screen - let the default (exit app) happen
+    };
+
+    window.dwOnPullToRefresh = async function () {
+      if (document.getElementById('screen-step1').classList.contains('active')) {
+        await loadRecipients();
+      } else if (screenProfile.classList.contains('active')) {
+        await openProfile();
+      }
+      // step2/step3: deliberately do nothing - a stray pull gesture must
+      // never disrupt an in-progress send-money/payment flow.
+    };
+
+  })();
+</script>
+
+</body>
+
+</html>

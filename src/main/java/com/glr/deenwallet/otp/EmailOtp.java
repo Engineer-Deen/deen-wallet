@@ -1,0 +1,4 @@
+package com.glr.deenwallet.otp;
+import jakarta.persistence.*; import lombok.*; import java.time.Instant; import java.util.UUID;
+@Entity @Table(name="email_otps",indexes=@Index(name="idx_email_otps_email_created",columnList="email,created_at")) @Getter @Setter @Builder @NoArgsConstructor @AllArgsConstructor public class EmailOtp { @Id @GeneratedValue private UUID id; @Column(nullable=false) private String email; @Column(nullable=false,length=255) private String code; @Column(name="expires_at",nullable=false) private Instant expiresAt; @Column(nullable=false) private boolean used; @Column(nullable=false) private int attempts; @Column(name="created_at",nullable=false,updatable=false) private Instant createdAt; @PrePersist void onCreate(){if(createdAt==null)createdAt=Instant.now();} public boolean isExpired(){return Instant.now().isAfter(expiresAt);} }
+

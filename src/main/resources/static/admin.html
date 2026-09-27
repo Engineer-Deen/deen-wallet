@@ -1,0 +1,3414 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>DeenWallet — Admin</title>
+    <style>
+        /* ===== ADMIN SPLASH ===== */
+        #admin-splash { position:fixed; inset:0; z-index:10000; display:flex; align-items:center; justify-content:center; background:linear-gradient(145deg,#FFFFFF 0%,#F1F8FA 100%); transition:opacity .35s ease,visibility .35s ease; }
+        #admin-splash.hide { opacity:0; visibility:hidden; pointer-events:none; }
+        .admin-splash-inner { text-align:center; animation:adminSplashIn .55s ease-out both; }
+        .admin-splash-logo { width:min(260px,78vw); height:auto; border-radius:18px; box-shadow:0 18px 40px rgba(0,0,0,.18); }
+        .admin-splash-name { margin-top:14px; font-size:29px; font-weight:850; color:#1C7A91; }
+        .admin-splash-sub { margin-top:6px; font-size:13px; color:#6E7C82; }
+        @keyframes adminSplashIn { from{opacity:0;transform:translateY(8px) scale(.97)} to{opacity:1;transform:none} }
+
+        /* ===== FULL CSS ===== */
+        :root {
+            --bg: #FFFFFF;
+            --card: #F7FAFB;
+            --border: #E4ECEF;
+            --text: #12242B;
+            --muted: #6E7C82;
+            --primary: #1C7A91;
+            --primary-light: #2E9FB0;
+            --primary-disabled: #BFE0E6;
+            --warning-bg: #FFF7E6;
+            --warning-text: #B9770E;
+            --error: #C0392B;
+            --success: #2E9FB0;
+            --admin-badge: #8E44AD;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html {
+            height: 100%;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100%;
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: var(--text);
+            background: #EEF2F4;
+            overflow: auto;
+        }
+
+        @media (max-width: 460px) {
+            body {
+                background: var(--bg);
+            }
+        }
+
+        #app {
+            max-width: 420px;
+            margin: 0 auto;
+            min-height: 100vh;
+            max-height: none;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        @media (min-width: 461px) {
+            #app {
+                min-height: 100vh;
+                max-height: 100vh;
+                box-shadow: 0 0 40px rgba(0, 0, 0, 0.06);
+            }
+        }
+
+        .screen {
+            display: none;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        /* ===== Login ===== */
+        .login-screen {
+            padding: 40px 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            flex: 1;
+        }
+
+        .admin-login-logo { width:min(270px,82vw); max-height:150px; object-fit:cover; border-radius:18px; display:block; margin:0 auto 18px; box-shadow:0 16px 36px rgba(0,0,0,.16); }
+
+        .login-screen .brand {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--primary);
+            text-align: center;
+            margin-bottom: 4px;
+        }
+
+        .login-screen .brand .admin-badge {
+            font-size: 12px;
+            font-weight: 700;
+            color: #fff;
+            background: var(--admin-badge);
+            padding: 2px 12px;
+            border-radius: 12px;
+            margin-left: 6px;
+            display: inline-block;
+        }
+
+        .login-screen .subtitle {
+            font-size: 14px;
+            color: var(--muted);
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .login-screen label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            display: block;
+            margin: 12px 0 6px;
+        }
+
+        .login-screen .text-input {
+            width: 100%;
+            border: 1px solid var(--border);
+            background: var(--card);
+            border-radius: 12px;
+            padding: 14px;
+            font-size: 15px;
+            color: var(--text);
+            outline: none;
+        }
+
+        .login-screen .text-input:focus {
+            border-color: var(--primary-light);
+        }
+
+        .password-field-wrap {
+            position: relative;
+        }
+        .password-field-wrap .text-input,
+        .password-field-wrap input {
+            padding-right: 44px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .password-toggle-btn {
+            position: absolute;
+            right: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            font-size: 18px;
+            line-height: 1;
+            padding: 8px;
+            cursor: pointer;
+            opacity: 0.6;
+        }
+        .password-toggle-btn:hover {
+            opacity: 1;
+        }
+
+        .login-screen .btn-primary {
+            background: var(--primary-light);
+            border: none;
+            border-radius: 28px;
+            padding: 16px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            width: 100%;
+            transition: background 0.2s;
+        }
+
+        .login-screen .btn-primary:disabled {
+            background: var(--primary-disabled);
+            cursor: not-allowed;
+        }
+
+        .login-screen .inline-error {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 10px;
+            font-size: 13px;
+            color: var(--error);
+        }
+
+        .login-screen .default-hint {
+            text-align: center;
+            margin-top: 16px;
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        /* ===== Top Bar ===== */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px 8px;
+            flex-shrink: 0;
+        }
+
+        .top-brand-logo { width:82px; height:48px; object-fit:cover; border-radius:10px; box-shadow:0 5px 14px rgba(0,0,0,.12); }
+
+        .top-bar .brand {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .top-bar .admin-badge {
+            font-size: 11px;
+            font-weight: 600;
+            color: #fff;
+            background: var(--admin-badge);
+            padding: 2px 10px;
+            border-radius: 12px;
+            margin-left: 6px;
+        }
+
+        .top-bar .menu-btn {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            width: 38px;
+            height: 38px;
+            font-size: 18px;
+            cursor: pointer;
+            color: var(--text);
+            flex-shrink: 0;
+        }
+
+        .menu-dropdown {
+            position: absolute;
+            top: 58px;
+            right: 20px;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+            overflow: hidden;
+            z-index: 20;
+            min-width: 160px;
+        }
+
+        .menu-dropdown button {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 12px 16px;
+            background: none;
+            border: none;
+            font-size: 14px;
+            color: var(--text);
+            cursor: pointer;
+        }
+
+        .menu-dropdown button:hover {
+            background: var(--card);
+        }
+
+        .menu-dropdown button.danger {
+            color: var(--error);
+        }
+
+        .menu-divider {
+            height: 1px;
+            background: var(--border);
+        }
+
+        /* ===== Nav Tabs ===== */
+        .nav-tabs {
+            display: flex;
+            gap: 4px;
+            padding: 8px 12px 12px;
+            border-bottom: 2px solid var(--border);
+            overflow-x: auto;
+            flex-shrink: 0;
+            -webkit-overflow-scrolling: touch;
+            background: var(--bg);
+        }
+
+        .nav-tabs::-webkit-scrollbar {
+            height: 2px;
+        }
+
+        .nav-tabs::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        .nav-tab {
+            padding: 8px 14px;
+            border-radius: 20px;
+            border: 1px solid transparent;
+            background: transparent;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--muted);
+            cursor: pointer;
+            white-space: nowrap;
+            text-align: center;
+            transition: all 0.3s ease;
+            min-width: 50px;
+        }
+
+        .nav-tab:hover:not(.active) {
+            background: var(--card);
+            color: var(--text);
+        }
+
+        .nav-tab.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(28, 122, 145, 0.3);
+            transform: scale(1.02);
+        }
+
+        /* ===== Scrollable ===== */
+        .scroll {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 20px 100px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .scroll::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        .scroll::-webkit-scrollbar-thumb:hover {
+            background: var(--muted);
+        }
+
+        /* ===== Cards ===== */
+        .admin-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 16px;
+            margin-top: 14px;
+        }
+
+        .admin-card-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin: 0 0 2px;
+        }
+
+        .admin-card-sub {
+            font-size: 13px;
+            color: var(--muted);
+            margin: 0 0 12px;
+        }
+
+        /* ===== Stats ===== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .stat-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px;
+            text-align: center;
+        }
+
+        .stat-card .number {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--text);
+        }
+
+        .stat-card .label {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        .stat-card.primary .number {
+            color: var(--primary-light);
+        }
+
+        .stat-card.success .number {
+            color: var(--success);
+        }
+
+        .stat-card.warning .number {
+            color: var(--warning-text);
+        }
+
+        /* ===== Search ===== */
+        .search-bar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .search-bar input {
+            flex: 1;
+            border: 1px solid var(--border);
+            background: #fff;
+            border-radius: 12px;
+            padding: 10px 14px;
+            font-size: 14px;
+            color: var(--text);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .search-bar input:focus {
+            border-color: var(--primary-light);
+        }
+
+        /* ===== Item cards ===== */
+        .item-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .item-card:hover {
+            border-color: var(--primary-light);
+            box-shadow: 0 2px 8px rgba(46, 159, 176, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .item-card:active {
+            transform: scale(0.98);
+        }
+
+        .item-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .item-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .item-info .name {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .item-info .meta {
+            font-size: 12px;
+            color: var(--muted);
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .item-actions {
+            display: flex;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+
+        /* ===== Badges ===== */
+        .badge {
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 10px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+
+        .badge.verified {
+            background: #E7F7EC;
+            color: #1E8449;
+        }
+
+        .badge.unverified {
+            background: #FBEAEA;
+            color: var(--error);
+        }
+
+        .badge.active {
+            background: #EAF6F8;
+            color: var(--primary);
+        }
+
+        .badge.inactive {
+            background: #EDEFF1;
+            color: var(--muted);
+        }
+
+        .badge.locked {
+            background: #FBEAEA;
+            color: var(--error);
+        }
+
+        .badge.super {
+            background: #8E44AD;
+            color: #fff;
+        }
+
+        /* ===== Buttons ===== */
+        .btn-primary {
+            background: var(--primary-light);
+            border: none;
+            border-radius: 12px;
+            padding: 12px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary);
+        }
+
+        .btn-primary:disabled {
+            background: var(--primary-disabled);
+            cursor: not-allowed;
+        }
+
+        .btn-sm {
+            padding: 6px 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-sm:active {
+            transform: scale(0.95);
+        }
+
+        .btn-sm.refresh {
+            background: var(--card);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-sm.refresh:hover {
+            background: var(--border);
+        }
+
+        .btn-sm.danger {
+            background: var(--error);
+            color: #fff;
+        }
+
+        .btn-sm.danger:hover {
+            background: #a93226;
+        }
+
+        .btn-sm.success {
+            background: var(--success);
+            color: #fff;
+        }
+
+        .btn-sm.success:hover {
+            background: #1E8449;
+        }
+
+        .btn-sm.primary {
+            background: var(--primary-light);
+            color: #fff;
+        }
+
+        .btn-sm.primary:hover {
+            background: var(--primary);
+        }
+
+        .btn-outline {
+            border: 1px solid var(--border);
+            background: #fff;
+            border-radius: 22px;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--muted);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-outline:active {
+            transform: scale(0.98);
+        }
+
+        .btn-outline:hover {
+            background: var(--card);
+        }
+
+        .recovery-btn {
+            background: #eaf6f8 !important;
+            border-color: var(--primary-light) !important;
+            color: var(--primary) !important;
+        }
+        .recovery-btn:hover {
+            background: #dbeff2 !important;
+        }
+        .recovery-btn:active {
+            background: #c9e7ec !important;
+            transform: scale(0.97);
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            color: var(--muted);
+            padding: 4px 6px;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .icon-btn:hover {
+            background: var(--card);
+        }
+
+        .icon-btn.danger:hover {
+            color: var(--error);
+            background: #FBEAEA;
+        }
+
+        /* ===== Support ===== */
+        .support-lookup {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .support-lookup input {
+            border: 1px solid var(--border);
+            background: #fff;
+            border-radius: 12px;
+            padding: 12px 14px;
+            font-size: 14px;
+            color: var(--text);
+            outline: none;
+            transition: border-color 0.2s;
+            font-family: monospace;
+        }
+
+        .support-lookup input:focus {
+            border-color: var(--primary-light);
+        }
+
+        .support-result {
+            margin-top: 14px;
+        }
+
+        .support-result .support-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px;
+        }
+
+        .support-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .support-row:last-child {
+            border-bottom: none;
+        }
+
+        .support-row .label {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .support-row .value {
+            font-weight: 600;
+            font-size: 13px;
+            text-align: right;
+            word-break: break-all;
+            max-width: 60%;
+        }
+
+        /* ===== WhatsApp ===== */
+        .whatsapp-input-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .whatsapp-input-row input {
+            flex: 1;
+            border: 1px solid var(--border);
+            background: #fff;
+            border-radius: 12px;
+            padding: 12px 14px;
+            font-size: 15px;
+            color: var(--text);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .whatsapp-input-row input:focus {
+            border-color: var(--primary-light);
+        }
+
+        .whatsapp-input-row .btn-fill {
+            flex-shrink: 0;
+            border: none;
+            background: var(--primary-light);
+            border-radius: 12px;
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .whatsapp-input-row .btn-fill:active {
+            transform: scale(0.95);
+        }
+
+        .whatsapp-input-row .btn-fill:hover {
+            background: var(--primary);
+        }
+
+        .inline-success {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 8px;
+            font-size: 13px;
+            color: var(--success);
+        }
+
+        /* ===== Errors ===== */
+        .loading-state,
+        .empty-state {
+            padding: 30px 20px;
+            text-align: center;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .error-state {
+            padding: 30px 20px;
+            text-align: center;
+            color: var(--error);
+            font-size: 14px;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(46, 159, 176, 0.25);
+            border-top-color: var(--primary-light);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .error-stats-mini {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .error-stats-mini .mini-card {
+            flex: 1;
+            min-width: 60px;
+            background: var(--card);
+            border-radius: 12px;
+            padding: 10px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+
+        .error-stats-mini .mini-card .num {
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        .error-stats-mini .mini-card .lbl {
+            font-size: 10px;
+            color: var(--muted);
+        }
+
+        .error-stats-mini .mini-card .num.danger {
+            color: var(--error);
+        }
+
+        .error-stats-mini .mini-card .num.warning {
+            color: var(--warning-text);
+        }
+
+        .error-stats-mini .mini-card .num.primary {
+            color: var(--primary);
+        }
+
+        .type-chart {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 12px;
+            background: var(--card);
+            border-radius: 12px;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+        }
+
+        .type-chart .pill {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            background: #FBEAEA;
+            color: var(--error);
+        }
+
+        .type-chart .pill .count {
+            background: var(--error);
+            color: #fff;
+            padding: 0 6px;
+            border-radius: 8px;
+            margin-left: 4px;
+            font-size: 10px;
+        }
+
+        .action-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .action-row .btn-sm {
+            flex: 1;
+        }
+
+        /* ===== Toast ===== */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--text);
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: 20px;
+            font-size: 13px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 30;
+            white-space: nowrap;
+            max-width: 90%;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        /* ===== Modal ===== */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 40;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: #fff;
+            border-radius: 20px;
+            max-width: 380px;
+            width: 100%;
+            padding: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal h3 {
+            margin: 0 0 6px;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .modal p {
+            margin: 0 0 16px;
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .modal .form-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .modal .btn-outline {
+            flex: 1;
+            border: 1px solid var(--border);
+            background: #fff;
+            border-radius: 22px;
+            padding: 11px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--muted);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .modal .btn-outline:active {
+            transform: scale(0.98);
+        }
+
+        .modal .btn-outline:hover {
+            background: var(--card);
+        }
+
+        .modal .btn-danger {
+            flex: 1;
+            border: none;
+            background: var(--error);
+            border-radius: 22px;
+            padding: 11px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .modal .btn-danger:active {
+            transform: scale(0.98);
+        }
+
+        .modal .btn-danger:hover {
+            background: #a93226;
+        }
+
+        /* ===== User detail modal ===== */
+        .user-detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .user-detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .user-detail-row .label {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .user-detail-row .value {
+            font-weight: 600;
+            font-size: 13px;
+            text-align: right;
+            word-break: break-all;
+            max-width: 60%;
+        }
+
+        .user-detail-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .user-detail-actions .btn-sm {
+            flex: 1;
+        }
+
+        /* ===== PIN MODAL (Admin) ===== */
+        #pin-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999 !important;
+            padding: 20px;
+            padding-top: max(20px, env(safe-area-inset-top, 20px));
+            padding-bottom: max(20px, env(safe-area-inset-bottom, 20px));
+            pointer-events: auto !important;
+        }
+
+        #pin-modal-overlay.active {
+            display: flex !important;
+        }
+
+        #pin-modal-overlay .modal-box {
+            background: #fff;
+            border-radius: 20px;
+            max-width: 380px;
+            max-height: 90vh;
+            overflow-y: auto;
+            width: 100%;
+            padding: 28px 24px 20px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: modalSlideIn 0.3s ease;
+            position: relative;
+            pointer-events: auto !important;
+        }
+
+        #pin-modal-overlay .modal-box * {
+            pointer-events: auto !important;
+        }
+
+        #pin-modal-overlay button,
+        #pin-modal-overlay .pin-key {
+            pointer-events: auto !important;
+            cursor: pointer !important;
+            position: relative;
+            z-index: 10000;
+        }
+
+        .pin-dots {
+            display: flex !important;
+            flex-direction: row !important;
+            justify-content: center;
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .pin-dot {
+            width: 50px;
+            height: 55px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text);
+            background: var(--card);
+            transition: border-color 0.2s;
+        }
+
+        .pin-dot.filled {
+            border-color: var(--primary-light);
+            background: #EAF6F8;
+        }
+
+        .pin-dot.active {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(46, 159, 176, 0.2);
+        }
+
+        .pin-dot.error {
+            border-color: var(--error);
+            animation: shake 0.3s ease;
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-8px);
+            }
+
+            75% {
+                transform: translateX(8px);
+            }
+        }
+
+        .pin-error-msg {
+            color: var(--error);
+            font-size: 13px;
+            margin: 4px 0 16px;
+            min-height: 20px;
+        }
+
+        .pin-hidden-input {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+            pointer-events: none;
+        }
+
+        /* ===== Profile / Admin Management ===== */
+        .profile-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .profile-row .label {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .profile-row .value {
+            font-weight: 600;
+            font-size: 13px;
+            text-align: right;
+        }
+
+        .pin-change-form {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        .pin-change-form .pin-input-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .pin-change-form .pin-input-group input {
+            flex: 1;
+            min-width: 80px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-size: 16px;
+            text-align: center;
+            font-family: monospace;
+            outline: none;
+        }
+
+        .pin-change-form .pin-input-group input:focus {
+            border-color: var(--primary-light);
+        }
+
+        .pin-change-form .pin-input-group .btn-small {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            background: var(--primary-light);
+            color: #fff;
+        }
+
+        .pin-change-form .pin-input-group .btn-small:active {
+            transform: scale(0.95);
+        }
+
+        .pin-change-form .pin-error {
+            color: var(--error);
+            font-size: 13px;
+            margin-top: 8px;
+        }
+
+        .pin-change-form .pin-success {
+            color: var(--success);
+            font-size: 13px;
+            margin-top: 8px;
+        }
+
+        /* ===== Admin management ===== */
+        .admin-management {
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 2px solid var(--border);
+        }
+
+        .admin-management .admin-card-title {
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .add-admin-form {
+            margin-top: 12px;
+        }
+
+        .add-admin-form input {
+            width: 100%;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .add-admin-form input:focus {
+            border-color: var(--primary-light);
+        }
+
+        .admin-list .item-card {
+            cursor: default;
+        }
+    </style>
+</head>
+
+<body>
+
+<div id="admin-splash" aria-label="DeenWallet loading">
+    <div class="admin-splash-inner">
+        <img class="admin-splash-logo" src="deenwallet-logo.png" alt="DeenWallet" />
+        <div class="admin-splash-name">DeenWallet</div>
+        <div class="admin-splash-sub">Secure Administration</div>
+    </div>
+</div>
+
+<div id="app">
+
+    <!-- ===== LOGIN SCREEN ===== -->
+    <div class="screen active" id="screen-login">
+        <div class="login-screen">
+            <img class="admin-login-logo" src="deenwallet-logo.png" alt="DeenWallet" />
+            <div class="brand">DeenWallet <span class="admin-badge">Admin</span></div>
+            <p class="subtitle">Sign in to manage users, transactions, and support.</p>
+            <label for="admin-email">Email</label>
+            <input class="text-input" id="admin-email" type="email" placeholder="admin@deenwallet.com"
+                   value="" />
+            <label for="admin-password">Password</label>
+            <div class="password-field-wrap">
+                <input class="text-input" id="admin-password" type="password" placeholder="Enter your password"
+                       value="" />
+                <button type="button" class="password-toggle-btn" data-target="admin-password" aria-label="Show password">&#128065;</button>
+            </div>
+            <div id="login-error" class="inline-error hidden"><span>&#9888;</span><span
+                    id="login-error-text"></span></div>
+            <button class="btn-primary" id="login-btn">Sign in</button>
+            <div id="admin-recovery-panel" class="hidden" style="margin-top:12px;padding:14px;border:1px solid #E4ECEF;border-radius:12px;background:#F7FAFB;">
+                <div style="font-weight:700;margin-bottom:5px;">Admin recovery</div>
+                <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">If admin protection was triggered, verify ownership with a one-time code sent to the registered admin email.</div>
+                <button type="button" class="btn-outline recovery-btn" id="admin-send-otp-btn" style="width:100%;margin-bottom:8px;">✉ Send recovery code</button>
+                <div id="admin-otp-countdown" class="hidden" style="font-size:12px;color:var(--muted);margin-bottom:8px;text-align:center;"></div>
+                <input class="text-input" id="admin-recovery-code" inputmode="numeric" maxlength="6" placeholder="Enter 6-digit code" style="margin-bottom:8px;" />
+                <button type="button" class="btn-primary" id="admin-verify-otp-btn" style="width:100%;">Verify &amp; restore access</button>
+                <div id="admin-recovery-message" style="font-size:12px;margin-top:8px;color:var(--muted);"></div>
+            </div>
+            <p class="default-hint">Use your admin credentials</p>
+        </div>
+    </div>
+
+    <!-- ===== MAIN SCREEN ===== -->
+    <div class="screen" id="screen-main">
+        <div class="top-bar">
+            <div style="display:flex;align-items:center;gap:9px;"><img class="top-brand-logo" src="deenwallet-logo.png" alt="DeenWallet" /><div><span class="brand">DeenWallet</span><span class="admin-badge">Admin</span></div></div>
+            <button class="menu-btn" id="menu-btn">&#8942;</button>
+        </div>
+
+        <!-- Nav Tabs -->
+        <div class="nav-tabs">
+            <button class="nav-tab active" data-tab="dashboard">📊 Dashboard</button>
+            <button class="nav-tab" data-tab="users">👤 Users</button>
+            <button class="nav-tab" data-tab="errors">⚠️ Errors</button>
+            <button class="nav-tab" data-tab="support">🆘 Support</button>
+        </div>
+
+        <!-- ===== DASHBOARD ===== -->
+        <div class="scroll" id="tab-dashboard">
+            <div class="stats-grid">
+                <div class="stat-card primary">
+                    <div class="number" id="stat-users">—</div>
+                    <div class="label">Total Users</div>
+                </div>
+                <div class="stat-card success">
+                    <div class="number" id="stat-verified">—</div>
+                    <div class="label">Verified Users</div>
+                </div>
+                <div class="stat-card primary">
+                    <div class="number" id="stat-transactions">—</div>
+                    <div class="label">Transactions</div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="number" id="stat-volume">—</div>
+                    <div class="label">Volume (SLE)</div>
+                </div>
+            </div>
+            <div id="dashboard-loading" class="loading-state">
+                <div class="spinner"></div>Loading stats…
+            </div>
+            <div id="dashboard-error" class="error-state hidden"></div>
+        </div>
+
+        <!-- ===== USERS ===== -->
+        <div class="scroll hidden" id="tab-users">
+            <div class="admin-card">
+                <p class="admin-card-title">Manage Users</p>
+                <p class="admin-card-sub">View and manage user accounts</p>
+                <div class="search-bar"><input id="user-search" placeholder="Search by name, email, phone…" /></div>
+                <div id="user-list-loading" class="loading-state">
+                    <div class="spinner"></div>Loading users…
+                </div>
+                <div id="user-list-error" class="error-state hidden"></div>
+                <div id="user-list"></div>
+            </div>
+        </div>
+
+        <!-- ===== ERRORS ===== -->
+        <div class="scroll hidden" id="tab-errors">
+            <div class="admin-card">
+                <p class="admin-card-title">Error Logs</p>
+                <p class="admin-card-sub">Monitor system errors and issues (includes browser console errors)</p>
+                <div class="error-stats-mini">
+                    <div class="mini-card">
+                        <div class="num danger" id="error-total">—</div>
+                        <div class="lbl">Total</div>
+                    </div>
+                    <div class="mini-card">
+                        <div class="num warning" id="error-24h">—</div>
+                        <div class="lbl">Last 24h</div>
+                    </div>
+                    <div class="mini-card">
+                        <div class="num primary" id="error-7d">—</div>
+                        <div class="lbl">Last 7d</div>
+                    </div>
+                </div>
+                <div id="error-type-chart" class="type-chart"></div>
+                <div class="search-bar"><input id="error-search" placeholder="Search errors…" /></div>
+                <div class="action-row">
+                    <button class="btn-sm refresh" id="error-refresh-btn">&#8635; Refresh</button>
+                    <button class="btn-sm danger" id="error-clear-btn">&#128465; Clear All</button>
+                </div>
+                <div id="error-list-loading" class="loading-state">
+                    <div class="spinner"></div>Loading errors…
+                </div>
+                <div id="error-list-error" class="error-state hidden"></div>
+                <div id="error-list"></div>
+            </div>
+        </div>
+
+        <!-- ===== SUPPORT ===== -->
+        <div class="scroll hidden" id="tab-support">
+            <div class="admin-card">
+                <p class="admin-card-title">Support Lookup</p>
+                <p class="admin-card-sub">Find transactions by ID, email, or phone</p>
+                <div class="support-lookup">
+                    <input id="support-search" placeholder="Transaction ID (e.g., DW-20260905-A7B3C)" />
+                    <button class="btn-primary" id="support-lookup-btn">🔍 Look up</button>
+                </div>
+                <div id="support-result" class="support-result hidden">
+                    <div class="support-card">
+                        <div class="support-row"><span class="label">Transaction Code</span><span class="value"
+                                                                                                  id="support-txn-code">—</span></div>
+                        <div class="support-row"><span class="label">Status</span><span class="value"
+                                                                                        id="support-txn-status">—</span></div>
+                        <div class="support-row"><span class="label">Amount</span><span class="value"
+                                                                                        id="support-txn-amount">—</span></div>
+                        <div class="support-row"><span class="label">Total Charged</span><span class="value"
+                                                                                               id="support-txn-total">—</span></div>
+                        <div class="support-row"><span class="label">Source</span><span class="value"
+                                                                                        id="support-txn-source">—</span></div>
+                        <div class="support-row"><span class="label">Recipient</span><span class="value"
+                                                                                           id="support-txn-recipient">—</span></div>
+                        <div class="support-row"><span class="label">User</span><span class="value"
+                                                                                      id="support-txn-user">—</span></div>
+                        <div class="support-row" style="border-bottom:none;"><span class="label">Created</span><span
+                                class="value" id="support-txn-created">—</span></div>
+                        <div class="support-row" id="support-txn-reason-row" style="display:none;border-bottom:none;"><span class="label">Failure Reason</span><span
+                                class="value" id="support-txn-reason">—</span></div>
+                    </div>
+                </div>
+                <div id="support-error" class="error-state hidden"></div>
+            </div>
+            <!-- WhatsApp Settings -->
+            <div class="admin-card" style="margin-top:14px;">
+                <p class="admin-card-title">Support Settings</p>
+                <p class="admin-card-sub">Configure the WhatsApp number for support</p>
+                <div class="whatsapp-input-row">
+                    <input id="whatsapp-input" type="tel" placeholder="+23212345678" />
+                    <button class="btn-fill" id="save-whatsapp-btn">Save</button>
+                </div>
+                <div id="whatsapp-error" class="inline-error hidden"><span>&#9888;</span><span
+                        id="whatsapp-error-text"></span></div>
+                <div id="whatsapp-success" class="inline-success hidden"><span>&#10003;</span><span>WhatsApp number
+                            updated!</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== PROFILE SCREEN ===== -->
+    <div class="screen" id="screen-profile">
+        <div class="scroll">
+            <button class="ussd-back" id="profile-back-btn"
+                    style="padding-left:0;font-size:22px;background:none;border:none;cursor:pointer;">&#8592;
+                Back</button>
+            <h1 class="greeting-title" style="margin-top:8px;">My Profile</h1>
+            <div id="profile-content"></div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL: USER DETAIL ===== -->
+    <div class="modal-overlay" id="user-modal-overlay">
+        <div class="modal">
+            <h3 id="user-modal-title">User Details</h3>
+            <p id="user-modal-sub" style="font-size:12px;color:var(--muted);">User account details</p>
+            <div id="user-modal-body"></div>
+            <div class="user-detail-actions" id="user-modal-actions">
+                <button class="btn-sm danger" id="user-modal-toggle">Deactivate</button>
+                <button class="btn-outline" id="user-modal-close">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== PIN MODAL ===== -->
+    <div class="modal-overlay" id="pin-modal-overlay">
+        <div class="modal-box">
+            <div class="modal-icon" style="font-size:48px;">🔐</div>
+            <h3 class="modal-title" style="font-size:20px;font-weight:700;margin:0 0 8px;">Session Locked</h3>
+            <p class="modal-message" style="font-size:15px;color:var(--muted);margin:0 0 20px;">Enter your 4-digit
+                PIN to continue</p>
+            <div class="pin-dots" id="pin-dots">
+                <div class="pin-dot" data-index="0">·</div>
+                <div class="pin-dot" data-index="1">·</div>
+                <div class="pin-dot" data-index="2">·</div>
+                <div class="pin-dot" data-index="3">·</div>
+            </div>
+            <div class="pin-error-msg" id="pin-error-msg"></div>
+            <input class="pin-hidden-input" id="pin-hidden-input" type="password" inputmode="numeric"
+                   maxlength="4" readonly />
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px;">
+                <button class="btn-outline pin-key" data-value="1">1</button>
+                <button class="btn-outline pin-key" data-value="2">2</button>
+                <button class="btn-outline pin-key" data-value="3">3</button>
+                <button class="btn-outline pin-key" data-value="4">4</button>
+                <button class="btn-outline pin-key" data-value="5">5</button>
+                <button class="btn-outline pin-key" data-value="6">6</button>
+                <button class="btn-outline pin-key" data-value="7">7</button>
+                <button class="btn-outline pin-key" data-value="8">8</button>
+                <button class="btn-outline pin-key" data-value="9">9</button>
+                <button class="btn-outline pin-key" data-value="clear" style="grid-column:span 1;">⌫</button>
+                <button class="btn-outline pin-key" data-value="0">0</button>
+                <button class="btn-fill pin-key" data-value="submit" style="grid-column:span 1;">↵</button>
+            </div>
+            <button class="btn-secondary" id="pin-logout-btn"
+                    style="margin-top:12px;width:100%;color:var(--primary);background:none;border:none;font-weight:600;cursor:pointer;">Log
+                out instead</button>
+        </div>
+    </div>
+
+    <!-- ===== MODAL: CONFIRM ===== -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal">
+            <h3 id="modal-title">Confirm</h3>
+            <p id="modal-message">Are you sure?</p>
+            <div class="form-actions">
+                <button class="btn-outline" id="modal-cancel">Cancel</button>
+                <button class="btn-danger" id="modal-confirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== TOAST ===== -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ==============================================================
+        // ADMIN PANEL – FINAL VERSION
+        // ==============================================================
+
+        // SECURITY: Every value below can originate from untrusted input -
+        // a user's registered full name/username, a saved recipient's
+        // holder name, or (worst case) the fully unauthenticated
+        // POST /api/errors endpoint. Any of those values must be escaped
+        // before being placed into innerHTML, or an attacker can run
+        // arbitrary JavaScript in this admin session (and steal the
+        // admin's tokens straight out of localStorage). Use escapeHtml()
+        // on every such value below - never interpolate raw.
+        function escapeHtml(value) {
+            if (value === null || value === undefined) return '';
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+
+        (function () {
+            const nativeFetch = window.fetch.bind(window);
+            window.fetch = function (input, init) {
+                init = init || {};
+                init.headers = Object.assign({ 'ngrok-skip-browser-warning': 'true' }, init.headers || {});
+
+                // If the caller already supplied their own abort signal
+                // (e.g. adminApiRequest's own timeout), respect it as-is
+                // rather than adding a second, conflicting one.
+                if (init.signal) {
+                    return nativeFetch(input, init).catch(function (err) {
+                        if (err && err.name === 'AbortError') throw err;
+                        var friendly = new Error('Unable to reach the server. Please check your connection and try again.');
+                        friendly.isNetworkError = true;
+                        throw friendly;
+                    });
+                }
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(function () { controller.abort(); }, 15000);
+                init.signal = controller.signal;
+
+                return nativeFetch(input, init)
+                    .catch(function () {
+                        var friendly = new Error('Unable to reach the server. Please check your connection and try again.');
+                        friendly.isNetworkError = true;
+                        throw friendly;
+                    })
+                    .finally(function () { clearTimeout(timeoutId); });
+            };
+        })();
+
+        window.onload = function () {
+
+            document.querySelectorAll('.password-toggle-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var input = document.getElementById(btn.dataset.target);
+                    if (!input) return;
+                    var isHidden = input.type === 'password';
+                    input.type = isHidden ? 'text' : 'password';
+                    btn.textContent = isHidden ? '\u{1F576}\uFE0F' : '\u{1F441}\uFE0F';
+                    btn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+                });
+            });
+
+            console.log('=== Admin page loaded ===');
+
+            // ==============================================================
+            // CONSTANTS & STATE
+            // ==============================================================
+            var API_BASE_URL = window.DEENWALLET_API_BASE_URL || (window.location.protocol === 'http:' || window.location.protocol === 'https:' ? window.location.origin : 'http://localhost:8080');
+
+            window.dwOpenUserApp = function () {
+                var url = window.DEENWALLET_USER_APP_URL || (window.location.origin + '/index.html');
+                window.open(url, '_system');
+            };
+            var TOKEN_KEY = 'deenwallet_admin_token';
+            var SESSION_TIMEOUT_MS = 300000; // 5 minutes
+            var MAX_PIN_ATTEMPTS = 2;
+            var currentUserRole = null;
+
+            var pinModalActive = false;
+            var pinAttempts = 0;
+            var pinVerifyInFlight = false;
+            var pinDisabledForSession = false;
+            var sessionLastActive = sessionStorage.getItem('deenwallet_admin_session_last_active');
+            if (!sessionLastActive) {
+                sessionStorage.setItem('deenwallet_admin_session_last_active', Date.now().toString());
+            }
+
+            function updateAdminSessionActive() {
+                sessionStorage.setItem('deenwallet_admin_session_last_active', Date.now().toString());
+            }
+
+            function isAdminSessionExpired() {
+                var last = sessionStorage.getItem('deenwallet_admin_session_last_active');
+                if (!last) return true;
+                var inactive = Date.now() - parseInt(last);
+                return inactive > SESSION_TIMEOUT_MS;
+            }
+
+            // ==============================================================
+            // ELEMENTS
+            // ==============================================================
+            var loginScreen = document.getElementById('screen-login');
+            var mainScreen = document.getElementById('screen-main');
+            var profileScreen = document.getElementById('screen-profile');
+
+            // screen-profile is an independent top-level screen (a
+            // sibling of screen-main, not nested inside it), so hiding
+            // mainScreen alone never hid it - this caused the login
+            // screen and a still-active profile screen to render
+            // stacked on top of each other. Use this everywhere instead
+            // of toggling the classes directly.
+            function forceToLoginScreen() {
+                if (profileScreen) profileScreen.classList.remove('active');
+                mainScreen.classList.remove('active');
+                loginScreen.classList.add('active');
+            }
+            var loginBtn = document.getElementById('login-btn');
+            var loginError = document.getElementById('login-error');
+            var loginErrorText = document.getElementById('login-error-text');
+            var toast = document.getElementById('toast');
+            var adminRecoveryPanel = document.getElementById('admin-recovery-panel');
+            var adminSendOtpBtn = document.getElementById('admin-send-otp-btn');
+            var adminVerifyOtpBtn = document.getElementById('admin-verify-otp-btn');
+            var adminRecoveryCode = document.getElementById('admin-recovery-code');
+            var adminRecoveryMessage = document.getElementById('admin-recovery-message');
+            var adminOtpRequestInFlight = false;
+            var adminOtpCooldownTimer = null;
+
+            // ==============================================================
+            // TOAST / HELPERS
+            // ==============================================================
+            function showToast(msg) {
+                if (!toast) return;
+                toast.textContent = msg;
+                toast.classList.add('show');
+                setTimeout(function () { toast.classList.remove('show'); }, 2500);
+            }
+
+            function show(el) { if (el) el.classList.remove('hidden'); }
+
+            function hide(el) { if (el) el.classList.add('hidden'); }
+
+            // ==============================================================
+            // TOKEN FUNCTIONS
+            // ==============================================================
+            function getToken() { return localStorage.getItem(TOKEN_KEY); }
+
+            function setToken(token) { localStorage.setItem(TOKEN_KEY, token); }
+            function getRefreshToken() { return localStorage.getItem('deenwallet_admin_refresh_token'); }
+            function setRefreshToken(token) { if (token) localStorage.setItem('deenwallet_admin_refresh_token', token); }
+            async function refreshAdminToken() { var rt=getRefreshToken(); if(!rt) throw new Error('No refresh token'); var r=await fetch(API_BASE_URL+'/api/admin/auth/refresh',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({refreshToken:rt})}); if(!r.ok) throw new Error('Admin session expired'); var d=await r.json(); setToken(d.accessToken); setRefreshToken(d.refreshToken); return d.accessToken; }
+
+            function clearToken() {
+                localStorage.removeItem(TOKEN_KEY);
+                localStorage.removeItem('deenwallet_admin_refresh_token');
+                sessionStorage.removeItem('deenwallet_admin_session_last_active');
+            }
+
+            // ==============================================================
+            // ADMIN API
+            // ==============================================================
+            async function adminApiRequest(path, options) {
+                options = options || {};
+                var url = new URL(API_BASE_URL + path);
+                if (options.params) {
+                    Object.keys(options.params).forEach(function (k) {
+                        if (options.params[k] !== undefined && options.params[k] !== null) {
+                            url.searchParams.set(k, options.params[k]);
+                        }
+                    });
+                }
+                var token = getToken();
+                // Refresh a nearly-expired access token before the API call.
+                // This avoids intermittent 403s during normal admin activity.
+                if (token) {
+                    try {
+                        var payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+                        if (payload.exp && (payload.exp * 1000 - Date.now()) < 30000 && getRefreshToken()) {
+                            token = await refreshAdminToken();
+                        }
+                    } catch (_) { }
+                }
+                var headers = { 'Content-Type': 'application/json' };
+                if (token) headers['Authorization'] = 'Bearer ' + token;
+
+                // A hung/unreachable server must fail fast rather than leave
+                // the caller (and the UI it's driving) waiting indefinitely -
+                // that indefinite wait is what "the app just freezes" was.
+                async function doFetch() {
+                    var controller = new AbortController();
+                    var timeoutId = setTimeout(function () { controller.abort(); }, 15000);
+                    try {
+                        return await fetch(url.toString(), {
+                            method: options.method || 'GET',
+                            headers: headers,
+                            body: options.body ? JSON.stringify(options.body) : undefined,
+                            signal: controller.signal
+                        });
+                    } catch (fetchError) {
+                        // Normalize every network-level failure (no
+                        // internet, DNS failure, connection refused,
+                        // timeout) into one clean, friendly error - never
+                        // let the raw "Failed to fetch" browser text
+                        // reach the UI.
+                        var friendly = new Error('Unable to reach the server. Please check your connection and try again.');
+                        friendly.isNetworkError = true;
+                        throw friendly;
+                    } finally {
+                        clearTimeout(timeoutId);
+                    }
+                }
+
+                var response = await doFetch();
+
+                var data = null;
+                try { data = await response.json(); } catch (_) { }
+
+                if (!response.ok && (response.status === 401 || response.status === 403) && getRefreshToken()) {
+                    try {
+                        var fresh = await refreshAdminToken();
+                        headers['Authorization'] = 'Bearer ' + fresh;
+                        response = await doFetch();
+                        data = null; try { data = await response.json(); } catch (_) {}
+                    } catch (_) {}
+                }
+                if (!response.ok) {
+                    var reason = response.headers.get('X-Reason');
+                    if (reason === 'PIN_DISABLED' || (response.status === 429 && data && /PIN is disabled/i.test(data.message || ''))) {
+                        clearToken();
+                        pinDisabledForSession = true;
+                        hideAdminPinModal();
+                        forceToLoginScreen();
+                        showToast('Admin PIN disabled. Please log in again.');
+                    } else if (response.status === 401 || response.status === 403) {
+                        clearToken(); forceToLoginScreen(); showToast('Session expired. Please login again.');
+                    }
+                    var message = (data && data.message) || 'Request failed.'; throw new Error(message);
+                }
+                return data;
+            }
+
+            // ==============================================================
+            // BROWSER ERROR CAPTURE
+            // ==============================================================
+            function reportErrorToBackend(errorType, message, stack, url, line, col, extra) {
+                if (!getToken()) return;
+                var payload = {
+                    errorType: errorType || 'JS_ERROR',
+                    message: message || 'Unknown error',
+                    stack: stack || '',
+                    url: url || window.location.href,
+                    line: line || 0,
+                    col: col || 0,
+                    userAgent: navigator.userAgent,
+                    extra: extra || {}
+                };
+                fetch(API_BASE_URL + '/api/admin/errors', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+                    body: JSON.stringify(payload)
+                }).catch(function (e) { });
+            }
+
+            window.onerror = function (message, source, lineno, colno, error) {
+                reportErrorToBackend('JS_ERROR', message, error ? error.stack : (source + ':' + lineno), source, lineno, colno, { error: error ? error.toString() : '' });
+                return false;
+            };
+            window.addEventListener('unhandledrejection', function (event) {
+                var reason = event.reason;
+                var msg = reason && reason.message ? reason.message : String(reason);
+                var stack = reason && reason.stack ? reason.stack : '';
+                reportErrorToBackend('PROMISE_REJECTION', msg, stack, window.location.href, 0, 0, { reason: reason });
+            });
+            var originalConsoleError = console.error;
+            console.error = function () {
+                var args = Array.from(arguments);
+                var message = args.map(function (a) { return typeof a === 'object' ? JSON.stringify(a) : String(a); }).join(' ');
+                if (message.length > 10) {
+                    reportErrorToBackend('CONSOLE_ERROR', message.substring(0, 1000), '', window.location.href, 0, 0, { console: true });
+                }
+                originalConsoleError.apply(console, args);
+            };
+
+            // ==============================================================
+            // SESSION PIN MANAGEMENT (with backend verification)
+            // ==============================================================
+            var pinModalOverlay = document.getElementById('pin-modal-overlay');
+            var pinHiddenInput = document.getElementById('pin-hidden-input');
+            var pinDots = document.querySelectorAll('#pin-dots .pin-dot');
+            var pinErrorMsg = document.getElementById('pin-error-msg');
+            var pinLogoutBtn = document.getElementById('pin-logout-btn');
+
+            function showAdminPinModal(message) {
+                pinModalActive = true;
+                pinAttempts = 0;
+                pinDisabledForSession = false;
+                pinErrorMsg.textContent = '';
+                pinHiddenInput.value = '';
+                updatePinDots();
+                pinModalOverlay.style.display = 'flex';
+                pinModalOverlay.classList.add('active');
+                if (message) {
+                    document.querySelector('#pin-modal-overlay .modal-message').textContent = message;
+                }
+                setTimeout(function () { pinHiddenInput.focus(); }, 200);
+            }
+
+            function hideAdminPinModal() {
+                pinModalActive = false;
+                pinModalOverlay.style.display = 'none';
+                pinModalOverlay.classList.remove('active');
+                updateAdminSessionActive();
+            }
+
+            function updatePinDots() {
+                var value = pinHiddenInput.value;
+                pinDots.forEach(function (dot, index) {
+                    var filled = index < value.length;
+                    dot.textContent = filled ? '●' : '·';
+                    dot.className = 'pin-dot';
+                    if (filled) dot.classList.add('filled');
+                    if (index === value.length) dot.classList.add('active');
+                });
+            }
+
+            // Verify PIN via backend
+            async function verifyAdminPin(enteredPin) {
+                if (pinVerifyInFlight || !pinModalActive) return;
+                pinVerifyInFlight = true;
+                document.querySelectorAll('.pin-key').forEach(function (key) { key.disabled = true; });
+                pinHiddenInput.disabled = true;
+                try {
+                    var token = getToken();
+                    if (token) {
+                        try {
+                            var payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+                            if (payload.exp && (payload.exp * 1000 - Date.now()) <= 60000 && getRefreshToken()) {
+                                token = await refreshAdminToken();
+                            }
+                        } catch (_) {}
+                    }
+                    var response = await fetch(API_BASE_URL + '/api/admin/verify-pin', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + (token || getToken())
+                        },
+                        body: JSON.stringify({ pin: enteredPin })
+                    });
+
+                    if (response.status === 200) {
+                        pinAttempts = 0;
+                        pinErrorMsg.textContent = '';
+                        hideAdminPinModal();
+                        showToast('Session unlocked');
+                        updateAdminSessionActive();
+                        return;
+                    } else if (response.status === 401) {
+                        // The access token itself was rejected (expired/invalid) -
+                        // this is never a wrong PIN, so it must never burn an
+                        // attempt. Try one refresh + retry before giving up.
+                        var recovered = false;
+                        if (getRefreshToken()) {
+                            try {
+                                var refreshedToken = await refreshAdminToken();
+                                var retryResponse = await fetch(API_BASE_URL + '/api/admin/verify-pin', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + refreshedToken },
+                                    body: JSON.stringify({ pin: enteredPin })
+                                });
+                                if (retryResponse.status === 200) {
+                                    recovered = true;
+                                    pinAttempts = 0;
+                                    pinErrorMsg.textContent = '';
+                                    hideAdminPinModal();
+                                    showToast('Session unlocked');
+                                    updateAdminSessionActive();
+                                } else {
+                                    response = retryResponse;
+                                }
+                            } catch (_) { /* fall through to session-expired handling below */ }
+                        }
+                        if (recovered) return;
+                        if (response.status === 401) {
+                            pinErrorMsg.textContent = '';
+                            clearToken();
+                            forceToLoginScreen();
+                            hideAdminPinModal();
+                            showToast('Session expired. Please log in again.');
+                            return;
+                        }
+                        // response was replaced by the retry above and is no
+                        // longer a 401 - fall through to the normal handling
+                        // for whatever status it now is.
+                    }
+
+                    if (response.status === 429) {
+                        pinErrorMsg.textContent = 'PIN disabled after 2 incorrect entries. Please log in again.';
+                        pinDisabledForSession = true;
+                        pinHiddenInput.disabled = true;
+                        document.querySelectorAll('.pin-key').forEach(function (key) { key.disabled = true; });
+                        setTimeout(function () {
+                            clearToken();
+                            forceToLoginScreen();
+                            hideAdminPinModal();
+                            pinHiddenInput.disabled = false;
+                            document.querySelectorAll('.pin-key').forEach(function (key) { key.disabled = false; });
+                            showToast('PIN disabled. Please log in again.');
+                        }, 650);
+                        return;
+                    } else if (response.status === 403) {
+                        var reason = response.headers.get('X-Reason');
+                        if (reason === 'PIN_NOT_SET') {
+                            pinErrorMsg.textContent = 'You have not set a PIN. Please go to Profile and set one.';
+                            pinHiddenInput.value = '';
+                            updatePinDots();
+                            setTimeout(function () { pinHiddenInput.focus(); }, 100);
+                            return;
+                        } else if (reason !== 'WRONG_PIN') {
+                            pinErrorMsg.textContent = 'Access denied. Please contact super admin.';
+                            return;
+                        }
+                        pinAttempts++;
+                        var remaining = MAX_PIN_ATTEMPTS - pinAttempts;
+                        pinErrorMsg.textContent = 'Incorrect PIN. ' + remaining + ' attempt(s) remaining.';
+                        pinDots.forEach(function (dot) { dot.classList.add('error'); });
+                        setTimeout(function () {
+                            pinDots.forEach(function (dot) { dot.classList.remove('error'); });
+                        }, 400);
+                        pinHiddenInput.value = '';
+                        updatePinDots();
+                        setTimeout(function () { pinHiddenInput.focus(); }, 100);
+                        if (pinAttempts >= MAX_PIN_ATTEMPTS) {
+                            pinErrorMsg.textContent = 'PIN disabled for this session after 2 incorrect entries. Please log in again.';
+                            pinDisabledForSession = true;
+                            pinHiddenInput.disabled = true;
+                            document.querySelectorAll('.pin-key').forEach(function (key) { key.disabled = true; });
+                            setTimeout(function () {
+                                clearToken();
+                                forceToLoginScreen();
+                                hideAdminPinModal();
+                                pinHiddenInput.disabled = false;
+                                document.querySelectorAll('.pin-key').forEach(function (key) { key.disabled = false; });
+                                showToast('PIN disabled. Please log in again.');
+                            }, 650);
+                        }
+                        return;
+                    } else if (response.status === 423 || response.status === 409) {
+                        var lockedMsg = 'Account locked due to too many failed attempts. Please contact support.';
+                        pinErrorMsg.textContent = lockedMsg;
+                        setTimeout(function () {
+                            clearToken();
+                            forceToLoginScreen();
+                            hideAdminPinModal();
+                            showToast(lockedMsg);
+                        }, 1500);
+                    } else {
+                        pinErrorMsg.textContent = 'An error occurred. Please try again.';
+                        pinHiddenInput.value = '';
+                        updatePinDots();
+                        setTimeout(function () { pinHiddenInput.focus(); }, 100);
+                    }
+                } catch (e) {
+                    pinErrorMsg.textContent = 'Network error. Please try again.';
+                    pinHiddenInput.value = '';
+                    updatePinDots();
+                } finally {
+                    pinVerifyInFlight = false;
+                    if (!pinDisabledForSession) {
+                        pinHiddenInput.disabled = false;
+                        document.querySelectorAll('.pin-key').forEach(function (key) { key.disabled = false; });
+                        if (pinModalActive) setTimeout(function () { pinHiddenInput.focus(); }, 20);
+                    }
+                }
+            }
+
+            // Attach keypad listeners
+            document.querySelectorAll('.pin-key').forEach(function (btn) {
+                btn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    var val = this.dataset.value;
+                    if (val === 'clear') {
+                        pinHiddenInput.value = pinHiddenInput.value.slice(0, -1);
+                        pinErrorMsg.textContent = '';
+                        updatePinDots();
+                        pinHiddenInput.focus();
+                    } else if (val === 'submit') {
+                        var entered = pinHiddenInput.value;
+                        if (entered.length === 4) {
+                            verifyAdminPin(entered);
+                        } else {
+                            pinErrorMsg.textContent = 'Please enter exactly 4 digits.';
+                        }
+                    } else {
+                        if (pinHiddenInput.value.length < 4) {
+                            pinHiddenInput.value += val;
+                            updatePinDots();
+                            pinErrorMsg.textContent = '';
+                            if (pinHiddenInput.value.length === 4) {
+                                verifyAdminPin(pinHiddenInput.value);
+                            }
+                        }
+                        pinHiddenInput.focus();
+                    }
+                });
+            });
+
+            pinHiddenInput.addEventListener('keydown', function (e) {
+                if (e.key >= '0' && e.key <= '9') {
+                    e.preventDefault();
+                    if (pinHiddenInput.value.length < 4) {
+                        pinHiddenInput.value += e.key;
+                        updatePinDots();
+                        pinErrorMsg.textContent = '';
+                        if (pinHiddenInput.value.length === 4) {
+                            verifyAdminPin(pinHiddenInput.value);
+                        }
+                    }
+                } else if (e.key === 'Backspace') {
+                    e.preventDefault();
+                    pinHiddenInput.value = pinHiddenInput.value.slice(0, -1);
+                    pinErrorMsg.textContent = '';
+                    updatePinDots();
+                } else if (e.key === 'Enter' && pinHiddenInput.value.length === 4) {
+                    e.preventDefault();
+                    verifyAdminPin(pinHiddenInput.value);
+                } else {
+                    e.preventDefault();
+                }
+            });
+
+            pinLogoutBtn.addEventListener('click', function () {
+                pinDisabledForSession = false;
+                clearToken();
+                forceToLoginScreen();
+                hideAdminPinModal();
+                showToast('Logged out.');
+            });
+
+            // ==============================================================
+            // SESSION CHECKER
+            // ==============================================================
+            function checkAdminSession() {
+                if (getToken() && isAdminSessionExpired() && !pinModalActive) {
+                    showAdminPinModal('Your session timed out. Enter your PIN to continue.');
+                } else if (getToken() && !pinModalActive) {
+                    updateAdminSessionActive();
+                }
+            }
+
+            window.addEventListener('focus', checkAdminSession);
+            document.addEventListener('visibilitychange', function () {
+                if (document.hidden) {
+                    updateAdminSessionActive();
+                } else if (getToken() && !pinModalActive) {
+                    // Always re-verify with PIN on returning to the app,
+                    // regardless of how briefly it was backgrounded.
+                    showAdminPinModal('Enter your PIN to continue.');
+                }
+            });
+
+            setInterval(checkAdminSession, 10000);
+
+            var idleTimeout = null;
+
+            function resetAdminIdle() {
+                if (getToken()) updateAdminSessionActive();
+                if (idleTimeout) clearTimeout(idleTimeout);
+                if (pinModalActive) return;
+                idleTimeout = setTimeout(function () {
+                    if (getToken() && isAdminSessionExpired() && !pinModalActive) {
+                        showAdminPinModal('Your session timed out. Enter your PIN to continue.');
+                    }
+                }, SESSION_TIMEOUT_MS + 5000);
+            }
+            document.addEventListener('mousemove', resetAdminIdle);
+            document.addEventListener('keydown', resetAdminIdle);
+            document.addEventListener('touchstart', resetAdminIdle);
+
+            // ==============================================================
+            // ADMIN LOGIN + RECOVERY
+            // ==============================================================
+            function showAdminRecovery(message) {
+                if (adminRecoveryPanel) adminRecoveryPanel.classList.remove('hidden');
+                if (adminRecoveryMessage) adminRecoveryMessage.textContent = message || 'Use the recovery code sent to your registered admin email.';
+            }
+
+            function startAdminOtpCooldown(seconds) {
+                if (adminOtpCooldownTimer) clearInterval(adminOtpCooldownTimer);
+                var box = document.getElementById('admin-otp-countdown');
+                var remaining = Math.max(1, Number(seconds) || 60);
+                adminSendOtpBtn.disabled = true;
+                if (box) { box.classList.remove('hidden'); box.textContent = 'You can request another code in ' + remaining + ' seconds.'; }
+                adminOtpCooldownTimer = setInterval(function(){
+                    remaining--;
+                    if (remaining <= 0) { clearInterval(adminOtpCooldownTimer); adminOtpCooldownTimer=null; adminSendOtpBtn.disabled=false; if(box){box.classList.add('hidden');box.textContent='';} }
+                    else if(box) box.textContent='You can request another code in ' + remaining + ' seconds.';
+                },1000);
+            }
+
+            async function sendAdminRecoveryOtp() {
+                var email = document.getElementById('admin-email').value.trim();
+                if (!email) { if (adminRecoveryMessage) adminRecoveryMessage.textContent = 'Enter your admin email first.'; return; }
+                if (adminOtpRequestInFlight) return;
+                adminOtpRequestInFlight = true;
+                adminSendOtpBtn.disabled = true;
+                try {
+                    var response = await fetch(API_BASE_URL + '/api/admin/auth/recovery/send-otp', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email })
+                    });
+                    var data = {}; try { data = await response.json(); } catch (_) {}
+                    if (!response.ok) throw new Error(data.message || 'Unable to send recovery code.');
+                    if (adminRecoveryMessage) adminRecoveryMessage.textContent = data.message || 'If the address belongs to an administrator, a recovery code has been sent.';
+                    startAdminOtpCooldown(60);
+                } catch (e) {
+                    if (adminRecoveryMessage) adminRecoveryMessage.textContent = e.message || 'Unable to send recovery code.';
+                    var waitMatch = String(e.message || '').match(/wait\s+(\d+)\s+seconds?/i);
+                    if (waitMatch) startAdminOtpCooldown(Number(waitMatch[1])); else adminSendOtpBtn.disabled = false;
+                }
+                finally { adminOtpRequestInFlight = false; }
+            }
+
+            async function verifyAdminRecoveryOtp() {
+                var email = document.getElementById('admin-email').value.trim();
+                var code = adminRecoveryCode.value.trim();
+                if (!email || !/^\d{6}$/.test(code)) { if (adminRecoveryMessage) adminRecoveryMessage.textContent = 'Enter the 6-digit recovery code.'; return; }
+                adminVerifyOtpBtn.disabled = true;
+                try {
+                    var response = await fetch(API_BASE_URL + '/api/admin/auth/recovery/verify-otp', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email, code: code })
+                    });
+                    var data = {}; try { data = await response.json(); } catch (_) {}
+                    if (!response.ok) throw new Error(data.message || 'Invalid or expired recovery code.');
+                    setToken(data.accessToken);
+                    setRefreshToken(data.refreshToken);
+                    pinDisabledForSession = false;
+                    var user = await adminApiRequest('/api/admin/me');
+                    currentUserRole = user.role || 'ADMIN';
+                    adminRecoveryPanel.classList.add('hidden');
+                    loginScreen.classList.remove('active');
+                    mainScreen.classList.add('active');
+                    updateAdminSessionActive();
+                    showToast('Admin access restored.');
+                    loadDashboard(); loadWhatsApp(); loadUsers();
+                } catch (e) { if (adminRecoveryMessage) adminRecoveryMessage.textContent = e.message || 'Recovery failed.'; }
+                finally { adminVerifyOtpBtn.disabled = false; }
+            }
+
+            if (adminSendOtpBtn) adminSendOtpBtn.addEventListener('click', sendAdminRecoveryOtp);
+            if (adminVerifyOtpBtn) adminVerifyOtpBtn.addEventListener('click', verifyAdminRecoveryOtp);
+
+            loginBtn.addEventListener('click', function () {
+                var email = document.getElementById('admin-email').value.trim();
+                var password = document.getElementById('admin-password').value;
+                hide(loginError);
+                if (!email || !password) {
+                    loginErrorText.textContent = 'Enter your email and password.'; show(loginError); return;
+                }
+                loginBtn.disabled = true; loginBtn.textContent = 'Signing in…';
+                fetch(API_BASE_URL + '/api/admin/auth/login', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email, password: password })
+                }).then(async function (response) {
+                    var data = {}; try { data = await response.json(); } catch (_) {}
+                    if (!response.ok) {
+                        var error = new Error(data.message || 'Login failed.'); error.status = response.status; error.recovery = response.headers.get('X-Recovery-Required'); throw error;
+                    }
+                    return data;
+                }).then(async function (data) {
+                    if (!data.accessToken) throw new Error('No admin access token received.');
+                    setToken(data.accessToken); setRefreshToken(data.refreshToken);
+                    var user = await adminApiRequest('/api/admin/me');
+                    currentUserRole = user.role || data.role || 'ADMIN';
+                    if (adminRecoveryPanel) adminRecoveryPanel.classList.add('hidden');
+                    loginScreen.classList.remove('active'); mainScreen.classList.add('active');
+                    showToast('Welcome, ' + (user.fullName || data.firstName || 'Admin') + '!');
+                    updateAdminSessionActive(); loadDashboard(); loadWhatsApp(); loadUsers();
+                }).catch(function (error) {
+                    loginErrorText.textContent = error.message || 'Login failed. Check your credentials.'; show(loginError);
+                    if (error.status === 423 || error.recovery === 'OTP') {
+                        showAdminRecovery('Admin protection is active. Request the recovery OTP to restore access.');
+                    } else if (error.recovery === 'EMAIL_VERIFICATION') {
+                        showAdminRecovery('Your admin email is not verified. Request the verification code and enter it below.');
+                    }
+                }).finally(function () { loginBtn.disabled = false; loginBtn.textContent = 'Sign in'; });
+            });
+
+            document.getElementById('admin-password').addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') loginBtn.click();
+            });
+            document.getElementById('admin-email').addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') loginBtn.click();
+            });
+
+            // ==============================================================
+            // TABS
+            // ==============================================================
+            var tabs = document.querySelectorAll('.nav-tab');
+            var tabContents = {
+                dashboard: document.getElementById('tab-dashboard'),
+                users: document.getElementById('tab-users'),
+                errors: document.getElementById('tab-errors'),
+                support: document.getElementById('tab-support')
+            };
+
+            tabs.forEach(function (tab) {
+                tab.addEventListener('click', function () {
+                    tabs.forEach(function (t) { t.classList.remove('active'); });
+                    tab.classList.add('active');
+                    Object.keys(tabContents).forEach(function (key) {
+                        if (tabContents[key]) {
+                            if (key === tab.dataset.tab) {
+                                tabContents[key].classList.remove('hidden');
+                            } else {
+                                tabContents[key].classList.add('hidden');
+                            }
+                        }
+                    });
+                    if (tab.dataset.tab === 'dashboard') loadDashboard();
+                    if (tab.dataset.tab === 'users') loadUsers();
+                    if (tab.dataset.tab === 'errors') loadErrors();
+                });
+            });
+
+            // ==============================================================
+            // MENU – with Profile
+            // ==============================================================
+            var menuOpen = false;
+
+            function closeMenu() {
+                var el = document.getElementById('menu-dropdown');
+                if (el) el.remove();
+                menuOpen = false;
+            }
+
+            document.getElementById('menu-btn').addEventListener('click', function (e) {
+                e.stopPropagation();
+                if (menuOpen) { closeMenu(); return; }
+                var dropdown = document.createElement('div');
+                dropdown.className = 'menu-dropdown';
+                dropdown.id = 'menu-dropdown';
+                dropdown.innerHTML =
+                    '<button id="menu-profile">👤 Profile</button>' +
+                    '<div class="menu-divider"></div>' +
+                    '<button onclick="window.dwOpenUserApp()">&#8592; User App</button>' +
+                    '<div class="menu-divider"></div>' +
+                    '<button id="menu-logout" class="danger">Log out</button>';
+                document.getElementById('app').appendChild(dropdown);
+                menuOpen = true;
+                document.getElementById('menu-profile').addEventListener('click', function () {
+                    closeMenu();
+                    openProfile();
+                });
+                document.getElementById('menu-logout').addEventListener('click', function () {
+                    closeMenu();
+                    pinDisabledForSession = false;
+                    clearToken();
+                    forceToLoginScreen();
+                    showToast('Logged out.');
+                });
+            });
+            document.addEventListener('click', closeMenu);
+
+            // ==============================================================
+            // DASHBOARD
+            // ==============================================================
+            function loadDashboard() {
+                var loading = document.getElementById('dashboard-loading');
+                var error = document.getElementById('dashboard-error');
+                show(loading);
+                hide(error);
+
+                adminApiRequest('/api/admin/stats')
+                    .then(function (stats) {
+                        document.getElementById('stat-users').textContent = stats.totalUsers || 0;
+                        document.getElementById('stat-verified').textContent = stats.verifiedUsers || 0;
+                        document.getElementById('stat-transactions').textContent = stats.totalTransactions || 0;
+                        document.getElementById('stat-volume').textContent = (stats.totalVolumeSle || 0).toFixed(2);
+                        hide(loading);
+                    })
+                    .catch(function (e) {
+                        hide(loading);
+                        error.textContent = e.message || 'Failed to load dashboard.';
+                        show(error);
+                    });
+            }
+
+            // ==============================================================
+            // USERS (list)
+            // ==============================================================
+            var allUsers = [];
+
+            function loadUsers() {
+                var loading = document.getElementById('user-list-loading');
+                var error = document.getElementById('user-list-error');
+                var list = document.getElementById('user-list');
+                show(loading);
+                hide(error);
+                list.innerHTML = '';
+
+                adminApiRequest('/api/admin/users')
+                    .then(function (users) {
+                        allUsers = (users || []).filter(function (u) { return u.role === 'USER'; });
+                        renderUsers(allUsers);
+                        hide(loading);
+                    })
+                    .catch(function (e) {
+                        hide(loading);
+                        error.textContent = e.message || 'Failed to load users.';
+                        show(error);
+                    });
+            }
+
+            function renderUsers(users) {
+                var list = document.getElementById('user-list');
+                list.innerHTML = '';
+                if (!users || users.length === 0) {
+                    list.innerHTML = '<div class="empty-state">No users found.</div>';
+                    return;
+                }
+
+                users.forEach(function (user) {
+                    var card = document.createElement('div');
+                    card.className = 'item-card';
+                    var initial = (user.fullName || user.username || '?')[0].toUpperCase();
+                    var isActive = user.active !== false;
+                    var isLocked = user.locked === true;
+                    var isSuper = user.role === 'SUPER_ADMIN';
+
+                    var statusBadge = '';
+                    if (isSuper) {
+                        statusBadge = '<span class="badge super">👑 Super</span>';
+                    } else if (isLocked) {
+                        statusBadge = '<span class="badge locked">🔒 Locked</span>';
+                    } else if (isActive) {
+                        statusBadge = '<span class="badge active">✅ Active</span>';
+                    } else {
+                        statusBadge = '<span class="badge inactive">⛔ Inactive</span>';
+                    }
+
+                    var pinAttemptsDisplay = '';
+                    if (user.pinAttempts > 0) {
+                        pinAttemptsDisplay = '<span style="font-size:10px;color:var(--warning-text);">PIN attempts: ' + user.pinAttempts + '</span>';
+                    }
+
+                    card.innerHTML =
+                        '<div class="item-avatar">' + escapeHtml(initial) + '</div>' +
+                        '<div class="item-info">' +
+                        '<div class="name">' + escapeHtml(user.fullName || user.username) + '</div>' +
+                        '<div class="meta">' +
+                        '<span>' + escapeHtml(user.email) + '</span>' +
+                        '<span class="badge ' + (user.emailVerified ? 'verified' : 'unverified') + '">' + (user.emailVerified ? '✅ Verified' : '❌ Unverified') + '</span>' +
+                        statusBadge +
+                        pinAttemptsDisplay +
+                        '</div>' +
+                        '</div>' +
+                        '<div class="item-actions">' +
+                        '<button class="icon-btn" data-action="view-user" data-id="' + user.id + '" title="View Details">👁️</button>' +
+                        ((user.loginFailedAttempts > 0 || user.loginLockedUntil) ? '<button class="icon-btn" data-action="reset-login" data-id="' + user.id + '" title="Reset Login Protection">↻</button>' : '') +
+                        (isSuper ? '' : '<button class="icon-btn" data-action="toggle" data-id="' + user.id + '" data-active="' + isActive + '" data-locked="' + isLocked + '" title="' + (isLocked ? 'Unlock' : isActive ? 'Deactivate' : 'Activate') + '">' +
+                            (isLocked ? '🔓' : (isActive ? '🔒' : '✅')) + '</button>') +
+                        '</div>';
+                    list.appendChild(card);
+                });
+
+                // View user details
+                list.querySelectorAll('[data-action="view-user"]').forEach(function (btn) {
+                    btn.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        var userId = btn.dataset.id;
+                        var user = allUsers.find(function (u) { return u.id === userId; });
+                        if (user) openUserDetail(user);
+                    });
+                });
+
+                list.querySelectorAll('[data-action="reset-login"]').forEach(function (btn) {
+                    btn.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        var id = btn.dataset.id;
+                        showModal('Reset Login Protection', 'Clear the user password login attempts and temporary login pause?', function () {
+                            btn.disabled = true;
+                            adminApiRequest('/api/admin/users/' + id + '/reset-login-protection', { method: 'PUT' })
+                                .then(function () { showToast('User login protection reset.'); loadUsers(); })
+                                .catch(function (err) { showToast(err.message || 'Failed to reset login protection.'); })
+                                .finally(function () { btn.disabled = false; });
+                        });
+                    });
+                });
+
+                // Toggle (only for non-super)
+                list.querySelectorAll('[data-action="toggle"]').forEach(function (btn) {
+                    btn.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        var id = btn.dataset.id;
+                        var active = btn.dataset.active === 'true';
+                        var locked = btn.dataset.locked === 'true';
+
+                        var action = '';
+                        var message = '';
+                        if (locked) {
+                            action = 'unlock';
+                            message = 'This will unlock the user account.';
+                        } else if (active) {
+                            action = 'deactivate';
+                            message = 'This user will lose access.';
+                        } else {
+                            action = 'activate';
+                            message = 'This user will regain access.';
+                        }
+
+                        showModal(
+                            action.charAt(0).toUpperCase() + action.slice(1) + ' User',
+                            message,
+                            function () {
+                                var endpoint = locked
+                                    ? '/api/admin/users/' + id + '/unlock'
+                                    : '/api/admin/users/' + id + '/toggle';
+                                var options = locked
+                                    ? { method: 'PUT' }
+                                    : { method: 'PUT', body: { active: !active } };
+
+                                adminApiRequest(endpoint, options)
+                                    .then(function () {
+                                        showToast('User ' + action + 'd successfully.');
+                                        loadUsers();
+                                    })
+                                    .catch(function (err) {
+                                        showToast(err.message || 'Failed to update user.');
+                                        loadUsers();
+                                    });
+                            }
+                        );
+                    });
+                });
+
+                list.querySelectorAll('.item-card').forEach(function (card) {
+                    card.addEventListener('click', function () {
+                        var viewBtn = card.querySelector('[data-action="view-user"]');
+                        if (viewBtn) viewBtn.click();
+                    });
+                });
+            }
+
+            function openUserDetail(user) {
+                var overlay = document.getElementById('user-modal-overlay');
+                var body = document.getElementById('user-modal-body');
+                var toggleBtn = document.getElementById('user-modal-toggle');
+                var closeBtn = document.getElementById('user-modal-close');
+
+                document.getElementById('user-modal-title').textContent = user.fullName || user.username || 'User';
+                document.getElementById('user-modal-sub').textContent = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' ? 'Admin account details' : 'User account details';
+
+                var isActive = user.active !== false;
+                var isLocked = user.locked === true;
+                var isVerified = user.emailVerified === true;
+                var isSuper = user.role === 'SUPER_ADMIN';
+
+                body.innerHTML = `
+                    <div class="user-detail-row"><span class="label">Account Number</span><span class="value">${escapeHtml(user.accountNumber || '—')}</span></div>
+                    <div class="user-detail-row"><span class="label">Full Name</span><span class="value">${escapeHtml(user.fullName || '—')}</span></div>
+                    <div class="user-detail-row"><span class="label">Username</span><span class="value">${escapeHtml(user.username || '—')}</span></div>
+                    <div class="user-detail-row"><span class="label">Phone</span><span class="value">${escapeHtml(user.phone || '—')}</span></div>
+                    <div class="user-detail-row"><span class="label">Email</span><span class="value">${escapeHtml(user.email || '—')}</span></div>
+                    <div style="margin:12px 0;padding:12px;border:1px solid var(--border);border-radius:10px;">
+                      <div style="font-weight:600;margin-bottom:8px;">Admin contact update</div>
+                      <input id="admin-user-email" class="text-input" type="email" value="${escapeHtml(user.email || '')}" placeholder="Email" style="margin-bottom:8px;" />
+                      <input id="admin-user-phone" class="text-input" type="text" value="${escapeHtml(user.phone || '')}" placeholder="+232XXXXXXXX" />
+                      <button id="admin-save-contact-btn" class="btn-sm success" style="margin-top:8px;">Save email & phone</button>
+                      <div id="admin-contact-error" class="error-state hidden" style="margin-top:8px;"></div>
+                    </div>
+                    <div class="user-detail-row"><span class="label">Role</span><span class="value">${escapeHtml(user.role || 'USER')}</span></div>
+                    <div class="user-detail-row"><span class="label">Email Verified</span><span class="value ${isVerified ? 'success' : 'failed'}">${isVerified ? '✅ Yes' : '❌ No'}</span></div>
+                    ${isVerified ? '' : '<button id=\"verify-user-email-btn\" class=\"btn-sm success\" style=\"margin:12px 0;\">✓ Verify Email</button>'}
+                    <div class="user-detail-row"><span class="label">Status</span><span class="value ${isActive ? 'success' : 'failed'}">${isActive ? '✅ Active' : '⛔ Inactive'}</span></div>
+                    <div class="user-detail-row"><span class="label">Locked</span><span class="value ${isLocked ? 'failed' : 'success'}">${isLocked ? '🔒 Yes' : '✅ No'}</span></div>
+                    <div class="user-detail-row"><span class="label">PIN Attempts</span><span class="value">${user.pinAttempts || 0}</span></div>
+                    <div class="user-detail-row"><span class="label">Login Attempts</span><span class="value">${user.loginFailedAttempts || 0}</span></div>
+                    <div class="user-detail-row" style="border-bottom:none;"><span class="label">Login Status</span><span class="value">${user.loginLockedUntil ? '⏳ Temporarily paused until ' + new Date(user.loginLockedUntil).toLocaleString() : (user.adminRecoveryRequired ? '🔐 Recovery required' : '✅ Normal')}</span></div>
+                    ${(user.loginFailedAttempts > 0 || user.loginLockedUntil || user.adminRecoveryRequired) && user.role !== 'SUPER_ADMIN' ? '<button id="reset-login-protection-btn" class="btn-sm success" style="margin:12px 0;">↻ Reset Login Protection</button>' : ''}
+                `;
+
+                var saveContactBtn = document.getElementById('admin-save-contact-btn');
+                if (saveContactBtn) {
+                    saveContactBtn.addEventListener('click', function () {
+                        var email = document.getElementById('admin-user-email').value.trim();
+                        var phone = document.getElementById('admin-user-phone').value.trim();
+                        var errorEl = document.getElementById('admin-contact-error');
+                        hide(errorEl);
+                        if (!email || !/^\S+@\S+\.\S+$/.test(email)) { errorEl.textContent = 'Enter a valid email address.'; show(errorEl); return; }
+                        if (!/^\+232\d{8}$/.test(phone)) { errorEl.textContent = 'Phone must be in format +232XXXXXXXX.'; show(errorEl); return; }
+                        saveContactBtn.disabled = true; saveContactBtn.textContent = 'Saving...';
+                        adminApiRequest('/api/admin/users/' + user.id + '/contact', { method: 'PUT', body: { email: email, phone: phone } })
+                            .then(function (updated) { showToast(updated.emailVerified ? 'Contact details updated.' : 'Contact updated. A verification code was sent to the new email.'); loadUsers(); overlay.classList.remove('active'); })
+                            .catch(function (e) { errorEl.textContent = e.message || 'Failed to update contact details.'; show(errorEl); })
+                            .finally(function () { saveContactBtn.disabled = false; saveContactBtn.textContent = 'Save email & phone'; });
+                    });
+                }
+
+                var resetLoginBtn = document.getElementById('reset-login-protection-btn');
+                if (resetLoginBtn) {
+                    resetLoginBtn.addEventListener('click', function () {
+                        resetLoginBtn.disabled = true;
+                        resetLoginBtn.textContent = 'Resetting…';
+                        adminApiRequest('/api/admin/users/' + user.id + '/reset-login-protection', { method: 'PUT' })
+                            .then(function (updated) {
+                                showToast('Login protection reset.');
+                                overlay.classList.remove('active');
+                                loadUsers();
+                                if (updated.role !== 'USER') loadAdminList();
+                            })
+                            .catch(function (e) { showToast(e.message || 'Failed to reset login protection.'); })
+                            .finally(function () { resetLoginBtn.disabled = false; resetLoginBtn.textContent = '↻ Reset Login Protection'; });
+                    });
+                }
+
+                var verifyEmailBtn = document.getElementById('verify-user-email-btn');
+                if (verifyEmailBtn) {
+                    verifyEmailBtn.addEventListener('click', function () {
+                        if (!confirm('Mark this user email as verified?')) return;
+                        adminApiRequest('/api/admin/users/' + user.id + '/verify-email', { method: 'PUT' })
+                            .then(function () { showToast('User email verified.'); loadUsers(); overlay.classList.remove('active'); })
+                            .catch(function (e) { showToast(e.message || 'Failed to verify email.'); });
+                    });
+                }
+
+                if (isSuper) {
+                    toggleBtn.style.display = 'none';
+                } else {
+                    toggleBtn.style.display = 'block';
+                    if (isLocked) {
+                        toggleBtn.textContent = '🔓 Unlock User';
+                        toggleBtn.className = 'btn-sm success';
+                    } else if (isActive) {
+                        toggleBtn.textContent = '🔒 Deactivate';
+                        toggleBtn.className = 'btn-sm danger';
+                    } else {
+                        toggleBtn.textContent = '✅ Activate';
+                        toggleBtn.className = 'btn-sm success';
+                    }
+                }
+
+                toggleBtn.dataset.userId = user.id;
+                toggleBtn.dataset.active = isActive;
+                toggleBtn.dataset.locked = isLocked;
+
+                var newToggle = toggleBtn.cloneNode(true);
+                toggleBtn.parentNode.replaceChild(newToggle, toggleBtn);
+
+                newToggle.addEventListener('click', function () {
+                    var id = this.dataset.userId;
+                    var active = this.dataset.active === 'true';
+                    var locked = this.dataset.locked === 'true';
+
+                    var action = '';
+                    if (locked) {
+                        action = 'unlock';
+                    } else if (active) {
+                        action = 'deactivate';
+                    } else {
+                        action = 'activate';
+                    }
+
+                    if (!confirm('Are you sure you want to ' + action + ' this account?')) return;
+                    var overlay = document.getElementById('user-modal-overlay');
+                    overlay.classList.remove('active');
+
+                    var endpoint = locked
+                        ? '/api/admin/users/' + id + '/unlock'
+                        : '/api/admin/users/' + id + '/toggle';
+                    var options = locked
+                        ? { method: 'PUT' }
+                        : { method: 'PUT', body: { active: !active } };
+
+                    adminApiRequest(endpoint, options)
+                        .then(function () {
+                            showToast('User ' + action + 'd successfully.');
+                            loadUsers();
+                        })
+                        .catch(function (err) {
+                            showToast(err.message || 'Failed to update user.');
+                            loadUsers();
+                        });
+                });
+
+                var newClose = closeBtn.cloneNode(true);
+                closeBtn.parentNode.replaceChild(newClose, closeBtn);
+                newClose.addEventListener('click', function () {
+                    overlay.classList.remove('active');
+                });
+                overlay.onclick = function (e) {
+                    if (e.target === overlay) overlay.classList.remove('active');
+                };
+                overlay.classList.add('active');
+            }
+
+            document.getElementById('user-search').addEventListener('input', function (e) {
+                var q = e.target.value.toLowerCase();
+                var filtered = allUsers.filter(function (u) {
+                    return (u.fullName || '').toLowerCase().includes(q) ||
+                        (u.email || '').toLowerCase().includes(q) ||
+                        (u.phone || '').includes(q) ||
+                        (u.accountNumber || '').includes(q);
+                });
+                renderUsers(filtered);
+            });
+
+            // ==============================================================
+            // WHATSAPP SETTINGS
+            // ==============================================================
+            function loadWhatsApp() {
+                adminApiRequest('/api/admin/support/whatsapp')
+                    .then(function (data) {
+                        if (data && data.whatsappNumber) {
+                            document.getElementById('whatsapp-input').value = data.whatsappNumber;
+                        }
+                    })
+                    .catch(function (e) {
+                        console.warn('Failed to load WhatsApp number:', e);
+                    });
+            }
+
+            document.getElementById('save-whatsapp-btn').addEventListener('click', function () {
+                var input = document.getElementById('whatsapp-input');
+                var number = input.value.trim();
+                var error = document.getElementById('whatsapp-error');
+                var errorText = document.getElementById('whatsapp-error-text');
+                var success = document.getElementById('whatsapp-success');
+
+                hide(error);
+                hide(success);
+
+                if (!number) {
+                    errorText.textContent = 'Please enter a WhatsApp number.';
+                    show(error);
+                    return;
+                }
+
+                var btn = this;
+                btn.disabled = true;
+                btn.textContent = 'Saving...';
+
+                adminApiRequest('/api/admin/support/whatsapp', {
+                    method: 'PUT',
+                    body: { whatsappNumber: number }
+                })
+                    .then(function () {
+                        show(success);
+                        setTimeout(function () { hide(success); }, 3000);
+                        showToast('WhatsApp number updated!');
+                    })
+                    .catch(function (e) {
+                        errorText.textContent = e.message || 'Failed to update WhatsApp number.';
+                        show(error);
+                    })
+                    .finally(function () {
+                        btn.disabled = false;
+                        btn.textContent = 'Save';
+                    });
+            });
+
+            // ==============================================================
+            // SUPPORT LOOKUP
+            // ==============================================================
+            document.getElementById('support-lookup-btn').addEventListener('click', function () {
+                var query = document.getElementById('support-search').value.trim();
+                var result = document.getElementById('support-result');
+                var error = document.getElementById('support-error');
+                hide(result);
+                hide(error);
+
+                if (!query) {
+                    error.textContent = 'Enter a transaction ID or code.';
+                    show(error);
+                    return;
+                }
+
+                adminApiRequest('/api/admin/transactions/lookup/' + encodeURIComponent(query))
+                    .then(function (data) {
+                        var txnCode = data.transactionCode || data.transactionId || query;
+                        document.getElementById('support-txn-code').textContent = txnCode;
+                        document.getElementById('support-txn-status').textContent = data.status || '—';
+                        document.getElementById('support-txn-amount').textContent = data.amount ? 'SLE ' + Number(data.amount).toFixed(2) : '—';
+                        document.getElementById('support-txn-total').textContent = data.totalCharged ? 'SLE ' + Number(data.totalCharged).toFixed(2) : '—';
+                        document.getElementById('support-txn-source').textContent = data.sourcePhone || data.sourceProviderId || '—';
+                        document.getElementById('support-txn-recipient').textContent = data.destinationPhone || data.destinationHolderName || '—';
+                        document.getElementById('support-txn-user').textContent = data.accountHolderAccountNumber ? data.accountHolderAccountNumber + (data.accountHolderName ? ' — ' + data.accountHolderName : '') : (data.accountHolderEmail || data.accountHolderName || '—');
+                        document.getElementById('support-txn-created').textContent = data.createdAt ? new Date(data.createdAt).toLocaleString() : '—';
+                        var reasonRow = document.getElementById('support-txn-reason-row');
+                        var reasonEl = document.getElementById('support-txn-reason');
+                        if (reasonRow && reasonEl) {
+                            reasonRow.style.display = data.failureReason ? 'flex' : 'none';
+                            reasonEl.textContent = data.failureReason || '—';
+                        }
+                        show(result);
+                    })
+                    .catch(function (err) {
+                        adminApiRequest('/api/admin/users')
+                            .then(function (users) {
+                                var found = users.find(function (u) {
+                                    return u.email === query || u.phone === query || u.username === query || u.accountNumber === query;
+                                });
+                                if (found) {
+                                    showToast('User found: ' + found.fullName);
+                                    document.getElementById('support-txn-code').textContent = '—';
+                                    document.getElementById('support-txn-status').textContent = 'User Lookup';
+                                    document.getElementById('support-txn-amount').textContent = '—';
+                                    document.getElementById('support-txn-total').textContent = '—';
+                                    document.getElementById('support-txn-source').textContent = found.phone || '—';
+                                    document.getElementById('support-txn-recipient').textContent = '—';
+                                    document.getElementById('support-txn-user').textContent = found.email + ' (' + found.fullName + ')';
+                                    document.getElementById('support-txn-created').textContent = found.createdAt ? new Date(found.createdAt).toLocaleString() : '—';
+                                    show(result);
+                                    return;
+                                }
+                                throw new Error('No transaction or user found for "' + query + '"');
+                            })
+                            .catch(function (err2) {
+                                error.textContent = err2.message || err.message || 'Lookup failed.';
+                                show(error);
+                            });
+                    });
+            });
+
+            document.getElementById('support-search').addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    document.getElementById('support-lookup-btn').click();
+                }
+            });
+
+            // ==============================================================
+            // ERRORS
+            // ==============================================================
+            var allErrors = [];
+
+            function loadErrors() {
+                var loading = document.getElementById('error-list-loading');
+                var error = document.getElementById('error-list-error');
+                var list = document.getElementById('error-list');
+                show(loading);
+                hide(error);
+                list.innerHTML = '';
+
+                adminApiRequest('/api/admin/errors/stats')
+                    .then(function (stats) {
+                        document.getElementById('error-total').textContent = stats.totalErrors || 0;
+                        document.getElementById('error-24h').textContent = stats.errorsLast24h || 0;
+                        document.getElementById('error-7d').textContent = stats.errorsLast7d || 0;
+                        var chart = document.getElementById('error-type-chart');
+                        chart.innerHTML = '';
+                        if (stats.byType && stats.byType.length > 0) {
+                            stats.byType.forEach(function (item) {
+                                var pill = document.createElement('span');
+                                pill.className = 'pill';
+                                pill.innerHTML = escapeHtml(item.errorType) + ' <span class="count">' + escapeHtml(item.count) + '</span>';
+                                chart.appendChild(pill);
+                            });
+                        } else {
+                            chart.innerHTML = '<span style="color:#6E7C82;font-size:13px;">No errors logged yet.</span>';
+                        }
+                        return adminApiRequest('/api/admin/errors', { params: { limit: 200 } });
+                    })
+                    .then(function (errors) {
+                        allErrors = errors || [];
+                        renderErrors(allErrors);
+                        hide(loading);
+                    })
+                    .catch(function (e) {
+                        hide(loading);
+                        if (e.status === 404) {
+                            error.textContent = 'Error endpoints not available. Create them in your backend.';
+                            show(error);
+                        } else {
+                            error.textContent = e.message || 'Failed to load errors.';
+                            show(error);
+                        }
+                    });
+            }
+
+            function renderErrors(errors) {
+                var list = document.getElementById('error-list');
+                list.innerHTML = '';
+                if (!errors || errors.length === 0) {
+                    list.innerHTML = '<div class="empty-state">No errors logged. 🎉</div>';
+                    return;
+                }
+
+                errors.forEach(function (err) {
+                    var card = document.createElement('div');
+                    card.className = 'item-card';
+                    var iconMap = {
+                        'JS_ERROR': '🛑', 'API_ERROR': '🌐', 'RAGE_CLICK': '😤',
+                        'NETWORK_ERROR': '📡', 'VALIDATION_ERROR': '⚠️',
+                        'PROMISE_REJECTION': '💔', 'CONSOLE_ERROR': '📣'
+                    };
+                    var icon = iconMap[err.errorType] || '🔴';
+
+                    card.innerHTML =
+                        '<div style="font-size:18px;flex-shrink:0;">' + icon + '</div>' +
+                        '<div class="item-info">' +
+                        '<div class="name">' + escapeHtml(err.errorType || 'Unknown') + '</div>' +
+                        '<div class="meta">' +
+                        '<span style="font-size:12px;">' + escapeHtml(err.message || 'No message') + '</span>' +
+                        (err.statusCode ? '<span style="font-weight:600;color:var(--error);">' + escapeHtml(err.statusCode) + '</span>' : '') +
+                        '<span style="font-size:11px;color:var(--muted);">' + escapeHtml(err.url ? err.url.replace(/^https?:\/\/[^\/]+/, '') : '') + '</span>' +
+                        '<span style="font-size:11px;color:var(--muted);">' + (err.createdAt ? new Date(err.createdAt).toLocaleString() : '') + '</span>' +
+                        '</div>' +
+                        (err.stack ? '<div style="font-size:10px;color:var(--muted);margin-top:4px;padding:4px 8px;background:#fff;border-radius:6px;border:1px solid var(--border);overflow-x:auto;white-space:pre-wrap;word-break:break-word;">' + escapeHtml(err.stack.substring(0, 300)) + (err.stack.length > 300 ? '…' : '') + '</div>' : '') +
+                        '</div>' +
+                        '<div class="item-actions">' +
+                        '<button class="icon-btn" data-action="copy" data-msg="' + escapeHtml(err.message || '') + '">&#128203;</button>' +
+                        '</div>';
+                    list.appendChild(card);
+                });
+
+                list.querySelectorAll('[data-action="copy"]').forEach(function (btn) {
+                    btn.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        navigator.clipboard.writeText(btn.dataset.msg).then(function () {
+                            showToast('Error message copied!');
+                        });
+                    });
+                });
+            }
+
+            document.getElementById('error-search').addEventListener('input', function (e) {
+                var q = e.target.value.toLowerCase();
+                var filtered = allErrors.filter(function (err) {
+                    return (err.errorType || '').toLowerCase().includes(q) ||
+                        (err.message || '').toLowerCase().includes(q) ||
+                        (err.url || '').toLowerCase().includes(q);
+                });
+                renderErrors(filtered);
+            });
+
+            document.getElementById('error-refresh-btn').addEventListener('click', loadErrors);
+
+            document.getElementById('error-clear-btn').addEventListener('click', function () {
+                showModal('Clear All Errors', 'This will permanently delete all error logs. Are you sure?', function () {
+                    var clearBtn = document.getElementById('error-clear-btn');
+                    clearBtn.disabled = true;
+                    adminApiRequest('/api/admin/errors', { method: 'DELETE' })
+                        .then(function () {
+                            allErrors = [];
+                            renderErrors([]);
+                            document.getElementById('error-total').textContent = '0';
+                            document.getElementById('error-24h').textContent = '0';
+                            document.getElementById('error-7d').textContent = '0';
+                            document.getElementById('error-type-chart').innerHTML = '<span style="color:#6E7C82;font-size:13px;">No errors logged yet.</span>';
+                            showToast('All errors cleared.');
+                            setTimeout(loadErrors, 150);
+                        })
+                        .catch(function (err) {
+                            showToast(err.message || 'Failed to clear errors.');
+                        })
+                        .finally(function () { clearBtn.disabled = false; });
+                });
+            });
+
+            // ==============================================================
+            // MODAL – Generic
+            // ==============================================================
+            var modalResolve = null;
+
+            function showModal(title, message, onConfirm) {
+                document.getElementById('modal-title').textContent = title;
+                document.getElementById('modal-message').textContent = message;
+                document.getElementById('modal-overlay').classList.add('active');
+                modalResolve = onConfirm;
+            }
+
+            document.getElementById('modal-cancel').addEventListener('click', function () {
+                document.getElementById('modal-overlay').classList.remove('active');
+            });
+            document.getElementById('modal-confirm').addEventListener('click', function () {
+                if (modalResolve) modalResolve();
+                document.getElementById('modal-overlay').classList.remove('active');
+            });
+            document.getElementById('modal-overlay').addEventListener('click', function (e) {
+                if (e.target === this) {
+                    this.classList.remove('active');
+                }
+            });
+
+            // ==============================================================
+            // PROFILE – with PIN change & Admin Management
+            // ==============================================================
+            function openProfile() {
+                mainScreen.classList.remove('active');
+                profileScreen.classList.add('active');
+                renderProfile();
+            }
+
+            document.getElementById('profile-back-btn').addEventListener('click', function () {
+                profileScreen.classList.remove('active');
+                mainScreen.classList.add('active');
+            });
+
+            async function renderProfile() {
+                var content = document.getElementById('profile-content');
+                content.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading profile…</div>';
+
+                try {
+                    var user = await adminApiRequest('/api/admin/me');
+                    var isSuper = user.role === 'SUPER_ADMIN';
+
+                    var html = `
+                        <div class="admin-card">
+                            <div class="profile-row"><span class="label">Email</span><span class="value">${escapeHtml(user.email)}</span></div>
+                            <div class="profile-row"><span class="label">Email status</span><span class="value">${user.emailVerified ? '✅ Verified' : '<button class=\"btn-sm success\" id=\"verify-my-email-btn\">Verify my email</button>'}</span></div>
+                            <div class="profile-row"><span class="label">Full Name</span><span class="value">${escapeHtml(user.fullName || '—')}</span></div>
+                            <div class="profile-row"><span class="label">Account Number</span><span class="value">${escapeHtml(user.accountNumber || '—')}</span></div>
+                            <div class="profile-row"><span class="label">Role</span><span class="value"><span class="badge ${isSuper ? 'super' : 'active'}">${isSuper ? '👑 Super Admin' : 'Admin'}</span></span></div>
+                        </div>
+
+                        <div class="admin-card">
+                            <p class="admin-card-title">Change PIN</p>
+                            <p class="admin-card-sub">Set or update your 4-digit PIN for session protection</p>
+                            <div class="pin-change-form">
+                                <input type="password" id="pin-current-password-input" placeholder="Current account password" autocomplete="current-password" style="margin-bottom:8px;" />
+                                <div class="pin-input-group">
+                                    <input type="password" id="new-pin-input" maxlength="4" placeholder="New PIN" inputmode="numeric" autocomplete="off" />
+                                    <input type="password" id="confirm-pin-input" maxlength="4" placeholder="Confirm" inputmode="numeric" autocomplete="off" />
+                                    <button class="btn-small" id="update-pin-btn">Update</button>
+                                </div>
+                                <div id="pin-update-error" class="pin-error hidden"></div>
+                                <div id="pin-update-success" class="pin-success hidden">PIN updated successfully!</div>
+                            </div>
+                        </div>
+                    `;
+
+                    // If super admin, show admin management section
+                    if (isSuper) {
+                        html += `
+                            <div class="admin-management">
+                                <p class="admin-card-title">Admin Management</p>
+                                <p class="admin-card-sub">Add new admins and manage existing ones</p>
+                                <div class="add-admin-form">
+                                    <input type="email" id="new-admin-email" placeholder="Admin Email" />
+                                    <div class="password-field-wrap">
+                                        <input type="password" id="new-admin-password" placeholder="Password" />
+                                        <button type="button" class="password-toggle-btn" data-target="new-admin-password" aria-label="Show password">&#128065;</button>
+                                    </div>
+                                    <input type="text" id="new-admin-fullname" placeholder="Full Name" />
+                                    <input type="text" id="new-admin-username" placeholder="Username" />
+                                    <input type="text" id="new-admin-phone" placeholder="Phone (e.g. 76123456)" />
+                                    <button class="btn-primary" id="create-admin-btn">Create Admin</button>
+                                    <div id="create-admin-error" class="error-state hidden"></div>
+                                    <div id="create-admin-success" class="inline-success hidden"><span>&#10003;</span><span>Admin created successfully!</span></div>
+                                </div>
+                                <div id="admin-list" class="admin-list" style="margin-top:16px;"></div>
+                            </div>
+                        `;
+                    }
+
+                    content.innerHTML = html;
+
+                    var verifyMyEmailBtn = document.getElementById('verify-my-email-btn');
+                    if (verifyMyEmailBtn) {
+                        verifyMyEmailBtn.addEventListener('click', function () {
+                            adminApiRequest('/api/admin/profile/verify-email', { method: 'PUT' })
+                                .then(function () { showToast('Your admin email is now verified.'); renderProfile(); })
+                                .catch(function (e) { showToast(e.message || 'Failed to verify your email.'); });
+                        });
+                    }
+
+                    // PIN change handler
+                    document.getElementById('update-pin-btn').addEventListener('click', function () {
+                        var newPin = document.getElementById('new-pin-input').value.trim();
+                        var confirmPin = document.getElementById('confirm-pin-input').value.trim();
+                        var currentPasswordEl = document.getElementById('pin-current-password-input');
+                        var currentPassword = currentPasswordEl ? currentPasswordEl.value : '';
+                        var errorEl = document.getElementById('pin-update-error');
+                        var successEl = document.getElementById('pin-update-success');
+                        hide(errorEl);
+                        hide(successEl);
+
+                        if (!currentPassword) {
+                            errorEl.textContent = 'Enter your current account password to change your PIN.';
+                            show(errorEl);
+                            return;
+                        }
+                        if (newPin.length !== 4 || !/^\d{4}$/.test(newPin)) {
+                            errorEl.textContent = 'PIN must be exactly 4 digits.';
+                            show(errorEl);
+                            return;
+                        }
+                        if (newPin !== confirmPin) {
+                            errorEl.textContent = 'PINs do not match.';
+                            show(errorEl);
+                            return;
+                        }
+
+                        adminApiRequest('/api/admin/pin', {
+                            method: 'POST',
+                            body: { newPin: newPin, currentPassword: currentPassword }
+                        })
+                            .then(function () {
+                                successEl.textContent = 'PIN updated successfully!';
+                                show(successEl);
+                                document.getElementById('new-pin-input').value = '';
+                                document.getElementById('confirm-pin-input').value = '';
+                                if (currentPasswordEl) currentPasswordEl.value = '';
+                                showToast('PIN updated successfully!');
+                            })
+                            .catch(function (err) {
+                                errorEl.textContent = err.message || 'Failed to update PIN.';
+                                show(errorEl);
+                            });
+                    });
+
+                    // If super admin, load admin list and add admin handler
+                    if (isSuper) {
+                        loadAdminList();
+
+                        document.getElementById('create-admin-btn').addEventListener('click', function () {
+                            var email = document.getElementById('new-admin-email').value.trim();
+                            var password = document.getElementById('new-admin-password').value;
+                            var fullName = document.getElementById('new-admin-fullname').value.trim();
+                            var username = document.getElementById('new-admin-username').value.trim();
+                            var phone = document.getElementById('new-admin-phone').value.trim();
+
+                            var errorEl = document.getElementById('create-admin-error');
+                            var successEl = document.getElementById('create-admin-success');
+                            hide(errorEl);
+                            hide(successEl);
+
+                            if (!email || !password || !fullName || !username || !phone) {
+                                errorEl.textContent = 'Email, password, full name, username, and phone are required.';
+                                show(errorEl);
+                                return;
+                            }
+
+                            var btn = this;
+                            btn.disabled = true;
+                            btn.textContent = 'Creating...';
+
+                            adminApiRequest('/api/admin/admins', {
+                                method: 'POST',
+                                body: { email, password, fullName, username, phone }
+                            })
+                                .then(function () {
+                                    show(successEl);
+                                    setTimeout(function () { hide(successEl); }, 3000);
+                                    showToast('Admin created successfully!');
+                                    document.getElementById('new-admin-email').value = '';
+                                    document.getElementById('new-admin-password').value = '';
+                                    document.getElementById('new-admin-fullname').value = '';
+                                    document.getElementById('new-admin-username').value = '';
+                                    document.getElementById('new-admin-phone').value = '';
+                                    loadAdminList();
+                                })
+                                .catch(function (err) {
+                                    errorEl.textContent = err.message || 'Failed to create admin.';
+                                    show(errorEl);
+                                })
+                                .finally(function () {
+                                    btn.disabled = false;
+                                    btn.textContent = 'Create Admin';
+                                });
+                        });
+                    }
+
+                } catch (e) {
+                    content.innerHTML = '<div class="error-state">Failed to load profile: ' + e.message + '</div>';
+                }
+            }
+
+            // Load admin list (only for super admin)
+            async function loadAdminList() {
+                var container = document.getElementById('admin-list');
+                if (!container) return;
+                container.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading admins…</div>';
+
+                try {
+                    var admins = await adminApiRequest('/api/admin/admins');
+                    container.innerHTML = '';
+                    if (!admins || admins.length === 0) {
+                        container.innerHTML = '<div class="empty-state">No admins found.</div>';
+                        return;
+                    }
+
+                    admins.forEach(function (admin) {
+                        var card = document.createElement('div');
+                        card.className = 'item-card';
+                        var isActive = admin.active !== false;
+                        var isLocked = admin.locked === true;
+                        var isSuper = admin.role === 'SUPER_ADMIN';
+
+                        var statusBadge = '';
+                        if (isSuper) {
+                            statusBadge = '<span class="badge super">👑 Super</span>';
+                        } else if (isLocked) {
+                            statusBadge = '<span class="badge locked">🔒 Locked</span>';
+                        } else if (isActive) {
+                            statusBadge = '<span class="badge active">✅ Active</span>';
+                        } else {
+                            statusBadge = '<span class="badge inactive">⛔ Inactive</span>';
+                        }
+
+                        card.innerHTML = `
+                            <div class="item-info">
+                                <div class="name">${escapeHtml(admin.fullName || admin.username)}</div>
+                                <div class="meta">
+                                    <span>${escapeHtml(admin.email)}</span>
+                                    <span style="font-size:11px;color:var(--muted);">${escapeHtml(admin.accountNumber || 'No account number')}</span>
+                                    ${statusBadge}
+                                    <span style="font-size:11px;color:var(--muted);">PIN attempts: ${escapeHtml(admin.pinAttempts || 0)}</span>
+                                    <span style="font-size:11px;color:var(--muted);">Login attempts: ${escapeHtml(admin.loginFailedAttempts || 0)}</span>
+                                </div>
+                            </div>
+                            <div class="item-actions">
+                                <button class="icon-btn" data-action="view-admin" data-id="${admin.id}" title="View Details">👁️</button>
+                                ${(!isSuper && (admin.loginFailedAttempts > 0 || admin.loginLockedUntil || admin.adminRecoveryRequired)) ? `<button class="icon-btn" data-action="reset-admin-login" data-id="${admin.id}" title="Reset Login Protection">↻</button>` : ''}
+                                ${isSuper ? '' : `<button class="icon-btn" data-action="toggle-admin" data-id="${admin.id}" data-active="${isActive}" data-locked="${isLocked}" title="${isLocked ? 'Unlock' : isActive ? 'Deactivate' : 'Activate'}">
+                                    ${isLocked ? '🔓' : (isActive ? '🔒' : '✅')}
+                                </button>`}
+                            </div>
+                        `;
+                        container.appendChild(card);
+                    });
+
+                    container.querySelectorAll('[data-action="view-admin"]').forEach(function (btn) {
+                        btn.addEventListener('click', function (e) {
+                            e.stopPropagation();
+                            var id = btn.dataset.id;
+                            adminApiRequest('/api/admin/users/' + id)
+                                .then(function (admin) { openUserDetail(admin); })
+                                .catch(function (err) { showToast(err.message || 'Failed to load admin details.'); });
+                        });
+                    });
+
+                    container.querySelectorAll('[data-action="reset-admin-login"]').forEach(function (btn) {
+                        btn.addEventListener('click', function (e) {
+                            e.stopPropagation();
+                            showModal('Reset Admin Login Protection', "Clear this child admin's failed login attempts and recovery/temporary lock state?", function () {
+                                btn.disabled = true;
+                                adminApiRequest('/api/admin/users/' + btn.dataset.id + '/reset-login-protection', { method: 'PUT' })
+                                    .then(function () { showToast('Admin login protection reset.'); loadAdminList(); })
+                                    .catch(function (err) { showToast(err.message || 'Failed to reset admin login protection.'); })
+                                    .finally(function () { btn.disabled = false; });
+                            });
+                        });
+                    });
+
+                    container.querySelectorAll('[data-action="toggle-admin"]').forEach(function (btn) {
+                        btn.addEventListener('click', function (e) {
+                            e.stopPropagation();
+                            var id = btn.dataset.id;
+                            var active = btn.dataset.active === 'true';
+                            var locked = btn.dataset.locked === 'true';
+
+                            var action = '';
+                            if (locked) {
+                                action = 'unlock';
+                            } else if (active) {
+                                action = 'deactivate';
+                            } else {
+                                action = 'activate';
+                            }
+
+                            if (!confirm('Are you sure you want to ' + action + ' this admin?')) return;
+
+                            var endpoint = locked
+                                ? '/api/admin/users/' + id + '/unlock'
+                                : '/api/admin/users/' + id + '/toggle';
+                            var options = locked
+                                ? { method: 'PUT' }
+                                : { method: 'PUT', body: { active: !active } };
+
+                            adminApiRequest(endpoint, options)
+                                .then(function () {
+                                    showToast('Admin ' + action + 'd successfully.');
+                                    loadAdminList();
+                                })
+                                .catch(function (err) {
+                                    showToast(err.message || 'Failed to update admin.');
+                                });
+                        });
+                    });
+
+                    container.querySelectorAll('.item-card').forEach(function (card) {
+                        card.addEventListener('click', function () {
+                            var view = card.querySelector('[data-action="view-admin"]');
+                            if (view) view.click();
+                        });
+                    });
+
+                } catch (e) {
+                    container.innerHTML = '<div class="error-state">Failed to load admins: ' + e.message + '</div>';
+                }
+            }
+
+            // ==============================================================
+            // AUTO LOGIN CHECK
+            // ==============================================================
+            if (getToken()) {
+                loginScreen.classList.remove('active');
+                mainScreen.classList.add('active');
+                loadDashboard();
+                loadWhatsApp();
+                if (isAdminSessionExpired()) {
+                    showAdminPinModal('Your session timed out. Enter your PIN to continue.');
+                } else {
+                    updateAdminSessionActive();
+                }
+                setInterval(checkAdminSession, 10000);
+            }
+
+            // ==============================================================
+            // NETWORK STATUS (mirrors the user app's banner)
+            // ==============================================================
+            function isNetworkError(error) {
+                if (!error) return false;
+                if (typeof error.status !== 'undefined') return false;
+                var msg = (error.message || '').toLowerCase();
+                return !navigator.onLine || msg.indexOf('failed to fetch') !== -1 || msg.indexOf('network') !== -1 || msg.indexOf('load failed') !== -1;
+            }
+            window.dwIsNetworkError = isNetworkError;
+
+            (function () {
+                var banner = null;
+                var serverReachable = true;
+                function ensureBanner() {
+                    if (banner) return banner;
+                    banner = document.createElement('div');
+                    banner.id = 'dw-offline-banner';
+                    banner.textContent = 'No internet connection';
+                    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#b91c1c;color:#fff;text-align:center;font:600 13px/1 -apple-system,Segoe UI,Roboto,sans-serif;padding:10px 12px;transform:translateY(-100%);transition:transform 0.25s ease;box-shadow:0 2px 8px rgba(0,0,0,0.25);';
+                    document.body.appendChild(banner);
+                    return banner;
+                }
+                function showOfflineBanner() { ensureBanner().style.transform = 'translateY(0)'; }
+                function hideOfflineBanner() {
+                    if (banner) banner.style.transform = 'translateY(-100%)';
+                    if (typeof window.dwOnPullToRefresh === 'function') window.dwOnPullToRefresh();
+                }
+                var probing = false;
+                function probeServer() {
+                    if (probing) return;
+                    probing = true;
+                    var controller = new AbortController();
+                    var timeoutId = setTimeout(function () { controller.abort(); }, 5000);
+                    fetch(API_BASE_URL + '/api/app/version', { cache: 'no-store', signal: controller.signal })
+                        .then(function () {
+                            if (!serverReachable) { serverReachable = true; hideOfflineBanner(); }
+                        })
+                        .catch(function () {
+                            if (serverReachable) { serverReachable = false; showOfflineBanner(); }
+                        })
+                        .finally(function () { clearTimeout(timeoutId); probing = false; });
+                }
+                window.addEventListener('offline', showOfflineBanner);
+                window.addEventListener('online', probeServer);
+                if (!navigator.onLine) showOfflineBanner();
+                probeServer();
+                setInterval(probeServer, 5000);
+            })();
+
+            // ==============================================================
+            // ANDROID BACK BUTTON (Capacitor only - no-ops on plain web)
+            // ==============================================================
+            (function () {
+                if (!window.Capacitor || !window.Capacitor.isNativePlatform || !window.Capacitor.isNativePlatform()) return;
+                var AppPlugin = window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+                if (!AppPlugin) return;
+                AppPlugin.addListener('backButton', function (data) {
+                    if (pinModalOverlay && pinModalOverlay.classList.contains('active')) return; // never bypass the PIN lock
+                    var userModalOverlay = document.getElementById('user-modal-overlay');
+                    if (userModalOverlay && userModalOverlay.classList.contains('active')) {
+                        userModalOverlay.classList.remove('active');
+                        return;
+                    }
+                    var genericModalOverlay = document.getElementById('modal-overlay');
+                    if (genericModalOverlay && genericModalOverlay.classList.contains('active')) {
+                        genericModalOverlay.classList.remove('active');
+                        return;
+                    }
+                    if (profileScreen && profileScreen.classList.contains('active')) {
+                        var profileBackBtnEl = document.getElementById('profile-back-btn');
+                        if (profileBackBtnEl) { profileBackBtnEl.click(); return; }
+                    }
+                    var activeTab = document.querySelector('.nav-tab.active');
+                    if (activeTab && activeTab.dataset.tab !== 'dashboard') {
+                        var dashboardTab = document.querySelector('.nav-tab[data-tab="dashboard"]');
+                        if (dashboardTab) { dashboardTab.click(); return; }
+                    }
+                    if (data && data.canGoBack) {
+                        window.history.back();
+                    } else {
+                        AppPlugin.exitApp();
+                    }
+                });
+            })();
+
+            // ==============================================================
+            // PULL TO REFRESH
+            // ==============================================================
+            window.dwOnPullToRefresh = function () {
+                var activeTab = document.querySelector('.nav-tab.active');
+                var tab = activeTab ? activeTab.dataset.tab : 'dashboard';
+                if (tab === 'dashboard') loadDashboard();
+                else if (tab === 'users') loadUsers();
+                else if (tab === 'errors') loadErrors();
+            };
+            (function () {
+                var THRESHOLD = 70;
+                var startY = null, pulling = false, indicator = null;
+                function ensureIndicator() {
+                    if (indicator) return indicator;
+                    indicator = document.createElement('div');
+                    indicator.id = 'dw-pull-refresh-indicator';
+                    indicator.textContent = '↓ Pull to refresh';
+                    indicator.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9998;text-align:center;padding:10px;font:600 12px/1 -apple-system,Segoe UI,Roboto,sans-serif;color:#555;background:rgba(255,255,255,0.95);transform:translateY(-100%);transition:transform 0.15s ease;';
+                    document.body.appendChild(indicator);
+                    return indicator;
+                }
+                document.addEventListener('touchstart', function (e) {
+                    if (window.scrollY > 0) { startY = null; return; }
+                    if (document.querySelector('.modal-overlay.active')) { startY = null; return; }
+                    startY = e.touches[0].clientY;
+                    pulling = false;
+                }, { passive: true });
+                document.addEventListener('touchmove', function (e) {
+                    if (startY === null) return;
+                    var delta = e.touches[0].clientY - startY;
+                    if (delta <= 0) return;
+                    pulling = true;
+                    var el = ensureIndicator();
+                    var progress = Math.min(delta / THRESHOLD, 1);
+                    el.style.transform = 'translateY(' + (progress * 100 - 100) + '%)';
+                    el.textContent = progress >= 1 ? '↑ Release to refresh' : '↓ Pull to refresh';
+                }, { passive: true });
+                document.addEventListener('touchend', function (e) {
+                    if (!pulling || startY === null) { startY = null; return; }
+                    var delta = e.changedTouches[0].clientY - startY;
+                    startY = null;
+                    pulling = false;
+                    if (delta < THRESHOLD) { if (indicator) indicator.style.transform = 'translateY(-100%)'; return; }
+                    var el = ensureIndicator();
+                    el.textContent = 'Refreshing…';
+                    el.style.transform = 'translateY(0)';
+                    try {
+                        window.dwOnPullToRefresh();
+                    } finally {
+                        el.style.transform = 'translateY(-100%)';
+                    }
+                }, { passive: true });
+            })();
+
+            console.log('=== Admin page ready ===');
+        };
+    </script>
+
+    <script src="config.js"></script>
+    <script>setTimeout(function(){var splash=document.getElementById('admin-splash');if(splash)splash.classList.add('hide');},900);</script>
+    </div>
+</body>
+
+</html>
