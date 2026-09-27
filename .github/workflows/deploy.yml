@@ -33,7 +33,8 @@ jobs:
           username: ${{ secrets.OCI_USERNAME }}
           key: ${{ secrets.OCI_SSH_KEY }}
           source: "target/deen-wallet-0.1.0.jar"
-          target: "/tmp/"
+          target: "/var/www/deenwallet/"
+          strip_components: 1
 
       - name: Restart Deen Wallet Service via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -43,8 +44,7 @@ jobs:
           key: ${{ secrets.OCI_SSH_KEY }}
           script: |
             set -euxo pipefail
-            ls -la /tmp/deen-wallet-0.1.0.jar
-            sudo mv /tmp/deen-wallet-0.1.0.jar /var/www/deenwallet/deenwallet.jar
+            mv /var/www/deenwallet/deen-wallet-0.1.0.jar /var/www/deenwallet/deenwallet.jar
             ls -la /var/www/deenwallet/deenwallet.jar
             sudo systemctl restart deenwallet
             sleep 2
