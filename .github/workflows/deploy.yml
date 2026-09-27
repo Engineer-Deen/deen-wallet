@@ -33,8 +33,7 @@ jobs:
           username: ${{ secrets.OCI_USERNAME }}
           key: ${{ secrets.OCI_SSH_KEY }}
           source: "target/deen-wallet-0.1.0.jar"
-          target: "/tmp"
-          strip_components: 2
+          target: "/tmp/"
 
       - name: Restart Deen Wallet Service via SSH
         uses: appleboy/ssh-action@v1.0.3
