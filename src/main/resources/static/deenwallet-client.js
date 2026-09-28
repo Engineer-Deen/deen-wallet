@@ -231,14 +231,7 @@ async function apiRequest(path, { method = 'GET', params, body } = {}) {
   }
 
   let token = getAccessToken();
-  const headers = {
-    'Content-Type': 'application/json',
-    // Bypasses ngrok's free-tier interstitial page, which otherwise
-    // intercepts fetch()/XHR calls with a 403 and an HTML warning body
-    // instead of reaching the real backend. Harmless (silently ignored)
-    // against any non-ngrok host, so this is safe to leave in permanently.
-    'ngrok-skip-browser-warning': 'true'
-  };
+  const headers = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = 'Bearer ' + token;
 
   const doRequest = async (tokenToUse) => {

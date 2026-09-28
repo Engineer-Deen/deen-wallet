@@ -47,7 +47,7 @@ public class SecurityConfig {
 
         config.setAllowedOriginPatterns(allowedList);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"));
+        config.setAllowedHeaders(List.of("*")); // Allows any header including custom ones or ngrok skips
         config.setExposedHeaders(List.of("X-Reason", "X-Recovery-Required", "Retry-After"));
         config.setAllowCredentials(true);
 
