@@ -3,6 +3,9 @@ package com.glr.deenwallet.admin;
 import com.glr.deenwallet.monitoring.ErrorLog;
 import com.glr.deenwallet.monitoring.ErrorLogRepository;
 import com.glr.deenwallet.monitoring.ErrorReportRequest;
+import com.glr.deenwallet.notification.NotificationResponse;
+import com.glr.deenwallet.notification.NotificationService;
+import com.glr.deenwallet.notification.PushNotificationService;
 import com.glr.deenwallet.transaction.Transaction;
 import com.glr.deenwallet.transaction.TransactionRepository;
 import com.glr.deenwallet.user.User;
@@ -10,12 +13,13 @@ import com.glr.deenwallet.user.UserRepository;
 import com.glr.deenwallet.email.EmailService;
 import com.glr.deenwallet.otp.OtpService;
 import lombok.Data;
-import jakarta.validation.Valid; import jakarta.validation.constraints.Email; import jakarta.validation.constraints.NotBlank; import jakarta.validation.constraints.Pattern;
+import jakarta.validation.Valid; import jakarta.validation.constraints.Email; import jakarta.validation.constraints.NotBlank; import jakarta.validation.constraints.NotEmpty; import jakarta.validation.constraints.Pattern; import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,6 +30,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -36,12 +41,15 @@ public class AdminController {
 
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
+    private final com.glr.deenwallet.transaction.TransactionArchiveRepository transactionArchiveRepository;
     private final ErrorLogRepository errorLogRepository;
     private final AdminService adminService;
     private final PasswordEncoder passwordEncoder;
     private final com.glr.deenwallet.user.AccountNumberGenerator accountNumberGenerator;
     private final EmailService emailService;
     private final OtpService otpService;
+    private final NotificationService notificationService;
+    private final PushNotificationService pushNotificationService;
 
     @Value("${app.support.whatsapp:+23280613600}")
     private String supportWhatsApp;
@@ -62,13 +70,72 @@ public class AdminController {
         return ResponseEntity.ok(AdminUserResponse.from(user));
     }
 
-    // ===== USERS =====
-    @GetMapping("/users")
-    public ResponseEntity<List<AdminUserResponse>> listUsers() {
+    // ===== ADMIN IN-APP NOTIFICATIONS =====
+    @PostMapping("/notifications")
+    public ResponseEntity<List<NotificationResponse>> sendInAppNotification(
+            @Valid @RequestBody AdminNotificationRequest request) {
         validateAdmin();
-        List<User> users = userRepository.findAllByOrderByCreatedAtDesc().stream()
-                .filter(u -> "USER".equals(u.getRole()))
+
+        List<UUID> userIds = request.getUserIds().stream().distinct().toList();
+        if (userIds.isEmpty()) {
+            throw new IllegalArgumentException("At least one user is required.");
+        }
+
+        List<User> users = userRepository.findAllById(userIds);
+        if (users.size() != userIds.size()) {
+            throw new IllegalArgumentException("One or more users could not be found.");
+        }
+
+        for (User user : users) {
+            if (!"USER".equals(user.getRole())) {
+                throw new IllegalArgumentException("In-app notifications can only be sent to customer users.");
+            }
+        }
+
+        List<NotificationResponse> notifications = userIds.stream()
+                .map(userId -> {
+                    NotificationResponse notification = notificationService.create(
+                            userId,
+                            "ADMIN_MESSAGE",
+                            request.getTitle().trim(),
+                            request.getMessage().trim(),
+                            null,
+                            null
+                    );
+
+                    pushNotificationService.sendToUser(
+                            userId,
+                            notification.title(),
+                            notification.message(),
+                            Map.of(
+                                    "type", "ADMIN_MESSAGE",
+                                    "notificationId", notification.id().toString()
+                            )
+                    );
+
+                    return notification;
+                })
                 .toList();
+
+        log.info("Admin {} sent an in-app notification to {} user(s)",
+                getCurrentUser().getEmail(), notifications.size());
+
+        return ResponseEntity.ok(notifications);
+    }
+
+    // ===== USERS =====
+    // Same JSON shape as before. The role filter and ordering now happen in SQL
+    // (idx_users_role_created_at) instead of loading every account and filtering in Java.
+    // Optional ?limit= (default 5000, max 10000) and ?page= (0-based) for larger user bases.
+    @GetMapping("/users")
+    public ResponseEntity<List<AdminUserResponse>> listUsers(
+            @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false) Integer page) {
+        validateAdmin();
+        int size = limit == null ? 5000 : Math.max(1, Math.min(limit, 10000));
+        int pageIndex = page == null ? 0 : Math.max(0, page);
+        List<User> users = userRepository.findByRole("USER",
+                PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "createdAt")));
         return ResponseEntity.ok(users.stream().map(AdminUserResponse::from).toList());
     }
 
@@ -282,11 +349,33 @@ public class AdminController {
     }
 
     // ===== TRANSACTIONS =====
+    // Same JSON shape as before, but bounded: the old version loaded EVERY transaction ever
+    // made (DISTINCT + full sort, ~580 ms and 20 MB of temp disk at 200k rows) on each call.
+    // Newest 1000 by default; ?limit= (max 5000) and ?page= (0-based) to go further back.
+    // Older records remain reachable through /transactions/lookup/{idOrCode} and, once
+    // archived, through /transactions/archive/{code} (see TransactionArchiveJob).
     @GetMapping("/transactions")
-    public ResponseEntity<List<AdminTransactionResponse>> listTransactions() {
+    public ResponseEntity<List<AdminTransactionResponse>> listTransactions(
+            @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false) Integer page) {
         validateAdmin();
-        List<Transaction> transactions = transactionRepository.findAllByOrderByCreatedAtDesc();
+        int size = limit == null ? 1000 : Math.max(1, Math.min(limit, 5000));
+        int pageIndex = page == null ? 0 : Math.max(0, page);
+        List<Transaction> transactions = transactionRepository.findAllBy(
+                PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "createdAt")));
         return ResponseEntity.ok(transactions.stream().map(AdminTransactionResponse::from).toList());
+    }
+
+    // A transaction the "normal" list no longer shows because TransactionArchiveJob moved
+    // it out. Nothing is ever deleted, so this always finds it if the code is correct.
+    @GetMapping("/transactions/archive/{code}")
+    public ResponseEntity<AdminTransactionResponse> findArchivedTransaction(@PathVariable String code) {
+        validateAdmin();
+        com.glr.deenwallet.transaction.TransactionArchive archived = transactionArchiveRepository
+                .findByTransactionCode(code.toUpperCase())
+                .orElseThrow(() -> new IllegalArgumentException("No transaction found with that code, archived or not"));
+        User user = userRepository.findById(archived.getUserId()).orElse(null);
+        return ResponseEntity.ok(AdminTransactionResponse.from(archived, user));
     }
 
     @GetMapping("/transactions/{id}")
@@ -317,11 +406,18 @@ public class AdminController {
     }
 
     // ===== ERROR LOGS (with POST) =====
+    // ?since=<ISO instant> switches this into a live-poll query: only errors newer than
+    // that timestamp are returned, so the admin Errors tab can refresh every few seconds
+    // without re-downloading everything it already has. Without ?since, behaves as before.
     @GetMapping("/errors")
-    public ResponseEntity<List<AdminErrorLogResponse>> listErrors(@RequestParam(required = false) Integer limit) {
+    public ResponseEntity<List<AdminErrorLogResponse>> listErrors(
+            @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false) Instant since) {
         validateAdmin();
         int maxLimit = limit != null && limit > 0 ? Math.min(limit, 200) : 100;
-        List<ErrorLog> errorLogs = errorLogRepository.findRecent(PageRequest.of(0, maxLimit));
+        List<ErrorLog> errorLogs = since != null
+                ? errorLogRepository.findSince(since, PageRequest.of(0, maxLimit))
+                : errorLogRepository.findRecent(PageRequest.of(0, maxLimit));
         return ResponseEntity.ok(errorLogs.stream().map(AdminErrorLogResponse::from).toList());
     }
 
@@ -333,11 +429,15 @@ public class AdminController {
         long totalErrors = errorLogRepository.count();
         long errorsLast24h = errorLogRepository.countByCreatedAtAfter(twentyFourHoursAgo);
         long errorsLast7d = errorLogRepository.countByCreatedAtAfter(sevenDaysAgo);
+        long userAppErrorsLast24h = errorLogRepository.countBySourceAppAndCreatedAtAfter("user", twentyFourHoursAgo);
+        long adminAppErrorsLast24h = errorLogRepository.countBySourceAppAndCreatedAtAfter("admin", twentyFourHoursAgo);
         List<Object[]> typeCounts = errorLogRepository.countGroupByErrorType();
         return ResponseEntity.ok(new AdminErrorStatsResponse(
                 totalErrors,
                 errorsLast24h,
                 errorsLast7d,
+                userAppErrorsLast24h,
+                adminAppErrorsLast24h,
                 typeCounts.stream()
                         .map(row -> new AdminErrorStatsResponse.ErrorTypeCount((String) row[0], ((Number) row[1]).longValue()))
                         .toList()
@@ -347,13 +447,17 @@ public class AdminController {
     @PostMapping("/errors")
     public ResponseEntity<Void> reportError(@RequestBody ErrorReportRequest request) {
         validateAdmin();
-        // Build error log from request (extra fields are ignored)
+        // This endpoint IS the admin app's own error channel, so sourceApp is always
+        // "admin" here regardless of what the request body says.
         ErrorLog errorLog = ErrorLog.builder()
                 .userId(getCurrentUser().getId())
                 .errorType(request.getErrorType())
                 .message(request.getMessage())
                 .statusCode(request.getStatusCode())
                 .url(request.getUrl())
+                .sourceApp("admin")
+                .endpointPath(request.getEndpointPath())
+                .httpMethod(request.getHttpMethod())
                 .userAgent(request.getUserAgent())
                 .actionBuffer(request.getActionBuffer() != null ? String.join(" | ", request.getActionBuffer()) : null)
                 .build();
@@ -400,6 +504,20 @@ public class AdminController {
     }
 
     // ===== DTOs =====
+    @Data
+    public static class AdminNotificationRequest {
+        @NotEmpty(message = "At least one user is required")
+        private List<UUID> userIds;
+
+        @NotBlank(message = "Title is required")
+        @Size(max = 200, message = "Title must be at most 200 characters")
+        private String title;
+
+        @NotBlank(message = "Message is required")
+        @Size(max = 2000, message = "Message must be at most 2000 characters")
+        private String message;
+    }
+
     @Data
     public static class SupportWhatsAppResponse {
         private String whatsappNumber;

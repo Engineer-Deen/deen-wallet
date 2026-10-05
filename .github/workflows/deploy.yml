@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build-and-deploy:
@@ -11,22 +15,34 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
-          java-version: '21'
-          distribution: 'temurin'
+          java-version: "21"
+          distribution: "temurin"
           cache: maven
 
       - name: Stamp build commit
-        run: echo "${{ github.sha }}" > src/main/resources/build-commit.txt
+        run: |
+          echo "${{ github.sha }}" > src/main/resources/build-commit.txt
 
       - name: Build Executable JAR with Maven
-        run: mvn clean package -DskipTests
+        run: |
+          mvn clean package -DskipTests
+          test -s target/deen-wallet-0.1.0.jar
+          ls -lh target/deen-wallet-0.1.0.jar
 
-      - name: Copy JAR to OCI Server via SCP
+      - name: Calculate JAR checksum
+        id: checksum
+        shell: bash
+        run: |
+          SHA256=$(sha256sum target/deen-wallet-0.1.0.jar | awk '{print $1}')
+          echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
+          echo "Built JAR SHA256: $SHA256"
+
+      - name: Upload JAR to OCI
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.OCI_HOST }}
@@ -36,17 +52,91 @@ jobs:
           target: "/var/www/deenwallet/"
           strip_components: 1
 
-      - name: Restart Deen Wallet Service via SSH
+      - name: Deploy and verify JAR on OCI
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          EXPECTED_SHA256: ${{ steps.checksum.outputs.sha256 }}
+          GITHUB_SHA_VALUE: ${{ github.sha }}
+        with:
+          host: ${{ secrets.OCI_HOST }}
+          username: ${{ secrets.OCI_USERNAME }}
+          key: ${{ secrets.OCI_SSH_KEY }}
+          envs: EXPECTED_SHA256,GITHUB_SHA_VALUE
+          script: |
+            set -euo pipefail
+
+            APP_DIR="/var/www/deenwallet"
+            UPLOADED_JAR="$APP_DIR/deen-wallet-0.1.0.jar"
+            DEPLOYED_JAR="$APP_DIR/deenwallet.jar"
+
+            echo "Checking uploaded JAR..."
+            test -s "$UPLOADED_JAR"
+
+            ACTUAL_SHA256=$(sha256sum "$UPLOADED_JAR" | awk '{print $1}')
+
+            echo "Expected SHA256: $EXPECTED_SHA256"
+            echo "Actual SHA256:   $ACTUAL_SHA256"
+
+            if [ "$ACTUAL_SHA256" != "$EXPECTED_SHA256" ]; then
+              echo "ERROR: Uploaded JAR checksum does not match the GitHub Actions build."
+              exit 1
+            fi
+
+            echo "JAR checksum verified."
+
+            mv -f "$UPLOADED_JAR" "$DEPLOYED_JAR"
+
+            echo "Deployed JAR:"
+            ls -lh "$DEPLOYED_JAR"
+
+            DEPLOYED_SHA256=$(sha256sum "$DEPLOYED_JAR" | awk '{print $1}')
+
+            if [ "$DEPLOYED_SHA256" != "$EXPECTED_SHA256" ]; then
+              echo "ERROR: Deployed JAR checksum does not match."
+              exit 1
+            fi
+
+            echo "Deployed JAR checksum verified."
+
+            echo "Restarting Deen Wallet service..."
+            sudo systemctl restart deenwallet
+
+            sleep 5
+
+            sudo systemctl is-active --quiet deenwallet
+
+            echo "Service is active."
+
+            ACTIVE_PID=$(systemctl show deenwallet -p MainPID --value)
+
+            if [ -z "$ACTIVE_PID" ] || [ "$ACTIVE_PID" = "0" ]; then
+              echo "ERROR: Could not determine active Java process."
+              exit 1
+            fi
+
+            echo "Active PID: $ACTIVE_PID"
+
+            ACTIVE_TIMESTAMP=$(systemctl show deenwallet -p ActiveEnterTimestamp --value)
+
+            echo "Service started at: $ACTIVE_TIMESTAMP"
+
+            echo "Production deployment successful."
+            echo "Git commit: $GITHUB_SHA_VALUE"
+            echo "JAR SHA256: $DEPLOYED_SHA256"
+
+      - name: Verify production service
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.OCI_HOST }}
           username: ${{ secrets.OCI_USERNAME }}
           key: ${{ secrets.OCI_SSH_KEY }}
           script: |
-            set -euxo pipefail
-            mv /var/www/deenwallet/deen-wallet-0.1.0.jar /var/www/deenwallet/deenwallet.jar
-            ls -la /var/www/deenwallet/deenwallet.jar
-            sudo systemctl restart deenwallet
-            sleep 2
+            set -euo pipefail
+
+            echo "Checking Deen Wallet service..."
             sudo systemctl is-active --quiet deenwallet
-            echo "Deployed and running: $(date)"
+
+            echo "Service status:"
+            sudo systemctl status deenwallet --no-pager -l | head -40
+
+            echo "Deployment verification completed successfully."
