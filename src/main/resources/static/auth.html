@@ -6,6 +6,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
   <title>DeenWallet — Sign in</title>
   <style>
+    #login-success-popup { position:fixed; inset:0; z-index:10000; display:flex; align-items:center; justify-content:center; padding:20px; background:rgba(18,36,43,.38); opacity:0; visibility:hidden; transition:opacity .2s ease,visibility .2s ease; }
+    #login-success-popup.visible { opacity:1; visibility:visible; }
+    .login-success-card { width:min(340px,100%); background:#fff; border-radius:20px; padding:28px 24px; text-align:center; box-shadow:0 20px 55px rgba(0,0,0,.2); transform:translateY(10px) scale(.97); transition:transform .2s ease; }
+    #login-success-popup.visible .login-success-card { transform:translateY(0) scale(1); }
+    .login-success-icon { width:58px; height:58px; margin:0 auto 14px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:#E8F7F0; color:#1E8449; font-size:30px; font-weight:800; }
+    .login-success-title { color:#12242B; font-size:20px; font-weight:800; }
+    .login-success-message { margin-top:7px; color:#6E7C82; font-size:13px; }
+
     #deenwallet-splash {
       position: fixed; inset: 0; z-index: 9999; display:flex; align-items:center; justify-content:center;
       background:linear-gradient(145deg,#FFFFFF 0%,#F1F8FA 100%); transition:opacity .35s ease,visibility .35s ease;
@@ -49,7 +57,7 @@
       background: #EEF2F4;
     }
 
-    @media (max-width: 460px) {
+    @media (max-width: 768px) {
       body {
         background: var(--bg);
       }
@@ -64,9 +72,35 @@
       background: var(--bg);
     }
 
-    @media (min-width: 461px) {
+    @media (min-width: 769px) {
       #app {
         box-shadow: 0 0 40px rgba(0, 0, 0, 0.06);
+      }
+    }
+
+    /* ============================================================ */
+    /* DESKTOP / WEB. This page was designed mobile-first (and is reused
+       as-is inside the Android app's webview), so nothing below 769px
+       changes at all. At real desktop widths, the flat gray canvas made
+       this look like a mobile-app screenshot pasted onto a webpage rather
+       than an intentional design - fixed with a soft branded background
+       and a floating card, the way a real website login page looks. */
+    @media (min-width: 769px) {
+      body {
+        background: linear-gradient(145deg, #EAF4F6 0%, #F7FBFC 100%);
+        min-height: 100vh;
+      }
+
+      /* Desktop login needs the full two-column canvas.
+         The old 420px mobile max-width was squeezing the visual
+         panel and form into the same narrow space. */
+      #app {
+        width: calc(100% - 48px);
+        max-width: 1180px;
+        box-shadow: 0 10px 40px rgba(18, 36, 43, 0.08);
+        border-radius: 20px;
+        margin: 40px auto;
+        min-height: calc(100vh - 80px);
       }
     }
 
@@ -375,6 +409,321 @@
     .password-toggle-btn:hover {
       opacity: 1;
     }
+
+
+    /* ============================================================
+       MODERN CUSTOMER LOGIN DESIGN
+       Preserves the existing screen IDs/JS contracts.
+       ============================================================ */
+    .login-screen-modern {
+      width:100%;
+      max-width:100%;
+      margin:auto;
+    }
+
+    .login-shell {
+      width:100%;
+      display:grid;
+      grid-template-columns:minmax(0,1.05fr) minmax(400px,.95fr);
+      min-height:calc(100vh - 80px);
+      overflow:hidden;
+      border-radius:20px;
+      background:#fff;
+    }
+
+    .login-visual {
+      position:relative;
+      min-height:620px;
+      padding:52px 44px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      overflow:hidden;
+      background:linear-gradient(145deg,#EAF8FA 0%,#F8FCFD 58%,#E7F5F7 100%);
+    }
+
+    .login-visual::before,
+    .login-visual::after {
+      content:"";
+      position:absolute;
+      border-radius:50%;
+      pointer-events:none;
+    }
+    .login-visual::before {
+      width:430px;height:430px;right:-170px;top:-110px;
+      background:rgba(46,159,176,.10);
+    }
+    .login-visual::after {
+      width:360px;height:360px;left:-180px;bottom:-170px;
+      background:rgba(28,122,145,.08);
+    }
+
+    .login-brand-row { position:relative;z-index:2;display:flex;align-items:center;gap:12px; }
+    .login-brand-logo { width:52px;height:52px;object-fit:contain;border-radius:14px;box-shadow:0 10px 24px rgba(18,36,43,.12);background:#fff; }
+    .login-brand-name { font-size:22px;font-weight:800;letter-spacing:-.5px;color:#173A45; }
+    .login-brand-name span { color:var(--primary); }
+
+    .login-visual-copy {
+      position:relative;
+      z-index:2;
+      max-width:520px;
+      min-width:0;
+    }
+    .login-visual-copy h2 { margin:0;color:#102D3A;font-size:clamp(36px,4vw,58px);line-height:1.03;letter-spacing:-2px;font-weight:850; }
+    .login-visual-copy p { margin:18px 0 0;color:#61757D;font-size:16px;line-height:1.6;max-width:460px; }
+
+    .wallet-art { position:relative;z-index:2;margin:28px auto 10px;width:min(420px,92%);height:245px; }
+    .wallet-card {
+      position:absolute;left:50%;top:18px;transform:translateX(-50%) rotate(-5deg);
+      width:82%;height:185px;border-radius:28px;padding:24px;
+      background:linear-gradient(135deg,#55C8D2 0%,#1C7A91 100%);
+      box-shadow:0 24px 45px rgba(28,122,145,.25);
+      color:#fff;
+    }
+    .wallet-card.two { top:54px;left:58%;transform:translateX(-50%) rotate(6deg);opacity:.28;filter:blur(.2px); }
+    .wallet-card .mini-label { font-size:12px;opacity:.86; }
+    .wallet-card .mini-balance { margin-top:8px;font-size:30px;font-weight:800;letter-spacing:-1px; }
+    .wallet-card .mini-row { position:absolute;left:24px;right:24px;bottom:20px;display:flex;justify-content:space-between;font-size:11px;opacity:.9; }
+    .login-visual-features { position:relative;z-index:2;display:grid;grid-template-columns:repeat(3,1fr);gap:12px; }
+    .login-feature { padding:14px 10px;border:1px solid rgba(28,122,145,.12);background:rgba(255,255,255,.68);border-radius:16px;text-align:center;backdrop-filter:blur(8px); }
+    .login-feature strong { display:block;font-size:12px;color:#173A45;margin-top:6px; }
+    .login-feature span { font-size:19px;color:var(--primary); }
+
+    .login-panel {
+      display:flex;align-items:center;justify-content:center;
+      padding:40px 42px;background:#fff;
+    }
+    .login-form-wrap {
+      width:100%;
+      max-width:430px;
+      min-width:0;
+    }
+    .login-mobile-brand { display:none; }
+    .login-form-title { margin:0;color:#12242B;font-size:34px;line-height:1.1;letter-spacing:-1px;font-weight:850; }
+    .login-form-subtitle { margin:10px 0 26px;color:#6E7C82;font-size:14px;line-height:1.5; }
+    .login-field { position:relative;margin-bottom:14px; }
+    .login-field-icon { position:absolute;left:15px;top:50%;transform:translateY(-50%);font-size:17px;color:#7C8E95;pointer-events:none; }
+    .login-field .text-input { padding:15px 44px 15px 44px;border-radius:14px;background:#fff;box-shadow:0 4px 18px rgba(18,36,43,.04); }
+    .login-forgot-row { display:flex;justify-content:flex-end;margin:-5px 0 2px; }
+    .login-link { border:0;background:none;padding:6px 0;color:var(--primary);font-weight:750;font-size:12px;cursor:pointer; }
+    .login-or { display:flex;align-items:center;gap:12px;margin:20px 0 14px;color:#9AA8AD;font-size:11px;font-weight:700; }
+    .login-or::before,.login-or::after { content:"";height:1px;flex:1;background:#E4ECEF; }
+    .biometric-btn { width:100%;border:1px solid #DDE9EC;background:#fff;color:#173A45;border-radius:14px;padding:14px;font-size:13px;font-weight:750;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px; }
+    .biometric-btn:active { transform:scale(.99); }
+    .login-security-row { display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:24px; }
+    .login-security-item { text-align:center;color:#6E7C82;font-size:10px;line-height:1.35; }
+    .login-security-item .icon { display:flex;align-items:center;justify-content:center;width:36px;height:36px;margin:0 auto 6px;border-radius:50%;background:#EFF8FA;color:var(--primary);font-size:16px; }
+    .login-bottom-signup { margin-top:24px;text-align:center;font-size:12px;color:#6E7C82; }
+    .login-bottom-signup button { border:0;background:none;color:var(--primary);font-weight:800;cursor:pointer;padding:0 3px; }
+
+    .recovery-panel { margin-top:18px;padding:18px;border:1px solid var(--border);border-radius:16px;background:#F8FBFC; }
+    .recovery-panel h3 { margin:0 0 6px;font-size:18px; }
+    .recovery-panel p { margin:0 0 14px;color:var(--muted);font-size:12px;line-height:1.5; }
+    .recovery-actions { display:flex;gap:8px; }
+    .btn-secondary { background:#fff;border:1px solid var(--border);border-radius:28px;padding:13px 16px;color:var(--text);font-weight:700;cursor:pointer; }
+
+    @media (max-width:768px) {
+      #app { max-width:480px;min-height:100dvh; }
+      .screen { padding:0;min-height:100dvh;overflow-y:auto; }
+      .login-shell { display:block;min-height:100dvh;border-radius:0; }
+      .login-visual { min-height:auto;padding:24px 20px 20px; }
+      .login-visual-copy { margin-top:26px; }
+      .login-visual-copy h2 { font-size:32px;letter-spacing:-1px; }
+      .login-visual-copy p { margin-top:10px;font-size:13px; }
+      .wallet-art { height:160px;margin:16px auto 4px; }
+      .wallet-card { width:88%;height:130px;border-radius:20px;padding:17px; }
+      .wallet-card.two { top:35px; }
+      .wallet-card .mini-balance { font-size:23px; }
+      .login-visual-features { gap:7px; }
+      .login-feature { padding:10px 5px;border-radius:12px; }
+      .login-feature strong { font-size:10px; }
+      .login-panel { padding:26px 20px 30px;align-items:flex-start; }
+      .login-form-title { font-size:28px; }
+      .login-mobile-brand { display:flex;align-items:center;gap:9px;margin-bottom:20px; }
+      .login-mobile-brand img { width:42px;height:42px;border-radius:11px;object-fit:contain;box-shadow:0 6px 15px rgba(18,36,43,.10); }
+      .login-mobile-brand strong { font-size:18px;color:#173A45; }
+    }
+    @media (min-width:769px) and (max-width:1050px) {
+      .login-shell { grid-template-columns:1fr 1fr; }
+      .login-visual { padding:38px 30px; }
+      .login-panel { padding:30px; }
+    }
+
+    /* ==================================================================
+       WELCOME: full-screen onboarding carousel (phones only)
+       Three slides that swipe sideways, a dot indicator, and two fixed
+       buttons. Nothing on this screen scrolls down.
+       ================================================================== */
+    #screen-welcome {
+      position: relative;
+      height: 100dvh;
+      max-height: 100dvh;
+      padding: 0;
+      overflow: hidden;
+    }
+    #screen-welcome::before {
+      content: "";
+      position: absolute;
+      width: 420px; height: 420px;
+      right: -190px; top: -150px;
+      border-radius: 50%;
+      background: rgba(46, 159, 176, .10);
+      pointer-events: none;
+    }
+    .welcome-top {
+      position: relative; z-index: 2;
+      padding: calc(20px + env(safe-area-inset-top, 0px)) 24px 0;
+    }
+    .welcome-carousel {
+      position: relative; z-index: 2;
+      flex: 1; min-height: 0;
+      display: flex;
+    }
+    .welcome-track {
+      flex: 1;
+      display: flex;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-snap-type: x mandatory;
+      overscroll-behavior-x: contain;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .welcome-track::-webkit-scrollbar { display: none; }
+    .welcome-slide {
+      flex: 0 0 100%;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 26px 28px 0;
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
+    }
+    .welcome-slide h2 {
+      margin: 0;
+      color: #102D3A;
+      font-size: clamp(28px, 8.4vw, 36px);
+      line-height: 1.06;
+      letter-spacing: -1.2px;
+      font-weight: 850;
+    }
+    .welcome-slide p {
+      margin: 12px 0 0;
+      max-width: 34ch;
+      color: #61757D;
+      font-size: 15px;
+      line-height: 1.55;
+    }
+    .welcome-art {
+      flex: 1; min-height: 0;
+      display: flex; align-items: center; justify-content: center;
+      padding-bottom: 8px;
+    }
+    .welcome-art .wallet-art { width: 100%; height: 250px; margin: 0; }
+    .welcome-art .wallet-card { height: 190px; top: 14px; padding: 26px; }
+    .welcome-art .wallet-card.two { top: 64px; }
+    .welcome-art .wallet-card .mini-balance { font-size: 30px; }
+    @media (max-height: 700px) {
+      .welcome-art .wallet-art { height: 190px; }
+      .welcome-art .wallet-card { height: 140px; padding: 20px; }
+      .welcome-art .wallet-card.two { top: 48px; }
+      .welcome-art .wallet-card .mini-balance { font-size: 24px; }
+    }
+
+    .swap-art { width: min(320px, 100%); display: flex; flex-direction: column; align-items: center; }
+    .swap-chip {
+      width: 100%;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 24px 22px;
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      background: #fff;
+      box-shadow: 0 10px 28px rgba(18, 36, 43, .07);
+      color: #173A45; font-size: 18px; font-weight: 800;
+    }
+    .swap-chip small { color: var(--muted); font-size: 12px; font-weight: 600; }
+    .swap-chip.to {
+      border: 0;
+      padding: 25px 23px;
+      background: linear-gradient(135deg, #55C8D2 0%, #1C7A91 100%);
+      box-shadow: 0 18px 36px rgba(28, 122, 145, .25);
+      color: #fff;
+    }
+    .swap-chip.to small { color: rgba(255, 255, 255, .82); }
+    .swap-link {
+      position: relative; z-index: 2;
+      width: 52px; height: 52px; margin: -12px 0;
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid var(--border); border-radius: 50%;
+      background: #fff; color: var(--primary); font-size: 22px;
+      box-shadow: 0 6px 16px rgba(18, 36, 43, .08);
+    }
+    .swap-note { margin-top: 16px; color: var(--muted); font-size: 12px; font-weight: 600; }
+
+    .help-art { width: min(320px, 100%); display: flex; flex-direction: column; gap: 10px; }
+    .bubble { max-width: 88%; padding: 14px 18px; border-radius: 22px; font-size: 15px; line-height: 1.4; }
+    .bubble.in { align-self: flex-start; border-bottom-left-radius: 6px; background: #EFF8FA; color: #173A45; }
+    .bubble.out { align-self: flex-end; border-bottom-right-radius: 6px; background: var(--primary); color: #fff; }
+    .bubble-meta { color: var(--muted); font-size: 11px; font-weight: 600; margin: 2px 6px 0; }
+    .bubble-meta.right { align-self: flex-end; }
+
+    .welcome-dots {
+      position: relative; z-index: 2;
+      display: flex; justify-content: center; gap: 8px;
+      padding: 14px 0 6px;
+    }
+    .welcome-dot {
+      width: 8px; height: 8px; padding: 0;
+      border: 0; border-radius: 99px;
+      background: #C9DADF;
+      cursor: pointer;
+      transition: width .25s ease, background-color .25s ease;
+    }
+    .welcome-dot[aria-current="true"] { width: 26px; background: var(--primary-light); }
+    .welcome-actions {
+      position: relative; z-index: 2;
+      display: flex; align-items: center; gap: 12px;
+      padding: 6px 24px calc(22px + env(safe-area-inset-bottom, 0px));
+    }
+    .welcome-login {
+      flex: 1.35;
+      margin-top: 0;
+      min-height: 56px;
+      border-radius: 28px;
+      background: linear-gradient(180deg, #7DC3D4 0%, var(--primary-light) 100%);
+      font-size: 17px; font-weight: 700;
+    }
+    .welcome-signup {
+      flex: 1;
+      min-height: 56px;
+      border: 0; background: none;
+      color: #173A45; font-size: 17px; font-weight: 700;
+      cursor: pointer;
+    }
+    .welcome-login:focus-visible,
+    .welcome-signup:focus-visible,
+    .welcome-dot:focus-visible,
+    .screen-back:focus-visible { outline: 3px solid rgba(28, 122, 145, .45); outline-offset: 3px; }
+
+    .screen-back {
+      display: none;
+      align-items: center; gap: 6px;
+      margin: 0 0 14px; padding: 8px 0;
+      border: 0; background: none;
+      color: var(--primary); font-size: 14px; font-weight: 750;
+      cursor: pointer;
+    }
+
+    @media (min-width: 769px) {
+      #screen-welcome, #screen-welcome.active { display: none; }
+    }
+    @media (max-width: 768px) {
+      .screen-back { display: inline-flex; }
+      #screen-login .login-visual { display: none; }
+      #screen-login .login-security-row { display: none; }
+      #screen-login .login-panel { padding-top: calc(18px + env(safe-area-inset-top, 0px)); }
+      #screen-register, #screen-confirm { padding: calc(18px + env(safe-area-inset-top, 0px)) 20px 28px; }
+    }
   </style>
 </head>
 
@@ -389,8 +738,74 @@
 
 <div id="app">
 
+  <!-- ===================== WELCOME (phone onboarding) ===================== -->
+  <div class="screen" id="screen-welcome">
+    <div class="login-brand-row welcome-top">
+      <img class="login-brand-logo" src="deenwallet-logo.png" alt="" />
+      <div class="login-brand-name">Deen<span>Wallet</span></div>
+    </div>
+
+    <div class="welcome-carousel" role="region" aria-roledescription="carousel" aria-label="About DeenWallet">
+      <div class="welcome-track" id="welcome-track">
+
+        <section class="welcome-slide" role="group" aria-roledescription="slide" aria-label="1 of 3">
+          <h2>Your money.<br />One secure place.</h2>
+          <p>Make secure payments, convert money, and get your service instantly.</p>
+          <div class="welcome-art">
+            <div class="wallet-art" aria-hidden="true">
+              <div class="wallet-card two"></div>
+              <div class="wallet-card">
+                <div class="mini-label">Instant service</div>
+                <div class="mini-balance">Pay securely</div>
+                <div class="mini-row"><span>Payment → Service</span><span>DeenWallet</span></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="welcome-slide" role="group" aria-roledescription="slide" aria-label="2 of 3">
+          <h2>Switch wallets<br />in a few taps.</h2>
+          <p>Convert between Orange Money, Africell and QMoney without leaving the app.</p>
+          <div class="welcome-art">
+            <div class="swap-art" aria-hidden="true">
+              <div class="swap-chip"><span>Orange Money</span><small>From</small></div>
+              <div class="swap-link">⇅</div>
+              <div class="swap-chip to"><span>Africell Money</span><small>To</small></div>
+              <div class="swap-note">QMoney works too</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="welcome-slide" role="group" aria-roledescription="slide" aria-label="3 of 3">
+          <h2>Help, any time<br />of day.</h2>
+          <p>Message our support team on WhatsApp whenever you need a hand.</p>
+          <div class="welcome-art">
+            <div class="help-art" aria-hidden="true">
+              <div class="bubble in">Did my transfer go through?</div>
+              <div class="bubble out">Yes, it was delivered a moment ago.</div>
+              <div class="bubble-meta right">DeenWallet support</div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+
+    <div class="welcome-dots" role="group" aria-label="Choose a slide">
+      <button type="button" class="welcome-dot" aria-label="Slide 1" aria-current="true"></button>
+      <button type="button" class="welcome-dot" aria-label="Slide 2" aria-current="false"></button>
+      <button type="button" class="welcome-dot" aria-label="Slide 3" aria-current="false"></button>
+    </div>
+
+    <div class="welcome-actions">
+      <button type="button" class="btn-primary welcome-login" id="welcome-login-btn">Log in</button>
+      <button type="button" class="welcome-signup" id="welcome-signup-btn">Sign up</button>
+    </div>
+  </div>
+
   <!-- ===================== REGISTER ===================== -->
   <div class="screen" id="screen-register">
+    <button type="button" class="screen-back" id="register-back-btn" aria-label="Back to welcome">&#8592; Back</button>
     <div class="brand">DeenWallet</div>
     <h1 class="title">Create your account</h1>
     <p class="subtitle">Register to start converting between Orange Money, Africell, and QMoney.</p>
@@ -520,42 +935,100 @@
 
   <!-- ===================== LOGIN ===================== -->
   <div class="screen active" id="screen-login">
-    <div class="brand">DeenWallet</div>
-    <h1 class="title">Welcome back</h1>
-    <p class="subtitle">Log in to send and convert money.</p>
+    <div class="login-shell">
+      <section class="login-visual" aria-label="DeenWallet introduction">
+        <div class="login-brand-row">
+          <img class="login-brand-logo" src="deenwallet-logo.png" alt="DeenWallet" />
+          <div class="login-brand-name">Deen<span>Wallet</span></div>
+        </div>
 
-    <div class="login-tabs">
-      <button class="login-tab active" id="login-tab-email" type="button">Email</button>
-      <button class="login-tab frozen" id="login-tab-phone" type="button">Phone (coming soon)</button>
-    </div>
+        <div class="login-visual-copy">
+          <h2>Your money.<br />One secure place.</h2>
+          <p>Make secure payments, convert money, and get your service instantly.</p>
+          <div class="wallet-art" aria-hidden="true">
+            <div class="wallet-card two"></div>
+            <div class="wallet-card">
+              <div class="mini-label">Instant service</div>
+              <div class="mini-balance">Pay securely</div>
+              <div class="mini-row"><span>Payment → Service</span><span>DeenWallet</span></div>
+            </div>
+          </div>
+        </div>
 
-    <div id="login-phone-note" class="field-note hidden">
-      Phone login will be available once SMS verification is added. Please use email for now.
-    </div>
+        <div class="login-visual-features">
+          <div class="login-feature"><span>◉</span><strong>Secure</strong></div>
+          <div class="login-feature"><span>↔</span><strong>Instant transfers</strong></div>
+          <div class="login-feature"><span>?</span><strong>24/7 Support</strong></div>
+        </div>
+      </section>
 
-    <div id="login-email-fields">
-      <label for="login-email">Email</label>
-      <input class="text-input" id="login-email" type="email" placeholder="you@example.com" />
+      <section class="login-panel">
+        <div class="login-form-wrap">
+          <button type="button" class="screen-back" id="login-back-btn" aria-label="Back to welcome">&#8592; Back</button>
+          <h1 class="login-form-title">Welcome Back</h1>
+          <p class="login-form-subtitle">Log in to make secure payments, manage your transactions, and access DeenWallet services.</p>
 
-      <label for="login-password">Password</label>
-      <div class="password-field-wrap">
-        <input class="text-input" id="login-password" type="password" placeholder="Your password" />
-        <button type="button" class="password-toggle-btn" data-target="login-password" aria-label="Show password">&#128065;</button>
-      </div>
+          <div class="login-tabs">
+            <button class="login-tab active" id="login-tab-email" type="button">Email</button>
+            <button class="login-tab frozen" id="login-tab-phone" type="button">Phone (coming soon)</button>
+          </div>
 
-      <div id="login-error" class="inline-error hidden"><span>&#9888;</span><span id="login-error-text"></span></div>
-      <div id="login-rate-status" class="field-note hidden" style="margin-top:8px;color:#B9770E;text-align:center;"></div>
-      <div id="login-recovery" class="hidden" style="margin-top:10px;padding:12px;border:1px solid #E4ECEF;border-radius:12px;background:#F7FAFB;font-size:13px;line-height:1.5;">
-        <button type="button" id="login-verify-email" class="support-chip" style="width:100%;margin-bottom:8px;">✉ Verify / resend email code</button>
-        <a id="login-support-whatsapp" class="support-chip whatsapp-chip" style="display:flex;text-align:center;text-decoration:none;justify-content:center;align-items:center;" target="_blank" rel="noopener">◉ Contact support on WhatsApp</a>
-      </div>
+          <div id="login-phone-note" class="field-note hidden">Phone login will be available once SMS verification is added. Please use email for now.</div>
 
-      <button class="btn-primary" id="login-btn">Log in</button>
-    </div>
+          <div id="login-email-fields">
+            <div class="login-field">
+              <span class="login-field-icon" aria-hidden="true">♙</span>
+              <input class="text-input" id="login-email" type="email" placeholder="Account email" autocomplete="username" aria-label="Account email" />
+            </div>
 
-    <div class="switch-row">
-      New to DeenWallet?
-      <button id="go-to-register-from-login">Create an account</button>
+            <div class="login-field">
+              <span class="login-field-icon" aria-hidden="true">▣</span>
+              <div class="password-field-wrap">
+                <input class="text-input" id="login-password" type="password" placeholder="Password" autocomplete="current-password" aria-label="Password" />
+                <button type="button" class="password-toggle-btn" data-target="login-password" aria-label="Show password">&#128065;</button>
+              </div>
+            </div>
+
+            <div class="login-forgot-row">
+              <button type="button" class="login-link" id="forgot-password-btn">Forgot password?</button>
+            </div>
+
+            <div id="login-error" class="inline-error hidden"><span>&#9888;</span><span id="login-error-text"></span></div>
+            <div id="login-rate-status" class="field-note hidden" style="margin-top:8px;color:#B9770E;text-align:center;"></div>
+            <div id="login-recovery" class="hidden" style="margin-top:10px;padding:12px;border:1px solid #E4ECEF;border-radius:12px;background:#F7FAFB;font-size:13px;line-height:1.5;">
+              <button type="button" id="login-verify-email" class="support-chip" style="width:100%;margin-bottom:8px;">✉ Verify / resend email code</button>
+              <a id="login-support-whatsapp" class="support-chip whatsapp-chip" style="display:flex;text-align:center;text-decoration:none;justify-content:center;align-items:center;" target="_blank" rel="noopener">◉ Contact support on WhatsApp</a>
+            </div>
+
+            <button class="btn-primary" id="login-btn">Log in</button>
+          </div>
+
+          <div class="login-or"><span>OR</span></div>
+          <button type="button" class="biometric-btn" id="biometric-login-btn"><span aria-hidden="true">⌁</span> Use biometric login</button>
+
+          <div class="login-security-row">
+            <div class="login-security-item"><span class="icon">✓</span>Secure<br />Transactions</div>
+            <div class="login-security-item"><span class="icon">↔</span>Instant<br />Transfers</div>
+            <div class="login-security-item"><span class="icon">?</span>24/7<br />Support</div>
+          </div>
+
+          <div class="login-bottom-signup">
+            Don't have an account?
+            <button id="go-to-register-from-login">Sign up</button>
+          </div>
+
+          <div id="forgot-password-panel" class="recovery-panel hidden">
+            <h3>Reset your password</h3>
+            <p>Enter your registered email and we will send a secure password reset link.</p>
+            <input class="text-input" id="forgot-password-email" type="email" placeholder="Your email" autocomplete="email" />
+            <div id="forgot-password-message" class="field-note" style="margin-top:8px;"></div>
+            <div class="recovery-actions">
+              <button type="button" class="btn-primary" id="forgot-password-send" style="margin-top:12px;">Send recovery code</button>
+              <button type="button" class="btn-secondary" id="forgot-password-cancel">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   </div>
 
@@ -571,6 +1044,8 @@
 </div>
 
 <script src="config.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-messaging-compat.js"></script>
 <script src="deenwallet-client.js"></script>
 <script>
   (function () {
@@ -622,6 +1097,14 @@
       const loginVerifyEmail = document.getElementById('login-verify-email');
       const loginSupportWhatsApp = document.getElementById('login-support-whatsapp');
       const loginRateStatus = document.getElementById('login-rate-status');
+      const forgotPasswordBtn = document.getElementById('forgot-password-btn');
+      const forgotPasswordPanel = document.getElementById('forgot-password-panel');
+      const forgotPasswordEmail = document.getElementById('forgot-password-email');
+      const forgotPasswordSend = document.getElementById('forgot-password-send');
+      const forgotPasswordCancel = document.getElementById('forgot-password-cancel');
+      const forgotPasswordMessage = document.getElementById('forgot-password-message');
+      const biometricLoginBtn = document.getElementById('biometric-login-btn');
+
       const accountLockModal = document.getElementById('account-lock-modal');
       const accountLockWhatsApp = document.getElementById('account-lock-whatsapp');
       const accountLockClose = document.getElementById('account-lock-close');
@@ -639,6 +1122,97 @@
       const loginTabEmail = document.getElementById('login-tab-email');
       const loginTabPhone = document.getElementById('login-tab-phone');
       const loginPhoneNote = document.getElementById('login-phone-note');
+
+
+      if (forgotPasswordBtn) {
+        forgotPasswordBtn.addEventListener('click', function () {
+          window.location.href = 'reset-password.html';
+        });
+      }
+      if (forgotPasswordCancel) {
+        forgotPasswordCancel.addEventListener('click', function () {
+          if (forgotPasswordPanel) forgotPasswordPanel.classList.add('hidden');
+          if (forgotPasswordMessage) forgotPasswordMessage.textContent = '';
+        });
+      }
+      if (forgotPasswordSend) {
+        forgotPasswordSend.addEventListener('click', async function () {
+          const email = forgotPasswordEmail ? forgotPasswordEmail.value.trim() : '';
+
+          if (forgotPasswordMessage) {
+            forgotPasswordMessage.textContent = '';
+          }
+
+          if (!email) {
+            if (forgotPasswordMessage) {
+              forgotPasswordMessage.textContent = 'Enter your registered email address.';
+            }
+            return;
+          }
+
+          if (forgotPasswordSend) {
+            forgotPasswordSend.disabled = true;
+            forgotPasswordSend.innerHTML = '<div class="spinner"></div>';
+          }
+
+          try {
+            await apiRequest('/api/auth/forgot-password', {
+              method: 'POST',
+              body: { email }
+            });
+
+            // Keep the response generic so the UI does not reveal whether
+            // an email address belongs to a registered USER account.
+            if (forgotPasswordMessage) {
+              forgotPasswordMessage.textContent =
+                      'If an account exists for that email, a password reset link has been sent. Please check your inbox.';
+              forgotPasswordMessage.style.color = '#2E9FB0';
+            }
+          } catch (error) {
+            // Do not expose account-existence information. The backend
+            // normally returns 204 for both existing and unknown emails.
+            console.error('Password reset request error:', error);
+            if (forgotPasswordMessage) {
+              forgotPasswordMessage.textContent =
+                      'We could not process the request right now. Please try again later.';
+              forgotPasswordMessage.style.color = 'var(--error)';
+            }
+          } finally {
+            if (forgotPasswordSend) {
+              forgotPasswordSend.disabled = false;
+              forgotPasswordSend.textContent = 'Send reset link';
+            }
+          }
+        });
+      }
+      if (biometricLoginBtn) {
+        biometricLoginBtn.addEventListener('click', async function () {
+          biometricLoginBtn.disabled = true;
+          const originalText = biometricLoginBtn.textContent;
+          biometricLoginBtn.textContent = 'Authenticating…';
+          try {
+            if (typeof window.biometricLogin !== 'function') {
+              throw new Error('Biometric login is not available in this app version.');
+            }
+            await window.biometricLogin();
+            showLoginSuccessPopup();
+            setTimeout(function () { window.location.href = AFTER_LOGIN_REDIRECT; }, 900);
+          } catch (error) {
+            console.error('Biometric login error:', error);
+            showToastSafe(error && error.message ? error.message : 'Biometric login failed.');
+          } finally {
+            biometricLoginBtn.disabled = false;
+            biometricLoginBtn.textContent = originalText;
+          }
+        });
+      }
+      function showToastSafe(message) {
+        if (typeof window.showToast === 'function') {
+          window.showToast(message);
+          return;
+        }
+        alert(message);
+      }
 
       // ==============================================================
       // LOGIN BUTTON
@@ -773,9 +1347,20 @@
             if (loginRateTimer) { clearInterval(loginRateTimer); loginRateTimer = null; }
           }
           const unverified = lower.includes('verify your email') || lower.includes('email before logging');
-          const locked = lower.includes('account locked') || lower.includes('multiple failed') || lower.includes('contact support');
-          if (loginRecovery && (unverified || locked)) loginRecovery.classList.remove('hidden');
-          if (locked) showAccountLockModal();
+          const passwordLocked = rateLimited
+                  || lower.includes('too many incorrect login attempts')
+                  || lower.includes('login is temporarily paused')
+                  || lower.includes('login temporarily paused');
+          const pinLocked = lower.includes('pin was entered incorrectly')
+                  || lower.includes('incorrect pin attempts')
+                  || lower.includes('pin attempts');
+          const accountLocked = lower.includes('account is locked') || lower.includes('account blocked');
+          if (loginRecovery && (unverified || passwordLocked)) loginRecovery.classList.remove('hidden');
+          if (passwordLocked) {
+            if (loginErrorText) loginErrorText.textContent = 'Your account is temporarily locked because of multiple incorrect password attempts. Please wait for the countdown to finish before trying again.';
+          } else if (pinLocked || accountLocked) {
+            showAccountLockModal();
+          }
           if (loginVerifyEmail) loginVerifyEmail.style.display = unverified ? 'block' : 'none';
           if (loginSupportWhatsApp) {
             const number = String(window.DEENWALLET_SUPPORT_WHATSAPP || '').replace(/\D/g, '');
@@ -788,6 +1373,19 @@
             if (!rateLimitedThisAttempt && !loginRateTimer) loginBtn.disabled = false;
           }
         }
+      }
+
+      // ==============================================================
+      // LOGIN SUCCESS POPUP
+      // ==============================================================
+      function showLoginSuccessPopup() {
+        const existing = document.getElementById('login-success-popup');
+        if (existing) existing.remove();
+        const popup = document.createElement('div');
+        popup.id = 'login-success-popup';
+        popup.innerHTML = '<div class="login-success-card"><div class="login-success-icon">✓</div><div class="login-success-title">Login successful</div><div class="login-success-message">Welcome back to DeenWallet.</div></div>';
+        document.body.appendChild(popup);
+        requestAnimationFrame(function () { popup.classList.add('visible'); });
       }
 
       // ==============================================================
@@ -988,10 +1586,100 @@
       // ==============================================================
       // SCREEN SWITCHING
       // ==============================================================
+      // ---- Welcome carousel state (declared before goToScreen is first used) ----
+      const welcomeTrack = document.getElementById('welcome-track');
+      const welcomeDots = Array.from(document.querySelectorAll('.welcome-dot'));
+      const phoneQuery = window.matchMedia('(max-width: 768px)');
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const WELCOME_AUTOPLAY_MS = 4500;
+      let welcomeIndex = 0;
+      let welcomeTimer = null;
+
+      function setWelcomeIndex(i) {
+        welcomeIndex = i;
+        welcomeDots.forEach(function (dot, n) {
+          dot.setAttribute('aria-current', n === i ? 'true' : 'false');
+        });
+      }
+
+      function scrollToSlide(i) {
+        if (!welcomeTrack) return;
+        welcomeTrack.scrollTo({
+          left: i * welcomeTrack.clientWidth,
+          behavior: reduceMotion.matches ? 'auto' : 'smooth'
+        });
+      }
+
+      function stopWelcomeAutoplay() {
+        if (welcomeTimer) { clearInterval(welcomeTimer); welcomeTimer = null; }
+      }
+
+      function startWelcomeAutoplay() {
+        stopWelcomeAutoplay();
+        if (reduceMotion.matches || !welcomeDots.length) return;
+        welcomeTimer = setInterval(function () {
+          scrollToSlide((welcomeIndex + 1) % welcomeDots.length);
+        }, WELCOME_AUTOPLAY_MS);
+      }
+
       function goToScreen(id) {
         document.querySelectorAll('.screen').forEach((el) => el.classList.remove('active'));
         const target = document.getElementById(id);
-        if (target) target.classList.add('active');
+        if (target) {
+          target.classList.add('active');
+          target.scrollTop = 0;
+        }
+        window.scrollTo(0, 0);
+        if (id === 'screen-welcome') startWelcomeAutoplay(); else stopWelcomeAutoplay();
+      }
+
+      if (welcomeTrack) {
+        // Keep the dots in step with swiping and with the automatic movement.
+        welcomeTrack.addEventListener('scroll', function () {
+          const width = welcomeTrack.clientWidth || 1;
+          const i = Math.round(welcomeTrack.scrollLeft / width);
+          if (i !== welcomeIndex) setWelcomeIndex(i);
+        }, { passive: true });
+
+        // Pause while a finger is on the slides, then carry on.
+        welcomeTrack.addEventListener('touchstart', stopWelcomeAutoplay, { passive: true });
+        welcomeTrack.addEventListener('touchend', startWelcomeAutoplay, { passive: true });
+      }
+
+      welcomeDots.forEach(function (dot, n) {
+        dot.addEventListener('click', function () {
+          scrollToSlide(n);
+          startWelcomeAutoplay();
+        });
+      });
+
+      document.addEventListener('visibilitychange', function () {
+        const welcome = document.getElementById('screen-welcome');
+        if (document.hidden) stopWelcomeAutoplay();
+        else if (welcome && welcome.classList.contains('active')) startWelcomeAutoplay();
+      });
+
+      const welcomeLoginBtn = document.getElementById('welcome-login-btn');
+      const welcomeSignupBtn = document.getElementById('welcome-signup-btn');
+      const loginBackBtn = document.getElementById('login-back-btn');
+      const registerBackBtn = document.getElementById('register-back-btn');
+      if (welcomeLoginBtn) welcomeLoginBtn.addEventListener('click', function () { goToScreen('screen-login'); });
+      if (welcomeSignupBtn) welcomeSignupBtn.addEventListener('click', function () { goToScreen('screen-register'); });
+      if (loginBackBtn) loginBackBtn.addEventListener('click', function () { goToScreen('screen-welcome'); });
+      if (registerBackBtn) registerBackBtn.addEventListener('click', function () { goToScreen('screen-welcome'); });
+
+      // The welcome screen only exists on phones. If the window grows past
+      // that (rotation, desktop), fall back to the two-column login.
+      phoneQuery.addEventListener('change', function (e) {
+        const welcome = document.getElementById('screen-welcome');
+        if (!e.matches && welcome && welcome.classList.contains('active')) goToScreen('screen-login');
+      });
+
+      // Phones open on the carousel. A #login or #signup link skips it.
+      if (phoneQuery.matches) {
+        if (window.location.hash === '#login') goToScreen('screen-login');
+        else if (window.location.hash === '#signup') goToScreen('screen-register');
+        else goToScreen('screen-welcome');
       }
 
       // Login tabs

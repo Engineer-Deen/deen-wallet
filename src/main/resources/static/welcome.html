@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>DeenWallet — Simple mobile money conversion</title>
+  <meta name="description" content="DeenWallet provides a simple way to convert money between supported mobile money providers in Sierra Leone." />
+  <meta name="theme-color" content="#0C2A33" />
+  <meta property="og:title" content="DeenWallet — Simple mobile money conversion" />
+  <meta property="og:description" content="Convert money between supported mobile money providers with DeenWallet." />
+  <meta property="og:image" content="/assets/logo.png" />
+  <link rel="icon" href="/assets/logo.png" />
+  <style>
+    :root {
+      --ink: #0C2A33;
+      --ink-soft: #46606A;
+      --lagoon: #1C7A91;
+      --lagoon-deep: #145A6C;
+      --surf: #2E9FB0;
+      --tint: #E3F2F5;
+      --mist: #F2F7F8;
+      --line: #DAE7EB;
+      --gold: #D9B24E;
+      --gold-deep: #B8923A;
+      --sl-green: #1EB53A;
+      --sl-blue: #0072C6;
+      --white: #FFFFFF;
+      --display: "Avenir Next", "Segoe UI Variable Display", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 17px;
+      line-height: 1.6;
+      color: var(--ink);
+      background: var(--white);
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; display: block; }
+    h1, h2, h3, p { margin: 0; }
+    :focus-visible { outline: 3px solid var(--surf); outline-offset: 3px; border-radius: 6px; }
+
+    .wrap { width: 100%; max-width: 1160px; margin: 0 auto; padding: 0 22px; }
+    .skip {
+      position: absolute; left: -999px; top: 8px; z-index: 50;
+      background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 10px; font-weight: 700;
+    }
+    .skip:focus { left: 8px; }
+
+    /* ---------------------------------------------------------------
+       Buttons
+       --------------------------------------------------------------- */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-height: 52px; padding: 0 30px;
+      border: 0; border-radius: 16px;
+      font: 700 16px/1 var(--display);
+      cursor: pointer;
+      transition: transform .15s ease, background-color .15s ease, box-shadow .15s ease;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn-primary { background: var(--lagoon); color: #fff; box-shadow: 0 12px 26px rgba(28, 122, 145, .30); }
+    .btn-primary:hover { background: var(--lagoon-deep); }
+    .btn-line { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--line); }
+    .btn-line:hover { box-shadow: inset 0 0 0 1.5px var(--surf); }
+    .btn-gold { background: var(--gold); color: var(--ink); }
+    .btn-gold:hover { background: #E6C163; }
+    .btn-sm { min-height: 42px; padding: 0 20px; border-radius: 12px; font-size: 14.5px; }
+
+    /* ---------------------------------------------------------------
+       Nav
+       --------------------------------------------------------------- */
+    .nav {
+      position: sticky; top: 0; z-index: 30;
+      background: rgba(255, 255, 255, .94);
+      -webkit-backdrop-filter: saturate(180%) blur(10px);
+      backdrop-filter: saturate(180%) blur(10px);
+      border-bottom: 1px solid var(--line);
+    }
+    .nav-in { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+    .brand { display: flex; align-items: center; gap: 11px; font: 800 20px/1 var(--display); letter-spacing: -.02em; }
+    .brand img { width: 38px; height: 38px; border-radius: 11px; object-fit: cover; }
+    .brand span { color: var(--lagoon); }
+    .nav-actions { display: flex; align-items: center; gap: 6px; }
+    .nav-login { padding: 10px 14px; border-radius: 12px; font: 700 14.5px/1 var(--display); color: var(--ink); }
+    .nav-login:hover { background: var(--mist); }
+
+    /* ---------------------------------------------------------------
+       Hero
+       --------------------------------------------------------------- */
+    .hero { position: relative; overflow: hidden; padding: 44px 0 0; }
+    .hero::before {
+      content: ""; position: absolute; z-index: 0;
+      width: 620px; height: 620px; border-radius: 50%;
+      right: -250px; top: 120px;
+      background: var(--tint);
+    }
+    .hero-grid { position: relative; z-index: 1; display: grid; gap: 34px; }
+    .hero h1 {
+      font: 800 clamp(40px, 11.2vw, 76px)/1.0 var(--display);
+      letter-spacing: -.045em;
+      text-wrap: balance;
+    }
+    .hero .sub { margin-top: 20px; max-width: 34ch; font-size: 18px; line-height: 1.55; color: var(--ink-soft); }
+    .cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+    .cta-row .btn { flex: 1 1 150px; }
+    .hero-note { display: flex; align-items: center; gap: 12px; margin-top: 22px; font-size: 14px; color: var(--ink-soft); }
+    .flag { display: inline-flex; flex: none; width: 30px; height: 20px; border-radius: 4px; overflow: hidden; box-shadow: 0 0 0 1px rgba(12, 42, 51, .12); }
+    .flag i { flex: 1; }
+    .flag i:nth-child(1) { background: var(--sl-green); }
+    .flag i:nth-child(2) { background: #fff; }
+    .flag i:nth-child(3) { background: var(--sl-blue); }
+
+    /* Phone stage: on small screens the phone rises from the bottom edge */
+    .stage { position: relative; display: flex; justify-content: center; height: 470px; overflow: hidden; margin-top: 4px; }
+    .phone {
+      position: relative; flex: none;
+      width: 300px; height: 620px;
+      padding: 11px;
+      border-radius: 50px;
+      background: var(--ink);
+      box-shadow: 0 40px 70px rgba(12, 42, 51, .30), inset 0 0 0 2px #1B4350;
+    }
+    .screen {
+      position: relative; height: 100%; overflow: hidden;
+      display: flex; flex-direction: column;
+      padding: 0;
+      border-radius: 40px;
+      background: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .notch { position: absolute; left: 50%; top: 9px; width: 84px; height: 22px; margin-left: -42px; border-radius: 99px; background: var(--ink); z-index: 6; }
+    .status { position: absolute; left: 0; right: 0; top: 0; z-index: 7; display: flex; justify-content: space-between; align-items: center; padding: 14px 24px 0; font-size: 12px; font-weight: 700; }
+    .battery { width: 22px; height: 11px; border-radius: 3.5px; box-shadow: inset 0 0 0 1.5px var(--ink); position: relative; }
+    .battery::after { content: ""; position: absolute; left: 2px; top: 2px; bottom: 2px; width: 14px; border-radius: 1.5px; background: var(--ink); }
+    /* ---- App screen: the real DeenWallet home screen ----------------------
+       Built at the real phone width (390px) with the exact spacing, colours
+       and type from the app, then scaled down to fit the mockup. */
+    .app {
+      position: absolute; left: 0; top: 0;
+      width: 390px; height: 839px;
+      transform: scale(.7128); transform-origin: 0 0;
+      display: flex; flex-direction: column;
+      background: linear-gradient(145deg, #EAF4F6 0%, #F7FBFC 100%);
+      color: #12242B; font-size: 14px; line-height: 1.5;
+    }
+    .app-top { flex: none; padding: 46px 20px 8px; background: #fff; }
+    .app-bar { display: grid; grid-template-columns: 40px minmax(0, 1fr) 40px; align-items: center; gap: 10px; min-height: 48px; }
+    .app-menu { width: 40px; height: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: #F7FAFB; border: 1px solid #E4ECEF; border-radius: 10px; }
+    .app-menu i { display: block; width: 19px; height: 2px; border-radius: 4px; background: #12242B; }
+    .app-logo { justify-self: center; width: 88px; height: 48px; object-fit: cover; border-radius: 10px; box-shadow: 0 6px 16px rgba(0, 0, 0, .12); }
+    .app-bell { position: relative; justify-self: end; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: #F7FAFB; border-radius: 12px; }
+    .app-badge { position: absolute; top: 3px; right: 3px; min-width: 16px; height: 16px; padding: 0 4px; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #E85D5D; color: #fff; font-size: 9px; font-weight: 800; }
+    .app-scroll { flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 12px 20px 0; }
+    .app-greet { margin-top: 8px; }
+    .app-greet h4 { margin: 0; font-size: 22px; font-weight: 700; line-height: 1.5; }
+    .app-greet p { margin: 4px 0 0; font-size: 13px; color: #6E7C82; }
+    .app-dots { display: flex; justify-content: center; gap: 8px; margin: 8px 0 16px; }
+    .app-dots i { width: 8px; height: 8px; border-radius: 50%; background: #E4ECEF; }
+    .app-dots i:first-child { background: #2E9FB0; }
+    .app-card { margin-top: 18px; padding: 20px; background: #F7FAFB; border: 1px solid #E4ECEF; border-radius: 20px; box-shadow: 0 6px 20px rgba(18, 36, 43, .04); }
+    .app-card h4 { margin: 0 0 2px; font-size: 17px; font-weight: 800; }
+    .app-card .app-sub { margin: 0 0 16px; max-width: none; font-size: 13px; line-height: 1.5; color: #6E7C82; }
+    .app-label { margin: 16px 0 8px; font-size: 13px; font-weight: 600; color: #12242B; }
+    .app-card .app-label:last-of-type { margin-top: 20px; }
+    .app-phone { display: flex; align-items: center; background: #fff; border: 1px solid #E4ECEF; border-radius: 14px; overflow: hidden; }
+    .app-prefix { display: flex; align-items: center; gap: 8px; padding: 14px; border-right: 1px solid #E4ECEF; white-space: nowrap; font-size: 15px; font-weight: 500; }
+    .app-flag { width: 22px; height: 22px; border-radius: 50%; overflow: hidden; border: 1px solid #E4ECEF; display: flex; flex-direction: column; }
+    .app-flag i { flex: 1; }
+    .app-phone .num { padding: 14px; font-size: 16px; }
+    .amount { display: flex; align-items: center; gap: 8px; padding: 4px 16px; background: #fff; border: 1px solid #E4ECEF; border-radius: 14px; }
+    .amount b { font-size: 14px; font-weight: 600; color: #6E7C82; }
+    .amount .val { position: relative; display: inline-flex; align-items: center; padding: 14px 0; font-size: 22px; font-weight: 600; line-height: 33px; font-variant-numeric: tabular-nums; min-width: 1ch; }
+    .amount .ph { color: #A9B7BC; }
+    .amount .d { opacity: 0; }
+    .amount .caret { width: 2px; height: 24px; margin-left: 1px; background: #2E9FB0; animation: blink 1s steps(2, start) infinite; }
+    .app-activity { margin-top: 16px; padding: 18px; background: #fff; border: 1px solid #E4ECEF; border-radius: 16px; box-shadow: 0 6px 20px rgba(18, 36, 43, .05); }
+    .app-act-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .app-act-head h4 { margin: 0; font-size: 17px; font-weight: 800; }
+    .app-act-head p { margin: 4px 0 0; font-size: 12px; color: #6E7C82; }
+    .app-viewall { flex: none; padding: 8px 11px; border-radius: 10px; background: #EAF6F8; color: #1C7A91; font-size: 13px; font-weight: 800; white-space: nowrap; }
+    .app-rows { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+    .app-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 13px; border: 1px solid #EEF3F5; border-radius: 12px; background: #F9FBFC; }
+    .app-row b { display: block; font-size: 13px; font-weight: 800; }
+    .app-row .meta { display: flex; flex-wrap: wrap; gap: 5px 9px; margin-top: 4px; font-size: 11px; color: #6E7C82; }
+    .app-row .pill { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 999px; background: #EAF7EF; color: #21824B; font-size: 10px; font-weight: 800; }
+    .app-row .money { flex: none; font-size: 13px; font-weight: 800; text-align: right; }
+    .app-foot { flex: none; padding: 12px 20px 14px; background: #F5F9FA; border-top: 1px solid #E4ECEF; }
+    .go { padding: 16px; border-radius: 28px; background: #BFE0E6; color: #fff; font-size: 16px; font-weight: 600; line-height: 24px; text-align: center; transition: background-color .3s ease, transform .15s ease; }
+    .app-nav { flex: none; height: 76px; padding: 6px 8px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: #fff; border-top: 1px solid #E4ECEF; }
+    .app-nav span { min-width: 0; padding: 4px 8px; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #7A898F; font-size: 11px; line-height: 1.1; font-weight: 700; }
+    .app-nav .on { color: #1C7A91; background: #EAF6F8; }
+    .app-nav svg { width: 22px; height: 22px; display: block; stroke: currentColor; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+    .app-nav .ico { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; }
+
+    .dim { position: absolute; inset: 0; z-index: 4; background: rgba(12, 42, 51, .38); opacity: 0; transition: opacity .35s ease; pointer-events: none; }
+    .sheet {
+      position: absolute; left: 0; right: 0; bottom: 0; z-index: 5;
+      padding: 22px 20px 26px; border-radius: 28px 28px 0 0; background: #fff; text-align: center;
+      transform: translateY(105%); transition: transform .5s cubic-bezier(.2, .8, .2, 1);
+    }
+    .tick { width: 54px; height: 54px; margin: 0 auto 12px; border-radius: 50%; background: var(--lagoon); display: flex; align-items: center; justify-content: center; }
+    .sheet h3 { font-size: 17px; font-weight: 800; letter-spacing: -.01em; }
+    .sheet .big { margin-top: 6px; font-size: 30px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+    .sheet .via { margin-top: 2px; font-size: 12px; color: var(--ink-soft); }
+    .sheet .ref { display: flex; justify-content: space-between; margin-top: 16px; padding: 11px 14px; border-radius: 14px; background: var(--mist); font-size: 11.5px; color: var(--ink-soft); }
+    .sheet .ref b { color: var(--ink); font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+
+    .push {
+      display: none;
+      position: absolute; z-index: 8; left: -8px; top: 140px; width: 262px;
+      padding: 13px 14px; border-radius: 20px;
+      background: #fff; box-shadow: 0 22px 44px rgba(12, 42, 51, .20), 0 0 0 1px var(--line);
+      opacity: 0; transform: translateY(14px) scale(.97);
+      transition: opacity .45s ease, transform .45s cubic-bezier(.2, .8, .2, 1);
+    }
+    .push-top { display: flex; align-items: center; gap: 8px; font-size: 11.5px; font-weight: 700; color: var(--ink-soft); }
+    .push-top img { width: 20px; height: 20px; border-radius: 6px; object-fit: cover; }
+    .push-top em { margin-left: auto; font-style: normal; font-weight: 600; }
+    .push p { margin-top: 6px; font-size: 13.5px; line-height: 1.4; font-weight: 600; }
+
+    /* Demo sequence (classes are added one after another by the script) */
+    .phone.t1 .d1, .phone.t2 .d2, .phone.t3 .d3 { opacity: 1; }
+    .phone.t1 .ph { display: none; }
+    .phone.ready .go { background: #2E9FB0; }
+    .phone.press .go { transform: scale(.97); }
+    .phone.sheet-on .dim { opacity: 1; }
+    .phone.sheet-on .sheet { transform: none; }
+    .phone.push-on .push { opacity: 1; transform: none; }
+    .phone.t3 .caret, .phone.sheet-on .caret { animation: none; opacity: 0; }
+
+    @keyframes blink { to { visibility: hidden; } }
+
+    /* Without JavaScript, show the finished-typing state */
+    .nojs .phone .d { opacity: 1; }
+    .nojs .phone .ph { display: none; }
+    .nojs .phone .go { background: #2E9FB0; }
+    .nojs .phone .caret { display: none; }
+
+    /* ---------------------------------------------------------------
+       Providers band
+       --------------------------------------------------------------- */
+    .providers { position: relative; z-index: 2; background: var(--ink); color: #fff; }
+    .providers .wrap { display: grid; gap: 14px; padding-top: 34px; padding-bottom: 34px; }
+    .providers p { font-size: 15px; color: #A9C3CB; }
+    .provider-list { display: flex; flex-wrap: wrap; gap: 8px 30px; list-style: none; margin: 0; padding: 0; }
+    .provider-list li { font: 800 clamp(24px, 6.4vw, 38px)/1.15 var(--display); letter-spacing: -.03em; }
+    .provider-list li + li { position: relative; }
+
+    /* ---------------------------------------------------------------
+       Section heads
+       --------------------------------------------------------------- */
+    .section { padding: 76px 0; }
+    .section-head { max-width: 760px; margin-bottom: 40px; }
+    .section-head h2 { font: 800 clamp(30px, 7.4vw, 50px)/1.05 var(--display); letter-spacing: -.04em; text-wrap: balance; }
+    .section-head p { margin-top: 14px; max-width: 52ch; color: var(--ink-soft); }
+
+    /* ---------------------------------------------------------------
+       Steps
+       --------------------------------------------------------------- */
+    .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+    .step { position: relative; display: grid; grid-template-columns: 52px 1fr; gap: 0 18px; padding-bottom: 34px; }
+    .step:last-child { padding-bottom: 0; }
+    .step::before { content: ""; position: absolute; left: 25px; top: 54px; bottom: 2px; width: 2px; background: var(--line); }
+    .step:last-child::before { display: none; }
+    .step-n {
+      width: 52px; height: 52px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--lagoon); color: #fff;
+      font: 800 21px/1 var(--display);
+    }
+    .step h3 { padding-top: 9px; font: 800 21px/1.2 var(--display); letter-spacing: -.02em; }
+    .step p { margin-top: 6px; color: var(--ink-soft); font-size: 16px; }
+    .how { background: var(--mist); }
+
+    /* ---------------------------------------------------------------
+       Feature tiles
+       --------------------------------------------------------------- */
+    .tiles { display: grid; gap: 16px; }
+    .tile { position: relative; overflow: hidden; padding: 26px 24px 28px; border-radius: 30px; background: var(--mist); }
+    .tile h3 { font: 800 22px/1.15 var(--display); letter-spacing: -.025em; }
+    .tile p { margin-top: 8px; max-width: 40ch; font-size: 15.5px; line-height: 1.55; color: var(--ink-soft); }
+    .tile .vis { margin-top: 24px; }
+    .tile.dark { background: var(--ink); color: #fff; }
+    .tile.dark p { color: #A9C3CB; }
+    .tile.plain { background: #fff; box-shadow: inset 0 0 0 1.5px var(--line); }
+    .tile.soft { background: var(--tint); }
+
+    /* wallet flow */
+    .flow { display: flex; align-items: center; gap: 0; }
+    .node { flex: none; padding: 12px 14px; border-radius: 16px; background: #fff; box-shadow: inset 0 0 0 1.5px var(--line); font: 800 14px/1.2 var(--display); letter-spacing: -.01em; }
+    .node small { display: block; font-weight: 600; font-size: 11.5px; color: var(--ink-soft); }
+    .rail { flex: 1; min-width: 12px; height: 2px; background: repeating-linear-gradient(90deg, var(--surf) 0 6px, transparent 6px 11px); }
+    .hub { flex: none; width: 58px; height: 58px; border-radius: 18px; overflow: hidden; box-shadow: 0 10px 22px rgba(12, 42, 51, .22); }
+    .hub img { width: 100%; height: 100%; object-fit: cover; }
+    .flow-note { margin-top: 12px; font-size: 13.5px; color: var(--ink-soft); }
+
+    /* PIN */
+    .pin { display: flex; gap: 12px; }
+    .pin i { width: 18px; height: 18px; border-radius: 50%; box-shadow: inset 0 0 0 2px #4B7380; }
+    .pin i.f { background: var(--gold); box-shadow: none; }
+
+    /* history */
+    .hist { display: grid; gap: 10px; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 15px; border-radius: 18px; background: var(--mist); }
+    .row b { display: block; font-size: 14.5px; letter-spacing: -.01em; }
+    .row span { display: block; font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+    .row .amt { text-align: right; }
+    .row .ok { display: inline-block; margin-top: 2px; padding: 2px 9px; border-radius: 99px; background: var(--tint); color: var(--lagoon-deep); font-size: 11px; font-weight: 700; }
+
+    /* notifications visual */
+    .people { display: flex; align-items: center; }
+    .av { width: 54px; height: 54px; margin-left: -10px; border-radius: 50%; border: 3px solid var(--tint); display: flex; align-items: center; justify-content: center; font: 800 18px/1 var(--display); color: #fff; }
+    .av:first-child { margin-left: 0; }
+    .av.a { background: var(--lagoon); }
+    .av.b { background: var(--gold-deep); }
+    .av.c { background: var(--ink); }
+    .av.add { background: #fff; color: var(--lagoon); border-style: dashed; border-color: #9CCDD6; }
+
+    /* chat */
+    .chat { display: grid; gap: 8px; }
+    .bub { max-width: 82%; padding: 11px 15px; border-radius: 20px; font-size: 14.5px; line-height: 1.4; }
+    .bub.in { justify-self: start; border-bottom-left-radius: 6px; background: var(--mist); }
+    .bub.out { justify-self: end; border-bottom-right-radius: 6px; background: var(--lagoon); color: #fff; }
+    .wa { display: inline-flex; align-items: center; gap: 6px; margin-top: 18px; font: 800 15px/1 var(--display); color: var(--lagoon-deep); }
+    .wa:hover { text-decoration: underline; text-underline-offset: 4px; }
+
+    /* Sierra Leone */
+    .flag-band { display: flex; height: 76px; border-radius: 20px; overflow: hidden; box-shadow: 0 0 0 1.5px var(--line); }
+    .flag-band i { flex: 1; }
+    .flag-band i:nth-child(1) { background: var(--sl-green); }
+    .flag-band i:nth-child(2) { background: #fff; }
+    .flag-band i:nth-child(3) { background: var(--sl-blue); }
+
+    /* ---------------------------------------------------------------
+       Final call to action
+       --------------------------------------------------------------- */
+    .final { background: var(--ink); color: #fff; padding: 84px 0; }
+    .final h2 { max-width: 14ch; font: 800 clamp(36px, 9vw, 64px)/1.0 var(--display); letter-spacing: -.045em; text-wrap: balance; }
+    .final p { margin-top: 18px; max-width: 40ch; font-size: 18px; color: #A9C3CB; }
+    .final .cta-row { margin-top: 30px; }
+    .final .btn-line { color: #fff; box-shadow: inset 0 0 0 1.5px #3D6572; }
+    .final .btn-line:hover { box-shadow: inset 0 0 0 1.5px var(--gold); }
+
+    /* ---------------------------------------------------------------
+       Footer
+       --------------------------------------------------------------- */
+    .band { display: flex; height: 6px; }
+    .band i { flex: 1; }
+    .band i:nth-child(1) { background: var(--sl-green); }
+    .band i:nth-child(2) { background: #fff; }
+    .band i:nth-child(3) { background: var(--sl-blue); }
+    footer { padding: 34px 0 40px; background: #fff; }
+    .foot { display: grid; gap: 18px; }
+    .foot-links { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 14.5px; font-weight: 600; color: var(--ink-soft); }
+    .foot-links a:hover { color: var(--lagoon-deep); }
+    .copy { font-size: 14px; color: var(--ink-soft); }
+
+    /* ---------------------------------------------------------------
+       Larger screens
+       --------------------------------------------------------------- */
+    @media (min-width: 720px) {
+      .wrap { padding: 0 32px; }
+      .hero { padding-top: 64px; }
+      .hero .sub { font-size: 20px; }
+      .cta-row .btn { flex: 0 0 auto; }
+      .providers .wrap { grid-template-columns: 220px 1fr; align-items: center; }
+      .provider-list { gap: 8px 44px; }
+      .provider-list li + li::before { content: ""; position: absolute; left: -24px; top: 18%; bottom: 18%; width: 1.5px; background: #2F5460; }
+      .section { padding: 104px 0; }
+      .steps { grid-template-columns: repeat(3, 1fr); gap: 0 26px; }
+      .step { grid-template-columns: 1fr; padding-bottom: 0; }
+      .step::before { left: 52px; right: -26px; top: 25px; bottom: auto; width: auto; height: 2px; }
+      .step h3 { padding-top: 22px; }
+      .tiles { grid-template-columns: repeat(12, 1fr); gap: 20px; }
+      .tile { padding: 34px 34px 36px; }
+      .tile.a { grid-column: span 7; }
+      .tile.b { grid-column: span 5; }
+      .tile.c { grid-column: span 5; }
+      .tile.d { grid-column: span 7; }
+      .tile.e { grid-column: span 7; }
+      .tile.f { grid-column: span 5; }
+      .final { padding: 120px 0; }
+      .foot { grid-template-columns: 1fr auto; align-items: center; }
+    }
+
+    @media (min-width: 980px) {
+      .hero { padding: 76px 0 0; }
+      .hero::before { width: 760px; height: 760px; right: -170px; top: 40px; }
+      .hero-grid { grid-template-columns: minmax(0, 1.08fr) minmax(0, .92fr); align-items: center; gap: 24px; }
+      .hero-copy { padding-bottom: 110px; align-self: center; }
+      .stage { height: 610px; margin-top: 0; justify-content: center; overflow: visible; }
+      .phone { margin-bottom: -170px; }
+      .push { display: block; }
+      .hero { padding-bottom: 0; }
+      .hero .stage { align-items: flex-start; }
+    }
+
+    @media (min-width: 980px) and (max-width: 1100px) {
+      .push { left: -34px; width: 240px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      * { transition: none !important; animation: none !important; }
+      .amount .caret { display: none; }
+    }
+  </style>
+  <script>
+    // Lets the CSS know whether the demo can run. Without JavaScript the phone
+    // simply shows its finished-typing state.
+    document.documentElement.className = 'nojs';
+    document.documentElement.classList.remove('nojs');
+  </script>
+  <noscript><style>html { } .phone .d { opacity: 1; } .phone .ph { display: none; } .phone .go { background: #2E9FB0; } .phone .caret { display: none; }</style></noscript>
+</head>
+
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<nav class="nav" aria-label="Main">
+  <div class="wrap nav-in">
+    <a class="brand" href="welcome.html" aria-label="DeenWallet home">
+      <img src="assets/logo.png" alt="" width="38" height="38" />
+      <div>Deen<span>Wallet</span></div>
+    </a>
+    <div class="nav-actions">
+      <a class="nav-login" href="#services">Services</a>
+      <a class="nav-login" href="auth.html#login">Log in</a>
+      <a class="btn btn-primary btn-sm" href="auth.html#signup">Sign up</a>
+    </div>
+  </div>
+</nav>
+
+<main id="main">
+  <header class="hero">
+    <div class="wrap hero-grid">
+      <div class="hero-copy">
+        <h1>Move your money with a simpler mobile experience.</h1>
+        <p class="sub">DeenWallet provides a simple conversion flow for supported mobile money providers in Sierra Leone.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="auth.html#signup">Sign up</a>
+          <a class="btn btn-line" href="auth.html#login">Log in</a>
+        </div>
+        <p class="hero-note">
+          <span class="flag" aria-hidden="true"><i></i><i></i><i></i></span>
+          Create your account and complete the required verification steps to get started.
+        </p>
+      </div>
+
+      <div class="stage" aria-hidden="true">
+        <div class="phone" id="demo-phone">
+          <div class="screen">
+            <div class="notch"></div>
+            <div class="status"><span>9:41</span><span class="battery"></span></div>
+
+            <div class="app">
+              <div class="app-top">
+                <div class="app-bar">
+                  <span class="app-menu"><i></i><i></i><i></i></span>
+                  <img class="app-logo" src="deenwallet-logo.png" alt="" />
+                  <span class="app-bell">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="#E8B83A" stroke="#C99A2E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8" /><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0" fill="none" /></svg>
+                    <span class="app-badge">3</span>
+                  </span>
+                </div>
+              </div>
+
+              <div class="app-scroll">
+                <div class="app-greet">
+                  <h4>Hello, there</h4>
+                  <p>Your DeenWallet account</p>
+                </div>
+                <div class="app-dots"><i></i><i></i><i></i></div>
+
+                <div class="app-card">
+                  <h4>Convert Money</h4>
+                  <p class="app-sub">Convert between supported mobile money providers.</p>
+
+                  <div class="app-label">From</div>
+                  <div class="app-phone">
+                    <div class="app-prefix"><span class="app-flag"><i style="background:#1EB53A"></i><i style="background:#fff"></i><i style="background:#0072C6"></i></span>+232</div>
+                    <span class="num">76 123 456</span>
+                  </div>
+
+                  <div class="app-label">Amount</div>
+                  <div class="amount">
+                    <b>SLE</b>
+                    <span class="val"><span class="ph">0.00</span><span class="d d1">5</span><span class="d d2">0</span><span class="d d3">0</span><span class="caret"></span></span>
+                  </div>
+                </div>
+
+                <div class="app-activity">
+                  <div class="app-act-head">
+                    <div>
+                      <h4>Recent Activity</h4>
+                      <p>Your latest transactions will appear here.</p>
+                    </div>
+                    <span class="app-viewall">View all</span>
+                  </div>
+                  <div class="app-rows">
+                    <div class="app-row">
+                      <div><b>Mariama Sesay</b><div class="meta"><span>3/10/2026, 8:30 AM</span><span class="pill">Completed</span></div></div>
+                      <div class="money">500.00 SLE</div>
+                    </div>
+                    <div class="app-row">
+                      <div><b>Ibrahim Conteh</b><div class="meta"><span>2/10/2026, 4:12 PM</span><span class="pill">Completed</span></div></div>
+                      <div class="money">120.00 SLE</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="app-foot"><div class="go">Continue</div></div>
+
+              <div class="app-nav">
+                <span class="on"><span class="ico"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5" /><path d="M5 9.5V21h14V9.5" /><path d="M9.5 21v-6h5v6" /></svg></span>Home</span>
+                <span><span class="ico"><svg viewBox="0 0 24 24"><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /><circle cx="8" cy="7" r="1.5" /><circle cx="15" cy="12" r="1.5" /><circle cx="11" cy="17" r="1.5" /></svg></span>Services</span>
+                <span><span class="ico"><svg viewBox="0 0 24 24"><path d="M4 13v-1a8 8 0 0 1 16 0v1" /><path d="M4 13a2 2 0 0 1 2-2h1v6H6a2 2 0 0 1-2-2z" /><path d="M20 13a2 2 0 0 0-2-2h-1v6h1a2 2 0 0 0 2-2z" /><path d="M15 20h2a3 3 0 0 0 3-3" /></svg></span>Support</span>
+              </div>
+            </div>
+
+            <div class="dim"></div>
+            <div class="sheet">
+              <div class="tick"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></div>
+              <h3>Transaction complete</h3>
+              <div class="big">Completed</div>
+              <div class="via">The transaction status has been updated.</div>
+              <div class="ref"><span>Status</span><b>Completed</b></div>
+            </div>
+          </div>
+
+          <div class="push">
+            <div class="push-top"><img src="assets/logo.png" alt="" />DeenWallet<em>now</em></div>
+            <p>Your DeenWallet transaction has been completed successfully.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section class="providers" aria-label="Supported providers">
+    <div class="wrap">
+      <p>Currently supported mobile money providers</p>
+      <ul class="provider-list">
+        <li>Orange Money</li>
+        <li>Africell Money</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section" id="services">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Services available through DeenWallet.</h2>
+        <p class="sub">DeenWallet can support multiple services from one account. Availability depends on what is enabled in the system at the time you use the app.</p>
+      </div>
+
+      <div class="tiles">
+        <article class="tile a">
+          <h3>Mobile money conversion</h3>
+          <p>Convert between supported mobile money providers through the DeenWallet transaction flow.</p>
+        </article>
+
+        <article class="tile c plain">
+          <h3>Transaction management</h3>
+          <p>Review transaction details, status and account activity after you use an available service.</p>
+        </article>
+
+        <article class="tile f">
+          <h3>More services as they are enabled</h3>
+          <p>Additional DeenWallet services can be introduced and made available through the same account and services area.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section how" id="how">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Get started with DeenWallet.</h2>
+      </div>
+      <ol class="steps">
+        <li class="step">
+          <div class="step-n">1</div>
+          <div>
+            <h3>Create your account</h3>
+            <p>Create your DeenWallet account with your required account details.</p>
+          </div>
+        </li>
+        <li class="step">
+          <div class="step-n">2</div>
+          <div>
+            <h3>Verify your email</h3>
+            <p>Confirm your email to complete the account setup.</p>
+          </div>
+        </li>
+        <li class="step">
+          <div class="step-n">3</div>
+          <div>
+            <h3>Use a supported service</h3>
+            <p>Choose an available service, enter the required details, review the transaction, and confirm it with your PIN.</p>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="section" id="features">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Simple services, clear transaction management.</h2>
+      </div>
+
+      <div class="tiles">
+        <article class="tile a">
+          <h3>Mobile money conversion</h3>
+          <p>Choose the supported mobile money providers, enter the required amount and review the conversion before confirming.</p>
+          <div class="vis" aria-hidden="true">
+            <div class="flow">
+              <div class="node">Provider A</div>
+              <div class="rail"></div>
+              <div class="hub"><img src="assets/logo.png" alt="" /></div>
+              <div class="rail"></div>
+              <div class="node">Provider B</div>
+            </div>
+            <div class="flow-note">Provider availability is controlled by DeenWallet’s current backend configuration.</div>
+          </div>
+        </article>
+
+        <article class="tile b dark">
+          <h3>Account security</h3>
+          <p>Protect your account with authentication and PIN controls. Biometric login is also available on supported Android devices.</p>
+          <div class="vis pin" aria-hidden="true"><i class="f"></i><i class="f"></i><i class="f"></i><i></i></div>
+        </article>
+
+        <article class="tile c plain">
+          <h3>Transaction history</h3>
+          <p>Review your transactions, amounts, dates and statuses from your account.</p>
+          <div class="vis hist" aria-hidden="true">
+            <div class="row">
+              <div><b>Transaction</b><span>Recent activity</span></div>
+              <div class="amt"><b>Amount</b><span class="ok">Completed</span></div>
+            </div>
+            <div class="row">
+              <div><b>Transaction</b><span>Status update</span></div>
+              <div class="amt"><b>Details</b><span class="ok">View</span></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="tile d soft">
+          <h3>Notifications and updates</h3>
+          <p>Receive notifications about supported transaction events and important account updates.</p>
+          <div class="vis people" aria-hidden="true">
+            <span class="av a">✓</span><span class="av b">!</span><span class="av c">•</span><span class="av add">+</span>
+          </div>
+        </article>
+
+        <article class="tile e plain">
+          <h3>WhatsApp support</h3>
+          <p>Need help? Contact DeenWallet support through WhatsApp.</p>
+          <div class="vis chat" aria-hidden="true">
+            <div class="bub in">I need help with my transaction.</div>
+            <div class="bub out">Our support team can help you check the transaction.</div>
+          </div>
+          <a class="wa" href="https://wa.me/23280613600" target="_blank" rel="noopener">Message us on WhatsApp</a>
+        </article>
+
+        <article class="tile f">
+          <h3>Built for Sierra Leone</h3>
+          <p>Designed around the mobile-money environment and the services DeenWallet supports in Sierra Leone.</p>
+          <div class="vis flag-band" aria-hidden="true"><i></i><i></i><i></i></div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="final">
+    <div class="wrap">
+      <h2>One account for your DeenWallet services.</h2>
+      <p>Create an account or sign in to access the services and account features currently available to you.</p>
+      <div class="cta-row">
+        <a class="btn btn-gold" href="auth.html#signup">Sign up</a>
+        <a class="btn btn-line" href="auth.html#login">Log in</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="band" aria-hidden="true"><i></i><i></i><i></i></div>
+<footer>
+  <div class="wrap foot">
+    <div class="copy">&copy; <span id="year">2026</span> DeenWallet. All rights reserved.</div>
+    <nav class="foot-links" aria-label="Footer">
+      <a href="privacy.html">Privacy Policy</a>
+      <a href="terms.html">Terms of Service</a>
+      <a href="https://wa.me/23280613600" target="_blank" rel="noopener">WhatsApp Support</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    var phone = document.getElementById('demo-phone');
+    if (!phone) return;
+
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var steps = [
+      [700, 't1'], [1050, 't2'], [1400, 't3'],
+      [2100, 'ready'],
+      [2900, 'press'],
+      [3250, 'sheet-on'],
+      [4700, 'push-on']
+    ];
+
+    if (reduce) {
+      // Show the finished-typing state straight away, with no movement.
+      ['t1', 't2', 't3', 'ready'].forEach(function (c) { phone.classList.add(c); });
+      return;
+    }
+
+    steps.forEach(function (s) {
+      window.setTimeout(function () { phone.classList.add(s[1]); }, s[0]);
+    });
+    // Release the button press a moment after it lands.
+    window.setTimeout(function () { phone.classList.remove('press'); }, 3150);
+  })();
+</script>
+</body>
+
+</html>
+
+
+
+
+
+
+
+
+
+
+

@@ -1,6 +1,7 @@
 package com.glr.deenwallet.admin;
 
 import com.glr.deenwallet.transaction.Transaction;
+import com.glr.deenwallet.transaction.TransactionArchive;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -42,6 +43,37 @@ public record AdminTransactionResponse(
                 t.getId(),
                 t.getUserId(),
                 t.getStatus().name(),
+                toDecimal(t.getAmountValue()),
+                toDecimal(t.getFeeValue()),
+                toDecimal(t.getMonimeDepositFeeValue()),
+                toDecimal(t.getDeenWalletFeeValue()),
+                toDecimal(t.getMonimeWithdrawalFeeValue()),
+                toDecimal(t.getTotalChargedValue()),
+                t.getSourceProviderId(),
+                t.getSourcePhone(),
+                t.getDestinationProviderId(),
+                t.getDestinationPhone(),
+                t.getDestinationHolderName(),
+                t.getMonimePaymentCodeId(),
+                t.getMonimePayoutId(),
+                t.getMonimeUssdCode(),
+                t.getFailureReason(),
+                t.isSmsSent(),
+                t.getCreatedAt(),
+                t.getUpdatedAt(),
+                t.getTransactionCode(),
+                user == null ? null : user.getFullName(),
+                user == null ? null : user.getEmail(),
+                user == null ? null : user.getAccountNumber()
+        );
+    }
+
+    /** For rows already moved to transactions_archive (see TransactionArchiveJob). */
+    public static AdminTransactionResponse from(TransactionArchive t, com.glr.deenwallet.user.User user) {
+        return new AdminTransactionResponse(
+                t.getId(),
+                t.getUserId(),
+                t.getStatus(),
                 toDecimal(t.getAmountValue()),
                 toDecimal(t.getFeeValue()),
                 toDecimal(t.getMonimeDepositFeeValue()),

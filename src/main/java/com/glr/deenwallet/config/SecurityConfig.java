@@ -38,7 +38,8 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // Split by comma, trim whitespace, and strip trailing slashes for clean Origin header matching
+        // Split by comma, trim whitespace, and strip trailing slashes
+        // for clean Origin header matching.
         List<String> allowedList = Arrays.stream(origins.split(","))
                 .map(String::trim)
                 .filter(x -> !x.isBlank())
@@ -47,12 +48,13 @@ public class SecurityConfig {
 
         config.setAllowedOriginPatterns(allowedList);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*")); // Allows any header including custom ones or ngrok skips
+        config.setAllowedHeaders(List.of("*"));
         config.setExposedHeaders(List.of("X-Reason", "X-Recovery-Required", "Retry-After"));
         config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
+
         return source;
     }
 
@@ -61,33 +63,70 @@ public class SecurityConfig {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        .requestMatchers(
+                                "/api/auth/biometric/registration-challenge",
+                                "/api/auth/biometric/register",
+                                "/api/auth/biometric/credentials/**"
+                        ).hasRole("USER")
+
                         .requestMatchers(
                                 "/",
+                                "/welcome.html",
+                                "/privacy.html",
+                                "/terms.html",
                                 "/index.html",
                                 "/auth.html",
+                                "/reset-password.html",
                                 "/admin.html",
                                 "/transactions.html",
                                 "/config.js",
                                 "/deenwallet-client.js",
+                                "/firebase-messaging-sw.js",
                                 "/deenwallet-logo.png",
                                 "/favicon.ico",
                                 "/error",
                                 "/assets/**",
+                                "/downloads/**",
                                 "/api/auth/**",
                                 "/api/admin/auth/**",
                                 "/api/v1/webhooks/monime",
                                 "/api/errors",
                                 "/api/app/version",
-                                "/api/providers/prefixes"
+                                "/api/app/android-update",
+                                "/api/providers/prefixes",
+                                "/api/config/firebase-web",
+                                "/api/auth/biometric/challenge",
+                                "/api/auth/biometric/login",
+                                "/icon-192.png"
                         ).permitAll()
-                        .requestMatchers("/api/users/**", "/api/transactions/**", "/api/recipients/**", "/api/accounts/**").hasRole("USER")
-                        .requestMatchers("/api/admin/**", "/api/support/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
+
+                        // User-protected endpoints
+                        .requestMatchers(
+                                "/api/users/**",
+                                "/api/transactions/**",
+                                "/api/recipients/**",
+                                "/api/accounts/**",
+                                "/api/notifications/**"
+                        ).hasRole("USER")
+
+                        // Admin-protected endpoints
+                        .requestMatchers(
+                                "/api/admin/**",
+                                "/api/support/**"
+                        ).hasAnyRole("ADMIN", "SUPER_ADMIN")
+
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(
+                        jwtAuthFilter,
+                        UsernamePasswordAuthenticationFilter.class
+                );
 
         return http.build();
     }

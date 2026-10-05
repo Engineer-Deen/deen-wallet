@@ -2,14 +2,21 @@ spring:
   application:
     name: deen-wallet
 
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/deenwallet_db}
-    username: ${DB_USER:deenwallet}
+    username: ${DB_USERNAME:deenwallet}
     password: ${DB_PASSWORD:Abdul@10737}
+
     hikari:
       maximum-pool-size: 30
-      minimum-idle: 5
-      connection-timeout: 10000
+      minimum-idle: 10
+      connection-timeout: 5000
+      max-lifetime: 1740000
+      leak-detection-threshold: 20000
 
   jpa:
     hibernate:
@@ -38,21 +45,40 @@ spring:
 
 server:
   port: ${SERVER_PORT:8082}
+
   tomcat:
     threads:
       max: 400
     accept-count: 200
 
 app:
+  transaction-archive:
+    after-days: ${TRANSACTION_ARCHIVE_AFTER_DAYS:180}
+    enabled: ${TRANSACTION_ARCHIVE_ENABLED:true}
+
+  errors:
+    trust-forwarded-for: ${APP_ERRORS_TRUST_FORWARDED_FOR:false}
+
   release-id: ${APP_RELEASE_ID:${random.uuid}}
+
+  android-update:
+    version-code: ${APP_ANDROID_UPDATE_VERSION_CODE:2}
+    version-name: ${APP_ANDROID_UPDATE_VERSION_NAME:1.1}
+    download-url: ${APP_ANDROID_UPDATE_DOWNLOAD_URL:https://deenwallapp.com/downloads/DeenWallet-1.1.apk}
+    force-update: ${APP_ANDROID_UPDATE_FORCE:false}
+    release-notes: ${APP_ANDROID_UPDATE_RELEASE_NOTES:Improved update system|Bug fixes}
+    apk-path: ${APP_ANDROID_UPDATE_APK_PATH:downloads/DeenWallet-1.1.apk}
 
   mail:
     from-email: ${MAIL_FROM_EMAIL:no-reply@deenwallapp.com}
     from-name: ${MAIL_FROM_NAME:Deen Wallet}
 
+  frontend:
+    base-url: ${FRONTEND_BASE_URL:http://localhost:8082}
+
   firebase:
     service-account-path: ${FIREBASE_SERVICE_ACCOUNT_PATH:}
-
+    web-config-path: ${FIREBASE_WEB_CONFIG_PATH:./secrets/firebase-web-config.json}
   jwt:
     secret: ${JWT_SECRET:}
     access-token-expiration-minutes: 5
@@ -94,6 +120,7 @@ app:
         - "72"
         - "73"
         - "74"
+
       m18:
         - "30"
         - "33"
@@ -103,9 +130,11 @@ app:
         - "77"
         - "70"
         - "80"
+
       m19:
         - "31"
         - "32"
         - "34"
         - "35"
+
     default-provider: "m17"

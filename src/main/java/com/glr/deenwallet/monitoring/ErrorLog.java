@@ -15,6 +15,11 @@ public class ErrorLog {
     private String message;
     @Column(name="status_code") private Integer statusCode;
     private String url;
+    /** Which frontend sent this: "user" (auth/index/transactions.html) or "admin" (admin.html). */
+    @Column(name="source_app", nullable=false) @Builder.Default private String sourceApp = "user";
+    /** The actual API path that failed (e.g. "/api/transactions"), distinct from `url` (the page). */
+    @Column(name="endpoint_path") private String endpointPath;
+    @Column(name="http_method") private String httpMethod;
     @Column(name="user_agent") private String userAgent;
     @Column(name="action_buffer") private String actionBuffer;
     @Column(name="stack") private String stack;

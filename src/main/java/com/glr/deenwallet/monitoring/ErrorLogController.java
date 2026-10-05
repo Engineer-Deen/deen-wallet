@@ -69,6 +69,14 @@ public class ErrorLogController {
                 .message(truncate(request.getMessage(), MAX_MESSAGE_LENGTH))
                 .statusCode(request.getStatusCode())
                 .url(request.getUrl())
+                // Always "user", regardless of what the request body claims. This is the
+                // PUBLIC, unauthenticated endpoint - a client-supplied "admin" value here
+                // was previously trusted, letting anyone inject fake admin-app errors into
+                // the admin dashboard. Only the authenticated /api/admin/errors endpoint
+                // (AdminController) is allowed to record an "admin" source.
+                .sourceApp("user")
+                .endpointPath(truncate(request.getEndpointPath(), 300))
+                .httpMethod(truncate(request.getHttpMethod(), 10))
                 .userAgent(userAgent)
                 .actionBuffer(truncate(joinBuffer(request.getActionBuffer()), MAX_ACTION_BUFFER_LENGTH))
                 .stack(truncate(request.getStack(), 10000))
@@ -80,6 +88,9 @@ public class ErrorLogController {
         return ResponseEntity.noContent().build();
     }
 
+    // Anything that isn't explicitly "admin" is treated as "user" - if this ever fails
+    // to identify the app, the error still lands in the higher-traffic (user) bucket
+    // rather than silently going unfiltered/uncounted.
     private UUID extractUserId(String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return null;

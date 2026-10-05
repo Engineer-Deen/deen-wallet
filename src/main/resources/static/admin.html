@@ -24,6 +24,7 @@
             --muted: #6E7C82;
             --primary: #1C7A91;
             --primary-light: #2E9FB0;
+            --primary-soft: #EAF6F8;
             --primary-disabled: #BFE0E6;
             --warning-bg: #FFF7E6;
             --warning-text: #B9770E;
@@ -52,7 +53,7 @@
             overflow: auto;
         }
 
-        @media (max-width: 460px) {
+        @media (max-width: 768px) {
             body {
                 background: var(--bg);
             }
@@ -62,7 +63,12 @@
             max-width: 420px;
             margin: 0 auto;
             min-height: 100vh;
-            max-height: none;
+            /* Was "none": with no cap, #app could grow taller than the screen and the
+               BODY scrolled the whole app - header and tabs included - instead of just
+               the .scroll panel below them. This is the actual fix for the header
+               moving while scrolling; .scroll/.top-bar/.nav-tabs below were already
+               correct and needed no change once this is capped. */
+            max-height: 100dvh;
             display: flex;
             flex-direction: column;
             background: var(--bg);
@@ -70,11 +76,42 @@
             overflow: hidden;
         }
 
-        @media (min-width: 461px) {
+        @media (min-width: 769px) {
             #app {
                 min-height: 100vh;
                 max-height: 100vh;
                 box-shadow: 0 0 40px rgba(0, 0, 0, 0.06);
+            }
+        }
+
+        /* ============================================================ */
+        /* DESKTOP / WEB. Nothing below 769px changes - the admin app's
+           mobile view (and the Capacitor admin app, which loads this exact
+           page) keep the layout above untouched.
+           IMPORTANT: unlike the public site's pages, this does NOT remove
+           the height cap or flatten .scroll into normal page scroll. The
+           fixed header + internally-scrolling content is exactly the
+           behavior that was asked for here ("header stays put, only the
+           content scrolls") - so #app stays height-capped and .scroll
+           stays as its own scrolling region. The only problem being fixed
+           here is purely cosmetic: a cramped 420px card floating in flat
+           gray dead space, which read as "a mobile screenshot," not a
+           desktop admin panel. */
+        @media (min-width: 769px) {
+            body {
+                background: #EAEEF0;
+            }
+
+            #app {
+                max-width: 1040px;
+                /* Same fixed-height, internally-scrolling shell as above -
+                   just with room to breathe instead of touching the
+                   viewport edges, which is what made it look like a phone
+                   screenshot rather than a desktop panel. */
+                max-height: calc(100vh - 48px);
+                margin: 24px auto;
+                border-radius: 18px;
+                box-shadow: 0 16px 44px rgba(18, 36, 43, 0.10);
             }
         }
 
@@ -98,6 +135,15 @@
             flex-direction: column;
             justify-content: center;
             flex: 1;
+            min-height: 100%;
+        }
+
+        /* Admin login must scroll when recovery content becomes taller than the viewport */
+        #screen-login {
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain;
         }
 
         .admin-login-logo { width:min(270px,82vw); max-height:150px; object-fit:cover; border-radius:18px; display:block; margin:0 auto 18px; box-shadow:0 16px 36px rgba(0,0,0,.16); }
@@ -214,11 +260,24 @@
 
         /* ===== Top Bar ===== */
         .top-bar {
-            display: flex;
-            justify-content: space-between;
+            display: grid;
+            grid-template-columns: 38px 1fr 38px;
             align-items: center;
             padding: 16px 20px 8px;
             flex-shrink: 0;
+            position: relative;
+        }
+
+        .top-bar > div {
+            grid-column: 2;
+            justify-self: center;
+        }
+
+        .top-bar .menu-btn {
+            grid-column: 1;
+            grid-row: 1;
+            justify-self: start;
+            order: -1;
         }
 
         .top-brand-logo { width:82px; height:48px; object-fit:cover; border-radius:10px; box-shadow:0 5px 14px rgba(0,0,0,.12); }
@@ -287,6 +346,78 @@
         .menu-divider {
             height: 1px;
             background: var(--border);
+        }
+
+        /* ===== ADMIN SIDE DRAWER ===== */
+        body.drawer-open { overflow: hidden; }
+        .menu-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:0; }
+        .menu-btn span { display:block; width:19px; height:2px; border-radius:4px; background:var(--text); }
+        .admin-drawer-overlay { position:fixed; inset:0; background:rgba(5,16,22,.58); opacity:0; visibility:hidden; transition:opacity .22s ease,visibility .22s ease; z-index:80; }
+        .admin-drawer-overlay.open { opacity:1; visibility:visible; }
+        .admin-drawer { position:fixed; top:0; left:0; bottom:0; width:min(88vw,360px); background:#111c24; color:#fff; transform:translateX(-102%); transition:transform .25s cubic-bezier(.22,.61,.36,1); z-index:81; box-shadow:14px 0 40px rgba(0,0,0,.28); display:flex; flex-direction:column; overflow:hidden; }
+        .admin-drawer.open { transform:translateX(0); }
+        .admin-drawer-profile { margin:16px 14px 12px; padding:18px 16px; min-height:118px; border-radius:24px; background:linear-gradient(135deg,var(--primary),#0f6477); display:flex; align-items:center; gap:14px; box-shadow:0 12px 28px rgba(0,0,0,.22); flex-shrink:0; cursor:pointer; }
+        .admin-drawer-avatar { width:62px; height:62px; border-radius:50%; background:rgba(255,255,255,.9); color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:25px; font-weight:800; flex-shrink:0; border:3px solid rgba(255,255,255,.28); }
+        .admin-drawer-profile-info { min-width:0; }
+        .admin-drawer-name { font-size:18px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .admin-drawer-email { margin-top:4px; font-size:12px; color:rgba(255,255,255,.82); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .admin-drawer-role { display:inline-flex; margin-top:8px; padding:3px 9px; border-radius:999px; background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.24); font-size:10px; font-weight:800; letter-spacing:.5px; }
+        .admin-drawer-scroll { flex:1; overflow-y:auto; padding:6px 12px 24px; -webkit-overflow-scrolling:touch; }
+        .admin-drawer-item { width:100%; min-height:54px; display:flex; align-items:center; gap:13px; border:none; border-radius:15px; background:transparent; color:rgba(255,255,255,.94); padding:9px 12px; margin:3px 0; cursor:pointer; text-align:left; transition:background .18s ease,transform .18s ease; }
+        .admin-drawer-item:hover,.admin-drawer-item.active { background:rgba(18,166,194,.22); }
+        .admin-drawer-item:active { transform:scale(.985); }
+        .admin-drawer-icon { width:27px; text-align:center; font-size:24px; line-height:1; flex-shrink:0; color:#fff; }
+        .admin-drawer-label { flex:1; min-width:0; font-size:15px; font-weight:650; }
+        .admin-drawer-chevron { color:rgba(255,255,255,.68); font-size:25px; line-height:1; }
+        .drawer-coming-soon,.coming-soon-pill { display:inline-flex; align-items:center; justify-content:center; white-space:nowrap; padding:5px 9px; border-radius:9px; background:#a85f18; color:#fff; font-size:10px; font-weight:800; }
+        .admin-drawer-divider { height:1px; background:rgba(255,255,255,.12); margin:12px 10px; }
+        .admin-drawer-item.danger { color:#ff5252; margin-top:5px; }
+        .admin-drawer-item.danger .admin-drawer-icon,.admin-drawer-item.danger .admin-drawer-chevron { color:#ff5252; }
+        .messaging-channel-badge { display:inline-flex; align-items:center; gap:6px; margin:6px 0 12px; padding:5px 10px; border-radius:999px; background:#EAF6F8; color:var(--primary); font-size:11px; font-weight:800; }
+        .messaging-channel-badge span { font-size:9px; }
+        .messaging-coming-card { margin-top:14px; display:flex; align-items:center; gap:14px; background:linear-gradient(180deg,#fff,#f7fafb); }
+        .messaging-coming-icon { width:48px; height:48px; border-radius:15px; background:#EEF4F6; color:var(--muted); display:flex; align-items:center; justify-content:center; font-size:24px; flex-shrink:0; }
+        .messaging-coming-content { min-width:0; flex:1; }
+        .messaging-coming-content .admin-card-sub { margin-bottom:8px; }
+
+        /* ===== RESPONSIVE MESSAGING PICKER ===== */
+        .messaging-recipient-card { margin-top: 12px; }
+        .messaging-recipient-summary { display:flex; align-items:center; gap:12px; min-width:0; }
+        .messaging-recipient-icon { width:44px; height:44px; border-radius:14px; background:#EAF6F8; color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
+        .messaging-recipient-copy { min-width:0; flex:1; }
+        .messaging-recipient-title { font-size:14px; font-weight:750; color:var(--text); }
+        .messaging-recipient-detail { margin-top:3px; font-size:12px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .messaging-choose-btn { width:100%; margin-top:12px; display:flex; align-items:center; justify-content:space-between; gap:10px; border:1px solid var(--border); background:#fff; color:var(--text); border-radius:13px; padding:12px 14px; font-size:14px; font-weight:700; cursor:pointer; }
+        .messaging-choose-btn:active { transform:scale(.99); }
+        .messaging-choose-arrow { color:var(--muted); font-size:22px; line-height:1; }
+        .messaging-selection-preview { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+        .messaging-selection-chip { max-width:100%; padding:5px 9px; border-radius:999px; background:#EAF6F8; color:var(--primary); font-size:11px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .messaging-picker-overlay { position:fixed; inset:0; z-index:150; background:rgba(5,16,22,.58); display:none; align-items:flex-end; justify-content:center; padding:0; }
+        .messaging-picker-overlay.open { display:flex; }
+        .messaging-picker { width:min(100%,520px); max-height:min(92dvh,760px); background:var(--bg); border-radius:22px 22px 0 0; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 -16px 44px rgba(0,0,0,.24); }
+        .messaging-picker-header { display:flex; align-items:center; gap:10px; padding:14px 16px; border-bottom:1px solid var(--border); flex-shrink:0; }
+        .messaging-picker-back { width:38px; height:38px; border:1px solid var(--border); background:#fff; border-radius:12px; color:var(--text); font-size:22px; cursor:pointer; flex-shrink:0; }
+        .messaging-picker-heading { min-width:0; flex:1; }
+        .messaging-picker-heading strong { display:block; font-size:16px; }
+        .messaging-picker-heading span { display:block; margin-top:2px; font-size:11px; color:var(--muted); }
+        .messaging-picker-search { padding:10px 16px; flex-shrink:0; }
+        .messaging-picker-toolbar { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:0 16px 10px; flex-shrink:0; }
+        .messaging-picker-count { font-size:12px; font-weight:700; color:var(--muted); }
+        .messaging-picker-actions { display:flex; gap:7px; }
+        .messaging-picker-list { flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; padding:0 16px 12px; }
+        .messaging-picker-list .messaging-user-option { margin-bottom:8px; padding:12px 10px; border-radius:14px; }
+        .messaging-picker-footer { display:flex; gap:10px; padding:12px 16px calc(12px + env(safe-area-inset-bottom)); border-top:1px solid var(--border); background:var(--bg); flex-shrink:0; }
+        .messaging-picker-footer button { flex:1; min-height:46px; }
+        @media (max-width:380px) {
+            .messaging-picker-header { padding-left:12px; padding-right:12px; }
+            .messaging-picker-search,.messaging-picker-toolbar,.messaging-picker-list { padding-left:12px; padding-right:12px; }
+            .messaging-picker-footer { padding-left:12px; padding-right:12px; }
+            .messaging-card { padding:13px; }
+            .messaging-recipient-icon { width:40px; height:40px; }
+        }
+        @media (min-width:769px) {
+            .messaging-picker-overlay { align-items:center; padding:24px; }
+            .messaging-picker { max-height:min(760px,calc(100vh - 48px)); border-radius:22px; }
         }
 
         /* ===== Nav Tabs ===== */
@@ -627,6 +758,51 @@
             background: var(--primary);
         }
 
+        /* Error tab: source filter pills + live indicator */
+        .btn-sm[data-source-filter] {
+            background: var(--card);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-sm[data-source-filter].filter-active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        @keyframes errorLivePulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34,197,94,0.5); }
+            50% { opacity: 0.55; box-shadow: 0 0 0 4px rgba(34,197,94,0); }
+        }
+
+        .error-app-badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 8px;
+            white-space: nowrap;
+        }
+
+        .error-app-badge.user {
+            background: #E6F4F7;
+            color: var(--primary);
+        }
+
+        .error-app-badge.admin {
+            background: #F3E8FF;
+            color: #7C3AED;
+        }
+
+        .item-card.error-new {
+            animation: errorNewFlash 2.5s ease-out;
+        }
+
+        @keyframes errorNewFlash {
+            0% { background: #FFF7D6; }
+            100% { background: transparent; }
+        }
+
         .btn-outline {
             border: 1px solid var(--border);
             background: #fff;
@@ -903,6 +1079,223 @@
 
         .action-row .btn-sm {
             flex: 1;
+        }
+
+        /* ===== BOTTOM APP NAVIGATION ===== */
+        .bottom-nav {
+            position: fixed;
+            left: 50%;
+            bottom: 0;
+            transform: translateX(-50%);
+            width: min(100%, 1040px);
+            height: calc(68px + env(safe-area-inset-bottom, 0px));
+            padding: 6px 10px env(safe-area-inset-bottom, 0px);
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            align-items: stretch;
+            background: rgba(255, 255, 255, 0.98);
+            border-top: 1px solid var(--border);
+            box-shadow: 0 -8px 24px rgba(18, 36, 43, 0.08);
+            z-index: 35;
+            backdrop-filter: blur(10px);
+        }
+
+        .bottom-nav-btn {
+            border: none;
+            background: transparent;
+            color: var(--muted);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            min-width: 0;
+            transition: all .2s ease;
+        }
+
+        .bottom-nav-btn .bottom-nav-icon {
+            font-size: 21px;
+            line-height: 1;
+        }
+
+        .bottom-nav-btn small {
+            font-size: 9px;
+            line-height: 1;
+            font-weight: 700;
+            margin-top: 1px;
+            opacity: .78;
+        }
+
+        .bottom-nav-btn.active {
+            color: var(--primary);
+            background: #EAF6F8;
+        }
+
+        .bottom-nav-btn.coming-soon {
+            cursor: pointer;
+        }
+
+        .bottom-nav-btn.coming-soon .bottom-nav-icon {
+            opacity: .8;
+        }
+
+        .bottom-nav-btn:active {
+            transform: scale(.97);
+        }
+
+        /* Keep scrollable content clear of the fixed bottom navigation. */
+        #screen-main > .scroll {
+            padding-bottom: 92px;
+        }
+
+        .messaging-card {
+            margin-top: 0;
+        }
+
+        .messaging-recipient-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin: 12px 0 8px;
+        }
+
+        .messaging-recipient-count {
+            font-size: 12px;
+            color: var(--muted);
+            font-weight: 600;
+        }
+
+        .messaging-recipient-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .messaging-user-list {
+            max-height: 310px;
+            overflow-y: auto;
+            padding-right: 2px;
+        }
+
+        .messaging-user-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 11px 10px;
+            margin-bottom: 7px;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            cursor: pointer;
+        }
+
+        .messaging-user-option.selected {
+            border-color: var(--primary-light);
+            background: #F0FAFB;
+        }
+
+        .messaging-user-option input {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary);
+            flex-shrink: 0;
+        }
+
+        .messaging-user-info {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .messaging-user-name {
+            font-size: 13px;
+            font-weight: 700;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .messaging-user-meta {
+            margin-top: 2px;
+            font-size: 11px;
+            color: var(--muted);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .messaging-input,
+        .messaging-textarea {
+            width: 100%;
+            border: 1px solid var(--border);
+            background: #fff;
+            border-radius: 12px;
+            padding: 11px 13px;
+            font-size: 14px;
+            color: var(--text);
+            outline: none;
+            font-family: inherit;
+        }
+
+        .messaging-input:focus,
+        .messaging-textarea:focus {
+            border-color: var(--primary-light);
+        }
+
+        .messaging-textarea {
+            min-height: 120px;
+            resize: vertical;
+            line-height: 1.5;
+        }
+
+        .messaging-field {
+            margin-top: 12px;
+        }
+
+        .messaging-field label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .messaging-result {
+            margin-top: 10px;
+            font-size: 12px;
+        }
+
+        .messaging-result.success {
+            color: #1E8449;
+        }
+
+        .messaging-result.error {
+            color: var(--error);
+        }
+
+        @media (min-width: 769px) {
+            .bottom-nav {
+                border-radius: 0 0 18px 18px;
+            }
+        }
+
+        /* ===== MOBILE / WEB VIEWPORT SAFETY ===== */
+        @media (max-width: 768px) {
+            html, body { width:100%; min-width:0; overflow:hidden; }
+            #app { width:100%; max-width:none; min-width:0; height:100dvh; min-height:100dvh; max-height:100dvh; margin:0; border-radius:0; }
+            .screen { width:100%; min-width:0; }
+            .top-bar { padding-left:max(14px, env(safe-area-inset-left)); padding-right:max(14px, env(safe-area-inset-right)); }
+            .scroll { min-width:0; width:100%; padding-left:max(12px, env(safe-area-inset-left)); padding-right:max(12px, env(safe-area-inset-right)); padding-bottom:calc(100px + env(safe-area-inset-bottom)); overscroll-behavior-y:contain; }
+            .admin-card { max-width:100%; min-width:0; }
+            .stats-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+            .bottom-nav { left:0; right:0; width:100%; transform:none; padding-bottom:env(safe-area-inset-bottom); }
+            .bottom-nav-btn { min-width:0; flex:1; }
+            .bottom-nav-btn span { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+            input, textarea, select, button { max-width:100%; }
+            .messaging-textarea { max-width:100%; min-height:110px; }
         }
 
         /* ===== Toast ===== */
@@ -1289,6 +1682,102 @@
         .admin-list .item-card {
             cursor: default;
         }
+
+        /* ===== Dedicated admin sub-screens ===== */
+        .profile-screen-scroll { padding-bottom: 28px; }
+        .subscreen-heading { display:flex; align-items:center; gap:14px; margin:10px 0 18px; }
+        .subscreen-icon { width:52px; height:52px; border-radius:17px; display:flex; align-items:center; justify-content:center; flex-shrink:0; background:var(--primary-soft,#EAF6F8); color:var(--primary); font-size:27px; font-weight:800; }
+        .profile-hero-card { display:flex; align-items:center; gap:15px; padding:18px; background:linear-gradient(135deg,var(--primary),#0f6477); color:#fff; border:none; }
+        .profile-avatar-large { width:70px; height:70px; border-radius:50%; background:rgba(255,255,255,.92); color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:28px; font-weight:800; flex-shrink:0; border:3px solid rgba(255,255,255,.3); }
+        .profile-hero-info { min-width:0; }
+        .profile-hero-info h2 { margin:0 0 4px; font-size:20px; }
+        .profile-hero-info p { margin:0 0 8px; font-size:12px; color:rgba(255,255,255,.86); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .profile-hero-info .badge { background:rgba(255,255,255,.18); color:#fff; border-color:rgba(255,255,255,.25); }
+        .subscreen-card-icon { width:44px; height:44px; border-radius:14px; background:var(--primary-soft,#EAF6F8); color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:24px; margin-bottom:12px; }
+        .about-card { text-align:center; padding:28px 20px; }
+        .about-logo-wrap { width:82px; height:82px; border-radius:24px; margin:0 auto 14px; display:flex; align-items:center; justify-content:center; background:#f3f8f9; border:1px solid var(--border); overflow:hidden; }
+        .about-logo-wrap img { width:62px; height:62px; object-fit:contain; }
+        .about-card h2 { margin:0; font-size:21px; }
+        .about-version { margin:5px 0 20px; color:var(--muted); font-size:12px; }
+        .about-info-list { text-align:left; border:1px solid var(--border); border-radius:14px; overflow:hidden; margin-bottom:16px; }
+        .about-info-list div { display:flex; justify-content:space-between; gap:12px; padding:12px 14px; border-bottom:1px solid var(--border); font-size:12px; }
+        .about-info-list div:last-child { border-bottom:none; }
+        .about-info-list span { color:var(--muted); }
+        .about-info-list strong { color:var(--text); text-align:right; }
+        .about-description { color:var(--muted); font-size:12px; line-height:1.6; margin:0; }
+
+        /* ===== ADMIN PROFILE POLISH ===== */
+        .profile-screen-scroll { padding-bottom: 40px; }
+        .profile-hero-card { background:linear-gradient(135deg,var(--primary),var(--primary-light)); color:#fff; border:none; border-radius:24px; padding:22px; display:flex; align-items:center; gap:16px; box-shadow:0 12px 28px rgba(28,122,145,.18); }
+        .profile-avatar-large { width:76px; height:76px; border-radius:50%; background:rgba(255,255,255,.94); color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:800; flex:0 0 76px; border:4px solid rgba(255,255,255,.28); }
+        .profile-hero-info { min-width:0; flex:1; }
+        .profile-hero-info h2 { margin:0; font-size:21px; line-height:1.2; overflow-wrap:anywhere; }
+        .profile-hero-info p { margin:6px 0 10px; font-size:13px; color:rgba(255,255,255,.88); overflow-wrap:anywhere; }
+        .profile-hero-info .badge { display:inline-flex; padding:5px 10px; border-radius:999px; background:rgba(255,255,255,.18); color:#fff; border:1px solid rgba(255,255,255,.28); font-size:11px; font-weight:800; }
+        .profile-row { display:flex; justify-content:space-between; align-items:flex-start; gap:18px; padding:13px 0; border-bottom:1px solid var(--border); font-size:13px; }
+        .profile-row .label { color:var(--muted); flex:0 0 38%; }
+        .profile-row .value { color:var(--text); font-weight:600; text-align:right; min-width:0; overflow-wrap:anywhere; }
+        @media (max-width:380px) {
+            .profile-hero-card { padding:18px 14px; gap:12px; }
+            .profile-avatar-large { width:64px; height:64px; flex-basis:64px; font-size:25px; }
+            .profile-hero-info h2 { font-size:18px; }
+            .profile-row { gap:10px; }
+            .profile-row .label { flex-basis:34%; }
+        }
+
+        /* ===== USER / ADMIN DETAIL SCREEN ===== */
+        .account-detail-screen { background:linear-gradient(180deg,#f7fbfc 0%,#ffffff 48%); }
+        .account-detail-scroll { padding-top:18px; padding-bottom:40px; }
+        .account-detail-top { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; }
+        .account-detail-back { display:inline-flex; align-items:center; gap:7px; border:1px solid var(--border); background:#fff; color:var(--text); border-radius:14px; padding:9px 13px; font-size:13px; font-weight:750; cursor:pointer; box-shadow:0 4px 12px rgba(18,36,43,.05); }
+        .account-detail-back:hover { border-color:var(--primary-light); color:var(--primary); }
+        .account-detail-kicker { font-size:10px; font-weight:850; letter-spacing:1.2px; text-transform:uppercase; color:var(--primary); }
+        .account-detail-hero { position:relative; overflow:hidden; border-radius:28px; padding:24px; color:#fff; background:linear-gradient(135deg,#145f72 0%,#1c7a91 48%,#2e9fb0 100%); box-shadow:0 18px 38px rgba(28,122,145,.22); }
+        .account-detail-hero::after { content:""; position:absolute; width:180px; height:180px; right:-55px; top:-65px; border-radius:50%; background:rgba(255,255,255,.09); box-shadow:-45px 80px 0 rgba(255,255,255,.05); }
+        .account-detail-hero-main { position:relative; z-index:1; display:flex; align-items:center; gap:16px; }
+        .account-detail-avatar { width:78px; height:78px; flex:0 0 78px; border-radius:24px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.95); color:var(--primary); font-size:31px; font-weight:850; box-shadow:0 10px 22px rgba(0,0,0,.12); }
+        .account-detail-name { margin:0; font-size:23px; line-height:1.15; font-weight:850; overflow-wrap:anywhere; }
+        .account-detail-email { margin:7px 0 11px; font-size:12px; color:rgba(255,255,255,.84); overflow-wrap:anywhere; }
+        .account-detail-badges { display:flex; flex-wrap:wrap; gap:6px; }
+        .account-detail-badge { display:inline-flex; align-items:center; gap:5px; padding:5px 9px; border-radius:999px; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.2); font-size:10px; font-weight:800; }
+        .account-detail-badge.super { background:rgba(142,68,173,.88); border-color:rgba(255,255,255,.2); }
+        .account-detail-badge.good { background:rgba(46,134,74,.82); }
+        .account-detail-badge.bad { background:rgba(192,57,43,.82); }
+        .account-detail-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:14px; }
+        .account-detail-stat { position:relative; z-index:1; padding:13px 14px; border-radius:17px; background:rgba(255,255,255,.11); border:1px solid rgba(255,255,255,.13); }
+        .account-detail-stat-label { display:block; font-size:10px; color:rgba(255,255,255,.7); margin-bottom:4px; }
+        .account-detail-stat-value { display:block; font-size:14px; font-weight:800; }
+        .account-detail-section { margin-top:14px; background:#fff; border:1px solid var(--border); border-radius:22px; padding:18px; box-shadow:0 8px 24px rgba(18,36,43,.055); }
+        .account-detail-section-head { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+        .account-detail-section-icon { width:38px; height:38px; border-radius:12px; display:flex; align-items:center; justify-content:center; background:#eaf6f8; color:var(--primary); font-size:19px; }
+        .account-detail-section-title { margin:0; font-size:15px; font-weight:800; }
+        .account-detail-section-sub { margin:2px 0 0; color:var(--muted); font-size:11px; }
+        .account-detail-info { border:1px solid var(--border); border-radius:15px; overflow:hidden; }
+        .account-detail-row { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; padding:12px 13px; background:#fff; border-bottom:1px solid var(--border); font-size:12px; }
+        .account-detail-row:last-child { border-bottom:none; }
+        .account-detail-row:nth-child(even) { background:#fbfdfe; }
+        .account-detail-row .label { color:var(--muted); flex:0 0 38%; }
+        .account-detail-row .value { color:var(--text); font-weight:700; text-align:right; min-width:0; overflow-wrap:anywhere; }
+        .account-detail-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; margin-top:14px; }
+        .account-detail-actions .btn-sm { min-height:42px; }
+        .account-detail-contact { background:linear-gradient(180deg,#fafdfe,#f5fafb); }
+        .account-detail-contact .text-input { background:#fff; }
+        .account-detail-note { display:flex; align-items:flex-start; gap:9px; padding:11px 12px; margin-top:10px; border-radius:13px; background:#fff7e6; color:#8a5a0a; font-size:11px; line-height:1.5; }
+        .account-detail-note strong { font-weight:800; }
+        @media (max-width:560px) {
+            .account-detail-hero { padding:20px 16px; border-radius:24px; }
+            .account-detail-main { gap:12px; }
+            .account-detail-avatar { width:66px; height:66px; flex-basis:66px; border-radius:20px; font-size:26px; }
+            .account-detail-name { font-size:19px; }
+            .account-detail-section { padding:14px; border-radius:19px; }
+            .account-detail-grid { gap:8px; }
+        }
+        @media (max-width:380px) {
+            .account-detail-grid { grid-template-columns:1fr; }
+            .account-detail-actions { grid-template-columns:1fr; }
+            .account-detail-row { gap:10px; }
+        }
+
     </style>
 </head>
 
@@ -1339,15 +1828,42 @@
     <div class="screen" id="screen-main">
         <div class="top-bar">
             <div style="display:flex;align-items:center;gap:9px;"><img class="top-brand-logo" src="deenwallet-logo.png" alt="DeenWallet" /><div><span class="brand">DeenWallet</span><span class="admin-badge">Admin</span></div></div>
-            <button class="menu-btn" id="menu-btn">&#8942;</button>
+            <button class="menu-btn" id="menu-btn" aria-label="Open admin menu" aria-expanded="false"><span></span><span></span><span></span></button>
         </div>
 
-        <!-- Nav Tabs -->
-        <div class="nav-tabs">
-            <button class="nav-tab active" data-tab="dashboard">📊 Dashboard</button>
-            <button class="nav-tab" data-tab="users">👤 Users</button>
-            <button class="nav-tab" data-tab="errors">⚠️ Errors</button>
-            <button class="nav-tab" data-tab="support">🆘 Support</button>
+        <!-- ===== ADMIN SIDE DRAWER ===== -->
+        <div class="admin-drawer-overlay" id="admin-drawer-overlay" aria-hidden="true"></div>
+        <aside class="admin-drawer" id="admin-drawer" aria-hidden="true" aria-label="Admin menu">
+            <div class="admin-drawer-profile" id="admin-drawer-profile">
+                <div class="admin-drawer-avatar" id="admin-drawer-avatar">A</div>
+                <div class="admin-drawer-profile-info">
+                    <div class="admin-drawer-name" id="admin-drawer-name">Admin</div>
+                    <div class="admin-drawer-email" id="admin-drawer-email">Admin account</div>
+                    <span class="admin-drawer-role" id="admin-drawer-role">ADMIN</span>
+                </div>
+            </div>
+            <div class="admin-drawer-scroll">
+                <button type="button" class="admin-drawer-item" data-drawer-action="home"><span class="admin-drawer-icon">⌂</span><span class="admin-drawer-label">Home</span><span class="admin-drawer-chevron">›</span></button>
+                <button type="button" class="admin-drawer-item" data-drawer-action="users"><span class="admin-drawer-icon">♙</span><span class="admin-drawer-label">Users</span><span class="admin-drawer-chevron">›</span></button>
+                <button type="button" class="admin-drawer-item" data-drawer-action="errors"><span class="admin-drawer-icon">▤</span><span class="admin-drawer-label">Error Logs</span><span class="admin-drawer-chevron">›</span></button>
+                <button type="button" class="admin-drawer-item" data-drawer-action="support"><span class="admin-drawer-icon">◉</span><span class="admin-drawer-label">Support</span><span class="admin-drawer-chevron">›</span></button>
+                <div class="admin-drawer-divider"></div>
+                <button type="button" class="admin-drawer-item" data-drawer-action="profile"><span class="admin-drawer-icon">♙</span><span class="admin-drawer-label">Admin Profile</span><span class="admin-drawer-chevron">›</span></button>
+                <button type="button" class="admin-drawer-item" data-drawer-action="pin"><span class="admin-drawer-icon">⚿</span><span class="admin-drawer-label">Change PIN</span><span class="admin-drawer-chevron">›</span></button>
+                <button type="button" class="admin-drawer-item admin-management-drawer-item" id="admin-management-drawer-item" data-drawer-action="admin-management" style="display:none;"><span class="admin-drawer-icon">♛</span><span class="admin-drawer-label">Admin Management</span><span class="admin-drawer-chevron">›</span></button>
+                <button type="button" class="admin-drawer-item" data-drawer-action="about"><span class="admin-drawer-icon">ⓘ</span><span class="admin-drawer-label">About</span><span class="admin-drawer-chevron">›</span></button>
+                <div class="admin-drawer-divider"></div>
+                <button type="button" class="admin-drawer-item danger" data-drawer-action="logout"><span class="admin-drawer-icon">↪</span><span class="admin-drawer-label">Logout</span><span class="admin-drawer-chevron">›</span></button>
+            </div>
+        </aside>
+
+        <!-- Legacy admin sections remain available from the menu.
+             Primary navigation is now the fixed bottom navigation below. -->
+        <div class="nav-tabs" style="display:none !important;">
+            <button class="nav-tab active" data-tab="dashboard">Dashboard</button>
+            <button class="nav-tab" data-tab="users">Users</button>
+            <button class="nav-tab" data-tab="errors">Errors</button>
+            <button class="nav-tab" data-tab="support">Support</button>
         </div>
 
         <!-- ===== DASHBOARD ===== -->
@@ -1376,6 +1892,59 @@
             <div id="dashboard-error" class="error-state hidden"></div>
         </div>
 
+        <!-- ===== ADMIN MESSAGING ===== -->
+        <div class="scroll hidden" id="tab-admin-messaging">
+            <div class="admin-card messaging-card">
+                <p class="admin-card-title">Admin Messaging</p>
+                <p class="admin-card-sub">Choose a messaging channel and send updates to customer users.</p>
+                <div class="messaging-channel-badge"><span>●</span> In-App Notification</div>
+
+                <div class="admin-card messaging-recipient-card" style="margin-top:12px;">
+                    <div class="messaging-recipient-summary">
+                        <div class="messaging-recipient-icon">👥</div>
+                        <div class="messaging-recipient-copy">
+                            <div class="messaging-recipient-title">Recipients</div>
+                            <div class="messaging-recipient-detail" id="messaging-recipient-detail">No customers selected</div>
+                        </div>
+                    </div>
+                    <button type="button" class="messaging-choose-btn" id="messaging-open-picker">
+                        <span>Choose customers</span><span class="messaging-choose-arrow">›</span>
+                    </button>
+                    <div id="messaging-selection-preview" class="messaging-selection-preview"></div>
+                </div>
+
+                <div class="messaging-field">
+                    <label for="messaging-title">Title</label>
+                    <input id="messaging-title" class="messaging-input" maxlength="200" placeholder="Notification title" />
+                </div>
+
+                <div class="messaging-field">
+                    <label for="messaging-message">Message</label>
+                    <textarea id="messaging-message" class="messaging-textarea" maxlength="2000" placeholder="Write your message…"></textarea>
+                </div>
+
+                <div id="messaging-result" class="messaging-result hidden"></div>
+                <button type="button" class="btn-primary" id="messaging-send-btn" style="margin-top:12px;">Send In-App Notification</button>
+            </div>
+            <div class="admin-card messaging-coming-card">
+                <div class="messaging-coming-icon">✉</div>
+                <div class="messaging-coming-content">
+                    <p class="admin-card-title">Email Notification</p>
+                    <p class="admin-card-sub">Email messaging is planned and will be connected to the email service later.</p>
+                    <span class="coming-soon-pill">Coming Soon</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== WALLET ===== -->
+        <div class="scroll hidden" id="tab-wallet">
+            <div class="admin-card" style="text-align:center;padding:42px 20px;">
+                <div style="font-size:42px;margin-bottom:12px;">💳</div>
+                <p class="admin-card-title" style="font-size:20px;">Wallet</p>
+                <p class="admin-card-sub" style="margin-bottom:0;">Coming soon. Wallet management will be added here later.</p>
+            </div>
+        </div>
+
         <!-- ===== USERS ===== -->
         <div class="scroll hidden" id="tab-users">
             <div class="admin-card">
@@ -1393,8 +1962,8 @@
         <!-- ===== ERRORS ===== -->
         <div class="scroll hidden" id="tab-errors">
             <div class="admin-card">
-                <p class="admin-card-title">Error Logs</p>
-                <p class="admin-card-sub">Monitor system errors and issues (includes browser console errors)</p>
+                <p class="admin-card-title">Error Logs <span id="error-live-dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-left:6px;vertical-align:middle;animation:errorLivePulse 2s infinite;"></span></p>
+                <p class="admin-card-sub">Live (updates every 5s). Includes browser console errors, failed API calls, and crashes - from both apps.</p>
                 <div class="error-stats-mini">
                     <div class="mini-card">
                         <div class="num danger" id="error-total">—</div>
@@ -1410,6 +1979,11 @@
                     </div>
                 </div>
                 <div id="error-type-chart" class="type-chart"></div>
+                <div class="action-row" style="margin-top:8px;">
+                    <button class="btn-sm filter-active" data-source-filter="all" id="error-filter-all">All</button>
+                    <button class="btn-sm" data-source-filter="user" id="error-filter-user">📱 User App (<span id="error-count-user">0</span>)</button>
+                    <button class="btn-sm" data-source-filter="admin" id="error-filter-admin">🛠️ Admin App (<span id="error-count-admin">0</span>)</button>
+                </div>
                 <div class="search-bar"><input id="error-search" placeholder="Search errors…" /></div>
                 <div class="action-row">
                     <button class="btn-sm refresh" id="error-refresh-btn">&#8635; Refresh</button>
@@ -1470,16 +2044,138 @@
                             updated!</span></div>
             </div>
         </div>
+
+        <!-- ===== CUSTOMER RECIPIENT PICKER ===== -->
+        <div class="messaging-picker-overlay" id="messaging-picker-overlay" aria-hidden="true">
+            <section class="messaging-picker" role="dialog" aria-modal="true" aria-labelledby="messaging-picker-title">
+                <div class="messaging-picker-header">
+                    <button type="button" class="messaging-picker-back" id="messaging-picker-close" aria-label="Back">‹</button>
+                    <div class="messaging-picker-heading">
+                        <strong id="messaging-picker-title">Choose customers</strong>
+                        <span>Select one customer at a time or select all.</span>
+                    </div>
+                </div>
+                <div class="messaging-picker-search">
+                    <input id="messaging-user-search" class="messaging-input" placeholder="Search by name, email, phone, or account number…" autocomplete="off" />
+                </div>
+                <div class="messaging-picker-toolbar">
+                    <span class="messaging-picker-count" id="messaging-recipient-count">0 selected</span>
+                    <div class="messaging-picker-actions">
+                        <button type="button" class="btn-sm refresh" id="messaging-select-all">Select all</button>
+                        <button type="button" class="btn-sm refresh" id="messaging-clear-all">Clear</button>
+                    </div>
+                </div>
+                <div id="messaging-user-loading" class="loading-state hidden">
+                    <div class="spinner"></div>Loading customers…
+                </div>
+                <div id="messaging-user-error" class="error-state hidden"></div>
+                <div id="messaging-user-list" class="messaging-picker-list"></div>
+                <div class="messaging-picker-footer">
+                    <button type="button" class="btn-outline" id="messaging-picker-cancel">Cancel</button>
+                    <button type="button" class="btn-primary" id="messaging-picker-done" style="margin-top:0;">Done</button>
+                </div>
+            </section>
+        </div>
+
+        <!-- ===== FIXED BOTTOM NAVIGATION ===== -->
+        <nav class="bottom-nav" id="bottom-nav" aria-label="Admin navigation">
+            <button type="button" class="bottom-nav-btn active" data-bottom-tab="home" aria-label="Home">
+                <span class="bottom-nav-icon">⌂</span>
+                <span>Home</span>
+            </button>
+            <button type="button" class="bottom-nav-btn" data-bottom-tab="wallet" aria-label="Wallet">
+                <span class="bottom-nav-icon">▭</span>
+                <span>Wallet</span>
+                <small>Coming Soon</small>
+            </button>
+            <button type="button" class="bottom-nav-btn" data-bottom-tab="messaging" aria-label="Admin Messaging">
+                <span class="bottom-nav-icon">💬</span>
+                <span>Admin Messaging</span>
+            </button>
+        </nav>
     </div>
 
-    <!-- ===== PROFILE SCREEN ===== -->
+    <!-- ===== ADMIN PROFILE SCREEN ===== -->
     <div class="screen" id="screen-profile">
-        <div class="scroll">
-            <button class="ussd-back" id="profile-back-btn"
-                    style="padding-left:0;font-size:22px;background:none;border:none;cursor:pointer;">&#8592;
-                Back</button>
-            <h1 class="greeting-title" style="margin-top:8px;">My Profile</h1>
+        <div class="scroll profile-screen-scroll">
+            <button class="ussd-back" id="profile-back-btn" style="padding-left:0;font-size:22px;background:none;border:none;cursor:pointer;">&#8592; Back</button>
+            <div class="subscreen-heading">
+                <div class="subscreen-icon">♙</div>
+                <div>
+                    <h1 class="greeting-title" style="margin-top:0;">Admin Profile</h1>
+                    <p class="admin-card-sub" style="margin:0;">View your administrator account details.</p>
+                </div>
+            </div>
             <div id="profile-content"></div>
+        </div>
+    </div>
+
+    <!-- ===== CHANGE PIN SCREEN ===== -->
+    <div class="screen" id="screen-pin">
+        <div class="scroll profile-screen-scroll">
+            <button class="ussd-back" id="pin-back-btn" style="padding-left:0;font-size:22px;background:none;border:none;cursor:pointer;">&#8592; Back</button>
+            <div class="subscreen-heading">
+                <div class="subscreen-icon">⚿</div>
+                <div>
+                    <h1 class="greeting-title" style="margin-top:0;">Change PIN</h1>
+                    <p class="admin-card-sub" style="margin:0;">Update the 4-digit PIN used for session protection.</p>
+                </div>
+            </div>
+            <div id="pin-content"></div>
+        </div>
+    </div>
+
+    <!-- ===== ADMIN MANAGEMENT SCREEN ===== -->
+    <div class="screen" id="screen-admin-management">
+        <div class="scroll profile-screen-scroll">
+            <button class="ussd-back" id="admin-management-back-btn" style="padding-left:0;font-size:22px;background:none;border:none;cursor:pointer;">&#8592; Back</button>
+            <div class="subscreen-heading">
+                <div class="subscreen-icon">♛</div>
+                <div>
+                    <h1 class="greeting-title" style="margin-top:0;">Admin Management</h1>
+                    <p class="admin-card-sub" style="margin:0;">Create and manage administrator accounts.</p>
+                </div>
+            </div>
+            <div id="admin-management-content"></div>
+        </div>
+    </div>
+
+    <!-- ===== ACCOUNT DETAIL SCREEN ===== -->
+    <div class="screen account-detail-screen" id="screen-account-detail">
+        <div class="scroll account-detail-scroll">
+            <div class="account-detail-top">
+                <button class="ussd-back account-detail-back" id="account-detail-back-btn" type="button">&#8592; Back</button>
+                <span class="account-detail-kicker" id="account-detail-kicker">Account Overview</span>
+            </div>
+            <div id="account-detail-content">
+                <div class="loading-state"><div class="spinner"></div>Loading account…</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== ABOUT SCREEN ===== -->
+    <div class="screen" id="screen-about">
+        <div class="scroll profile-screen-scroll">
+            <button class="ussd-back" id="about-back-btn" style="padding-left:0;font-size:22px;background:none;border:none;cursor:pointer;">&#8592; Back</button>
+            <div class="subscreen-heading">
+                <div class="subscreen-icon">ⓘ</div>
+                <div>
+                    <h1 class="greeting-title" style="margin-top:0;">About DeenWallet</h1>
+                    <p class="admin-card-sub" style="margin:0;">Administration and system information.</p>
+                </div>
+            </div>
+            <div class="admin-card about-card">
+                <div class="about-logo-wrap"><img src="deenwallet-logo.png" alt="DeenWallet" /></div>
+                <h2>DeenWallet Admin</h2>
+                <p class="about-version">Secure Administration</p>
+                <div class="about-info-list">
+                    <div><span>Application</span><strong>DeenWallet</strong></div>
+                    <div><span>Portal</span><strong>Admin</strong></div>
+                    <div><span>Notifications</span><strong>In-App &amp; Push</strong></div>
+                    <div><span>Email Messaging</span><strong>Coming Soon</strong></div>
+                </div>
+                <p class="about-description">This administration portal is used to manage customer accounts, monitor transactions, support users, and communicate important updates.</p>
+            </div>
         </div>
     </div>
 
@@ -1631,6 +2327,7 @@
             var SESSION_TIMEOUT_MS = 300000; // 5 minutes
             var MAX_PIN_ATTEMPTS = 2;
             var currentUserRole = null;
+            var currentAdminUser = null;
 
             var pinModalActive = false;
             var pinAttempts = 0;
@@ -1658,6 +2355,8 @@
             var loginScreen = document.getElementById('screen-login');
             var mainScreen = document.getElementById('screen-main');
             var profileScreen = document.getElementById('screen-profile');
+            var accountDetailScreen = document.getElementById('screen-account-detail');
+            var accountDetailReturnScreen = 'users';
 
             // screen-profile is an independent top-level screen (a
             // sibling of screen-main, not nested inside it), so hiding
@@ -1666,6 +2365,7 @@
             // stacked on top of each other. Use this everywhere instead
             // of toggling the classes directly.
             function forceToLoginScreen() {
+                stopErrorAutoRefresh();
                 if (profileScreen) profileScreen.classList.remove('active');
                 mainScreen.classList.remove('active');
                 loginScreen.classList.add('active');
@@ -1710,109 +2410,151 @@
                 localStorage.removeItem(TOKEN_KEY);
                 localStorage.removeItem('deenwallet_admin_refresh_token');
                 sessionStorage.removeItem('deenwallet_admin_session_last_active');
+                sessionStorage.removeItem('deenwallet_admin_profile');
             }
 
             // ==============================================================
             // ADMIN API
             // ==============================================================
             async function adminApiRequest(path, options) {
-                options = options || {};
-                var url = new URL(API_BASE_URL + path);
-                if (options.params) {
-                    Object.keys(options.params).forEach(function (k) {
-                        if (options.params[k] !== undefined && options.params[k] !== null) {
-                            url.searchParams.set(k, options.params[k]);
-                        }
-                    });
-                }
-                var token = getToken();
-                // Refresh a nearly-expired access token before the API call.
-                // This avoids intermittent 403s during normal admin activity.
-                if (token) {
-                    try {
-                        var payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-                        if (payload.exp && (payload.exp * 1000 - Date.now()) < 30000 && getRefreshToken()) {
-                            token = await refreshAdminToken();
-                        }
-                    } catch (_) { }
-                }
-                var headers = { 'Content-Type': 'application/json' };
-                if (token) headers['Authorization'] = 'Bearer ' + token;
-
-                // A hung/unreachable server must fail fast rather than leave
-                // the caller (and the UI it's driving) waiting indefinitely -
-                // that indefinite wait is what "the app just freezes" was.
-                async function doFetch() {
-                    var controller = new AbortController();
-                    var timeoutId = setTimeout(function () { controller.abort(); }, 15000);
-                    try {
-                        return await fetch(url.toString(), {
-                            method: options.method || 'GET',
-                            headers: headers,
-                            body: options.body ? JSON.stringify(options.body) : undefined,
-                            signal: controller.signal
+                // Wraps the ENTIRE function so a bug anywhere in here (URL building, token
+                // parsing, etc.) is reported with a full stack instead of failing silently -
+                // the same class of bug the user-app client.js was recently found missing.
+                try {
+                    options = options || {};
+                    var url = new URL(API_BASE_URL + path);
+                    if (options.params) {
+                        Object.keys(options.params).forEach(function (k) {
+                            if (options.params[k] !== undefined && options.params[k] !== null) {
+                                url.searchParams.set(k, options.params[k]);
+                            }
                         });
-                    } catch (fetchError) {
-                        // Normalize every network-level failure (no
-                        // internet, DNS failure, connection refused,
-                        // timeout) into one clean, friendly error - never
-                        // let the raw "Failed to fetch" browser text
-                        // reach the UI.
-                        var friendly = new Error('Unable to reach the server. Please check your connection and try again.');
-                        friendly.isNetworkError = true;
-                        throw friendly;
-                    } finally {
-                        clearTimeout(timeoutId);
                     }
-                }
-
-                var response = await doFetch();
-
-                var data = null;
-                try { data = await response.json(); } catch (_) { }
-
-                if (!response.ok && (response.status === 401 || response.status === 403) && getRefreshToken()) {
-                    try {
-                        var fresh = await refreshAdminToken();
-                        headers['Authorization'] = 'Bearer ' + fresh;
-                        response = await doFetch();
-                        data = null; try { data = await response.json(); } catch (_) {}
-                    } catch (_) {}
-                }
-                if (!response.ok) {
-                    var reason = response.headers.get('X-Reason');
-                    if (reason === 'PIN_DISABLED' || (response.status === 429 && data && /PIN is disabled/i.test(data.message || ''))) {
-                        clearToken();
-                        pinDisabledForSession = true;
-                        hideAdminPinModal();
-                        forceToLoginScreen();
-                        showToast('Admin PIN disabled. Please log in again.');
-                    } else if (response.status === 401 || response.status === 403) {
-                        clearToken(); forceToLoginScreen(); showToast('Session expired. Please login again.');
+                    var token = getToken();
+                    // Refresh a nearly-expired access token before the API call.
+                    // This avoids intermittent 403s during normal admin activity.
+                    if (token) {
+                        try {
+                            var payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+                            if (payload.exp && (payload.exp * 1000 - Date.now()) < 30000 && getRefreshToken()) {
+                                token = await refreshAdminToken();
+                            }
+                        } catch (_) { }
                     }
-                    var message = (data && data.message) || 'Request failed.'; throw new Error(message);
+                    var headers = { 'Content-Type': 'application/json' };
+                    if (token) headers['Authorization'] = 'Bearer ' + token;
+
+                    // A hung/unreachable server must fail fast rather than leave
+                    // the caller (and the UI it's driving) waiting indefinitely -
+                    // that indefinite wait is what "the app just freezes" was.
+                    async function doFetch() {
+                        var controller = new AbortController();
+                        var timeoutId = setTimeout(function () { controller.abort(); }, 15000);
+                        try {
+                            return await fetch(url.toString(), {
+                                method: options.method || 'GET',
+                                headers: headers,
+                                body: options.body ? JSON.stringify(options.body) : undefined,
+                                signal: controller.signal
+                            });
+                        } catch (fetchError) {
+                            // No HTTP response at all: DNS failure, connection refused, CORS
+                            // block or timeout. Report it BEFORE normalizing, so the raw
+                            // message is what shows up in the admin Errors tab.
+                            reportErrorToBackend('NETWORK_ERROR', String(fetchError && fetchError.message || fetchError),
+                                fetchError && fetchError.stack, window.location.href, 0, 0,
+                                { endpointPath: path, httpMethod: options.method || 'GET' });
+                            // Normalize every network-level failure (no
+                            // internet, DNS failure, connection refused,
+                            // timeout) into one clean, friendly error - never
+                            // let the raw "Failed to fetch" browser text
+                            // reach the UI.
+                            var friendly = new Error('Unable to reach the server. Please check your connection and try again.');
+                            friendly.isNetworkError = true;
+                            throw friendly;
+                        } finally {
+                            clearTimeout(timeoutId);
+                        }
+                    }
+
+                    var response = await doFetch();
+
+                    var data = null;
+                    try { data = await response.json(); } catch (_) { }
+
+                    if (!response.ok && (response.status === 401 || response.status === 403) && getRefreshToken()) {
+                        try {
+                            var fresh = await refreshAdminToken();
+                            headers['Authorization'] = 'Bearer ' + fresh;
+                            response = await doFetch();
+                            data = null; try { data = await response.json(); } catch (_) {}
+                        } catch (_) {}
+                    }
+                    if (!response.ok) {
+                        // Trace WHICH endpoint failed. Skip expected 401s (a stale token
+                        // about to redirect to login is normal, not a bug worth an admin's time).
+                        if (response.status !== 401) {
+                            reportErrorToBackend('API_ERROR', (data && data.message) || 'Request failed.', '',
+                                window.location.href, 0, 0,
+                                { endpointPath: path, httpMethod: options.method || 'GET', statusCode: response.status });
+                        }
+                        var reason = response.headers.get('X-Reason');
+                        if (reason === 'PIN_DISABLED' || (response.status === 429 && data && /PIN is disabled/i.test(data.message || ''))) {
+                            clearToken();
+                            pinDisabledForSession = true;
+                            hideAdminPinModal();
+                            forceToLoginScreen();
+                            showToast('Admin PIN disabled. Please log in again.');
+                        } else if (response.status === 401 || response.status === 403) {
+                            clearToken(); forceToLoginScreen(); showToast('Session expired. Please login again.');
+                        }
+                        var message = (data && data.message) || 'Request failed.'; throw new Error(message);
+                    }
+                    return data;
+                } catch (error) {
+                    // Anything NOT already one of our own recognizable errors (network, or a
+                    // plain "Request failed."-style Error from above) is an unexpected bug in
+                    // this function itself - report it with a full stack, then behave exactly
+                    // as before by re-throwing unchanged.
+                    if (!error.isNetworkError) {
+                        reportErrorToBackend('CLIENT_BUG', String(error && error.message || error), error && error.stack,
+                            window.location.href, 0, 0, { endpointPath: path, httpMethod: (options && options.method) || 'GET' });
+                    }
+                    throw error;
                 }
-                return data;
             }
 
             // ==============================================================
             // BROWSER ERROR CAPTURE
             // ==============================================================
             function reportErrorToBackend(errorType, message, stack, url, line, col, extra) {
-                if (!getToken()) return;
                 var payload = {
                     errorType: errorType || 'JS_ERROR',
                     message: message || 'Unknown error',
                     stack: stack || '',
                     url: url || window.location.href,
+                    // Tags this as the ADMIN app so it's never confused with a user-app
+                    // report, whichever endpoint below actually ends up sending it.
+                    sourceApp: 'admin',
+                    endpointPath: (extra && extra.endpointPath) || undefined,
+                    httpMethod: (extra && extra.httpMethod) || undefined,
+                    statusCode: (extra && extra.statusCode) || undefined,
                     line: line || 0,
                     col: col || 0,
                     userAgent: navigator.userAgent,
                     extra: extra || {}
                 };
-                fetch(API_BASE_URL + '/api/admin/errors', {
+                var token = getToken();
+                // Logged-in: use the admin-only endpoint (ties the report to this admin's
+                // account). Not logged in (e.g. a crash on the login screen itself, before
+                // any token exists): fall back to the public endpoint so it's still
+                // captured - it accepts sourceApp:'admin' and stores it the same way.
+                var endpoint = token ? '/api/admin/errors' : '/api/errors';
+                var headers = { 'Content-Type': 'application/json' };
+                if (token) headers['Authorization'] = 'Bearer ' + token;
+                fetch(API_BASE_URL + endpoint, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+                    headers: headers,
                     body: JSON.stringify(payload)
                 }).catch(function (e) { });
             }
@@ -2104,16 +2846,38 @@
                 }
             }
 
-            window.addEventListener('focus', checkAdminSession);
+            function lockAdminOnReturn() {
+                if (getToken() && !pinModalActive) {
+                    // Match the customer app: every return from the background
+                    // requires the PIN, even if the app was away only briefly.
+                    showAdminPinModal('Enter your PIN to continue.');
+                }
+            }
+
+            window.addEventListener('focus', lockAdminOnReturn);
             document.addEventListener('visibilitychange', function () {
                 if (document.hidden) {
                     updateAdminSessionActive();
-                } else if (getToken() && !pinModalActive) {
-                    // Always re-verify with PIN on returning to the app,
-                    // regardless of how briefly it was backgrounded.
-                    showAdminPinModal('Enter your PIN to continue.');
+                } else {
+                    lockAdminOnReturn();
                 }
             });
+
+            // Capacitor Android lifecycle: ensure the same lock is applied when
+            // Android resumes the WebView even when browser visibility/focus
+            // events are not delivered consistently.
+            (function () {
+                if (!window.Capacitor || !window.Capacitor.isNativePlatform || !window.Capacitor.isNativePlatform()) return;
+                var AppPlugin = window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+                if (!AppPlugin || typeof AppPlugin.addListener !== 'function') return;
+                AppPlugin.addListener('appStateChange', function (state) {
+                    if (state && state.isActive) {
+                        lockAdminOnReturn();
+                    } else {
+                        updateAdminSessionActive();
+                    }
+                });
+            })();
 
             setInterval(checkAdminSession, 10000);
 
@@ -2191,7 +2955,9 @@
                     setRefreshToken(data.refreshToken);
                     pinDisabledForSession = false;
                     var user = await adminApiRequest('/api/admin/me');
+                    currentAdminUser = user;
                     currentUserRole = user.role || 'ADMIN';
+                    sessionStorage.setItem('deenwallet_admin_profile', JSON.stringify(user));
                     adminRecoveryPanel.classList.add('hidden');
                     loginScreen.classList.remove('active');
                     mainScreen.classList.add('active');
@@ -2225,11 +2991,13 @@
                     if (!data.accessToken) throw new Error('No admin access token received.');
                     setToken(data.accessToken); setRefreshToken(data.refreshToken);
                     var user = await adminApiRequest('/api/admin/me');
+                    currentAdminUser = user;
                     currentUserRole = user.role || data.role || 'ADMIN';
+                    sessionStorage.setItem('deenwallet_admin_profile', JSON.stringify(user));
                     if (adminRecoveryPanel) adminRecoveryPanel.classList.add('hidden');
                     loginScreen.classList.remove('active'); mainScreen.classList.add('active');
                     showToast('Welcome, ' + (user.fullName || data.firstName || 'Admin') + '!');
-                    updateAdminSessionActive(); loadDashboard(); loadWhatsApp(); loadUsers();
+                    updateAdminSessionActive(); setBottomNavActive('home'); showMainSection('dashboard'); loadWhatsApp(); loadUsers();
                 }).catch(function (error) {
                     loginErrorText.textContent = error.message || 'Login failed. Check your credentials.'; show(loginError);
                     if (error.status === 423 || error.recovery === 'OTP') {
@@ -2255,66 +3023,119 @@
                 dashboard: document.getElementById('tab-dashboard'),
                 users: document.getElementById('tab-users'),
                 errors: document.getElementById('tab-errors'),
-                support: document.getElementById('tab-support')
+                support: document.getElementById('tab-support'),
+                wallet: document.getElementById('tab-wallet'),
+                messaging: document.getElementById('tab-admin-messaging')
             };
+
+            function showMainSection(section) {
+                Object.keys(tabContents).forEach(function (key) {
+                    if (!tabContents[key]) return;
+                    if (key === section) tabContents[key].classList.remove('hidden');
+                    else tabContents[key].classList.add('hidden');
+                });
+
+                if (section === 'dashboard') loadDashboard();
+                if (section === 'users') loadUsers();
+                if (section === 'errors') { loadErrors(); startErrorAutoRefresh(); }
+                else { stopErrorAutoRefresh(); }
+                if (section === 'messaging') updateMessagingRecipientCount();
+            }
+
+            function setBottomNavActive(section) {
+                document.querySelectorAll('.bottom-nav-btn').forEach(function (btn) {
+                    btn.classList.toggle('active', btn.dataset.bottomTab === section);
+                });
+                document.querySelectorAll('[data-drawer-action]').forEach(function (item) {
+                    item.classList.toggle('active', item.dataset.drawerAction === section);
+                });
+            }
+
+            document.querySelectorAll('.bottom-nav-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var section = btn.dataset.bottomTab;
+                    if (section === 'home') {
+                        setBottomNavActive('home');
+                        showMainSection('dashboard');
+                        return;
+                    }
+                    if (section === 'wallet') {
+                        setBottomNavActive('wallet');
+                        showMainSection('wallet');
+                        return;
+                    }
+                    if (section === 'messaging') {
+                        setBottomNavActive('messaging');
+                        showMainSection('messaging');
+                    }
+                });
+            });
 
             tabs.forEach(function (tab) {
                 tab.addEventListener('click', function () {
                     tabs.forEach(function (t) { t.classList.remove('active'); });
                     tab.classList.add('active');
-                    Object.keys(tabContents).forEach(function (key) {
-                        if (tabContents[key]) {
-                            if (key === tab.dataset.tab) {
-                                tabContents[key].classList.remove('hidden');
-                            } else {
-                                tabContents[key].classList.add('hidden');
-                            }
-                        }
-                    });
-                    if (tab.dataset.tab === 'dashboard') loadDashboard();
-                    if (tab.dataset.tab === 'users') loadUsers();
-                    if (tab.dataset.tab === 'errors') loadErrors();
+                    showMainSection(tab.dataset.tab);
+                    setBottomNavActive(tab.dataset.tab === 'dashboard' ? 'home' : tab.dataset.tab);
                 });
             });
 
             // ==============================================================
-            // MENU – with Profile
+            // ADMIN SIDE DRAWER
             // ==============================================================
-            var menuOpen = false;
+            var adminDrawer = document.getElementById('admin-drawer');
+            var adminDrawerOverlay = document.getElementById('admin-drawer-overlay');
+            var adminMenuBtn = document.getElementById('menu-btn');
 
-            function closeMenu() {
-                var el = document.getElementById('menu-dropdown');
-                if (el) el.remove();
-                menuOpen = false;
+            function updateAdminDrawerProfile() {
+                var saved = currentAdminUser;
+                if (!saved) { try { saved = JSON.parse(sessionStorage.getItem('deenwallet_admin_profile') || 'null'); } catch (e) { saved = null; } }
+                var name = (saved && (saved.fullName || saved.username)) || 'Admin';
+                var email = (saved && saved.email) || 'Admin account';
+                var role = (saved && saved.role) || currentUserRole || 'ADMIN';
+                document.getElementById('admin-drawer-name').textContent = name;
+                document.getElementById('admin-drawer-email').textContent = email;
+                document.getElementById('admin-drawer-role').textContent = role === 'SUPER_ADMIN' ? 'SUPER ADMIN' : 'ADMIN';
+                document.getElementById('admin-drawer-avatar').textContent = String(name).trim().charAt(0).toUpperCase() || 'A';
+                var managementItem = document.getElementById('admin-management-drawer-item');
+                if (managementItem) managementItem.style.display = role === 'SUPER_ADMIN' ? 'flex' : 'none';
             }
 
-            document.getElementById('menu-btn').addEventListener('click', function (e) {
-                e.stopPropagation();
-                if (menuOpen) { closeMenu(); return; }
-                var dropdown = document.createElement('div');
-                dropdown.className = 'menu-dropdown';
-                dropdown.id = 'menu-dropdown';
-                dropdown.innerHTML =
-                    '<button id="menu-profile">👤 Profile</button>' +
-                    '<div class="menu-divider"></div>' +
-                    '<button onclick="window.dwOpenUserApp()">&#8592; User App</button>' +
-                    '<div class="menu-divider"></div>' +
-                    '<button id="menu-logout" class="danger">Log out</button>';
-                document.getElementById('app').appendChild(dropdown);
-                menuOpen = true;
-                document.getElementById('menu-profile').addEventListener('click', function () {
-                    closeMenu();
-                    openProfile();
-                });
-                document.getElementById('menu-logout').addEventListener('click', function () {
-                    closeMenu();
-                    pinDisabledForSession = false;
-                    clearToken();
-                    forceToLoginScreen();
-                    showToast('Logged out.');
-                });
-            });
-            document.addEventListener('click', closeMenu);
+            function openAdminDrawer() {
+                updateAdminDrawerProfile();
+                adminDrawer.classList.add('open');
+                adminDrawerOverlay.classList.add('open');
+                adminDrawer.setAttribute('aria-hidden','false');
+                adminDrawerOverlay.setAttribute('aria-hidden','false');
+                adminMenuBtn.setAttribute('aria-expanded','true');
+                document.body.classList.add('drawer-open');
+            }
+
+            function closeAdminDrawer() {
+                adminDrawer.classList.remove('open');
+                adminDrawerOverlay.classList.remove('open');
+                adminDrawer.setAttribute('aria-hidden','true');
+                adminDrawerOverlay.setAttribute('aria-hidden','true');
+                adminMenuBtn.setAttribute('aria-expanded','false');
+                document.body.classList.remove('drawer-open');
+            }
+
+            function drawerNavigate(section) {
+                closeAdminDrawer();
+                if (section === 'profile') { openProfile(); return; }
+                if (section === 'pin') { openPinScreen(); return; }
+                if (section === 'admin-management') { openAdminManagement(); return; }
+                if (section === 'about') { openAboutScreen(); return; }
+                if (section === 'logout') { pinDisabledForSession=false; clearToken(); forceToLoginScreen(); showToast('Logged out.'); return; }
+                setBottomNavActive(section === 'home' ? 'home' : 'home');
+                showMainSection(section === 'home' ? 'dashboard' : section);
+            }
+
+            adminMenuBtn.addEventListener('click',function(e){ e.stopPropagation(); adminDrawer.classList.contains('open') ? closeAdminDrawer() : openAdminDrawer(); });
+            adminDrawerOverlay.addEventListener('click',closeAdminDrawer);
+            document.getElementById('admin-drawer-profile').addEventListener('click',function(){ drawerNavigate('profile'); });
+            document.querySelectorAll('[data-drawer-action]').forEach(function(item){ item.addEventListener('click',function(){ drawerNavigate(item.dataset.drawerAction); }); });
+            document.addEventListener('keydown',function(e){ if(e.key==='Escape' && adminDrawer.classList.contains('open')) closeAdminDrawer(); });
 
             // ==============================================================
             // DASHBOARD
@@ -2424,7 +3245,7 @@
                         e.stopPropagation();
                         var userId = btn.dataset.id;
                         var user = allUsers.find(function (u) { return u.id === userId; });
-                        if (user) openUserDetail(user);
+                        if (user) openUserDetail(user, 'users');
                     });
                 });
 
@@ -2496,42 +3317,95 @@
                 });
             }
 
-            function openUserDetail(user) {
-                var overlay = document.getElementById('user-modal-overlay');
-                var body = document.getElementById('user-modal-body');
-                var toggleBtn = document.getElementById('user-modal-toggle');
-                var closeBtn = document.getElementById('user-modal-close');
-
-                document.getElementById('user-modal-title').textContent = user.fullName || user.username || 'User';
-                document.getElementById('user-modal-sub').textContent = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' ? 'Admin account details' : 'User account details';
-
+            function openUserDetail(user, returnScreen) {
+                accountDetailReturnScreen = returnScreen || 'users';
+                var content = document.getElementById('account-detail-content');
                 var isActive = user.active !== false;
                 var isLocked = user.locked === true;
                 var isVerified = user.emailVerified === true;
                 var isSuper = user.role === 'SUPER_ADMIN';
+                var isAdmin = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN';
+                var name = user.fullName || user.username || 'Account';
+                var initial = String(name).trim().charAt(0).toUpperCase() || 'A';
+                var roleLabel = isSuper ? 'SUPER ADMIN' : (isAdmin ? 'ADMIN' : 'CUSTOMER');
+                var statusLabel = isLocked ? '🔒 Locked' : (isActive ? '● Active' : '● Inactive');
+                var statusClass = isLocked || !isActive ? 'bad' : 'good';
+                var detailKicker = document.getElementById('account-detail-kicker');
+                detailKicker.textContent = isAdmin ? 'Administrator Profile' : 'Customer Profile';
 
-                body.innerHTML = `
-                    <div class="user-detail-row"><span class="label">Account Number</span><span class="value">${escapeHtml(user.accountNumber || '—')}</span></div>
-                    <div class="user-detail-row"><span class="label">Full Name</span><span class="value">${escapeHtml(user.fullName || '—')}</span></div>
-                    <div class="user-detail-row"><span class="label">Username</span><span class="value">${escapeHtml(user.username || '—')}</span></div>
-                    <div class="user-detail-row"><span class="label">Phone</span><span class="value">${escapeHtml(user.phone || '—')}</span></div>
-                    <div class="user-detail-row"><span class="label">Email</span><span class="value">${escapeHtml(user.email || '—')}</span></div>
-                    <div style="margin:12px 0;padding:12px;border:1px solid var(--border);border-radius:10px;">
-                      <div style="font-weight:600;margin-bottom:8px;">Admin contact update</div>
-                      <input id="admin-user-email" class="text-input" type="email" value="${escapeHtml(user.email || '')}" placeholder="Email" style="margin-bottom:8px;" />
-                      <input id="admin-user-phone" class="text-input" type="text" value="${escapeHtml(user.phone || '')}" placeholder="+232XXXXXXXX" />
-                      <button id="admin-save-contact-btn" class="btn-sm success" style="margin-top:8px;">Save email & phone</button>
-                      <div id="admin-contact-error" class="error-state hidden" style="margin-top:8px;"></div>
-                    </div>
-                    <div class="user-detail-row"><span class="label">Role</span><span class="value">${escapeHtml(user.role || 'USER')}</span></div>
-                    <div class="user-detail-row"><span class="label">Email Verified</span><span class="value ${isVerified ? 'success' : 'failed'}">${isVerified ? '✅ Yes' : '❌ No'}</span></div>
-                    ${isVerified ? '' : '<button id=\"verify-user-email-btn\" class=\"btn-sm success\" style=\"margin:12px 0;\">✓ Verify Email</button>'}
-                    <div class="user-detail-row"><span class="label">Status</span><span class="value ${isActive ? 'success' : 'failed'}">${isActive ? '✅ Active' : '⛔ Inactive'}</span></div>
-                    <div class="user-detail-row"><span class="label">Locked</span><span class="value ${isLocked ? 'failed' : 'success'}">${isLocked ? '🔒 Yes' : '✅ No'}</span></div>
-                    <div class="user-detail-row"><span class="label">PIN Attempts</span><span class="value">${user.pinAttempts || 0}</span></div>
-                    <div class="user-detail-row"><span class="label">Login Attempts</span><span class="value">${user.loginFailedAttempts || 0}</span></div>
-                    <div class="user-detail-row" style="border-bottom:none;"><span class="label">Login Status</span><span class="value">${user.loginLockedUntil ? '⏳ Temporarily paused until ' + new Date(user.loginLockedUntil).toLocaleString() : (user.adminRecoveryRequired ? '🔐 Recovery required' : '✅ Normal')}</span></div>
-                    ${(user.loginFailedAttempts > 0 || user.loginLockedUntil || user.adminRecoveryRequired) && user.role !== 'SUPER_ADMIN' ? '<button id="reset-login-protection-btn" class="btn-sm success" style="margin:12px 0;">↻ Reset Login Protection</button>' : ''}
+                content.innerHTML = `
+                    <section class="account-detail-hero">
+                        <div class="account-detail-hero-main">
+                            <div class="account-detail-avatar">${escapeHtml(initial)}</div>
+                            <div style="min-width:0;flex:1;">
+                                <h1 class="account-detail-name">${escapeHtml(name)}</h1>
+                                <p class="account-detail-email">${escapeHtml(user.email || 'No email address')}</p>
+                                <div class="account-detail-badges">
+                                    <span class="account-detail-badge ${isSuper ? 'super' : ''}">${isSuper ? '♛' : '◈'} ${escapeHtml(roleLabel)}</span>
+                                    <span class="account-detail-badge ${statusClass}">${statusLabel}</span>
+                                    <span class="account-detail-badge">${isVerified ? '✓ Verified' : '○ Unverified'}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="account-detail-grid">
+                            <div class="account-detail-stat"><span class="account-detail-stat-label">Account Number</span><span class="account-detail-stat-value">${escapeHtml(user.accountNumber || '—')}</span></div>
+                            <div class="account-detail-stat"><span class="account-detail-stat-label">Username</span><span class="account-detail-stat-value">${escapeHtml(user.username || '—')}</span></div>
+                        </div>
+                    </section>
+
+                    <section class="account-detail-section">
+                        <div class="account-detail-section-head">
+                            <div class="account-detail-section-icon">◉</div>
+                            <div><h2 class="account-detail-section-title">Account Information</h2><p class="account-detail-section-sub">Core identity and contact details</p></div>
+                        </div>
+                        <div class="account-detail-info">
+                            <div class="account-detail-row"><span class="label">Full Name</span><span class="value">${escapeHtml(user.fullName || '—')}</span></div>
+                            <div class="account-detail-row"><span class="label">Username</span><span class="value">${escapeHtml(user.username || '—')}</span></div>
+                            <div class="account-detail-row"><span class="label">Phone</span><span class="value">${escapeHtml(user.phone || '—')}</span></div>
+                            <div class="account-detail-row"><span class="label">Email</span><span class="value">${escapeHtml(user.email || '—')}</span></div>
+                            <div class="account-detail-row"><span class="label">Role</span><span class="value">${escapeHtml(user.role || 'USER')}</span></div>
+                        </div>
+                    </section>
+
+                    <section class="account-detail-section account-detail-contact">
+                        <div class="account-detail-section-head">
+                            <div class="account-detail-section-icon">✎</div>
+                            <div><h2 class="account-detail-section-title">Contact Management</h2><p class="account-detail-section-sub">Update the account email and phone number</p></div>
+                        </div>
+                        <input id="admin-user-email" class="text-input" type="email" value="${escapeHtml(user.email || '')}" placeholder="Email" style="width:100%;margin-bottom:8px;" />
+                        <input id="admin-user-phone" class="text-input" type="text" value="${escapeHtml(user.phone || '')}" placeholder="+232XXXXXXXX" style="width:100%;" />
+                        <button id="admin-save-contact-btn" class="btn-sm success" style="margin-top:9px;min-height:40px;width:100%;">Save email &amp; phone</button>
+                        <div id="admin-contact-error" class="error-state hidden" style="margin-top:8px;"></div>
+                        <div class="account-detail-note"><span>ⓘ</span><span><strong>Note:</strong> changing the email may require the user to verify the new address.</span></div>
+                    </section>
+
+                    <section class="account-detail-section">
+                        <div class="account-detail-section-head">
+                            <div class="account-detail-section-icon">◌</div>
+                            <div><h2 class="account-detail-section-title">Security &amp; Status</h2><p class="account-detail-section-sub">Login protection and account state</p></div>
+                        </div>
+                        <div class="account-detail-info">
+                            <div class="account-detail-row"><span class="label">Email Verified</span><span class="value">${isVerified ? '✅ Yes' : '❌ No'}</span></div>
+                            <div class="account-detail-row"><span class="label">Account Status</span><span class="value">${isActive ? '✅ Active' : '⛔ Inactive'}</span></div>
+                            <div class="account-detail-row"><span class="label">Account Locked</span><span class="value">${isLocked ? '🔒 Yes' : '✅ No'}</span></div>
+                            <div class="account-detail-row"><span class="label">PIN Attempts</span><span class="value">${escapeHtml(user.pinAttempts || 0)}</span></div>
+                            <div class="account-detail-row"><span class="label">Login Attempts</span><span class="value">${escapeHtml(user.loginFailedAttempts || 0)}</span></div>
+                            <div class="account-detail-row"><span class="label">Login Status</span><span class="value">${user.loginLockedUntil ? '⏳ Paused until ' + new Date(user.loginLockedUntil).toLocaleString() : (user.adminRecoveryRequired ? '🔐 Recovery required' : '✅ Normal')}</span></div>
+                        </div>
+                        ${isVerified ? '' : '<button id="verify-user-email-btn" class="btn-sm success" style="margin-top:12px;width:100%;min-height:40px;">✓ Verify Email</button>'}
+                        ${(user.loginFailedAttempts > 0 || user.loginLockedUntil || user.adminRecoveryRequired) && !isSuper ? '<button id="reset-login-protection-btn" class="btn-sm success" style="margin-top:9px;width:100%;min-height:40px;">↻ Reset Login Protection</button>' : ''}
+                    </section>
+
+                    <section class="account-detail-section">
+                        <div class="account-detail-section-head">
+                            <div class="account-detail-section-icon">⚡</div>
+                            <div><h2 class="account-detail-section-title">Account Actions</h2><p class="account-detail-section-sub">Administrative controls for this account</p></div>
+                        </div>
+                        <div class="account-detail-actions">
+                            ${isSuper ? '<div></div>' : `<button id="account-detail-toggle" class="btn-sm ${isLocked || !isActive ? 'success' : 'danger'}">${isLocked ? '🔓 Unlock Account' : (isActive ? '🔒 Deactivate' : '✅ Activate')}</button>`}
+                            <button id="account-detail-back-action" class="btn-outline" type="button">← Back to ${isAdmin ? 'Admin Management' : 'Users'}</button>
+                        </div>
+                    </section>
                 `;
 
                 var saveContactBtn = document.getElementById('admin-save-contact-btn');
@@ -2545,7 +3419,11 @@
                         if (!/^\+232\d{8}$/.test(phone)) { errorEl.textContent = 'Phone must be in format +232XXXXXXXX.'; show(errorEl); return; }
                         saveContactBtn.disabled = true; saveContactBtn.textContent = 'Saving...';
                         adminApiRequest('/api/admin/users/' + user.id + '/contact', { method: 'PUT', body: { email: email, phone: phone } })
-                            .then(function (updated) { showToast(updated.emailVerified ? 'Contact details updated.' : 'Contact updated. A verification code was sent to the new email.'); loadUsers(); overlay.classList.remove('active'); })
+                            .then(function (updated) {
+                                showToast(updated.emailVerified ? 'Contact details updated.' : 'Contact updated. A verification code was sent to the new email.');
+                                if (returnScreen === 'admin-management') loadAdminList(); else loadUsers();
+                                openUserDetail(updated, accountDetailReturnScreen);
+                            })
                             .catch(function (e) { errorEl.textContent = e.message || 'Failed to update contact details.'; show(errorEl); })
                             .finally(function () { saveContactBtn.disabled = false; saveContactBtn.textContent = 'Save email & phone'; });
                     });
@@ -2559,9 +3437,8 @@
                         adminApiRequest('/api/admin/users/' + user.id + '/reset-login-protection', { method: 'PUT' })
                             .then(function (updated) {
                                 showToast('Login protection reset.');
-                                overlay.classList.remove('active');
-                                loadUsers();
-                                if (updated.role !== 'USER') loadAdminList();
+                                if (updated.role !== 'USER') loadAdminList(); else loadUsers();
+                                openUserDetail(updated, accountDetailReturnScreen);
                             })
                             .catch(function (e) { showToast(e.message || 'Failed to reset login protection.'); })
                             .finally(function () { resetLoginBtn.disabled = false; resetLoginBtn.textContent = '↻ Reset Login Protection'; });
@@ -2573,79 +3450,37 @@
                     verifyEmailBtn.addEventListener('click', function () {
                         if (!confirm('Mark this user email as verified?')) return;
                         adminApiRequest('/api/admin/users/' + user.id + '/verify-email', { method: 'PUT' })
-                            .then(function () { showToast('User email verified.'); loadUsers(); overlay.classList.remove('active'); })
+                            .then(function (updated) {
+                                showToast('User email verified.');
+                                if (returnScreen === 'admin-management') loadAdminList(); else loadUsers();
+                                openUserDetail(updated, accountDetailReturnScreen);
+                            })
                             .catch(function (e) { showToast(e.message || 'Failed to verify email.'); });
                     });
                 }
 
-                if (isSuper) {
-                    toggleBtn.style.display = 'none';
-                } else {
-                    toggleBtn.style.display = 'block';
-                    if (isLocked) {
-                        toggleBtn.textContent = '🔓 Unlock User';
-                        toggleBtn.className = 'btn-sm success';
-                    } else if (isActive) {
-                        toggleBtn.textContent = '🔒 Deactivate';
-                        toggleBtn.className = 'btn-sm danger';
-                    } else {
-                        toggleBtn.textContent = '✅ Activate';
-                        toggleBtn.className = 'btn-sm success';
-                    }
+                var toggleBtn = document.getElementById('account-detail-toggle');
+                if (toggleBtn) {
+                    toggleBtn.addEventListener('click', function () {
+                        var id = user.id;
+                        var action = isLocked ? 'unlock' : (isActive ? 'deactivate' : 'activate');
+                        if (!confirm('Are you sure you want to ' + action + ' this account?')) return;
+                        toggleBtn.disabled = true;
+                        toggleBtn.textContent = action === 'unlock' ? 'Unlocking…' : (action === 'activate' ? 'Activating…' : 'Deactivating…');
+                        var endpoint = isLocked ? '/api/admin/users/' + id + '/unlock' : '/api/admin/users/' + id + '/toggle';
+                        var options = isLocked ? { method: 'PUT' } : { method: 'PUT', body: { active: !isActive } };
+                        adminApiRequest(endpoint, options)
+                            .then(function (updated) {
+                                showToast('Account ' + action + 'd successfully.');
+                                if (returnScreen === 'admin-management') loadAdminList(); else loadUsers();
+                                openUserDetail(updated, accountDetailReturnScreen);
+                            })
+                            .catch(function (err) { showToast(err.message || 'Failed to update account.'); toggleBtn.disabled = false; });
+                    });
                 }
 
-                toggleBtn.dataset.userId = user.id;
-                toggleBtn.dataset.active = isActive;
-                toggleBtn.dataset.locked = isLocked;
-
-                var newToggle = toggleBtn.cloneNode(true);
-                toggleBtn.parentNode.replaceChild(newToggle, toggleBtn);
-
-                newToggle.addEventListener('click', function () {
-                    var id = this.dataset.userId;
-                    var active = this.dataset.active === 'true';
-                    var locked = this.dataset.locked === 'true';
-
-                    var action = '';
-                    if (locked) {
-                        action = 'unlock';
-                    } else if (active) {
-                        action = 'deactivate';
-                    } else {
-                        action = 'activate';
-                    }
-
-                    if (!confirm('Are you sure you want to ' + action + ' this account?')) return;
-                    var overlay = document.getElementById('user-modal-overlay');
-                    overlay.classList.remove('active');
-
-                    var endpoint = locked
-                        ? '/api/admin/users/' + id + '/unlock'
-                        : '/api/admin/users/' + id + '/toggle';
-                    var options = locked
-                        ? { method: 'PUT' }
-                        : { method: 'PUT', body: { active: !active } };
-
-                    adminApiRequest(endpoint, options)
-                        .then(function () {
-                            showToast('User ' + action + 'd successfully.');
-                            loadUsers();
-                        })
-                        .catch(function (err) {
-                            showToast(err.message || 'Failed to update user.');
-                            loadUsers();
-                        });
-                });
-
-                var newClose = closeBtn.cloneNode(true);
-                closeBtn.parentNode.replaceChild(newClose, closeBtn);
-                newClose.addEventListener('click', function () {
-                    overlay.classList.remove('active');
-                });
-                overlay.onclick = function (e) {
-                    if (e.target === overlay) overlay.classList.remove('active');
-                };
-                overlay.classList.add('active');
+                document.getElementById('account-detail-back-action').addEventListener('click', returnFromAccountDetail);
+                openSubScreen(accountDetailScreen);
             }
 
             document.getElementById('user-search').addEventListener('input', function (e) {
@@ -2658,6 +3493,243 @@
                 });
                 renderUsers(filtered);
             });
+
+            // ==============================================================
+            // ADMIN MESSAGING
+            // ==============================================================
+            var messagingUsers = [];
+            var messagingSelectedUserIds = new Set();
+            var messagingPickerSnapshot = new Set();
+
+            function updateMessagingRecipientCount() {
+                var count = messagingSelectedUserIds.size;
+                var countEl = document.getElementById('messaging-recipient-count');
+                var detailEl = document.getElementById('messaging-recipient-detail');
+                if (countEl) countEl.textContent = count + ' selected';
+                if (detailEl) detailEl.textContent = count ? count + ' customer' + (count === 1 ? '' : 's') + ' selected' : 'No customers selected';
+                renderMessagingSelectionPreview();
+            }
+
+            function renderMessagingSelectionPreview() {
+                var preview = document.getElementById('messaging-selection-preview');
+                if (!preview) return;
+                preview.innerHTML = '';
+                var selected = messagingUsers.filter(function (user) { return messagingSelectedUserIds.has(user.id); });
+                selected.slice(0, 5).forEach(function (user) {
+                    var chip = document.createElement('span');
+                    chip.className = 'messaging-selection-chip';
+                    chip.textContent = user.fullName || user.username || 'Customer';
+                    preview.appendChild(chip);
+                });
+                if (selected.length > 5) {
+                    var more = document.createElement('span');
+                    more.className = 'messaging-selection-chip';
+                    more.textContent = '+' + (selected.length - 5) + ' more';
+                    preview.appendChild(more);
+                }
+            }
+
+            function renderMessagingUsers(users) {
+                var list = document.getElementById('messaging-user-list');
+                if (!list) return;
+                list.innerHTML = '';
+
+                if (!users || users.length === 0) {
+                    list.innerHTML = '<div class="empty-state">No customer users found.</div>';
+                    updateMessagingRecipientCount();
+                    return;
+                }
+
+                users.forEach(function (user) {
+                    var row = document.createElement('label');
+                    row.className = 'messaging-user-option' + (messagingSelectedUserIds.has(user.id) ? ' selected' : '');
+
+                    var checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.checked = messagingSelectedUserIds.has(user.id);
+                    checkbox.addEventListener('change', function () {
+                        if (checkbox.checked) messagingSelectedUserIds.add(user.id);
+                        else messagingSelectedUserIds.delete(user.id);
+                        row.classList.toggle('selected', checkbox.checked);
+                        updateMessagingRecipientCount();
+                    });
+
+                    var info = document.createElement('div');
+                    info.className = 'messaging-user-info';
+                    var name = document.createElement('div');
+                    name.className = 'messaging-user-name';
+                    name.textContent = user.fullName || user.username || 'Customer';
+                    var meta = document.createElement('div');
+                    meta.className = 'messaging-user-meta';
+                    meta.textContent = [user.email, user.phone, user.accountNumber ? 'Acc. ' + user.accountNumber : '']
+                        .filter(Boolean).join(' · ');
+                    info.appendChild(name);
+                    info.appendChild(meta);
+
+                    row.appendChild(checkbox);
+                    row.appendChild(info);
+                    list.appendChild(row);
+                });
+
+                updateMessagingRecipientCount();
+            }
+
+            async function loadMessagingUsers() {
+                var loading = document.getElementById('messaging-user-loading');
+                var error = document.getElementById('messaging-user-error');
+                if (!loading || !error) return;
+                show(loading);
+                hide(error);
+
+                try {
+                    var users = await adminApiRequest('/api/admin/users?limit=10000');
+                    messagingUsers = (users || []).filter(function (user) {
+                        return user && user.role === 'USER';
+                    });
+                    var search = document.getElementById('messaging-user-search');
+                    renderMessagingUsers(filterMessagingUsers(search ? search.value : ''));
+                } catch (e) {
+                    error.textContent = e.message || 'Failed to load customer users.';
+                    show(error);
+                } finally {
+                    hide(loading);
+                }
+            }
+
+            function filterMessagingUsers(query) {
+                var q = String(query || '').trim().toLowerCase();
+                if (!q) return messagingUsers.slice();
+                return messagingUsers.filter(function (user) {
+                    return (user.fullName || '').toLowerCase().includes(q) ||
+                        (user.username || '').toLowerCase().includes(q) ||
+                        (user.email || '').toLowerCase().includes(q) ||
+                        (user.phone || '').toLowerCase().includes(q) ||
+                        (user.accountNumber || '').toLowerCase().includes(q);
+                });
+            }
+
+            function openMessagingPicker() {
+                var overlay = document.getElementById('messaging-picker-overlay');
+                if (!overlay) return;
+                messagingPickerSnapshot = new Set(messagingSelectedUserIds);
+                overlay.classList.add('open');
+                overlay.setAttribute('aria-hidden', 'false');
+                document.body.classList.add('drawer-open');
+                var search = document.getElementById('messaging-user-search');
+                if (search) {
+                    search.value = '';
+                    setTimeout(function () { search.focus(); }, 50);
+                }
+                if (!messagingUsers.length) loadMessagingUsers();
+                else renderMessagingUsers(messagingUsers);
+            }
+
+            function closeMessagingPicker(saveChanges) {
+                var overlay = document.getElementById('messaging-picker-overlay');
+                if (!overlay) return;
+                if (!saveChanges) {
+                    messagingSelectedUserIds = new Set(messagingPickerSnapshot);
+                }
+                overlay.classList.remove('open');
+                overlay.setAttribute('aria-hidden', 'true');
+                document.body.classList.remove('drawer-open');
+                updateMessagingRecipientCount();
+            }
+
+            var messagingOpenPicker = document.getElementById('messaging-open-picker');
+            if (messagingOpenPicker) messagingOpenPicker.addEventListener('click', openMessagingPicker);
+
+            var messagingPickerClose = document.getElementById('messaging-picker-close');
+            if (messagingPickerClose) messagingPickerClose.addEventListener('click', function () { closeMessagingPicker(false); });
+
+            var messagingPickerCancel = document.getElementById('messaging-picker-cancel');
+            if (messagingPickerCancel) messagingPickerCancel.addEventListener('click', function () { closeMessagingPicker(false); });
+
+            var messagingPickerDone = document.getElementById('messaging-picker-done');
+            if (messagingPickerDone) messagingPickerDone.addEventListener('click', function () { closeMessagingPicker(true); });
+
+            var messagingPickerOverlay = document.getElementById('messaging-picker-overlay');
+            if (messagingPickerOverlay) messagingPickerOverlay.addEventListener('click', function (e) {
+                if (e.target === messagingPickerOverlay) closeMessagingPicker(false);
+            });
+
+            var messagingSearch = document.getElementById('messaging-user-search');
+            if (messagingSearch) messagingSearch.addEventListener('input', function () {
+                renderMessagingUsers(filterMessagingUsers(messagingSearch.value));
+            });
+
+            var messagingSelectAll = document.getElementById('messaging-select-all');
+            if (messagingSelectAll) messagingSelectAll.addEventListener('click', function () {
+                filterMessagingUsers(messagingSearch ? messagingSearch.value : '').forEach(function (user) {
+                    messagingSelectedUserIds.add(user.id);
+                });
+                renderMessagingUsers(filterMessagingUsers(messagingSearch ? messagingSearch.value : ''));
+            });
+
+            var messagingClearAll = document.getElementById('messaging-clear-all');
+            if (messagingClearAll) messagingClearAll.addEventListener('click', function () {
+                messagingSelectedUserIds.clear();
+                renderMessagingUsers(filterMessagingUsers(messagingSearch ? messagingSearch.value : ''));
+            });
+
+            var messagingSendBtn = document.getElementById('messaging-send-btn');
+            if (messagingSendBtn) {
+                messagingSendBtn.addEventListener('click', async function () {
+                    var titleEl = document.getElementById('messaging-title');
+                    var messageEl = document.getElementById('messaging-message');
+                    var resultEl = document.getElementById('messaging-result');
+                    var title = titleEl ? titleEl.value.trim() : '';
+                    var message = messageEl ? messageEl.value.trim() : '';
+                    var userIds = Array.from(messagingSelectedUserIds);
+
+                    hide(resultEl);
+                    if (!userIds.length) {
+                        resultEl.textContent = 'Choose at least one customer.';
+                        resultEl.className = 'messaging-result error';
+                        show(resultEl);
+                        return;
+                    }
+                    if (!title) {
+                        resultEl.textContent = 'Enter a notification title.';
+                        resultEl.className = 'messaging-result error';
+                        show(resultEl);
+                        return;
+                    }
+                    if (!message) {
+                        resultEl.textContent = 'Enter a notification message.';
+                        resultEl.className = 'messaging-result error';
+                        show(resultEl);
+                        return;
+                    }
+
+                    messagingSendBtn.disabled = true;
+                    messagingSendBtn.textContent = 'Sending…';
+
+                    try {
+                        var created = await adminApiRequest('/api/admin/notifications', {
+                            method: 'POST',
+                            body: { userIds: userIds, title: title, message: message }
+                        });
+
+                        var sentCount = Array.isArray(created) ? created.length : userIds.length;
+                        resultEl.textContent = 'Notification sent to ' + sentCount + ' customer' + (sentCount === 1 ? '' : 's') + '.';
+                        resultEl.className = 'messaging-result success';
+                        show(resultEl);
+                        titleEl.value = '';
+                        messageEl.value = '';
+                        messagingSelectedUserIds.clear();
+                        updateMessagingRecipientCount();
+                        showToast('In-app notification sent.');
+                    } catch (e) {
+                        resultEl.textContent = e.message || 'Failed to send in-app notification.';
+                        resultEl.className = 'messaging-result error';
+                        show(resultEl);
+                    } finally {
+                        messagingSendBtn.disabled = false;
+                        messagingSendBtn.textContent = 'Send In-App Notification';
+                    }
+                });
+            }
 
             // ==============================================================
             // WHATSAPP SETTINGS
@@ -2786,14 +3858,55 @@
             // ERRORS
             // ==============================================================
             var allErrors = [];
+            var knownErrorIds = {};
+            var errorSourceFilter = 'all';
+            var errorAutoRefreshTimer = null;
 
-            function loadErrors() {
+            // Started when the Errors tab becomes active, stopped the moment the admin
+            // leaves it (or logs out) - so it never polls in the background for no reason.
+            function startErrorAutoRefresh() {
+                stopErrorAutoRefresh();
+                errorAutoRefreshTimer = setInterval(function () { loadErrors(true); }, 5000);
+            }
+            function stopErrorAutoRefresh() {
+                if (errorAutoRefreshTimer) { clearInterval(errorAutoRefreshTimer); errorAutoRefreshTimer = null; }
+            }
+
+            function applyErrorFilters(list) {
+                var q = (document.getElementById('error-search').value || '').toLowerCase();
+                return list.filter(function (err) {
+                    if (errorSourceFilter !== 'all' && (err.sourceApp || 'user') !== errorSourceFilter) return false;
+                    if (!q) return true;
+                    return (err.errorType || '').toLowerCase().includes(q) ||
+                        (err.message || '').toLowerCase().includes(q) ||
+                        (err.url || '').toLowerCase().includes(q) ||
+                        (err.endpointPath || '').toLowerCase().includes(q);
+                });
+            }
+
+            function updateSourceCounts(list) {
+                var u = 0, a = 0;
+                list.forEach(function (err) { if ((err.sourceApp || 'user') === 'admin') a++; else u++; });
+                document.getElementById('error-count-user').textContent = u;
+                document.getElementById('error-count-admin').textContent = a;
+            }
+
+            document.querySelectorAll('[data-source-filter]').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    document.querySelectorAll('[data-source-filter]').forEach(function (b) { b.classList.remove('filter-active'); });
+                    btn.classList.add('filter-active');
+                    errorSourceFilter = btn.dataset.sourceFilter;
+                    renderErrors(applyErrorFilters(allErrors));
+                });
+            });
+
+            // isBackgroundPoll=true: a silent 5s refresh (no spinner, no wiping the list,
+            // failures stay silent so a one-off network blip never spams the admin).
+            function loadErrors(isBackgroundPoll) {
                 var loading = document.getElementById('error-list-loading');
                 var error = document.getElementById('error-list-error');
                 var list = document.getElementById('error-list');
-                show(loading);
-                hide(error);
-                list.innerHTML = '';
+                if (!isBackgroundPoll) { show(loading); hide(error); list.innerHTML = ''; }
 
                 adminApiRequest('/api/admin/errors/stats')
                     .then(function (stats) {
@@ -2815,11 +3928,26 @@
                         return adminApiRequest('/api/admin/errors', { params: { limit: 200 } });
                     })
                     .then(function (errors) {
-                        allErrors = errors || [];
-                        renderErrors(allErrors);
-                        hide(loading);
+                        errors = errors || [];
+                        var newIds = [];
+                        if (isBackgroundPoll) {
+                            errors.forEach(function (e) { if (e.id && !knownErrorIds[e.id]) newIds.push(e.id); });
+                        }
+                        allErrors = errors;
+                        var idMap = {};
+                        errors.forEach(function (e) { if (e.id) idMap[e.id] = true; });
+                        knownErrorIds = idMap;
+                        updateSourceCounts(allErrors);
+                        renderErrors(applyErrorFilters(allErrors), newIds);
+                        if (!isBackgroundPoll) hide(loading);
+                        if (isBackgroundPoll && newIds.length > 0) {
+                            var newFromUser = errors.filter(function (e) { return newIds.indexOf(e.id) !== -1 && (e.sourceApp || 'user') === 'user'; }).length;
+                            showToast(newIds.length + ' new error' + (newIds.length > 1 ? 's' : '') +
+                                (newFromUser > 0 ? ' (' + newFromUser + ' from user app)' : ''));
+                        }
                     })
                     .catch(function (e) {
+                        if (isBackgroundPoll) return; // silent - don't spam on a brief blip
                         hide(loading);
                         if (e.status === 404) {
                             error.textContent = 'Error endpoints not available. Create them in your backend.';
@@ -2831,38 +3959,56 @@
                     });
             }
 
-            function renderErrors(errors) {
+            function renderErrors(errors, newIds) {
                 var list = document.getElementById('error-list');
                 list.innerHTML = '';
                 if (!errors || errors.length === 0) {
                     list.innerHTML = '<div class="empty-state">No errors logged. 🎉</div>';
                     return;
                 }
+                newIds = newIds || [];
 
                 errors.forEach(function (err) {
                     var card = document.createElement('div');
-                    card.className = 'item-card';
+                    card.className = 'item-card' + (newIds.indexOf(err.id) !== -1 ? ' error-new' : '');
                     var iconMap = {
                         'JS_ERROR': '🛑', 'API_ERROR': '🌐', 'RAGE_CLICK': '😤',
                         'NETWORK_ERROR': '📡', 'VALIDATION_ERROR': '⚠️',
-                        'PROMISE_REJECTION': '💔', 'CONSOLE_ERROR': '📣'
+                        'PROMISE_REJECTION': '💔', 'CONSOLE_ERROR': '📣', 'CLIENT_BUG': '🐛'
                     };
                     var icon = iconMap[err.errorType] || '🔴';
+                    var isAdmin = (err.sourceApp || 'user') === 'admin';
+
+                    // Traceability: exactly where this happened. For an API/network failure
+                    // that's the endpoint + method; for a JS crash it's the page + line:col.
+                    var whereHtml = '';
+                    if (err.endpointPath) {
+                        whereHtml = '<span style="font-size:11px;color:var(--muted);font-family:monospace;">' +
+                            escapeHtml(err.httpMethod || 'GET') + ' ' + escapeHtml(err.endpointPath) + '</span>';
+                    }
+                    var pageHtml = '<span style="font-size:11px;color:var(--muted);">' +
+                        escapeHtml(err.url ? err.url.replace(/^https?:\/\/[^\/]+/, '') : '') +
+                        (err.line ? ':' + escapeHtml(err.line) + (err.col ? ':' + escapeHtml(err.col) : '') : '') +
+                        '</span>';
+                    var userHtml = err.userId ? '<span style="font-size:11px;color:var(--muted);" title="Affected user ID">👤 ' +
+                        escapeHtml(String(err.userId).substring(0, 8)) + '…</span>' : '';
 
                     card.innerHTML =
                         '<div style="font-size:18px;flex-shrink:0;">' + icon + '</div>' +
                         '<div class="item-info">' +
-                        '<div class="name">' + escapeHtml(err.errorType || 'Unknown') + '</div>' +
+                        '<div class="name">' + escapeHtml(err.errorType || 'Unknown') +
+                        ' <span class="error-app-badge ' + (isAdmin ? 'admin' : 'user') + '">' + (isAdmin ? 'ADMIN APP' : 'USER APP') + '</span>' +
+                        '</div>' +
                         '<div class="meta">' +
                         '<span style="font-size:12px;">' + escapeHtml(err.message || 'No message') + '</span>' +
                         (err.statusCode ? '<span style="font-weight:600;color:var(--error);">' + escapeHtml(err.statusCode) + '</span>' : '') +
-                        '<span style="font-size:11px;color:var(--muted);">' + escapeHtml(err.url ? err.url.replace(/^https?:\/\/[^\/]+/, '') : '') + '</span>' +
+                        whereHtml + pageHtml + userHtml +
                         '<span style="font-size:11px;color:var(--muted);">' + (err.createdAt ? new Date(err.createdAt).toLocaleString() : '') + '</span>' +
                         '</div>' +
                         (err.stack ? '<div style="font-size:10px;color:var(--muted);margin-top:4px;padding:4px 8px;background:#fff;border-radius:6px;border:1px solid var(--border);overflow-x:auto;white-space:pre-wrap;word-break:break-word;">' + escapeHtml(err.stack.substring(0, 300)) + (err.stack.length > 300 ? '…' : '') + '</div>' : '') +
                         '</div>' +
                         '<div class="item-actions">' +
-                        '<button class="icon-btn" data-action="copy" data-msg="' + escapeHtml(err.message || '') + '">&#128203;</button>' +
+                        '<button class="icon-btn" data-action="copy" data-msg="' + escapeHtml((err.httpMethod && err.endpointPath ? err.httpMethod + ' ' + err.endpointPath + ' — ' : '') + (err.message || '')) + '">&#128203;</button>' +
                         '</div>';
                     list.appendChild(card);
                 });
@@ -2877,32 +4023,28 @@
                 });
             }
 
-            document.getElementById('error-search').addEventListener('input', function (e) {
-                var q = e.target.value.toLowerCase();
-                var filtered = allErrors.filter(function (err) {
-                    return (err.errorType || '').toLowerCase().includes(q) ||
-                        (err.message || '').toLowerCase().includes(q) ||
-                        (err.url || '').toLowerCase().includes(q);
-                });
-                renderErrors(filtered);
+            document.getElementById('error-search').addEventListener('input', function () {
+                renderErrors(applyErrorFilters(allErrors));
             });
 
-            document.getElementById('error-refresh-btn').addEventListener('click', loadErrors);
+            document.getElementById('error-refresh-btn').addEventListener('click', function () { loadErrors(false); });
 
             document.getElementById('error-clear-btn').addEventListener('click', function () {
-                showModal('Clear All Errors', 'This will permanently delete all error logs. Are you sure?', function () {
+                showModal('Clear All Errors', 'This will permanently delete all error logs (both apps). Are you sure?', function () {
                     var clearBtn = document.getElementById('error-clear-btn');
                     clearBtn.disabled = true;
                     adminApiRequest('/api/admin/errors', { method: 'DELETE' })
                         .then(function () {
                             allErrors = [];
+                            knownErrorIds = {};
                             renderErrors([]);
+                            updateSourceCounts([]);
                             document.getElementById('error-total').textContent = '0';
                             document.getElementById('error-24h').textContent = '0';
                             document.getElementById('error-7d').textContent = '0';
                             document.getElementById('error-type-chart').innerHTML = '<span style="color:#6E7C82;font-size:13px;">No errors logged yet.</span>';
                             showToast('All errors cleared.');
-                            setTimeout(loadErrors, 150);
+                            setTimeout(function () { loadErrors(false); }, 150);
                         })
                         .catch(function (err) {
                             showToast(err.message || 'Failed to clear errors.');
@@ -2937,187 +4079,187 @@
             });
 
             // ==============================================================
-            // PROFILE – with PIN change & Admin Management
+            // ADMIN PROFILE / PIN / ADMIN MANAGEMENT / ABOUT SCREENS
             // ==============================================================
-            function openProfile() {
+            function openSubScreen(screenEl) {
+                closeAdminDrawer();
                 mainScreen.classList.remove('active');
-                profileScreen.classList.add('active');
+                profileScreen.classList.remove('active');
+                document.getElementById('screen-pin').classList.remove('active');
+                document.getElementById('screen-admin-management').classList.remove('active');
+                document.getElementById('screen-about').classList.remove('active');
+                accountDetailScreen.classList.remove('active');
+                screenEl.classList.add('active');
+            }
+
+            function openProfile() {
+                openSubScreen(profileScreen);
                 renderProfile();
             }
 
-            document.getElementById('profile-back-btn').addEventListener('click', function () {
+            function openPinScreen() {
+                openSubScreen(document.getElementById('screen-pin'));
+                renderPinScreen();
+            }
+
+            function openAdminManagement() {
+                if (currentUserRole !== 'SUPER_ADMIN') {
+                    showToast('Admin Management is available only to the Super Admin.');
+                    return;
+                }
+                openSubScreen(document.getElementById('screen-admin-management'));
+                renderAdminManagement();
+            }
+
+            function openAboutScreen() {
+                openSubScreen(document.getElementById('screen-about'));
+            }
+
+            function returnToMainScreen() {
                 profileScreen.classList.remove('active');
+                document.getElementById('screen-pin').classList.remove('active');
+                document.getElementById('screen-admin-management').classList.remove('active');
+                document.getElementById('screen-about').classList.remove('active');
+                accountDetailScreen.classList.remove('active');
                 mainScreen.classList.add('active');
-            });
+                setBottomNavActive('home');
+                showMainSection('dashboard');
+            }
+
+            document.getElementById('profile-back-btn').addEventListener('click', returnToMainScreen);
+            document.getElementById('pin-back-btn').addEventListener('click', returnToMainScreen);
+            document.getElementById('admin-management-back-btn').addEventListener('click', returnToMainScreen);
+            document.getElementById('about-back-btn').addEventListener('click', returnToMainScreen);
+
+            function returnFromAccountDetail() {
+                accountDetailScreen.classList.remove('active');
+                mainScreen.classList.remove('active');
+                var parent = accountDetailReturnScreen === 'admin-management' ? document.getElementById('screen-admin-management') : null;
+                if (parent) {
+                    parent.classList.add('active');
+                    return;
+                }
+                mainScreen.classList.add('active');
+                setBottomNavActive('home');
+                showMainSection('users');
+            }
+
+            document.getElementById('account-detail-back-btn').addEventListener('click', returnFromAccountDetail);
 
             async function renderProfile() {
                 var content = document.getElementById('profile-content');
                 content.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading profile…</div>';
-
                 try {
                     var user = await adminApiRequest('/api/admin/me');
                     var isSuper = user.role === 'SUPER_ADMIN';
-
-                    var html = `
+                    content.innerHTML = `
+                        <div class="admin-card profile-hero-card">
+                            <div class="profile-avatar-large">${escapeHtml(String(user.fullName || user.username || 'A').trim().charAt(0).toUpperCase() || 'A')}</div>
+                            <div class="profile-hero-info">
+                                <h2>${escapeHtml(user.fullName || user.username || 'Admin')}</h2>
+                                <p>${escapeHtml(user.email || '—')}</p>
+                                <span class="badge ${isSuper ? 'super' : 'active'}">${isSuper ? '👑 Super Admin' : 'Admin'}</span>
+                            </div>
+                        </div>
                         <div class="admin-card">
-                            <div class="profile-row"><span class="label">Email</span><span class="value">${escapeHtml(user.email)}</span></div>
-                            <div class="profile-row"><span class="label">Email status</span><span class="value">${user.emailVerified ? '✅ Verified' : '<button class=\"btn-sm success\" id=\"verify-my-email-btn\">Verify my email</button>'}</span></div>
+                            <p class="admin-card-title">Account Information</p>
+                            <div class="profile-row"><span class="label">Email</span><span class="value">${escapeHtml(user.email || '—')}</span></div>
+                            <div class="profile-row"><span class="label">Email status</span><span class="value">${user.emailVerified ? '✅ Verified' : '<button class="btn-sm success" id="verify-my-email-btn">Verify my email</button>'}</span></div>
                             <div class="profile-row"><span class="label">Full Name</span><span class="value">${escapeHtml(user.fullName || '—')}</span></div>
+                            <div class="profile-row"><span class="label">Username</span><span class="value">${escapeHtml(user.username || '—')}</span></div>
                             <div class="profile-row"><span class="label">Account Number</span><span class="value">${escapeHtml(user.accountNumber || '—')}</span></div>
-                            <div class="profile-row"><span class="label">Role</span><span class="value"><span class="badge ${isSuper ? 'super' : 'active'}">${isSuper ? '👑 Super Admin' : 'Admin'}</span></span></div>
-                        </div>
-
-                        <div class="admin-card">
-                            <p class="admin-card-title">Change PIN</p>
-                            <p class="admin-card-sub">Set or update your 4-digit PIN for session protection</p>
-                            <div class="pin-change-form">
-                                <input type="password" id="pin-current-password-input" placeholder="Current account password" autocomplete="current-password" style="margin-bottom:8px;" />
-                                <div class="pin-input-group">
-                                    <input type="password" id="new-pin-input" maxlength="4" placeholder="New PIN" inputmode="numeric" autocomplete="off" />
-                                    <input type="password" id="confirm-pin-input" maxlength="4" placeholder="Confirm" inputmode="numeric" autocomplete="off" />
-                                    <button class="btn-small" id="update-pin-btn">Update</button>
-                                </div>
-                                <div id="pin-update-error" class="pin-error hidden"></div>
-                                <div id="pin-update-success" class="pin-success hidden">PIN updated successfully!</div>
-                            </div>
-                        </div>
-                    `;
-
-                    // If super admin, show admin management section
-                    if (isSuper) {
-                        html += `
-                            <div class="admin-management">
-                                <p class="admin-card-title">Admin Management</p>
-                                <p class="admin-card-sub">Add new admins and manage existing ones</p>
-                                <div class="add-admin-form">
-                                    <input type="email" id="new-admin-email" placeholder="Admin Email" />
-                                    <div class="password-field-wrap">
-                                        <input type="password" id="new-admin-password" placeholder="Password" />
-                                        <button type="button" class="password-toggle-btn" data-target="new-admin-password" aria-label="Show password">&#128065;</button>
-                                    </div>
-                                    <input type="text" id="new-admin-fullname" placeholder="Full Name" />
-                                    <input type="text" id="new-admin-username" placeholder="Username" />
-                                    <input type="text" id="new-admin-phone" placeholder="Phone (e.g. 76123456)" />
-                                    <button class="btn-primary" id="create-admin-btn">Create Admin</button>
-                                    <div id="create-admin-error" class="error-state hidden"></div>
-                                    <div id="create-admin-success" class="inline-success hidden"><span>&#10003;</span><span>Admin created successfully!</span></div>
-                                </div>
-                                <div id="admin-list" class="admin-list" style="margin-top:16px;"></div>
-                            </div>
-                        `;
-                    }
-
-                    content.innerHTML = html;
-
-                    var verifyMyEmailBtn = document.getElementById('verify-my-email-btn');
-                    if (verifyMyEmailBtn) {
-                        verifyMyEmailBtn.addEventListener('click', function () {
-                            adminApiRequest('/api/admin/profile/verify-email', { method: 'PUT' })
-                                .then(function () { showToast('Your admin email is now verified.'); renderProfile(); })
-                                .catch(function (e) { showToast(e.message || 'Failed to verify your email.'); });
-                        });
-                    }
-
-                    // PIN change handler
-                    document.getElementById('update-pin-btn').addEventListener('click', function () {
-                        var newPin = document.getElementById('new-pin-input').value.trim();
-                        var confirmPin = document.getElementById('confirm-pin-input').value.trim();
-                        var currentPasswordEl = document.getElementById('pin-current-password-input');
-                        var currentPassword = currentPasswordEl ? currentPasswordEl.value : '';
-                        var errorEl = document.getElementById('pin-update-error');
-                        var successEl = document.getElementById('pin-update-success');
-                        hide(errorEl);
-                        hide(successEl);
-
-                        if (!currentPassword) {
-                            errorEl.textContent = 'Enter your current account password to change your PIN.';
-                            show(errorEl);
-                            return;
-                        }
-                        if (newPin.length !== 4 || !/^\d{4}$/.test(newPin)) {
-                            errorEl.textContent = 'PIN must be exactly 4 digits.';
-                            show(errorEl);
-                            return;
-                        }
-                        if (newPin !== confirmPin) {
-                            errorEl.textContent = 'PINs do not match.';
-                            show(errorEl);
-                            return;
-                        }
-
-                        adminApiRequest('/api/admin/pin', {
-                            method: 'POST',
-                            body: { newPin: newPin, currentPassword: currentPassword }
-                        })
-                            .then(function () {
-                                successEl.textContent = 'PIN updated successfully!';
-                                show(successEl);
-                                document.getElementById('new-pin-input').value = '';
-                                document.getElementById('confirm-pin-input').value = '';
-                                if (currentPasswordEl) currentPasswordEl.value = '';
-                                showToast('PIN updated successfully!');
-                            })
-                            .catch(function (err) {
-                                errorEl.textContent = err.message || 'Failed to update PIN.';
-                                show(errorEl);
-                            });
+                            <div class="profile-row" style="border-bottom:none;"><span class="label">Role</span><span class="value"><span class="badge ${isSuper ? 'super' : 'active'}">${isSuper ? 'SUPER ADMIN' : 'ADMIN'}</span></span></div>
+                        </div>`;
+                    var verifyBtn = document.getElementById('verify-my-email-btn');
+                    if (verifyBtn) verifyBtn.addEventListener('click', function () {
+                        adminApiRequest('/api/admin/profile/verify-email', {method:'PUT'})
+                            .then(function(){ showToast('Your admin email is now verified.'); renderProfile(); })
+                            .catch(function(e){ showToast(e.message || 'Failed to verify your email.'); });
                     });
-
-                    // If super admin, load admin list and add admin handler
-                    if (isSuper) {
-                        loadAdminList();
-
-                        document.getElementById('create-admin-btn').addEventListener('click', function () {
-                            var email = document.getElementById('new-admin-email').value.trim();
-                            var password = document.getElementById('new-admin-password').value;
-                            var fullName = document.getElementById('new-admin-fullname').value.trim();
-                            var username = document.getElementById('new-admin-username').value.trim();
-                            var phone = document.getElementById('new-admin-phone').value.trim();
-
-                            var errorEl = document.getElementById('create-admin-error');
-                            var successEl = document.getElementById('create-admin-success');
-                            hide(errorEl);
-                            hide(successEl);
-
-                            if (!email || !password || !fullName || !username || !phone) {
-                                errorEl.textContent = 'Email, password, full name, username, and phone are required.';
-                                show(errorEl);
-                                return;
-                            }
-
-                            var btn = this;
-                            btn.disabled = true;
-                            btn.textContent = 'Creating...';
-
-                            adminApiRequest('/api/admin/admins', {
-                                method: 'POST',
-                                body: { email, password, fullName, username, phone }
-                            })
-                                .then(function () {
-                                    show(successEl);
-                                    setTimeout(function () { hide(successEl); }, 3000);
-                                    showToast('Admin created successfully!');
-                                    document.getElementById('new-admin-email').value = '';
-                                    document.getElementById('new-admin-password').value = '';
-                                    document.getElementById('new-admin-fullname').value = '';
-                                    document.getElementById('new-admin-username').value = '';
-                                    document.getElementById('new-admin-phone').value = '';
-                                    loadAdminList();
-                                })
-                                .catch(function (err) {
-                                    errorEl.textContent = err.message || 'Failed to create admin.';
-                                    show(errorEl);
-                                })
-                                .finally(function () {
-                                    btn.disabled = false;
-                                    btn.textContent = 'Create Admin';
-                                });
-                        });
-                    }
-
                 } catch (e) {
-                    content.innerHTML = '<div class="error-state">Failed to load profile: ' + e.message + '</div>';
+                    content.innerHTML = '<div class="error-state">Failed to load profile: ' + escapeHtml(e.message || 'Unknown error') + '</div>';
                 }
+            }
+
+            function renderPinScreen() {
+                var content = document.getElementById('pin-content');
+                content.innerHTML = `
+                    <div class="admin-card">
+                        <div class="subscreen-card-icon">⚿</div>
+                        <p class="admin-card-title">Update your App PIN</p>
+                        <p class="admin-card-sub">Your 4-digit PIN protects an active admin session.</p>
+                        <div class="pin-change-form">
+                            <input type="password" id="pin-current-password-input" placeholder="Current account password" autocomplete="current-password" style="margin-bottom:8px;" />
+                            <div class="pin-input-group">
+                                <input type="password" id="new-pin-input" maxlength="4" placeholder="New PIN" inputmode="numeric" autocomplete="off" />
+                                <input type="password" id="confirm-pin-input" maxlength="4" placeholder="Confirm" inputmode="numeric" autocomplete="off" />
+                                <button class="btn-small" id="update-pin-btn">Update</button>
+                            </div>
+                            <div id="pin-update-error" class="pin-error hidden"></div>
+                            <div id="pin-update-success" class="pin-success hidden">PIN updated successfully!</div>
+                        </div>
+                    </div>`;
+
+                document.getElementById('update-pin-btn').addEventListener('click', function () {
+                    var newPin = document.getElementById('new-pin-input').value.trim();
+                    var confirmPin = document.getElementById('confirm-pin-input').value.trim();
+                    var currentPasswordEl = document.getElementById('pin-current-password-input');
+                    var currentPassword = currentPasswordEl.value;
+                    var errorEl = document.getElementById('pin-update-error');
+                    var successEl = document.getElementById('pin-update-success');
+                    hide(errorEl); hide(successEl);
+                    if (!currentPassword) { errorEl.textContent='Enter your current account password to change your PIN.'; show(errorEl); return; }
+                    if (!/^\d{4}$/.test(newPin)) { errorEl.textContent='PIN must be exactly 4 digits.'; show(errorEl); return; }
+                    if (newPin !== confirmPin) { errorEl.textContent='PINs do not match.'; show(errorEl); return; }
+                    var btn = this; btn.disabled=true; btn.textContent='Updating…';
+                    adminApiRequest('/api/admin/pin',{method:'POST',body:{newPin:newPin,currentPassword:currentPassword}})
+                        .then(function(){ successEl.textContent='PIN updated successfully!'; show(successEl); document.getElementById('new-pin-input').value=''; document.getElementById('confirm-pin-input').value=''; currentPasswordEl.value=''; showToast('PIN updated successfully!'); })
+                        .catch(function(err){ errorEl.textContent=err.message || 'Failed to update PIN.'; show(errorEl); })
+                        .finally(function(){ btn.disabled=false; btn.textContent='Update'; });
+                });
+            }
+
+            function renderAdminManagement() {
+                var content = document.getElementById('admin-management-content');
+                content.innerHTML = `
+                    <div class="admin-card">
+                        <p class="admin-card-title">Create Admin</p>
+                        <p class="admin-card-sub">Only the Super Admin can create and manage administrator accounts.</p>
+                        <div class="add-admin-form">
+                            <input type="email" id="new-admin-email" placeholder="Admin Email" />
+                            <div class="password-field-wrap">
+                                <input type="password" id="new-admin-password" placeholder="Password" />
+                                <button type="button" class="password-toggle-btn" data-target="new-admin-password" aria-label="Show password">&#128065;</button>
+                            </div>
+                            <input type="text" id="new-admin-fullname" placeholder="Full Name" />
+                            <input type="text" id="new-admin-username" placeholder="Username" />
+                            <input type="text" id="new-admin-phone" placeholder="Phone (e.g. +23276123456)" />
+                            <button class="btn-primary" id="create-admin-btn">Create Admin</button>
+                            <div id="create-admin-error" class="error-state hidden"></div>
+                            <div id="create-admin-success" class="inline-success hidden"><span>&#10003;</span><span>Admin created successfully!</span></div>
+                        </div>
+                    </div>
+                    <div class="admin-card" style="margin-top:14px;">
+                        <p class="admin-card-title">Existing Administrators</p>
+                        <p class="admin-card-sub">Manage current admin accounts and their login protection.</p>
+                        <div id="admin-list" class="admin-list"></div>
+                    </div>`;
+
+                document.getElementById('create-admin-btn').addEventListener('click', function(){
+                    var email=document.getElementById('new-admin-email').value.trim();
+                    var password=document.getElementById('new-admin-password').value;
+                    var fullName=document.getElementById('new-admin-fullname').value.trim();
+                    var username=document.getElementById('new-admin-username').value.trim();
+                    var phone=document.getElementById('new-admin-phone').value.trim();
+                    var errorEl=document.getElementById('create-admin-error'); var successEl=document.getElementById('create-admin-success'); hide(errorEl); hide(successEl);
+                    if(!email||!password||!fullName||!username||!phone){errorEl.textContent='Email, password, full name, username, and phone are required.';show(errorEl);return;}
+                    var btn=this; btn.disabled=true; btn.textContent='Creating…';
+                    adminApiRequest('/api/admin/admins',{method:'POST',body:{email:email,password:password,fullName:fullName,username:username,phone:phone}})
+                        .then(function(){show(successEl);showToast('Admin created successfully!');['new-admin-email','new-admin-password','new-admin-fullname','new-admin-username','new-admin-phone'].forEach(function(id){document.getElementById(id).value='';});loadAdminList();})
+                        .catch(function(err){errorEl.textContent=err.message || 'Failed to create admin.';show(errorEl);})
+                        .finally(function(){btn.disabled=false;btn.textContent='Create Admin';});
+                });
+                loadAdminList();
             }
 
             // Load admin list (only for super admin)
@@ -3179,7 +4321,7 @@
                             e.stopPropagation();
                             var id = btn.dataset.id;
                             adminApiRequest('/api/admin/users/' + id)
-                                .then(function (admin) { openUserDetail(admin); })
+                                .then(function (admin) { openUserDetail(admin, 'admin-management'); })
                                 .catch(function (err) { showToast(err.message || 'Failed to load admin details.'); });
                         });
                     });
@@ -3249,9 +4391,13 @@
             // AUTO LOGIN CHECK
             // ==============================================================
             if (getToken()) {
+                try { currentAdminUser = JSON.parse(sessionStorage.getItem('deenwallet_admin_profile') || 'null'); } catch (e) { currentAdminUser = null; }
+                if (currentAdminUser) currentUserRole = currentAdminUser.role || 'ADMIN';
                 loginScreen.classList.remove('active');
                 mainScreen.classList.add('active');
-                loadDashboard();
+                updateAdminDrawerProfile();
+                setBottomNavActive('home');
+                showMainSection('dashboard');
                 loadWhatsApp();
                 if (isAdminSessionExpired()) {
                     showAdminPinModal('Your session timed out. Enter your PIN to continue.');
@@ -3319,6 +4465,7 @@
                 var AppPlugin = window.Capacitor.Plugins && window.Capacitor.Plugins.App;
                 if (!AppPlugin) return;
                 AppPlugin.addListener('backButton', function (data) {
+                    if (adminDrawer && adminDrawer.classList.contains('open')) { closeAdminDrawer(); return; }
                     if (pinModalOverlay && pinModalOverlay.classList.contains('active')) return; // never bypass the PIN lock
                     var userModalOverlay = document.getElementById('user-modal-overlay');
                     if (userModalOverlay && userModalOverlay.classList.contains('active')) {
@@ -3330,14 +4477,17 @@
                         genericModalOverlay.classList.remove('active');
                         return;
                     }
-                    if (profileScreen && profileScreen.classList.contains('active')) {
-                        var profileBackBtnEl = document.getElementById('profile-back-btn');
-                        if (profileBackBtnEl) { profileBackBtnEl.click(); return; }
+                    if (adminDrawer && adminDrawer.classList.contains('open')) { closeAdminDrawer(); return; }
+                    var activeSubscreen = document.querySelector('#screen-profile.active, #screen-pin.active, #screen-admin-management.active, #screen-account-detail.active, #screen-about.active');
+                    if (activeSubscreen) {
+                        var backButton = activeSubscreen.querySelector('.ussd-back');
+                        if (backButton) { backButton.click(); return; }
                     }
-                    var activeTab = document.querySelector('.nav-tab.active');
-                    if (activeTab && activeTab.dataset.tab !== 'dashboard') {
-                        var dashboardTab = document.querySelector('.nav-tab[data-tab="dashboard"]');
-                        if (dashboardTab) { dashboardTab.click(); return; }
+                    var bottomActive = document.querySelector('.bottom-nav-btn.active');
+                    if (bottomActive && bottomActive.dataset.bottomTab !== 'home') {
+                        setBottomNavActive('home');
+                        showMainSection('dashboard');
+                        return;
                     }
                     if (data && data.canGoBack) {
                         window.history.back();
@@ -3351,11 +4501,13 @@
             // PULL TO REFRESH
             // ==============================================================
             window.dwOnPullToRefresh = function () {
-                var activeTab = document.querySelector('.nav-tab.active');
-                var tab = activeTab ? activeTab.dataset.tab : 'dashboard';
-                if (tab === 'dashboard') loadDashboard();
-                else if (tab === 'users') loadUsers();
-                else if (tab === 'errors') loadErrors();
+                var visible = Object.keys(tabContents).find(function (key) {
+                    return tabContents[key] && !tabContents[key].classList.contains('hidden');
+                }) || 'dashboard';
+                if (visible === 'dashboard') loadDashboard();
+                else if (visible === 'users') loadUsers();
+                else if (visible === 'errors') loadErrors();
+                else if (visible === 'messaging') updateMessagingRecipientCount();
             };
             (function () {
                 var THRESHOLD = 70;
@@ -3408,7 +4560,7 @@
 
     <script src="config.js"></script>
     <script>setTimeout(function(){var splash=document.getElementById('admin-splash');if(splash)splash.classList.add('hide');},900);</script>
-    </div>
+</div>
 </body>
 
 </html>

@@ -77,7 +77,25 @@ public class AdminService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
     }
 
+    // Dashboard stats are 6 full-table aggregates (count/sum). Cached for 30 s so
+    // repeated dashboard loads / auto-refresh don't rescan the tables each time.
+    private static final long STATS_TTL_MS = 30_000;
+    private volatile AdminStatsResponse cachedStats;
+    private volatile long cachedStatsAtMs;
+
     public AdminStatsResponse getStats() {
+        long nowMs = System.currentTimeMillis();
+        AdminStatsResponse cached = cachedStats;
+        if (cached != null && nowMs - cachedStatsAtMs < STATS_TTL_MS) {
+            return cached;
+        }
+        AdminStatsResponse fresh = computeStats();
+        cachedStats = fresh;
+        cachedStatsAtMs = nowMs;
+        return fresh;
+    }
+
+    private AdminStatsResponse computeStats() {
         long totalUsers = userRepository.count();
         long verifiedUsers = userRepository.countByEmailVerifiedTrue();
         long totalTransactions = transactionRepository.count();

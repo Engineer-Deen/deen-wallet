@@ -223,11 +223,28 @@ public class AdminController {
     public ResponseEntity<AdminUserResponse> createAdmin(@Valid @RequestBody CreateAdminRequest request) {
         User currentUser = getCurrentUser();
         validateSuperAdmin(currentUser);
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        String email = request.getEmail().trim().toLowerCase(java.util.Locale.ROOT);
+
+        boolean adminEmailExists =
+                userRepository.findByEmailAndRole(email, "ADMIN").isPresent()
+                        || userRepository.findByEmailAndRole(email, "SUPER_ADMIN").isPresent();
+
+        if (adminEmailExists) {
+            throw new IllegalArgumentException("Email already registered");
         }
+
+        String phone = request.getPhone().trim();
+
+        boolean adminPhoneExists =
+                userRepository.findByPhoneAndRole(phone, "ADMIN").isPresent()
+                        || userRepository.findByPhoneAndRole(phone, "SUPER_ADMIN").isPresent();
+
+        if (adminPhoneExists) {
+            throw new IllegalArgumentException("Phone number already registered");
+        }
+
         User newAdmin = User.builder()
-                .email(request.getEmail())
+                .email(email)
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .fullName(request.getFullName())
                 .username(request.getUsername())
@@ -235,7 +252,7 @@ public class AdminController {
                 .active(true)
                 .emailVerified(false)
                 .locked(false)
-                .phone(request.getPhone())
+                .phone(phone)
                 .pinHash("")
                 .phoneVerified(false)
                 .role("ADMIN")
@@ -256,12 +273,44 @@ public class AdminController {
         String email = request.getEmail().trim().toLowerCase(java.util.Locale.ROOT);
         String phone = request.getPhone().trim();
 
-        userRepository.findByEmail(email).ifPresent(existing -> {
-            if (!existing.getId().equals(target.getId())) throw new IllegalArgumentException("Email already registered");
-        });
-        userRepository.findByPhone(phone).ifPresent(existing -> {
-            if (!existing.getId().equals(target.getId())) throw new IllegalArgumentException("Phone number already registered");
-        });
+        if ("USER".equals(target.getRole())) {
+            userRepository.findByEmailAndRole(email, "USER").ifPresent(existing -> {
+                if (!existing.getId().equals(target.getId())) {
+                    throw new IllegalArgumentException("Email already registered");
+                }
+            });
+        } else if ("ADMIN".equals(target.getRole()) || "SUPER_ADMIN".equals(target.getRole())) {
+            boolean adminEmailExists =
+                    userRepository.findByEmailAndRole(email, "ADMIN")
+                            .filter(existing -> !existing.getId().equals(target.getId()))
+                            .isPresent()
+                            || userRepository.findByEmailAndRole(email, "SUPER_ADMIN")
+                            .filter(existing -> !existing.getId().equals(target.getId()))
+                            .isPresent();
+
+            if (adminEmailExists) {
+                throw new IllegalArgumentException("Email already registered");
+            }
+        }
+        if ("USER".equals(target.getRole())) {
+            userRepository.findByPhoneAndRole(phone, "USER").ifPresent(existing -> {
+                if (!existing.getId().equals(target.getId())) {
+                    throw new IllegalArgumentException("Phone number already registered");
+                }
+            });
+        } else if ("ADMIN".equals(target.getRole()) || "SUPER_ADMIN".equals(target.getRole())) {
+            boolean adminPhoneExists =
+                    userRepository.findByPhoneAndRole(phone, "ADMIN")
+                            .filter(existing -> !existing.getId().equals(target.getId()))
+                            .isPresent()
+                            || userRepository.findByPhoneAndRole(phone, "SUPER_ADMIN")
+                            .filter(existing -> !existing.getId().equals(target.getId()))
+                            .isPresent();
+
+            if (adminPhoneExists) {
+                throw new IllegalArgumentException("Phone number already registered");
+            }
+        }
 
         boolean emailChanged = !email.equalsIgnoreCase(target.getEmail());
         boolean phoneChanged = !phone.equals(target.getPhone());
@@ -297,6 +346,12 @@ public class AdminController {
             target.setEmailVerified(true);
             userRepository.save(target);
             log.info("Admin {} manually verified email for {}", currentUser.getEmail(), target.getEmail());
+            // Same welcome email a user gets from verifying themselves via OTP
+            // (AuthService.confirmEmail) - only for regular users, since an admin
+            // account being verified isn't a new-customer "welcome" moment.
+            if ("USER".equals(target.getRole())) {
+                emailService.sendWelcomeEmail(target);
+            }
         }
         return ResponseEntity.ok(AdminUserResponse.from(target));
     }

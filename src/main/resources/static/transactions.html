@@ -36,7 +36,7 @@
       background: #EEF2F4;
     }
 
-    @media (max-width: 460px) {
+    @media (max-width: 768px) {
       body {
         background: var(--bg);
       }
@@ -53,10 +53,52 @@
       overflow: hidden;
     }
 
-    @media (min-width: 461px) {
+    @media (min-width: 769px) {
       #app {
         box-shadow: 0 0 40px rgba(0, 0, 0, 0.06);
         max-height: 100vh;
+      }
+    }
+
+    /* ============================================================ */
+    /* DESKTOP / WEB. Same fix as index.html - nothing below 769px
+       changes for the app or the Android webview. */
+    @media (min-width: 769px) {
+      body {
+        background: linear-gradient(145deg, #EAF4F6 0%, #F7FBFC 100%);
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+
+      #app {
+        max-width: 900px;
+        min-height: 100vh;
+        max-height: none;
+        overflow: visible;
+        box-shadow: none;
+        border-radius: 0;
+      }
+
+      .screen.active {
+        height: auto;
+        min-height: 100vh;
+      }
+
+      .scroll {
+        flex: none;
+        overflow-y: visible;
+        -webkit-overflow-scrolling: auto;
+      }
+
+      .top-nav {
+        position: sticky;
+        top: 0;
+        background: var(--bg);
+        z-index: 5;
+        padding-top: 20px;
+        margin: 0 -20px;
+        padding-left: 20px;
+        padding-right: 20px;
       }
     }
 
@@ -490,23 +532,51 @@
       return 'progress';
     }
 
-    async function loadList() {
+    function getCachedTransactions() {
+      try {
+        const raw = sessionStorage.getItem('deenwallet.recentTransactions');
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed.map(normalizeTransaction) : [];
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function renderCachedListImmediately() {
+      const cached = getCachedTransactions();
+      if (!cached.length) return false;
+      hide(loadingState);
+      hide(errorState);
+      hide(emptyState);
+      renderList(cached);
+      show(listEl);
+      return true;
+    }
+
+    async function loadList({ background = false } = {}) {
       try {
         const raw = await apiRequest('/api/transactions');
         const transactions = (raw || []).map(normalizeTransaction);
         hide(loadingState);
 
         if (transactions.length === 0) {
+          hide(listEl);
           show(emptyState);
           return;
         }
 
+        try {
+          sessionStorage.setItem('deenwallet.recentTransactions', JSON.stringify(transactions));
+        } catch (_) {}
         renderList(transactions);
         show(listEl);
       } catch (error) {
-        hide(loadingState);
-        errorState.textContent = error.message || "Couldn't load your transaction history.";
-        show(errorState);
+        if (!background && !listEl.children.length) {
+          hide(loadingState);
+          errorState.textContent = error.message || "Couldn't load your transaction history.";
+          show(errorState);
+        }
       }
     }
 
@@ -563,23 +633,32 @@
     // ==============================================================
     // RECEIPT DETAIL
     // ==============================================================
-    async function openReceipt(id) {
+    async function openReceipt(id, cachedTransaction = null) {
       screenList.classList.remove('active');
       screenReceipt.classList.add('active');
 
-      show(receiptLoading);
       hide(receiptError);
-      hide(receiptCard);
       receiptCanceledNote.hidden = true;
 
+      if (cachedTransaction) {
+        renderReceipt(cachedTransaction);
+        hide(receiptLoading);
+        show(receiptCard);
+      } else {
+        show(receiptLoading);
+        hide(receiptCard);
+      }
+
       try {
-        const raw = await apiRequest('/api/transactions/' + id);
+        const raw = await apiRequest('/api/transactions/' + encodeURIComponent(id));
         const txn = normalizeTransaction(raw);
         renderReceipt(txn);
         show(receiptCard);
       } catch (error) {
-        receiptError.textContent = error.message || "Couldn't load this transaction.";
-        show(receiptError);
+        if (!cachedTransaction) {
+          receiptError.textContent = error.message || "Couldn't load this transaction.";
+          show(receiptError);
+        }
       } finally {
         hide(receiptLoading);
       }
@@ -636,7 +715,30 @@
       screenList.classList.add('active');
     });
 
-    loadList();
+    const requestedTransactionId = new URLSearchParams(window.location.search).get('transactionId');
+
+    if (requestedTransactionId) {
+      let cachedTransaction = null;
+      try {
+        const selected = sessionStorage.getItem('deenwallet.selectedTransaction');
+        if (selected) {
+          const parsed = normalizeTransaction(JSON.parse(selected));
+          if ((parsed.id || parsed.transactionId) === requestedTransactionId) {
+            cachedTransaction = parsed;
+          }
+        }
+      } catch (_) {}
+
+      // Show the receipt immediately from the Home cache, then refresh it from
+      // the backend in the background. Also prepare the history list in parallel
+      // so Back is immediate instead of waiting for another page load.
+      openReceipt(requestedTransactionId, cachedTransaction);
+      renderCachedListImmediately();
+      loadList({ background: true });
+    } else {
+      const hadCache = renderCachedListImmediately();
+      loadList({ background: hadCache });
+    }
 
     window.dwOnPullToRefresh = loadList;
 

@@ -17,6 +17,11 @@ public class ErrorReportRequest {
     private String stack;
     private Integer statusCode;
     private String url;
+    /** "user" or "admin" - which frontend is reporting. Anything else is treated as "user". */
+    private String sourceApp;
+    /** For API_ERROR reports: the failing endpoint path and HTTP method, e.g. "/api/transactions", "POST". */
+    private String endpointPath;
+    private String httpMethod;
     private Integer line;
     private Integer col;
     private String userAgent;

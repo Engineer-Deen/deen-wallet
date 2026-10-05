@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -15,11 +16,17 @@ public interface DeviceTokenRepository extends JpaRepository<DeviceToken, UUID> 
 
     Optional<DeviceToken> findByFcmToken(String fcmToken);
 
+    // Delete queries need a transaction. Without @Transactional they throw
+    // TransactionRequiredException when called from code that isn't already
+    // inside one (like PushNotificationService and the logout endpoint).
+    @Transactional
     @Modifying
     @Query("DELETE FROM DeviceToken d WHERE d.fcmToken = :fcmToken")
     void deleteByFcmToken(@Param("fcmToken") String fcmToken);
 
+    @Transactional
     @Modifying
     @Query("DELETE FROM DeviceToken d WHERE d.userId = :userId AND d.fcmToken = :fcmToken")
     void deleteByUserIdAndFcmToken(@Param("userId") UUID userId, @Param("fcmToken") String fcmToken);
 }
+

@@ -28,6 +28,12 @@ public class EmailService {
     @Value("${app.mail.support-email:support@deenwallapp.com}")
     private String supportEmail;
 
+    @Value("${app.mail.feedback-email:ceofeedback@deenwallapp.com}")
+    private String feedbackEmail;
+
+    @Value("${app.frontend.base-url:https://deenwallapp.com}")
+    private String frontendBaseUrl;
+
     private final JavaMailSender mailSender;
 
     public void sendOtpEmail(String toEmail, String code, int expiryMinutes) {
@@ -37,7 +43,29 @@ public class EmailService {
 
     public void sendWelcomeEmail(User user) {
         send(user.getEmail(), "Welcome to Deen Wallet",
-                EmailTemplates.welcomeEmail(user.getFirstName(), user.getAccountNumber()));
+                EmailTemplates.welcomeEmail(user.getFirstName(), user.getAccountNumber(), feedbackEmail));
+    }
+
+    public void sendPasswordResetEmail(User user, String rawToken) {
+        if (user == null || user.getEmail() == null || user.getEmail().isBlank()) {
+            throw new IllegalArgumentException("User email is required");
+        }
+
+        if (rawToken == null || rawToken.isBlank()) {
+            throw new IllegalArgumentException("Password reset token is required");
+        }
+
+        String baseUrl = frontendBaseUrl == null
+                ? ""
+                : frontendBaseUrl.trim().replaceAll("/+$", "");
+
+        String resetLink = baseUrl + "/reset-password.html?token=" + rawToken.trim();
+
+        sendRequired(
+                user.getEmail(),
+                "Reset Your Deen Wallet Password",
+                EmailTemplates.passwordResetEmail(user.getFirstName(), resetLink)
+        );
     }
 
     @Async("emailTaskExecutor")
@@ -105,7 +133,7 @@ public class EmailService {
         if (toEmail == null || toEmail.isBlank()) throw new IllegalArgumentException("Recipient email is required");
         try {
             MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, StandardCharsets.UTF_8.name());
+            MimeMessageHelper helper = new MimeMessageHelper(message, false, StandardCharsets.UTF_8.name());
 
             helper.setFrom(senderEmail, senderName);
             helper.setReplyTo(supportEmail, "Deen Wallet Support");
@@ -128,7 +156,7 @@ public class EmailService {
         try {
             log.info("📧 Sending email to: {} - Subject: {}", toEmail, subject);
             MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, StandardCharsets.UTF_8.name());
+            MimeMessageHelper helper = new MimeMessageHelper(message, false, StandardCharsets.UTF_8.name());
 
             helper.setFrom(senderEmail, senderName);
             helper.setReplyTo(supportEmail, "Deen Wallet Support");

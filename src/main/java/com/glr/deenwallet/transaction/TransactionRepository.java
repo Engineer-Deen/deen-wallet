@@ -1,6 +1,7 @@
 package com.glr.deenwallet.transaction;
 
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -12,14 +13,21 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface TransactionRepository extends JpaRepository<Transaction, UUID> {
-    @Query("SELECT DISTINCT t FROM Transaction t WHERE t.userId = :userId ORDER BY t.createdAt DESC")
+    /** Newest-first, bounded. Uses idx_transactions_user_id_created_at (no sort, no DISTINCT). */
+    @Query("SELECT t FROM Transaction t WHERE t.userId = :userId ORDER BY t.createdAt DESC")
+    List<Transaction> findRecentByUserId(@Param("userId") UUID userId, Pageable pageable);
+
+    /** Unbounded - kept only for callers that truly need everything. Do not use on request paths. */
+    @Query("SELECT t FROM Transaction t WHERE t.userId = :userId ORDER BY t.createdAt DESC")
     List<Transaction> findByUserIdOrderByCreatedAtDesc(@Param("userId") UUID userId);
 
     Optional<Transaction> findByMonimePaymentCodeId(String monimePaymentCodeId);
     Optional<Transaction> findByMonimePayoutId(String monimePayoutId);
     List<Transaction> findByStatusAndCreatedAtBefore(TransactionStatus status, Instant cutoff);
 
-    @Query("SELECT t FROM Transaction t WHERE LOWER(t.transactionCode) = LOWER(:transactionCode)")
+    // Codes are stored upper-case. Upper-casing the PARAMETER (not the column) keeps the
+    // unique index usable; LOWER(column) forced a full table scan (126 ms at 200k rows).
+    @Query("SELECT t FROM Transaction t WHERE t.transactionCode = UPPER(:transactionCode)")
     Optional<Transaction> findByTransactionCodeIgnoreCase(@Param("transactionCode") String transactionCode);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
@@ -30,7 +38,11 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     @Query("SELECT t FROM Transaction t WHERE t.monimePayoutId = :payoutId")
     Optional<Transaction> findByMonimePayoutIdForUpdate(@Param("payoutId") String payoutId);
 
-    @Query("SELECT DISTINCT t FROM Transaction t ORDER BY t.createdAt DESC")
+    /** Admin list, bounded + paged. Pass PageRequest.of(page, size, Sort.by(DESC, "createdAt")). */
+    List<Transaction> findAllBy(Pageable pageable);
+
+    /** Unbounded - do not use on request paths (kept for compatibility). */
+    @Query("SELECT t FROM Transaction t ORDER BY t.createdAt DESC")
     List<Transaction> findAllByOrderByCreatedAtDesc();
 
     @Query("SELECT SUM(t.amountValue) FROM Transaction t")
@@ -41,4 +53,15 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
 
     long countByStatus(TransactionStatus status);
     List<Transaction> findByUserId(UUID userId);
+
+    /**
+     * Candidates for archiving: finished (final-state) transactions older than the
+     * retention cutoff. Batched with Pageable so one run never locks/loads the whole
+     * table - see TransactionArchiveJob.
+     */
+    @Query("SELECT t FROM Transaction t WHERE t.status IN :finalStatuses AND t.createdAt < :cutoff ORDER BY t.createdAt")
+    List<Transaction> findArchivable(
+            @Param("finalStatuses") List<TransactionStatus> finalStatuses,
+            @Param("cutoff") Instant cutoff,
+            Pageable pageable);
 }

@@ -127,7 +127,11 @@ public class Transaction {
     // ==============================================================
     private String generateTransactionCode() {
         String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String random = generateRandomString(5);
+        // 8 chars, matching TransactionService's generator: 5 chars (60M/day) could
+        // eventually collide with the unique constraint. This @PrePersist path is only
+        // a safety net (TransactionService always sets the code before save), but it
+        // must use the same length or it reintroduces the exact bug being fixed.
+        String random = generateRandomString(8);
         return "DW-" + date + "-" + random;
     }
 

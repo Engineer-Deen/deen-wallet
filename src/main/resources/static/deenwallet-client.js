@@ -1,3 +1,25 @@
+let DEENWALLET_FIREBASE_CONFIG = null;
+
+async function loadFirebaseWebConfig() {
+  if (DEENWALLET_FIREBASE_CONFIG) {
+    return DEENWALLET_FIREBASE_CONFIG;
+  }
+
+  const response = await fetch(
+      `${window.DEENWALLET_API_BASE_URL}/api/config/firebase-web`
+  );
+
+  if (!response.ok) {
+    throw new Error(
+        `Failed to load Firebase Web config: HTTP ${response.status}`
+    );
+  }
+
+  DEENWALLET_FIREBASE_CONFIG = await response.json();
+
+  return DEENWALLET_FIREBASE_CONFIG;
+}
+
 /**
  * deenwallet-client.js
  * Shared frontend client for DeenWallet
@@ -39,6 +61,12 @@ function reportErrorToBackend(errorType, message, stack, url, line, col, extra) 
         message: message || 'Unknown error',
         stack: stack || '',
         url: url || window.location.href,
+        // This is the USER app (auth.html / index.html / transactions.html). admin.html
+        // reports separately with 'admin', so admins can tell the two apart at a glance.
+        sourceApp: 'user',
+        endpointPath: (extra && extra.endpointPath) || undefined,
+        httpMethod: (extra && extra.httpMethod) || undefined,
+        statusCode: (extra && extra.statusCode) || undefined,
         line: line || 0,
         col: col || 0,
         userAgent: navigator.userAgent,
@@ -101,6 +129,405 @@ function clearTokens() {
   localStorage.removeItem('deenwallet_refresh_token');
   localStorage.removeItem(DEENWALLET_CONFIG.TOKEN_STORAGE_KEY);
   localStorage.removeItem(DEENWALLET_CONFIG.USER_STORAGE_KEY);
+}
+
+
+// ==============================================================
+// ANDROID BIOMETRIC LOGIN
+// ==============================================================
+function getBiometricPlugin() {
+  return window.Capacitor && window.Capacitor.Plugins
+      ? window.Capacitor.Plugins.DeenWalletBiometric
+      : null;
+}
+
+async function isBiometricAvailable() {
+  const plugin = getBiometricPlugin();
+  if (!plugin) return false;
+  try {
+    const result = await plugin.isAvailable();
+    return !!result.available;
+  } catch (_) {
+    return false;
+  }
+}
+
+async function getBiometricRegistration() {
+  const plugin = getBiometricPlugin();
+  if (!plugin) return { registered: false };
+  try { return await plugin.hasCredential(); }
+  catch (_) { return { registered: false }; }
+}
+
+async function registerBiometricLogin(deviceName) {
+  const plugin = getBiometricPlugin();
+  if (!plugin) throw new Error('Biometric login is only available in the DeenWallet Android app.');
+  if (!getAccessToken()) throw new Error('Please log in first.');
+  const available = await isBiometricAvailable();
+  if (!available) throw new Error('Strong biometric authentication is not available on this device.');
+
+  const challenge = await apiRequest('/api/auth/biometric/registration-challenge', { method: 'POST', body: {} });
+  const signed = await plugin.register({ challenge: challenge.challenge });
+  return apiRequest('/api/auth/biometric/register', {
+    method: 'POST',
+    body: {
+      credentialId: signed.credentialId,
+      publicKey: signed.publicKey,
+      signature: signed.signature,
+      challenge: challenge.challenge,
+      deviceName: deviceName || 'Android device'
+    }
+  });
+}
+
+async function biometricLogin() {
+  const plugin = getBiometricPlugin();
+  if (!plugin) throw new Error('Biometric login is only available in the DeenWallet Android app.');
+  const registration = await getBiometricRegistration();
+  if (!registration.registered || !registration.credentialId) {
+    throw new Error('Biometric login has not been enabled on this device. Log in with your password and enable it from the user menu.');
+  }
+  const challenge = await apiRequest('/api/auth/biometric/challenge', {
+    method: 'POST',
+    body: { credentialId: registration.credentialId }
+  });
+  const signed = await plugin.authenticate({ challenge: challenge.challenge });
+  const data = await apiRequest('/api/auth/biometric/login', {
+    method: 'POST',
+    body: {
+      credentialId: signed.credentialId,
+      challenge: challenge.challenge,
+      signature: signed.signature
+    }
+  });
+  const accessToken = data.accessToken || data.token;
+  const refreshToken = data.refreshToken;
+  if (!accessToken || !refreshToken) throw new Error('Biometric login response is missing authentication tokens.');
+  setTokens(accessToken, refreshToken);
+  localStorage.setItem(DEENWALLET_CONFIG.USER_STORAGE_KEY, JSON.stringify({
+    firstName: data.firstName, accountNumber: data.accountNumber, role: data.role
+  }));
+  return data;
+}
+
+async function disableBiometricLogin() {
+  const plugin = getBiometricPlugin();
+  if (!plugin || !getAccessToken()) throw new Error('Biometric login is not available.');
+  const registration = await getBiometricRegistration();
+  if (!registration.registered) return;
+  const credentials = await apiRequest('/api/auth/biometric/credentials', { method: 'GET' });
+  const match = credentials.find(c => c.credentialId === registration.credentialId);
+  if (match && match.id) {
+    await apiRequest('/api/auth/biometric/credentials/' + encodeURIComponent(match.id), { method: 'DELETE' });
+  }
+  await plugin.clearCredential();
+}
+
+// ==============================================================
+// ANDROID FIREBASE CLOUD MESSAGING (FCM)
+// ==============================================================
+// Registers the authenticated Android device token with the backend.
+// This is intentionally a no-op in the normal web browser.
+const DEENWALLET_FCM_TOKEN_STORAGE_KEY = 'deenwallet_fcm_token';
+
+function isDeenWalletAndroidApp() {
+  const result = !!(
+      window.Capacitor &&
+      typeof window.Capacitor.isNativePlatform === 'function' &&
+      window.Capacitor.isNativePlatform() &&
+      window.Capacitor.getPlatform &&
+      window.Capacitor.getPlatform() === 'android'
+  );
+  console.log('[DeenWallet FCM] Android app detected:', result, {
+    capacitorPresent: !!window.Capacitor,
+    nativePlatform: !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()),
+    platform: window.Capacitor && window.Capacitor.getPlatform ? window.Capacitor.getPlatform() : null
+  });
+  return result;
+}
+
+function getPushNotificationsPlugin() {
+  return window.Capacitor && window.Capacitor.Plugins
+      ? window.Capacitor.Plugins.PushNotifications
+      : null;
+}
+
+async function unregisterFcmToken(token) {
+  if (!token || !getAccessToken()) return;
+
+  try {
+    await fetch(DEENWALLET_CONFIG.API_BASE_URL + '/api/users/me/device-token', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + getAccessToken()
+      },
+      body: JSON.stringify({
+        fcmToken: token,
+        platform: 'android'
+      })
+    });
+  } catch (_) {
+    // Logout must still complete if the backend is temporarily unreachable.
+  }
+}
+
+async function registerFcmTokenWithBackend(token) {
+  console.log('[DeenWallet FCM] registerFcmTokenWithBackend called:', {
+    hasToken: !!token,
+    tokenLength: token ? token.length : 0,
+    hasAccessToken: !!getAccessToken(),
+    apiBaseUrl: DEENWALLET_CONFIG.API_BASE_URL
+  });
+  if (!token || !getAccessToken()) {
+    console.warn('[DeenWallet FCM] Backend registration skipped: missing FCM token or access token.');
+    return;
+  }
+
+  const registeredToken = localStorage.getItem(DEENWALLET_FCM_TOKEN_STORAGE_KEY);
+  if (registeredToken === token) return;
+
+  try {
+    const response = await fetch(DEENWALLET_CONFIG.API_BASE_URL + '/api/users/me/device-token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + getAccessToken()
+      },
+      body: JSON.stringify({
+        fcmToken: token,
+        platform: 'android'
+      })
+    });
+
+    console.log('[DeenWallet FCM] Backend registration response:', response.status);
+
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403) return;
+      throw new Error('Device token registration failed with HTTP ' + response.status);
+    }
+
+    localStorage.setItem(DEENWALLET_FCM_TOKEN_STORAGE_KEY, token);
+  } catch (error) {
+    console.warn('FCM device-token registration failed:', error);
+  }
+}
+
+async function initializeDeenWalletPushNotifications() {
+  console.log('[DeenWallet FCM] initializeDeenWalletPushNotifications called:', {
+    hasAccessToken: !!getAccessToken(),
+    apiBaseUrl: DEENWALLET_CONFIG.API_BASE_URL
+  });
+
+  if (!isDeenWalletAndroidApp()) {
+    console.warn('[DeenWallet FCM] Initialization skipped: not running as Android app.');
+    return;
+  }
+  if (!getAccessToken()) {
+    console.warn('[DeenWallet FCM] Initialization skipped: no access token.');
+    return;
+  }
+
+  const PushNotifications = getPushNotificationsPlugin();
+  console.log('[DeenWallet FCM] PushNotifications plugin:', !!PushNotifications);
+  if (!PushNotifications) {
+    console.warn('Capacitor Push Notifications plugin is unavailable.');
+    return;
+  }
+
+  try {
+    // Register listeners before calling register(), because the native
+    // plugin may emit the token immediately after registration.
+    await PushNotifications.addListener('registration', async function (token) {
+      if (token && token.value) {
+        console.log('[DeenWallet FCM] registration event received. Token length:', token.value.length);
+        await registerFcmTokenWithBackend(token.value);
+      }
+    });
+
+    await PushNotifications.addListener('registrationError', function (error) {
+      console.error('[DeenWallet FCM] registrationError event:', error);
+    });
+
+    const permission = await PushNotifications.checkPermissions();
+    let receive = permission.receive;
+    console.log('[DeenWallet FCM] permission status:', receive);
+
+    if (receive === 'prompt') {
+      const requested = await PushNotifications.requestPermissions();
+      receive = requested.receive;
+      console.log('[DeenWallet FCM] permission after request:', receive);
+    }
+
+    if (receive !== 'granted') {
+      console.warn('Push notification permission was not granted.');
+      return;
+    }
+
+    console.log('[DeenWallet FCM] calling PushNotifications.register()');
+    await PushNotifications.register();
+    console.log('[DeenWallet FCM] PushNotifications.register() completed');
+  } catch (error) {
+    console.error('[DeenWallet FCM] initialization failed:', error);
+  }
+}
+
+// The authenticated token is already stored by the login flow before the
+// user is redirected to the main application. This also handles app
+// restarts/page refreshes while the user remains signed in.
+console.log('[DeenWallet FCM] client loaded. Access token present:', !!getAccessToken());
+if (getAccessToken()) {
+  initializeDeenWalletPushNotifications();
+} else {
+  console.log('[DeenWallet FCM] initialization not started because no access token is present.');
+}
+
+// ==============================================================
+// WEB FIREBASE CLOUD MESSAGING (FCM)
+// ==============================================================
+async function initializeDeenWalletWebPushNotifications() {
+  // Never run this inside the native Android/iOS app.
+  if (window.Capacitor?.isNativePlatform?.()) {
+    return;
+  }
+
+  if (!getAccessToken()) {
+    console.log('[DeenWallet Web FCM] No access token. Skipping.');
+    return;
+  }
+
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+    console.warn('[DeenWallet Web FCM] Browser does not support notifications.');
+    return;
+  }
+
+  try {
+    const firebaseConfig = await loadFirebaseWebConfig();
+
+    if (!window.firebase) {
+      console.error('[DeenWallet Web FCM] Firebase SDK is not loaded.');
+      return;
+    }
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+
+    const messaging = firebase.messaging();
+
+    // The worker reads the public web config from its own URL so it can start
+    // Firebase immediately (see firebase-messaging-sw.js).
+    const swParams = new URLSearchParams({
+      apiKey: firebaseConfig.apiKey,
+      authDomain: firebaseConfig.authDomain,
+      projectId: firebaseConfig.projectId,
+      storageBucket: firebaseConfig.storageBucket,
+      messagingSenderId: firebaseConfig.messagingSenderId,
+      appId: firebaseConfig.appId
+    });
+
+    const registration = await navigator.serviceWorker.register(
+        '/firebase-messaging-sw.js?' + swParams.toString()
+    );
+    await navigator.serviceWorker.ready;
+
+    console.log('[DeenWallet Web FCM] Service worker registered.');
+
+    let permission = Notification.permission;
+
+    if (permission === 'default') {
+      permission = await Notification.requestPermission();
+    }
+
+    if (permission !== 'granted') {
+      console.warn('[DeenWallet Web FCM] Notification permission not granted.');
+      return;
+    }
+
+    const token = await messaging.getToken({
+      vapidKey: firebaseConfig.vapidKey,
+      serviceWorkerRegistration: registration
+    });
+
+    if (!token) {
+      console.warn('[DeenWallet Web FCM] No FCM token returned.');
+      return;
+    }
+
+    console.log('[DeenWallet Web FCM] Browser FCM token obtained.');
+
+    await registerWebFcmToken(token);
+
+    // While the site is open and visible, Firebase hands the message to the
+    // page instead of showing a popup, so show one ourselves.
+    messaging.onMessage((payload) => {
+      console.log('[DeenWallet Web FCM] Foreground message:', payload);
+      const n = payload.notification || {};
+      registration.showNotification(n.title || 'DeenWallet', {
+        body: n.body || '',
+        icon: '/deenwallet-logo.png',
+        data: payload.data || {}
+      });
+    });
+
+  } catch (error) {
+    console.error('[DeenWallet Web FCM] Initialization failed:', error);
+  }
+}
+
+
+async function registerWebFcmToken(token) {
+  if (!token || !getAccessToken()) {
+    return;
+  }
+
+  const storageKey = 'deenwallet_web_fcm_token';
+  const registeredToken = localStorage.getItem(storageKey);
+
+  if (registeredToken === token) {
+    return;
+  }
+
+  try {
+    const response = await fetch(
+        DEENWALLET_CONFIG.API_BASE_URL + '/api/users/me/device-token',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + getAccessToken()
+          },
+          body: JSON.stringify({
+            fcmToken: token,
+            platform: 'web'
+          })
+        }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+          'Web device-token registration failed with HTTP ' +
+          response.status
+      );
+    }
+
+    localStorage.setItem(storageKey, token);
+
+    console.log(
+        '[DeenWallet Web FCM] Browser token registered successfully.'
+    );
+
+  } catch (error) {
+    console.warn(
+        '[DeenWallet Web FCM] Token registration failed:',
+        error
+    );
+  }
+}
+
+
+if (!window.Capacitor?.isNativePlatform?.() && getAccessToken()) {
+  initializeDeenWalletWebPushNotifications();
 }
 
 const PROVIDERS = [
@@ -223,33 +650,51 @@ async function refreshAccessToken() {
 // ==============================================================
 
 async function apiRequest(path, { method = 'GET', params, body } = {}) {
-  const url = new URL(DEENWALLET_CONFIG.API_BASE_URL + path);
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) url.searchParams.set(key, value);
-    });
-  }
-
-  let token = getAccessToken();
-  const headers = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = 'Bearer ' + token;
-
-  const doRequest = async (tokenToUse) => {
-    if (tokenToUse) headers['Authorization'] = 'Bearer ' + tokenToUse;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
-    try {
-      return await fetch(url.toString(), { method, headers, body: body ? JSON.stringify(body) : undefined, signal: controller.signal });
-    } finally {
-      clearTimeout(timeoutId);
-    }
-  };
-
+  // Wraps the ENTIRE function, including building the URL/headers below - so a bug
+  // there (like a past release that referenced an undefined `headers` variable and
+  // crashed every request with no trace at all) is now caught, reported with a full
+  // stack, and re-thrown, instead of vanishing before it could ever reach the network.
   try {
+    const url = new URL(DEENWALLET_CONFIG.API_BASE_URL + path);
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) url.searchParams.set(key, value);
+      });
+    }
+
+    let token = getAccessToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+
+    const doRequest = async (tokenToUse) => {
+      if (tokenToUse) headers['Authorization'] = 'Bearer ' + tokenToUse;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      try {
+        return await fetch(url.toString(), { method, headers, body: body ? JSON.stringify(body) : undefined, signal: controller.signal });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+      window.apiRequest = apiRequest;
+    };
+
+    // Reports a failed call to THIS endpoint, so it shows up traceable to the exact
+    // path + method in the admin Errors tab. Skips expected 401s (a stale token
+    // refreshing is normal, not a bug worth an admin's time).
+    const reportApiFailure = (message, statusCode) => {
+      if (statusCode === 401) return;
+      reportErrorToBackend('API_ERROR', message, '', window.location.href, 0, 0,
+          { endpointPath: path, httpMethod: method, statusCode });
+    };
+
     let response;
     try {
       response = await doRequest(token);
     } catch (fetchError) {
+      // No HTTP response at all: DNS failure, connection refused, CORS block or timeout.
+      reportErrorToBackend('NETWORK_ERROR', String(fetchError && fetchError.message || fetchError),
+          fetchError && fetchError.stack, window.location.href, 0, 0,
+          { endpointPath: path, httpMethod: method });
       const friendly = new Error('Unable to reach the server. Please check your connection and try again.');
       friendly.isNetworkError = true;
       throw friendly;
@@ -278,6 +723,7 @@ async function apiRequest(path, { method = 'GET', params, body } = {}) {
 
         if (retryResponse.status === 423 || errorMsg.toLowerCase().includes('locked') || errorMsg.toLowerCase().includes('blocked')) {
           sessionStorage.setItem('deenwallet_account_locked', 'true');
+          reportApiFailure(errorMsg || 'Account locked.', retryResponse.status);
           const err = new Error(errorMsg || 'Account locked.');
           err.status = retryResponse.status;
           throw err;
@@ -295,6 +741,7 @@ async function apiRequest(path, { method = 'GET', params, body } = {}) {
         // Any other status (e.g. a genuine 400 "incorrect PIN") is a real
         // business-logic result from a now-valid, authenticated request -
         // surface it as-is instead of assuming the session is dead.
+        reportApiFailure(errorMsg || 'Something went wrong.', retryResponse.status);
         const err = new Error(errorMsg || 'Something went wrong.');
         err.status = retryResponse.status;
         const retryAfter = retryResponse.headers.get('Retry-After');
@@ -317,10 +764,20 @@ async function apiRequest(path, { method = 'GET', params, body } = {}) {
       if ((response.status === 403 || response.status === 423) && (message.toLowerCase().includes('locked') || message.toLowerCase().includes('blocked'))) {
         sessionStorage.setItem('deenwallet_account_locked', 'true');
       }
+      // Trace WHICH endpoint failed, not just that something on the page went wrong.
+      reportApiFailure(message, response.status);
       throw error;
     }
     return data;
   } catch (error) {
+    // Anything NOT already one of our own recognizable errors (network/401/423/etc,
+    // all of which carry isNetworkError or a .status) is an unexpected bug in this
+    // function itself - report it with a full stack so it's traceable, then behave
+    // exactly as before by re-throwing unchanged.
+    if (!error.isNetworkError && error.status === undefined) {
+      reportErrorToBackend('CLIENT_BUG', String(error && error.message || error), error && error.stack,
+          window.location.href, 0, 0, { endpointPath: path, httpMethod: method });
+    }
     throw error;
   }
 }
@@ -350,6 +807,13 @@ function getStoredUser() {
 
 async function logout() {
   const refresh = getRefreshToken();
+  const fcmToken = localStorage.getItem(DEENWALLET_FCM_TOKEN_STORAGE_KEY);
+
+  // Remove the device token while the current user is still authenticated.
+  // This prevents a signed-out account from continuing to receive pushes.
+  await unregisterFcmToken(fcmToken);
+  localStorage.removeItem(DEENWALLET_FCM_TOKEN_STORAGE_KEY);
+
   if (refresh) { try { await fetch(DEENWALLET_CONFIG.API_BASE_URL + '/api/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refreshToken: refresh }) }); } catch (_) {} }
   clearTokens();
   sessionStorage.removeItem('deenwallet_session_last_active');
@@ -700,9 +1164,19 @@ async function detectProviderFromPrefix(phoneNumber) {
   if (!AppPlugin) return;
 
   AppPlugin.addListener('backButton', function (data) {
-    if (typeof window.dwOnBackButton === 'function' && window.dwOnBackButton() === true) {
-      return; // the page closed its own panel/modal - stop here
+    if (typeof window.dwOnBackButton === 'function') {
+      const result = window.dwOnBackButton();
+      if (result === true) {
+        return; // the current DeenWallet screen handled the back action.
+      }
+      if (result === 'exit') {
+        AppPlugin.exitApp();
+        return;
+      }
     }
+
+    // Pages without a custom DeenWallet back handler keep normal browser
+    // history behaviour, then exit only when there is nowhere else to go.
     if (data && data.canGoBack) {
       window.history.back();
     } else {

@@ -9,14 +9,18 @@ import com.glr.deenwallet.monime.MonimeProperties;
 import com.glr.deenwallet.monime.PaymentCodeResult;
 import com.glr.deenwallet.monime.PayoutResult;
 import com.glr.deenwallet.monime.ProviderKycResult;
+import com.glr.deenwallet.notification.NotificationService;
 import com.glr.deenwallet.notification.PushNotificationService;
 import com.glr.deenwallet.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -30,6 +34,10 @@ import java.util.UUID;
 public class TransactionService {
 
     private static final Duration PAYMENT_CODE_TTL = Duration.ofMinutes(10);
+    /** A user's history screen shows at most this many of their newest transactions. */
+    private static final int MAX_USER_TRANSACTIONS = 200;
+    private static final SecureRandom RANDOM = new SecureRandom();
+    private static final String CODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
     private final TransactionRepository transactionRepository;
     private final MonimeClient monimeClient;
@@ -38,22 +46,24 @@ public class TransactionService {
     private final EmailService emailService;
     private final UserRepository userRepository;
     private final PushNotificationService pushNotificationService;
+    private final NotificationService notificationService;
+    private final TransactionTemplate transactionTemplate;
 
     // ==============================================================
     // ✅ GENERATE TRANSACTION CODE
     // ==============================================================
     public String generateTransactionCode() {
         String date = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String random = generateRandomString(5);
+        // 8 chars: with 5 chars (60M/day) the unique constraint would eventually collide
+        // and fail a real user's transaction; 8 chars makes that practically impossible.
+        String random = generateRandomString(8);
         return "DW-" + date + "-" + random;
     }
 
     private String generateRandomString(int length) {
-        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        StringBuilder sb = new StringBuilder();
-        java.security.SecureRandom random = new java.security.SecureRandom();
+        StringBuilder sb = new StringBuilder(length);
         for (int i = 0; i < length; i++) {
-            sb.append(chars.charAt(random.nextInt(chars.length())));
+            sb.append(CODE_CHARS.charAt(RANDOM.nextInt(CODE_CHARS.length())));
         }
         return sb.toString();
     }
@@ -61,63 +71,73 @@ public class TransactionService {
     // ==============================================================
     // ✅ INITIATE TRANSACTION - FIXED (Saves only ONCE)
     // ==============================================================
-    @Transactional
+    // Deliberately NOT @Transactional. The two Monime calls are slow network I/O; wrapping
+    // them in one transaction held a DB connection (pool of 30) for the whole round trip,
+    // so a slow Monime could starve login, listing and polling for everyone.
+    // Each database step below is its own short transaction.
     public TransactionResponse initiate(UUID userId, InitiateTransactionRequest request) {
+        // 1) Provider name lookup: network only, no DB connection held.
         ProviderKycResult kyc = monimeClient.getProviderKyc(
                 request.getDestinationProviderId(), request.getDestinationPhone());
 
         long minorUnits = toMinorUnits(request.getAmount());
         ConversionFee fee = ConversionFee.calculate(minorUnits);
-
         Money collectAmount = new Money("SLE", fee.totalChargedValue());
-
-        // Generate transaction code
         String transactionCode = generateTransactionCode();
 
-        Transaction transaction = Transaction.builder()
-                .userId(userId)
-                .recipientId(request.getRecipientId())
-                .amountCurrency("SLE")
-                .amountValue(minorUnits)
-                .feeValue(fee.feeValue())
-                .monimeDepositFeeValue(fee.monimeDepositFeeValue())
-                .deenWalletFeeValue(fee.deenWalletFeeValue())
-                .monimeWithdrawalFeeValue(fee.monimeWithdrawalFeeValue())
-                .totalChargedValue(fee.totalChargedValue())
-                .sourceProviderId(request.getSourceProviderId())
-                .sourcePhone(request.getSourcePhone())
-                .destinationProviderId(request.getDestinationProviderId())
-                .destinationPhone(request.getDestinationPhone())
-                .destinationHolderName(kyc != null && kyc.account() != null ? kyc.account().holderName() : null)
-                .status(TransactionStatus.AWAITING_PAYMENT)
-                .smsSent(false)
-                .transactionCode(transactionCode)  // ✅ Set transaction code
-                .build();
+        // 2) Short transaction: persist the row (its id is assigned here).
+        Transaction saved = transactionTemplate.execute(status -> transactionRepository.save(
+                Transaction.builder()
+                        .userId(userId)
+                        .recipientId(request.getRecipientId())
+                        .amountCurrency("SLE")
+                        .amountValue(minorUnits)
+                        .feeValue(fee.feeValue())
+                        .monimeDepositFeeValue(fee.monimeDepositFeeValue())
+                        .deenWalletFeeValue(fee.deenWalletFeeValue())
+                        .monimeWithdrawalFeeValue(fee.monimeWithdrawalFeeValue())
+                        .totalChargedValue(fee.totalChargedValue())
+                        .sourceProviderId(request.getSourceProviderId())
+                        .sourcePhone(request.getSourcePhone())
+                        .destinationProviderId(request.getDestinationProviderId())
+                        .destinationPhone(request.getDestinationPhone())
+                        .destinationHolderName(kyc != null && kyc.account() != null ? kyc.account().holderName() : null)
+                        .status(TransactionStatus.AWAITING_PAYMENT)
+                        .smsSent(false)
+                        .transactionCode(transactionCode)
+                        .build()));
+        final UUID transactionId = saved.getId();
 
-        // ✅ SAVE ONCE
-        transaction = transactionRepository.save(transaction);
-
-        CreatePaymentCodeRequest paymentCodeRequest = CreatePaymentCodeRequest.oneTime(
-                "Deen Wallet conversion",
-                collectAmount,
-                request.getSourcePhone(),
-                transaction.getId().toString()
-        );
-
-        PaymentCodeResult paymentCode = monimeClient.createPaymentCode(paymentCodeRequest);
-
-        if (paymentCode != null) {
-            transaction.setMonimePaymentCodeId(paymentCode.id());
-            transaction.setMonimeUssdCode(paymentCode.ussdCode());
-            // ✅ Hibernate auto-flush handles the update, NO SECOND SAVE needed
+        // 3) Payment code creation: network only. If it fails, remove the row so a failed
+        //    initiation leaves nothing behind (same outcome as the old single transaction).
+        final PaymentCodeResult paymentCode;
+        try {
+            paymentCode = monimeClient.createPaymentCode(CreatePaymentCodeRequest.oneTime(
+                    "Deen Wallet conversion",
+                    collectAmount,
+                    request.getSourcePhone(),
+                    transactionId.toString()));
+        } catch (RuntimeException e) {
+            transactionTemplate.executeWithoutResult(status -> transactionRepository.deleteById(transactionId));
+            throw e;
         }
 
-        // ✅ Return WITHOUT another save
-        return TransactionResponse.from(transaction);
+        // 4) Short transaction: attach the payment code to the row.
+        Transaction result = transactionTemplate.execute(status -> {
+            Transaction t = transactionRepository.findById(transactionId)
+                    .orElseThrow(() -> new IllegalStateException("Transaction disappeared during initiation"));
+            if (paymentCode != null) {
+                t.setMonimePaymentCodeId(paymentCode.id());
+                t.setMonimeUssdCode(paymentCode.ussdCode());
+            }
+            return t; // dirty-checked and flushed at commit
+        });
+
+        return TransactionResponse.from(result);
     }
 
     public List<Transaction> listForUser(UUID userId) {
-        return transactionRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        return transactionRepository.findRecentByUserId(userId, PageRequest.of(0, MAX_USER_TRANSACTIONS));
     }
 
     public Transaction getForUser(UUID userId, UUID transactionId) {
@@ -143,9 +163,31 @@ public class TransactionService {
                 .findByStatusAndCreatedAtBefore(TransactionStatus.AWAITING_PAYMENT, cutoff);
 
         for (Transaction transaction : stale) {
+            String cancellationReason =
+                    "Payment was not received before the 10-minute payment window expired.";
+
             transaction.setStatus(TransactionStatus.CANCELED);
-            transaction.setFailureReason("Payment was not received before the 10-minute payment window expired.");
+            transaction.setFailureReason(cancellationReason);
             transactionRepository.save(transaction);
+
+            notificationService.create(
+                    transaction.getUserId(),
+                    "TRANSACTION_CANCELED",
+                    "Transfer canceled",
+                    cancellationReason,
+                    transaction.getId(),
+                    transaction.getTransactionCode()
+            );
+
+            pushNotificationService.sendToUser(
+                    transaction.getUserId(),
+                    "Transfer canceled",
+                    cancellationReason,
+                    Map.of(
+                            "type", "TRANSACTION_CANCELED",
+                            "transactionId", transaction.getId().toString()
+                    )
+            );
 
             userRepository.findById(transaction.getUserId())
                     .ifPresent(user -> emailService.sendTransactionFailedEmail(user.getEmail(), transaction));
@@ -237,6 +279,17 @@ public class TransactionService {
         transaction.setSmsSent(true);
         transactionRepository.save(transaction);
 
+        // Persist the notification so it remains available in the user's
+        // notification center even if FCM delivery is unavailable.
+        notificationService.create(
+                transaction.getUserId(),
+                "TRANSACTION_COMPLETED",
+                "Transfer complete",
+                "Your transfer of " + transaction.getAmountCurrency() + " " + displayAmount + " was completed successfully.",
+                transaction.getId(),
+                transaction.getTransactionCode()
+        );
+
         pushNotificationService.sendToUser(
                 transaction.getUserId(),
                 "Transfer complete",
@@ -254,9 +307,35 @@ public class TransactionService {
         if (maybeTransaction.isEmpty()) return;
         Transaction transaction = maybeTransaction.get();
         if (transaction.getStatus() != TransactionStatus.AWAITING_PAYMENT) return;
+
+        String failureReason = normalizeFailureReason(
+                reason,
+                "The payment code could not be completed by the payment provider."
+        );
+
         transaction.setStatus(TransactionStatus.FAILED);
-        transaction.setFailureReason(normalizeFailureReason(reason, "The payment code could not be completed by the payment provider."));
+        transaction.setFailureReason(failureReason);
         transactionRepository.save(transaction);
+
+        notificationService.create(
+                transaction.getUserId(),
+                "TRANSACTION_FAILED",
+                "Transfer failed",
+                failureReason,
+                transaction.getId(),
+                transaction.getTransactionCode()
+        );
+
+        pushNotificationService.sendToUser(
+                transaction.getUserId(),
+                "Transfer failed",
+                failureReason,
+                Map.of(
+                        "type", "TRANSACTION_FAILED",
+                        "transactionId", transaction.getId().toString()
+                )
+        );
+
         userRepository.findById(transaction.getUserId())
                 .ifPresent(user -> emailService.sendTransactionFailedEmail(user.getEmail(), transaction));
     }
@@ -285,9 +364,33 @@ public class TransactionService {
             return;
         }
 
+        String failureReason = normalizeFailureReason(
+                reason,
+                "The recipient payout was rejected or could not be completed by the payment provider."
+        );
+
         transaction.setStatus(TransactionStatus.FAILED);
-        transaction.setFailureReason(normalizeFailureReason(reason, "The recipient payout was rejected or could not be completed by the payment provider."));
+        transaction.setFailureReason(failureReason);
         transactionRepository.save(transaction);
+
+        notificationService.create(
+                transaction.getUserId(),
+                "TRANSACTION_FAILED",
+                "Transfer failed",
+                failureReason,
+                transaction.getId(),
+                transaction.getTransactionCode()
+        );
+
+        pushNotificationService.sendToUser(
+                transaction.getUserId(),
+                "Transfer failed",
+                failureReason,
+                Map.of(
+                        "type", "TRANSACTION_FAILED",
+                        "transactionId", transaction.getId().toString()
+                )
+        );
 
         userRepository.findById(transaction.getUserId())
                 .ifPresent(user -> emailService.sendTransactionFailedEmail(user.getEmail(), transaction));
