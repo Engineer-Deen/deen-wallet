@@ -207,6 +207,8 @@
             flex-shrink: 0;
         }
 
+        /* Step 2 has no left/right action buttons, so its heading must span
+           the full top-bar instead of being placed in the 40px side column. */
         #screen-step2 .top-bar > div {
             grid-column: 1 / -1;
             min-width: 0;
@@ -2123,93 +2125,6 @@
         .support-contact-row strong { color:var(--text); }
         .support-note { margin-top:12px !important; font-size:12px !important; }
 
-
-        /* ============================================================
-           RESPONSIVE LAYOUT HARDENING
-           Keeps the existing design but allows the UI to use the full
-           available width on phones, tablets and Android WebView.
-           ============================================================ */
-        html { width:100%; min-width:0; overflow-x:hidden; }
-        body { width:100%; min-width:0; overflow-x:hidden; }
-
-        *, *::before, *::after { min-width:0; }
-
-        img, svg, video, canvas { max-width:100%; }
-
-        button, input, select, textarea { max-width:100%; font:inherit; }
-
-        @media (min-width:461px) and (max-width:768px) {
-            #app {
-                width:100%;
-                max-width:760px;
-                min-width:0;
-                height:100dvh;
-                min-height:100dvh;
-                max-height:100dvh;
-                margin:0 auto;
-                box-shadow:0 0 40px rgba(0,0,0,.06);
-            }
-
-            .scroll {
-                padding-left:max(20px, env(safe-area-inset-left));
-                padding-right:max(20px, env(safe-area-inset-right));
-            }
-        }
-
-        @media (max-width:460px) {
-            #app {
-                width:100%;
-                max-width:none;
-                min-width:0;
-            }
-
-            .scroll {
-                padding-left:max(14px, env(safe-area-inset-left));
-                padding-right:max(14px, env(safe-area-inset-right));
-                padding-bottom:12px;
-            }
-
-            .top-bar {
-                width:100%;
-                grid-template-columns:40px minmax(0,1fr) 40px;
-                gap:8px;
-            }
-
-            .app-brand-logo { max-width:88px; }
-
-            .greeting-title,
-            .account-hero-name,
-            .security-hero-title { overflow-wrap:anywhere; }
-
-            .form-actions { flex-wrap:wrap; }
-            .form-actions > * { min-width:0; flex:1 1 120px; }
-
-            .modal-overlay {
-                padding:max(12px, env(safe-area-inset-top))
-                max(12px, env(safe-area-inset-right))
-                max(12px, env(safe-area-inset-bottom))
-                max(12px, env(safe-area-inset-left));
-            }
-
-            .modal-box {
-                width:100%;
-                max-width:380px;
-                max-height:calc(100dvh - 24px);
-                overflow-y:auto;
-                padding:22px 18px 18px;
-            }
-        }
-
-        @media (max-width:360px) {
-            .scroll { padding-left:10px; padding-right:10px; }
-            .top-bar { grid-template-columns:36px minmax(0,1fr) 36px; gap:6px; }
-            .top-bar-spacer, .menu-btn, .notification-btn { width:36px; height:36px; }
-            .app-brand-logo { width:76px; height:42px; }
-            .app-bottom-nav { padding-left:4px; padding-right:4px; }
-            .app-nav-item { padding-left:4px; padding-right:4px; }
-            .modal-box { padding-left:14px; padding-right:14px; }
-        }
-
     </style>
 </head>
 
@@ -3033,7 +2948,7 @@
         // ==============================================================
         // SESSION PIN INIT
         // ==============================================================
-        const SESSION_TIMEOUT_MS = 20000;
+        const PIN_BACKGROUND_GRACE_MS = 30000;
         updateSessionLastActive();
 
         // ==============================================================
@@ -3532,20 +3447,30 @@
         // ==============================================================
         // SESSION MANAGEMENT
         // ==============================================================
+        // The PIN prompt is shown when the app has actually been left in
+        // the background for the configured grace period. Normal activity
+        // inside the app does not trigger the PIN prompt.
+        let appHiddenAt = null;
+
         function handleVisibilityChange() {
             if (document.hidden) {
+                appHiddenAt = Date.now();
                 if (typeof updateSessionLastActive === 'function') {
                     updateSessionLastActive();
                 }
-            } else {
-                // Always re-verify with PIN on returning to the app, regardless
-                // of how briefly it was backgrounded - this is deliberate, not
-                // just the inactivity-timeout check below.
-                if (!pinModalActive && getAccessToken()) {
-                    showPinModal('Enter your PIN to continue.');
-                } else if (typeof updateSessionLastActive === 'function') {
-                    updateSessionLastActive();
-                }
+                return;
+            }
+
+            const hiddenDuration = appHiddenAt === null
+                ? 0
+                : Date.now() - appHiddenAt;
+
+            appHiddenAt = null;
+
+            if (hiddenDuration >= PIN_BACKGROUND_GRACE_MS && !pinModalActive && getAccessToken()) {
+                showPinModal('Enter your PIN to continue.');
+            } else if (typeof updateSessionLastActive === 'function') {
+                updateSessionLastActive();
             }
         }
 
@@ -3556,34 +3481,6 @@
                 updateSessionLastActive();
             }
         });
-
-        window.addEventListener('focus', () => {
-            if (!pinModalActive && getAccessToken()) {
-                showPinModal('Enter your PIN to continue.');
-            } else if (typeof updateSessionLastActive === 'function') {
-                updateSessionLastActive();
-            }
-        });
-
-        let idleTimeout = null;
-
-        function resetIdleTimer() {
-            if (typeof updateSessionLastActive === 'function') {
-                updateSessionLastActive();
-            }
-            if (idleTimeout) clearTimeout(idleTimeout);
-            if (pinModalActive) return;
-            idleTimeout = setTimeout(() => {
-                const expired = typeof isSessionExpired === 'function' ? isSessionExpired(SESSION_TIMEOUT_MS) : false;
-                if (expired && !pinModalActive) {
-                    showPinModal('Your session timed out. Enter your PIN to continue.');
-                }
-            }, SESSION_TIMEOUT_MS + 5000);
-        }
-
-        document.addEventListener('mousemove', resetIdleTimer);
-        document.addEventListener('keydown', resetIdleTimer);
-        document.addEventListener('touchstart', resetIdleTimer);
 
         // Primary app navigation is implemented in deenwallet-client.js.
 
@@ -3642,43 +3539,7 @@
             if (action === 'logout') { logout(); return; }
         }
 
-        // The last result of the check below. The button uses it straight away,
-        // so a tap never waits for another round of network calls.
-        let biometricUiState = { enabled: false };
-        let biometricRefreshPromise = null;
-        let biometricBusy = false;
-
-        function refreshBiometricScreen() {
-            if (biometricRefreshPromise) return biometricRefreshPromise;
-            biometricRefreshPromise = refreshBiometricScreenNow().finally(function () { biometricRefreshPromise = null; });
-            return biometricRefreshPromise;
-        }
-
-        async function getBiometricStateForCurrentUser() {
-            const registration = await getBiometricRegistration();
-            let serverCredentials = [];
-            try {
-                serverCredentials = await apiRequest('/api/auth/biometric/credentials', { method: 'GET' });
-            } catch (error) {
-                throw error;
-            }
-
-            const serverRegistered = !!(
-                registration &&
-                registration.registered &&
-                registration.credentialId &&
-                Array.isArray(serverCredentials) &&
-                serverCredentials.some(c => c && c.credentialId === registration.credentialId)
-            );
-
-            return {
-                enabled: serverRegistered,
-                offline: false,
-                registration
-            };
-        }
-
-        async function refreshBiometricScreenNow() {
+        async function refreshBiometricScreen() {
             const badge = document.getElementById('biometric-status-badge');
             const title = document.getElementById('biometric-status-title');
             const deviceStatus = document.getElementById('biometric-device-status');
@@ -3690,6 +3551,7 @@
             if (!badge || !title || !deviceStatus || !message || !button) return;
 
             errorBox && errorBox.classList.add('hidden');
+            successBox && successBox.classList.add('hidden');
 
             if (!isDeenWalletAndroidApp()) {
                 badge.textContent = 'Android only';
@@ -3700,20 +3562,9 @@
                 return;
             }
 
-            // Until the check is done the button says so and cannot be tapped,
-            // instead of looking ready and then ignoring the first tap.
-            if (!biometricBusy) {
-                button.disabled = true;
-                button.textContent = 'Checking\u2026';
-            }
-
             try {
                 const plugin = getBiometricPlugin();
-                // Everything is asked at the same time, not one after the other.
-                const [result, state] = await Promise.all([
-                    plugin ? plugin.isAvailable() : Promise.resolve({ available: false, reason: -1 }),
-                    getBiometricStateForCurrentUser()
-                ]);
+                const result = plugin ? await plugin.isAvailable() : { available: false, reason: -1 };
 
                 if (!result.available) {
                     badge.textContent = 'Not ready';
@@ -3722,23 +3573,38 @@
                     message.textContent = result.reason === 11
                         ? 'No strong biometric is enrolled on this Android device. Enroll a fingerprint or other supported strong biometric in Android Settings, then return here.'
                         : 'This Android device cannot currently provide strong biometric authentication.';
-                    button.textContent = 'Enable biometric login';
                     button.disabled = true;
                     return;
                 }
 
-                if (state.offline) {
-                    throw new Error('Could not reach DeenWallet. Check your connection and try again.');
+                const registration = await getBiometricRegistration();
+                let serverCredentials = [];
+                try {
+                    serverCredentials = await apiRequest('/api/auth/biometric/credentials', { method: 'GET' });
+                } catch (serverError) {
+                    throw serverError;
                 }
 
-                biometricUiState = { enabled: !!state.enabled };
+                const serverRegistered = !!(registration.registered && registration.credentialId &&
+                    Array.isArray(serverCredentials) &&
+                    serverCredentials.some(c => c && c.credentialId === registration.credentialId));
 
-                if (state.enabled) {
+                if (serverRegistered) {
                     badge.textContent = 'Enabled';
                     title.textContent = 'Biometric login enabled';
                     deviceStatus.textContent = 'Active';
-                    message.textContent = 'This phone can sign in to this account with your fingerprint or face.';
+                    message.textContent = 'This device is registered for biometric sign-in to your DeenWallet account.';
                     button.textContent = 'Disable biometric login';
+                    button.disabled = false;
+                    return;
+                }
+
+                if (registration.registered && registration.credentialId) {
+                    badge.textContent = 'Needs setup';
+                    title.textContent = 'Biometric registration needs repair';
+                    deviceStatus.textContent = 'Not synced';
+                    message.textContent = 'This phone has a biometric credential, but it is not registered with your DeenWallet account. Register it again to restore biometric sign-in.';
+                    button.textContent = 'Register biometric login again';
                     button.disabled = false;
                     return;
                 }
@@ -3746,23 +3612,16 @@
                 badge.textContent = 'Available';
                 title.textContent = 'Ready to enable';
                 deviceStatus.textContent = 'Available';
-                message.textContent = 'Your Android biometric authentication is ready. Enable it to sign in to this account with your fingerprint or face.';
+                message.textContent = 'Your Android biometric authentication is ready. Enable it to register this device for biometric sign-in.';
                 button.textContent = 'Enable biometric login';
                 button.disabled = false;
-
-                // Get ready now, so the fingerprint prompt appears the moment the button is tapped.
-                prepareBiometricRegistration();
-                prefetchBiometricRegistrationChallenge();
             } catch (error) {
                 console.error('Biometric screen error:', error);
                 badge.textContent = 'Unavailable';
                 title.textContent = 'Could not check biometric status';
                 deviceStatus.textContent = 'Error';
                 message.textContent = 'We could not check biometric availability on this device.';
-                button.textContent = 'Try again';
-                // "Try again" re-runs the check.
-                biometricUiState = { enabled: false, failed: true };
-                button.disabled = false;
+                button.disabled = true;
                 if (errorBox) {
                     errorBox.textContent = error && error.message ? error.message : 'Could not check biometric status.';
                     errorBox.classList.remove('hidden');
@@ -3882,56 +3741,50 @@
         const biometricEnableBtn = document.getElementById('biometric-enable-btn');
         if (biometricEnableBtn) {
             biometricEnableBtn.addEventListener('click', async () => {
-                if (biometricBusy) return;
                 const errorBox = document.getElementById('biometric-screen-error');
                 const successBox = document.getElementById('biometric-screen-success');
+                biometricEnableBtn.disabled = true;
                 if (errorBox) errorBox.classList.add('hidden');
                 if (successBox) successBox.classList.add('hidden');
 
-                // The check failed earlier: the button just runs it again.
-                if (biometricUiState.failed) {
-                    refreshBiometricScreen();
-                    return;
-                }
-
-                biometricBusy = true;
-                const originalLabel = biometricEnableBtn.textContent;
-                biometricEnableBtn.disabled = true;
                 try {
-                    if (biometricRefreshPromise) await biometricRefreshPromise;
+                    const registration = await getBiometricRegistration();
+                    let serverCredentials = [];
+                    try {
+                        serverCredentials = await apiRequest('/api/auth/biometric/credentials', { method: 'GET' });
+                    } catch (serverError) {
+                        throw serverError;
+                    }
+                    const serverRegistered = !!(registration.registered && registration.credentialId &&
+                        Array.isArray(serverCredentials) &&
+                        serverCredentials.some(c => c && c.credentialId === registration.credentialId));
 
-                    if (biometricUiState.enabled) {
-                        if (!window.confirm('Disable biometric login on this device?')) {
-                            biometricEnableBtn.textContent = originalLabel;
+                    if (serverRegistered) {
+                        const confirmed = window.confirm('Disable biometric login on this device?');
+                        if (!confirmed) {
+                            await refreshBiometricScreen();
                             return;
                         }
-                        biometricEnableBtn.textContent = 'Turning off\u2026';
                         await disableBiometricLogin();
                         if (successBox) {
                             successBox.textContent = 'Biometric login has been disabled on this device.';
                             successBox.classList.remove('hidden');
                         }
                     } else {
-                        // Shown at once. The very first tap visibly starts something.
-                        biometricEnableBtn.textContent = 'Waiting for your fingerprint\u2026';
                         await registerBiometricLogin('DeenWallet Android');
                         if (successBox) {
                             successBox.textContent = 'Biometric login has been enabled on this device.';
                             successBox.classList.remove('hidden');
                         }
                     }
+                    await refreshBiometricScreen();
                 } catch (error) {
-                    // Closing the fingerprint prompt is not an error.
-                    if (!(error && error.code === 'CANCELED')) {
-                        console.error('Biometric settings error:', error);
-                        if (errorBox) {
-                            errorBox.textContent = error && error.message ? error.message : 'Could not update biometric login.';
-                            errorBox.classList.remove('hidden');
-                        }
+                    console.error('Biometric settings error:', error);
+                    if (errorBox) {
+                        errorBox.textContent = error && error.message ? error.message : 'Could not update biometric login.';
+                        errorBox.classList.remove('hidden');
                     }
-                } finally {
-                    biometricBusy = false;
-                    refreshBiometricScreen();
+                    await refreshBiometricScreen();
                 }
             });
         }
@@ -5056,8 +4909,6 @@
         if (getAccessToken() && !pinModalActive) {
             showPinModal('Enter your PIN to continue.');
         }
-        resetIdleTimer();
-
         console.log('DeenWallet initialized successfully');
 
         // ==============================================================
