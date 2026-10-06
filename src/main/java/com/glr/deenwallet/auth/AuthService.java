@@ -49,6 +49,7 @@ public class AuthService {
     private final OtpService otpService;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final BiometricCredentialRepository biometricCredentialRepository;
 
     @Transactional
     public void register(RegisterRequest request) {
@@ -306,14 +307,16 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         userRepository.save(user);
 
-// Revoke all existing refresh tokens after a successful password reset.
-// This prevents old sessions from obtaining new access tokens.
+        // Revoke all existing refresh tokens after a successful password reset.
+        // This prevents old sessions from obtaining new access tokens.
         refreshTokenRepository.revokeAllForUser(user.getId());
+
+        // A reset password also cancels every phone's biometric login.
+        biometricCredentialRepository.revokeAllForUser(user.getId());
 
         resetToken.setUsedAt(Instant.now());
         passwordResetTokenRepository.save(resetToken);
-
-        }
+    }
 
     private String hashPasswordResetToken(String rawToken) {
         try {
@@ -469,18 +472,24 @@ public class AuthService {
             // Only the request that actually changed the account into the
             // locked state sends the notification. Replayed/concurrent PIN
             // submissions do not send duplicate lock emails.
-            if (changed == 1
-                    && attempts == USER_PIN_MAX_ATTEMPTS) {
-
+            // (changed == 1 means this request did the locking. The old check also
+            // demanded attempts == 3 exactly, which silently skipped the email
+            // whenever the counter was anything else.)
+            if (changed == 1 && lockedState.isLocked()) {
+                log.info("Account {} locked after {} wrong PIN attempts - queueing lock email",
+                        lockedState.getAccountNumber(), attempts);
                 try {
-                    emailService.sendAccountLockedEmail(lockedState);
+                    emailService.sendAccountLockedEmail(lockedState, "pin");
                 } catch (Exception e) {
-                    log.warn(
+                    log.error(
                             "Unable to queue user lock email for {}",
                             lockedState.getEmail(),
                             e
                     );
                 }
+            } else {
+                log.info("Account {} already locked (changed={}, attempts={}) - no new lock email",
+                        lockedState.getAccountNumber(), changed, attempts);
             }
 
             throw new AccountPinLockedException(

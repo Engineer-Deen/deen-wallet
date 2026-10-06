@@ -417,7 +417,47 @@
     document.documentElement.className = 'nojs';
     document.documentElement.classList.remove('nojs');
   </script>
-  <noscript><style>html { } .phone .d { opacity: 1; } .phone .ph { display: none; } .phone .go { background: #2E9FB0; } .phone .caret { display: none; }</style></noscript>
+  <noscript><style>html { } .phone .d { opacity: 1; } .phone .ph { display: none; } .phone .go { background: #2E9FB0; } .phone .caret { display: none; }
+/* ============================================================
+   RESPONSIVE LAYOUT HARDENING
+   ============================================================ */
+html { width:100%; min-width:0; overflow-x:hidden; }
+body { width:100%; min-width:0; overflow-x:hidden; }
+*, *::before, *::after { min-width:0; }
+img, svg, video, canvas { max-width:100%; height:auto; }
+
+.wrap { width:100%; max-width:1160px; margin-left:auto; margin-right:auto; }
+
+@media (max-width:719px) {
+  .wrap { padding-left:18px; padding-right:18px; }
+  .nav-in { min-width:0; }
+  .nav-actions { min-width:0; }
+  .nav-login { padding:9px 10px; }
+  .hero { padding-top:32px; }
+  .hero-grid { gap:20px; }
+  .hero h1 { font-size:clamp(34px,11vw,52px); }
+  .hero .sub { max-width:100%; font-size:16px; }
+  .cta-row { gap:8px; }
+  .cta-row .btn { flex:1 1 140px; min-width:0; }
+  .stage { width:100%; max-width:100%; height:420px; }
+  .phone { transform:scale(.82); transform-origin:top center; }
+  .providers .wrap { min-width:0; }
+  .provider-list { grid-template-columns:1fr; }
+}
+
+@media (max-width:380px) {
+  .wrap { padding-left:14px; padding-right:14px; }
+  .brand { font-size:18px; gap:8px; }
+  .brand img { width:34px; height:34px; }
+  .nav-actions { gap:2px; }
+  .nav-login { padding:8px 8px; font-size:13px; }
+  .hero h1 { font-size:clamp(31px,10.5vw,44px); }
+  .cta-row .btn { flex-basis:100%; }
+  .stage { height:390px; }
+  .phone { transform:scale(.72); }
+}
+
+</style></noscript>
 </head>
 
 <body>
@@ -446,6 +486,7 @@
         <div class="cta-row">
           <a class="btn btn-primary" href="auth.html#signup">Sign up</a>
           <a class="btn btn-line" href="auth.html#login">Log in</a>
+          <a class="btn btn-gold" href="/downloads/DeenWallet-1.2.apk" download="DeenWallet-1.2.apk">Download App</a>
         </div>
         <p class="hero-note">
           <span class="flag" aria-hidden="true"><i></i><i></i><i></i></span>

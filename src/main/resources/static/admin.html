@@ -1761,7 +1761,18 @@
         .account-detail-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; margin-top:14px; }
         .account-detail-actions .btn-sm { min-height:42px; }
         .account-detail-contact { background:linear-gradient(180deg,#fafdfe,#f5fafb); }
-        .account-detail-contact .text-input { background:#fff; }
+        /* These inputs had no style of their own, so the browser drew its plain default boxes. */
+        .account-detail-contact .text-input {
+            display:block; width:100%; margin:0 0 10px; padding:13px 14px;
+            border:1px solid var(--border); border-radius:14px;
+            background:#fff; color:var(--text);
+            font:inherit; font-size:15px; line-height:1.4;
+            outline:none; box-sizing:border-box;
+            -webkit-appearance:none; appearance:none;
+            transition:border-color .15s ease, box-shadow .15s ease;
+        }
+        .account-detail-contact .text-input::placeholder { color:#A9B7BC; }
+        .account-detail-contact .text-input:focus { border-color:var(--primary-light); box-shadow:0 0 0 3px rgba(46,159,176,.15); }
         .account-detail-note { display:flex; align-items:flex-start; gap:9px; padding:11px 12px; margin-top:10px; border-radius:13px; background:#fff7e6; color:#8a5a0a; font-size:11px; line-height:1.5; }
         .account-detail-note strong { font-weight:800; }
         @media (max-width:560px) {
@@ -1778,7 +1789,56 @@
             .account-detail-row { gap:10px; }
         }
 
-    </style>
+    
+/* ============================================================
+   RESPONSIVE LAYOUT HARDENING
+   ============================================================ */
+html { width:100%; min-width:0; overflow-x:hidden; }
+body { width:100%; min-width:0; overflow-x:hidden; }
+*, *::before, *::after { min-width:0; }
+img, svg, video, canvas { max-width:100%; }
+button, input, select, textarea { max-width:100%; }
+
+@media (max-width:768px) {
+    .top-bar { width:100%; min-width:0; }
+    .top-bar > * { min-width:0; }
+    .scroll { width:100%; min-width:0; }
+    .admin-card, .profile-hero-card, .account-detail-hero,
+    .account-detail-section, .messaging-card { width:100%; max-width:100%; }
+
+    .nav-tabs, .admin-tabs, .filter-row, .toolbar,
+    .form-actions, .pin-input-group { min-width:0; max-width:100%; }
+
+    table { width:100%; max-width:100%; }
+    .table-wrap, .table-responsive, .transaction-table-wrap {
+        max-width:100%;
+        overflow-x:auto;
+        -webkit-overflow-scrolling:touch;
+    }
+
+    .menu-dropdown {
+        right:max(12px, env(safe-area-inset-right));
+        max-width:calc(100vw - 24px);
+    }
+
+    .modal-box, .modal-content {
+        width:calc(100vw - 24px);
+        max-width:560px;
+        max-height:calc(100dvh - 24px);
+        overflow-y:auto;
+    }
+}
+
+@media (max-width:380px) {
+    .scroll { padding-left:10px; padding-right:10px; }
+    .stats-grid { grid-template-columns:1fr; }
+    .nav-tab { padding-left:8px; padding-right:8px; }
+    .menu-dropdown { min-width:0; width:min(160px, calc(100vw - 24px)); }
+    .pin-change-form .pin-input-group { display:grid; grid-template-columns:1fr; }
+    .pin-change-form .pin-input-group input { min-width:0; width:100%; }
+}
+
+</style>
 </head>
 
 <body>
@@ -2364,11 +2424,44 @@
             // screen and a still-active profile screen to render
             // stacked on top of each other. Use this everywhere instead
             // of toggling the classes directly.
+            // Sends the admin back to a clean login. It used to switch off only two
+            // screens (main and profile), so the PIN, Admin Management, Account Detail
+            // and About screens stayed switched on and showed up under the login form.
+            // Now every screen is switched off, every drawer and popup is closed, and if
+            // an admin was inside, the page reloads so nothing from that session
+            // (lists, open details, half-filled forms) is carried into the next login.
             function forceToLoginScreen() {
+                if (window.__adminReloading) return;
                 stopErrorAutoRefresh();
-                if (profileScreen) profileScreen.classList.remove('active');
-                mainScreen.classList.remove('active');
+                try { clearToken(); } catch (e) { /* tokens may already be gone */ }
+
+                var wasInside = false;
+                document.querySelectorAll('.screen').forEach(function (el) {
+                    if (el.id !== 'screen-login' && el.classList.contains('active')) wasInside = true;
+                    el.classList.remove('active');
+                });
+
+                ['admin-drawer', 'admin-drawer-overlay', 'messaging-picker-overlay'].forEach(function (id) {
+                    var el = document.getElementById(id);
+                    if (el) { el.classList.remove('open'); el.setAttribute('aria-hidden', 'true'); }
+                });
+                ['user-modal-overlay', 'pin-modal-overlay', 'modal-overlay'].forEach(function (id) {
+                    var el = document.getElementById(id);
+                    if (el) el.classList.remove('active');
+                });
+                document.body.classList.remove('drawer-open', 'modal-open');
+
+                var pw = document.getElementById('admin-password');
+                if (pw) pw.value = '';
+
                 loginScreen.classList.add('active');
+                window.scrollTo(0, 0);
+
+                if (wasInside) {
+                    window.__adminReloading = true;
+                    // Give the message a moment to be saved, then start fresh.
+                    setTimeout(function () { window.location.reload(); }, 60);
+                }
             }
             var loginBtn = document.getElementById('login-btn');
             var loginError = document.getElementById('login-error');
@@ -2386,6 +2479,11 @@
             // TOAST / HELPERS
             // ==============================================================
             function showToast(msg) {
+                if (window.__adminReloading) {
+                    // The page is about to reload; show the message on the fresh login screen.
+                    try { sessionStorage.setItem('dw_admin_flash', msg); } catch (e) { /* optional */ }
+                    return;
+                }
                 if (!toast) return;
                 toast.textContent = msg;
                 toast.classList.add('show');
@@ -2395,6 +2493,16 @@
             function show(el) { if (el) el.classList.remove('hidden'); }
 
             function hide(el) { if (el) el.classList.add('hidden'); }
+
+            (function showSavedFlashMessage() {
+                try {
+                    var flash = sessionStorage.getItem('dw_admin_flash');
+                    if (flash) {
+                        sessionStorage.removeItem('dw_admin_flash');
+                        setTimeout(function () { showToast(flash); }, 300);
+                    }
+                } catch (e) { /* optional */ }
+            })();
 
             // ==============================================================
             // TOKEN FUNCTIONS
@@ -3372,8 +3480,8 @@
                             <div class="account-detail-section-icon">✎</div>
                             <div><h2 class="account-detail-section-title">Contact Management</h2><p class="account-detail-section-sub">Update the account email and phone number</p></div>
                         </div>
-                        <input id="admin-user-email" class="text-input" type="email" value="${escapeHtml(user.email || '')}" placeholder="Email" style="width:100%;margin-bottom:8px;" />
-                        <input id="admin-user-phone" class="text-input" type="text" value="${escapeHtml(user.phone || '')}" placeholder="+232XXXXXXXX" style="width:100%;" />
+                        <input id="admin-user-email" class="text-input" type="email" value="${escapeHtml(user.email || '')}" placeholder="Email" autocomplete="off" />
+                        <input id="admin-user-phone" class="text-input" type="tel" inputmode="tel" value="${escapeHtml(user.phone || '')}" placeholder="+232XXXXXXXX" autocomplete="off" />
                         <button id="admin-save-contact-btn" class="btn-sm success" style="margin-top:9px;min-height:40px;width:100%;">Save email &amp; phone</button>
                         <div id="admin-contact-error" class="error-state hidden" style="margin-top:8px;"></div>
                         <div class="account-detail-note"><span>ⓘ</span><span><strong>Note:</strong> changing the email may require the user to verify the new address.</span></div>

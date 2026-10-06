@@ -77,22 +77,34 @@ public class AuthController {
     @PostMapping("/biometric/registration-challenge")
     public ResponseEntity<BiometricService.ChallengeResponse> biometricRegistrationChallenge(
             org.springframework.security.core.Authentication authentication) {
-        return ResponseEntity.ok(biometricService.createRegistrationChallenge(UUID.fromString(authentication.getName())));
+        return ResponseEntity.ok(
+                biometricService.createRegistrationChallenge(
+                        UUID.fromString(authentication.getName())
+                )
+        );
     }
 
     @PostMapping("/biometric/register")
     public ResponseEntity<BiometricService.RegistrationResponse> biometricRegister(
             @RequestBody BiometricService.RegistrationRequest request,
             org.springframework.security.core.Authentication authentication) {
-        return ResponseEntity.ok(biometricService.register(UUID.fromString(authentication.getName()), request));
+        return ResponseEntity.ok(
+                biometricService.register(
+                        UUID.fromString(authentication.getName()),
+                        request
+                )
+        );
     }
 
     @PostMapping("/biometric/challenge")
     public ResponseEntity<BiometricService.ChallengeResponse> biometricChallenge(
-            @RequestBody java.util.Map<String, String> request) {
-        String credentialId = request.get("credentialId");
-        if (credentialId == null || credentialId.isBlank()) throw new IllegalArgumentException("credentialId is required");
-        return ResponseEntity.ok(biometricService.createLoginChallenge(credentialId));
+            @RequestBody BiometricService.LoginChallengeRequest request) {
+        if (request.credentialId() == null || request.credentialId().isBlank()) {
+            throw new IllegalArgumentException("credentialId is required");
+        }
+        return ResponseEntity.ok(
+                biometricService.createLoginChallenge(request)
+        );
     }
 
     @PostMapping("/biometric/login")
@@ -104,13 +116,19 @@ public class AuthController {
     @GetMapping("/biometric/credentials")
     public ResponseEntity<java.util.List<BiometricService.CredentialResponse>> biometricCredentials(
             org.springframework.security.core.Authentication authentication) {
-        return ResponseEntity.ok(biometricService.list(UUID.fromString(authentication.getName())));
+        return ResponseEntity.ok(
+                biometricService.list(UUID.fromString(authentication.getName()))
+        );
     }
 
     @DeleteMapping("/biometric/credentials/{id}")
     public ResponseEntity<Void> revokeBiometricCredential(
-            @PathVariable UUID id, org.springframework.security.core.Authentication authentication) {
-        biometricService.revoke(UUID.fromString(authentication.getName()), id);
+            @PathVariable UUID id,
+            org.springframework.security.core.Authentication authentication) {
+        biometricService.revoke(
+                UUID.fromString(authentication.getName()),
+                id
+        );
         return ResponseEntity.noContent().build();
     }
 

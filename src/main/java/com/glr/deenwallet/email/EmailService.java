@@ -43,7 +43,11 @@ public class EmailService {
 
     public void sendWelcomeEmail(User user) {
         send(user.getEmail(), "Welcome to Deen Wallet",
-                EmailTemplates.welcomeEmail(user.getFirstName(), user.getAccountNumber(), feedbackEmail));
+                EmailTemplates.welcomeEmail(
+                        user.getFirstName(),
+                        user.getAccountNumber(),
+                        feedbackEmail
+                ));
     }
 
     public void sendPasswordResetEmail(User user, String rawToken) {
@@ -78,7 +82,10 @@ public class EmailService {
     @Async("emailTaskExecutor")
     public void sendAccountDeactivatedEmail(User user) {
         send(user.getEmail(), "Deen Wallet Account Service Summary",
-                EmailTemplates.accountDeactivatedEmail(user.getFirstName(), supportEmail));
+                EmailTemplates.accountDeactivatedEmail(
+                        user.getFirstName(),
+                        supportEmail
+                ));
         log.info("✅ Account update email sent to: {}", user.getEmail());
     }
 
@@ -89,23 +96,48 @@ public class EmailService {
 
     @Async("emailTaskExecutor")
     public void sendAccountLockedEmail(User user, String lockReason) {
-        send(user.getEmail(), "Deen Wallet Service Activity Summary",
-                EmailTemplates.accountLockedEmail(user.getFirstName(), lockReason, supportEmail));
-        log.info("✅ Account activity email ({}) sent to: {}", lockReason, user.getEmail());
+        log.info(
+                "Preparing account lock email ({}) for: {}",
+                lockReason,
+                user.getEmail()
+        );
+
+        send(
+                user.getEmail(),
+                "Deen Wallet Service Activity Summary",
+                EmailTemplates.accountLockedEmail(
+                        user.getFirstName(),
+                        lockReason,
+                        supportEmail
+                )
+        );
     }
 
     @Async("emailTaskExecutor")
     public void sendAdminLoginBlockedEmail(User user, boolean superAdmin) {
-        send(user.getEmail(), "Deen Wallet Administrative Activity Notice",
-                EmailTemplates.adminLoginBlockedEmail(user.getFirstName(), superAdmin, supportEmail));
+        send(
+                user.getEmail(),
+                "Deen Wallet Administrative Activity Notice",
+                EmailTemplates.adminLoginBlockedEmail(
+                        user.getFirstName(),
+                        superAdmin,
+                        supportEmail
+                )
+        );
         log.info("Admin status email queued for: {}", user.getEmail());
     }
 
-    public void sendTransactionCompletedEmail(String toEmail, Transaction transaction) {
-        String transactionCode = transaction.getTransactionCode() != null ?
-                transaction.getTransactionCode() : transaction.getId().toString();
+    public void sendTransactionCompletedEmail(
+            String toEmail,
+            Transaction transaction
+    ) {
+        String transactionCode = transaction.getTransactionCode() != null
+                ? transaction.getTransactionCode()
+                : transaction.getId().toString();
 
-        send(toEmail, "Transfer Receipt",
+        send(
+                toEmail,
+                "Transfer Receipt",
                 EmailTemplates.transactionCompletedEmail(
                         transactionCode,
                         toDisplayAmount(transaction.getAmountValue()),
@@ -113,27 +145,46 @@ public class EmailService {
                         transaction.getDestinationHolderName(),
                         transaction.getDestinationPhone(),
                         transaction.getDestinationProviderId()
-                ));
+                )
+        );
     }
 
-    public void sendTransactionFailedEmail(String toEmail, Transaction transaction) {
-        String transactionCode = transaction.getTransactionCode() != null ?
-                transaction.getTransactionCode() : transaction.getId().toString();
+    public void sendTransactionFailedEmail(
+            String toEmail,
+            Transaction transaction
+    ) {
+        String transactionCode = transaction.getTransactionCode() != null
+                ? transaction.getTransactionCode()
+                : transaction.getId().toString();
 
-        send(toEmail, "Transfer Status Update",
+        send(
+                toEmail,
+                "Transfer Status Update",
                 EmailTemplates.transactionFailedEmail(
                         transactionCode,
                         toDisplayAmount(transaction.getAmountValue()),
                         transaction.getDestinationPhone(),
                         transaction.getFailureReason()
-                ));
+                )
+        );
     }
 
-    private void sendRequired(String toEmail, String subject, String htmlBody) {
-        if (toEmail == null || toEmail.isBlank()) throw new IllegalArgumentException("Recipient email is required");
+    private void sendRequired(
+            String toEmail,
+            String subject,
+            String htmlBody
+    ) {
+        if (toEmail == null || toEmail.isBlank()) {
+            throw new IllegalArgumentException("Recipient email is required");
+        }
+
         try {
             MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, false, StandardCharsets.UTF_8.name());
+            MimeMessageHelper helper = new MimeMessageHelper(
+                    message,
+                    false,
+                    StandardCharsets.UTF_8.name()
+            );
 
             helper.setFrom(senderEmail, senderName);
             helper.setReplyTo(supportEmail, "Deen Wallet Support");
@@ -142,39 +193,98 @@ public class EmailService {
             helper.setText(htmlBody, true);
 
             mailSender.send(message);
+
         } catch (Exception e) {
             log.error("Failed to send required email to {}", toEmail, e);
-            throw new IllegalStateException("Unable to send verification email. Please try again.", e);
+            throw new IllegalStateException(
+                    "Unable to send verification email. Please try again.",
+                    e
+            );
         }
     }
 
-    private void send(String toEmail, String subject, String htmlBody) {
+    private void send(
+            String toEmail,
+            String subject,
+            String htmlBody
+    ) {
         if (toEmail == null || toEmail.isBlank()) {
-            log.warn("Skipping email '{}': no recipient address available", subject);
+            log.warn(
+                    "Skipping email '{}': no recipient address available",
+                    subject
+            );
             return;
         }
-        try {
-            log.info("📧 Sending email to: {} - Subject: {}", toEmail, subject);
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, false, StandardCharsets.UTF_8.name());
 
-            helper.setFrom(senderEmail, senderName);
-            helper.setReplyTo(supportEmail, "Deen Wallet Support");
-            helper.setTo(toEmail);
-            helper.setSubject(subject);
-            helper.setText(htmlBody, true);
+        // Mail servers fail now and then (timeouts, rate limits). Try a few times
+        // before giving up so a security notice is not lost to one bad moment.
+        final int maxAttempts = 3;
 
-            mailSender.send(message);
-            log.info("✅ Email sent successfully to: {}", toEmail);
-        } catch (Exception e) {
-            log.error("❌ Failed to send email '{}' to {}: {}", subject, toEmail, e.getMessage(), e);
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                log.info(
+                        "📧 Sending email to: {} - Subject: {} (attempt {}/{})",
+                        toEmail,
+                        subject,
+                        attempt,
+                        maxAttempts
+                );
+
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(
+                        message,
+                        false,
+                        StandardCharsets.UTF_8.name()
+                );
+
+                helper.setFrom(senderEmail, senderName);
+                helper.setReplyTo(supportEmail, "Deen Wallet Support");
+                helper.setTo(toEmail);
+                helper.setSubject(subject);
+                helper.setText(htmlBody, true);
+
+                mailSender.send(message);
+
+                log.info("✅ Email sent successfully to: {}", toEmail);
+                return;
+
+            } catch (Exception e) {
+                log.error(
+                        "❌ Failed to send email '{}' to {} (attempt {}/{}): {}",
+                        subject,
+                        toEmail,
+                        attempt,
+                        maxAttempts,
+                        e.getMessage(),
+                        e
+                );
+
+                if (attempt < maxAttempts) {
+                    try {
+                        Thread.sleep(2000L * attempt);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                }
+            }
         }
+
+        log.error(
+                "❌ Giving up on email '{}' to {} after {} attempts",
+                subject,
+                toEmail,
+                maxAttempts
+        );
     }
 
     private String toDisplayAmount(Long minorUnits) {
         if (minorUnits == null) {
             return "0.00";
         }
-        return BigDecimal.valueOf(minorUnits).movePointLeft(2).toPlainString();
+
+        return BigDecimal.valueOf(minorUnits)
+                .movePointLeft(2)
+                .toPlainString();
     }
 }

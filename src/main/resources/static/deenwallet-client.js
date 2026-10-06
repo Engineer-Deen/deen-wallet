@@ -152,57 +152,146 @@ async function isBiometricAvailable() {
   }
 }
 
-async function getBiometricRegistration() {
+// Every account that has biometric login on THIS phone:
+// [{ accountId, credentialId, firstName, maskedEmail, accountNumber }]
+// Older app builds only knew one credential and had no account details, so the
+// list can contain an entry without accountId. The login screen treats those as
+// "old setup, please set it up again" instead of guessing which account it is.
+async function listBiometricAccounts() {
   const plugin = getBiometricPlugin();
-  if (!plugin) return { registered: false };
-  try { return await plugin.hasCredential(); }
-  catch (_) { return { registered: false }; }
+  if (!plugin) return [];
+  try {
+    if (typeof plugin.listCredentials === 'function') {
+      const result = await plugin.listCredentials();
+      return Array.isArray(result.credentials) ? result.credentials : [];
+    }
+    const legacy = await plugin.hasCredential();
+    return legacy && legacy.registered
+        ? [{ accountId: '', credentialId: legacy.credentialId, firstName: '', maskedEmail: '', accountNumber: '' }]
+        : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+// Kept for older callers. True when at least one account is set up on the phone.
+async function getBiometricRegistration() {
+  const list = await listBiometricAccounts();
+  return list.length ? { registered: true, credentialId: list[0].credentialId } : { registered: false };
+}
+
+// Asks the phone to get ready (creates the key ahead of time) so the
+// fingerprint prompt appears the instant the button is tapped.
+async function prepareBiometricRegistration() {
+  const plugin = getBiometricPlugin();
+  if (!plugin || typeof plugin.prepare !== 'function') return;
+  try { await plugin.prepare(); } catch (_) { /* optional speed-up */ }
+}
+
+// A registration challenge is fetched ahead of time too. It is valid for 2 minutes,
+// so it is refreshed after 90 seconds.
+let biometricChallengeCache = null;
+function prefetchBiometricRegistrationChallenge() {
+  if (!getAccessToken()) return null;
+  const now = Date.now();
+  if (biometricChallengeCache && now - biometricChallengeCache.at < 90000) return biometricChallengeCache.promise;
+  const promise = apiRequest('/api/auth/biometric/registration-challenge', { method: 'POST', body: {} });
+  biometricChallengeCache = { at: now, promise };
+  promise.catch(function () { if (biometricChallengeCache && biometricChallengeCache.promise === promise) biometricChallengeCache = null; });
+  return promise;
 }
 
 async function registerBiometricLogin(deviceName) {
   const plugin = getBiometricPlugin();
   if (!plugin) throw new Error('Biometric login is only available in the DeenWallet Android app.');
   if (!getAccessToken()) throw new Error('Please log in first.');
-  const available = await isBiometricAvailable();
-  if (!available) throw new Error('Strong biometric authentication is not available on this device.');
 
-  const challenge = await apiRequest('/api/auth/biometric/registration-challenge', { method: 'POST', body: {} });
-  const signed = await plugin.register({ challenge: challenge.challenge });
-  return apiRequest('/api/auth/biometric/register', {
-    method: 'POST',
-    body: {
-      credentialId: signed.credentialId,
-      publicKey: signed.publicKey,
-      signature: signed.signature,
+  // Use the challenge fetched ahead of time when there is one. It is used only once.
+  const challengePromise = prefetchBiometricRegistrationChallenge();
+  biometricChallengeCache = null;
+  const challenge = await challengePromise;
+  const account = challenge.account || {};
+
+  // If this account already has a credential on this phone, it is replaced.
+  const existing = (await listBiometricAccounts()).find(function (c) { return c.accountId && c.accountId === account.id; });
+
+  let signed;
+  try {
+    signed = await plugin.register({
       challenge: challenge.challenge,
-      deviceName: deviceName || 'Android device'
-    }
-  });
+      accountId: account.id || '',
+      firstName: account.firstName || '',
+      maskedEmail: account.maskedEmail || '',
+      accountNumber: account.accountNumber || ''
+    });
+  } catch (error) {
+    // The server never learns about a credential the phone did not finish creating.
+    throw error;
+  }
+
+  try {
+    return await apiRequest('/api/auth/biometric/register', {
+      method: 'POST',
+      body: {
+        credentialId: signed.credentialId,
+        publicKey: signed.publicKey,
+        signature: signed.signature,
+        challenge: challenge.challenge,
+        deviceName: deviceName || 'Android device',
+        replacesCredentialId: existing ? existing.credentialId : null
+      }
+    });
+  } catch (error) {
+    // Registration failed on the server, so remove the phone-side credential.
+    // Otherwise the phone would think biometric login is on when it is not.
+    try { await plugin.clearCredential({ credentialId: signed.credentialId }); } catch (_) {}
+    throw error;
+  }
 }
 
-async function biometricLogin() {
+// Signs in to ONE specific account that the person chose.
+// account = an entry from listBiometricAccounts().
+async function biometricLogin(account) {
   const plugin = getBiometricPlugin();
   if (!plugin) throw new Error('Biometric login is only available in the DeenWallet Android app.');
-  const registration = await getBiometricRegistration();
-  if (!registration.registered || !registration.credentialId) {
-    throw new Error('Biometric login has not been enabled on this device. Log in with your password and enable it from the user menu.');
+  if (!account || !account.credentialId) {
+    throw new Error('Choose which account to sign in to.');
   }
+  if (!account.accountId) {
+    const oldSetup = new Error('Your biometric login needs to be set up again. Log in with your password, then enable it from the menu.');
+    oldSetup.code = 'LEGACY_CREDENTIAL';
+    throw oldSetup;
+  }
+
   const challenge = await apiRequest('/api/auth/biometric/challenge', {
     method: 'POST',
-    body: { credentialId: registration.credentialId }
+    body: { credentialId: account.credentialId, accountId: account.accountId }
   });
-  const signed = await plugin.authenticate({ challenge: challenge.challenge });
+  const signed = await plugin.authenticate({
+    challenge: challenge.challenge,
+    credentialId: account.credentialId,
+    accountId: account.accountId
+  });
   const data = await apiRequest('/api/auth/biometric/login', {
     method: 'POST',
     body: {
       credentialId: signed.credentialId,
       challenge: challenge.challenge,
-      signature: signed.signature
+      signature: signed.signature,
+      accountId: account.accountId
     }
   });
   const accessToken = data.accessToken || data.token;
   const refreshToken = data.refreshToken;
   if (!accessToken || !refreshToken) throw new Error('Biometric login response is missing authentication tokens.');
+
+  // Safety net: the token must belong to the account that was chosen.
+  const payload = decodeJwtPayload(accessToken);
+  const tokenUser = payload && (payload.sub || payload.userId);
+  if (tokenUser && tokenUser !== account.accountId) {
+    throw new Error('Sign-in did not match the chosen account. Please try again.');
+  }
+
   setTokens(accessToken, refreshToken);
   localStorage.setItem(DEENWALLET_CONFIG.USER_STORAGE_KEY, JSON.stringify({
     firstName: data.firstName, accountNumber: data.accountNumber, role: data.role
@@ -210,17 +299,195 @@ async function biometricLogin() {
   return data;
 }
 
+// The account that is logged in right now, if it has biometric login on this phone.
+async function getBiometricStateForCurrentUser() {
+  const plugin = getBiometricPlugin();
+  if (!plugin || !getAccessToken()) return { enabled: false, credential: null, server: [] };
+  const [local, server] = await Promise.all([
+    listBiometricAccounts(),
+    apiRequest('/api/auth/biometric/credentials', { method: 'GET' }).catch(function () { return null; })
+  ]);
+  if (server === null) return { enabled: false, credential: null, server: null, offline: true };
+  const match = local.find(function (c) { return server.some(function (s) { return s.credentialId === c.credentialId; }); });
+  return { enabled: !!match, credential: match || null, server: server };
+}
+
 async function disableBiometricLogin() {
   const plugin = getBiometricPlugin();
   if (!plugin || !getAccessToken()) throw new Error('Biometric login is not available.');
-  const registration = await getBiometricRegistration();
-  if (!registration.registered) return;
-  const credentials = await apiRequest('/api/auth/biometric/credentials', { method: 'GET' });
-  const match = credentials.find(c => c.credentialId === registration.credentialId);
-  if (match && match.id) {
-    await apiRequest('/api/auth/biometric/credentials/' + encodeURIComponent(match.id), { method: 'DELETE' });
+  const state = await getBiometricStateForCurrentUser();
+  if (state.server) {
+    // Remove this account's credentials for this phone on the server...
+    const local = await listBiometricAccounts();
+    const mine = state.server.filter(function (s) { return local.some(function (c) { return c.credentialId === s.credentialId; }); });
+    for (const item of mine) {
+      await apiRequest('/api/auth/biometric/credentials/' + encodeURIComponent(item.id), { method: 'DELETE' });
+    }
+    // ...and on the phone. Other accounts on this phone are left alone.
+    for (const item of mine) {
+      await plugin.clearCredential({ credentialId: item.credentialId });
+    }
   }
-  await plugin.clearCredential();
+}
+
+
+// ==============================================================
+// IN-APP NOTIFICATION POPUP (with sound and vibration)
+// ==============================================================
+// Shown whenever a notification arrives while the person is using the app.
+// (When the app is closed or in the background the phone or browser shows
+// its own notification instead.)
+const DEENWALLET_SHOWN_NOTIFICATION_IDS = new Set();
+let deenWalletAudioContext = null;
+
+function unlockDeenWalletAudio() {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    if (!deenWalletAudioContext) deenWalletAudioContext = new Ctx();
+    if (deenWalletAudioContext.state === 'suspended') deenWalletAudioContext.resume();
+  } catch (_) { /* sound is optional */ }
+}
+// Browsers only allow sound after a tap, so the first tap unlocks it.
+['pointerdown', 'touchstart', 'keydown', 'click'].forEach(function (name) {
+  window.addEventListener(name, unlockDeenWalletAudio, { passive: true, once: false });
+});
+
+function playDeenWalletNotificationSound() {
+  try {
+    unlockDeenWalletAudio();
+    const ctx = deenWalletAudioContext;
+    if (!ctx || ctx.state !== 'running') return;
+    const now = ctx.currentTime;
+    // Two short, friendly tones.
+    [[880, 0], [1320, 0.16]].forEach(function (pair) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = pair[0];
+      gain.gain.setValueAtTime(0.0001, now + pair[1]);
+      gain.gain.exponentialRampToValueAtTime(0.35, now + pair[1] + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + pair[1] + 0.34);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + pair[1]);
+      osc.stop(now + pair[1] + 0.36);
+    });
+  } catch (_) { /* sound is optional */ }
+}
+
+function vibrateDeenWalletDevice() {
+  try {
+    if (navigator.vibrate) navigator.vibrate([140, 70, 140]);
+  } catch (_) { /* vibration is optional */ }
+}
+
+function ensureDeenWalletPopupStyles() {
+  if (document.getElementById('dw-popup-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'dw-popup-styles';
+  style.textContent = [
+    '.dw-popup-host{position:fixed;left:0;right:0;top:0;z-index:2147483000;display:flex;flex-direction:column;align-items:center;gap:10px;',
+    'padding:calc(12px + env(safe-area-inset-top,0px)) 12px 0;pointer-events:none;}',
+    '.dw-popup{pointer-events:auto;width:100%;max-width:420px;display:flex;align-items:flex-start;gap:12px;padding:13px 14px;',
+    'background:#fff;border-radius:18px;border:1px solid #E4ECEF;box-shadow:0 18px 40px rgba(12,42,51,.22);',
+    'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#12242B;',
+    'transform:translateY(-130%);opacity:0;transition:transform .35s cubic-bezier(.2,.8,.2,1),opacity .25s ease;cursor:pointer;}',
+    '.dw-popup.dw-in{transform:none;opacity:1;}',
+    '.dw-popup img{width:40px;height:40px;flex:none;border-radius:11px;object-fit:cover;}',
+    '.dw-popup-body{flex:1;min-width:0;}',
+    '.dw-popup-title{margin:0;font-size:14.5px;font-weight:800;line-height:1.3;}',
+    '.dw-popup-text{margin:3px 0 0;font-size:13.5px;line-height:1.4;color:#46606A;word-break:break-word;}',
+    '.dw-popup-close{flex:none;width:28px;height:28px;border:0;border-radius:50%;background:#F2F7F8;color:#46606A;font-size:16px;line-height:1;cursor:pointer;}',
+    '@media (prefers-reduced-motion:reduce){.dw-popup{transition:none;}}'
+  ].join('');
+  document.head.appendChild(style);
+}
+
+// notification = { id?, title, body, onClick? }
+function showInAppNotification(notification) {
+  try {
+    if (!notification) return;
+    if (notification.id) {
+      if (DEENWALLET_SHOWN_NOTIFICATION_IDS.has(notification.id)) return;
+      DEENWALLET_SHOWN_NOTIFICATION_IDS.add(notification.id);
+    }
+    ensureDeenWalletPopupStyles();
+
+    let host = document.getElementById('dw-popup-host');
+    if (!host) {
+      host = document.createElement('div');
+      host.id = 'dw-popup-host';
+      host.className = 'dw-popup-host';
+      host.setAttribute('role', 'region');
+      host.setAttribute('aria-label', 'Notifications');
+      document.body.appendChild(host);
+    }
+
+    const card = document.createElement('div');
+    card.className = 'dw-popup';
+    card.setAttribute('role', 'alert');
+
+    const icon = document.createElement('img');
+    icon.src = '/assets/icon-192.png';
+    icon.alt = '';
+    const body = document.createElement('div');
+    body.className = 'dw-popup-body';
+    const title = document.createElement('p');
+    title.className = 'dw-popup-title';
+    title.textContent = notification.title || 'DeenWallet';
+    const text = document.createElement('p');
+    text.className = 'dw-popup-text';
+    text.textContent = notification.body || '';
+    body.appendChild(title);
+    body.appendChild(text);
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'dw-popup-close';
+    close.setAttribute('aria-label', 'Dismiss');
+    close.textContent = '\u00D7';
+
+    card.appendChild(icon);
+    card.appendChild(body);
+    card.appendChild(close);
+    host.appendChild(card);
+    // Keep only the three newest on screen.
+    while (host.children.length > 3) host.removeChild(host.firstChild);
+
+    let timer = null;
+    function dismiss() {
+      if (timer) clearTimeout(timer);
+      card.classList.remove('dw-in');
+      setTimeout(function () { if (card.parentNode) card.parentNode.removeChild(card); }, 350);
+    }
+    close.addEventListener('click', function (e) { e.stopPropagation(); dismiss(); });
+    card.addEventListener('click', function () {
+      dismiss();
+      if (typeof notification.onClick === 'function') notification.onClick();
+      else window.dispatchEvent(new CustomEvent('deenwallet:notification-open'));
+    });
+
+    requestAnimationFrame(function () { card.classList.add('dw-in'); });
+    timer = setTimeout(dismiss, 7000);
+
+    playDeenWalletNotificationSound();
+    vibrateDeenWalletDevice();
+  } catch (error) {
+    console.warn('[DeenWallet] Could not show the in-app notification:', error);
+  }
+}
+
+// One entry point for every push that arrives while the app is open.
+function handleForegroundPush(payload) {
+  const n = (payload && payload.notification) || {};
+  const data = (payload && payload.data) || {};
+  showInAppNotification({
+    id: data.notificationId || null,
+    title: n.title || (payload && payload.title),
+    body: n.body || (payload && payload.body)
+  });
+  // Lets the page refresh its bell badge and list right away.
+  window.dispatchEvent(new CustomEvent('deenwallet:notification', { detail: { data: data } }));
 }
 
 // ==============================================================
@@ -349,6 +616,32 @@ async function initializeDeenWalletPushNotifications() {
       console.error('[DeenWallet FCM] registrationError event:', error);
     });
 
+    // A push that arrives while the app is open: show our own popup (with sound and vibration).
+    await PushNotifications.addListener('pushNotificationReceived', function (notification) {
+      handleForegroundPush({
+        title: notification && notification.title,
+        body: notification && notification.body,
+        data: (notification && notification.data) || {}
+      });
+    });
+
+    // The alert channel the server targets, so background notifications also play a sound and vibrate.
+    try {
+      if (typeof PushNotifications.createChannel === 'function') {
+        await PushNotifications.createChannel({
+          id: 'deenwallet_alerts',
+          name: 'DeenWallet alerts',
+          description: 'Transfers and account messages',
+          importance: 5,
+          visibility: 1,
+          vibration: true,
+          lights: true
+        });
+      }
+    } catch (channelError) {
+      console.warn('[DeenWallet FCM] Could not create the alert channel:', channelError);
+    }
+
     const permission = await PushNotifications.checkPermissions();
     let receive = permission.receive;
     console.log('[DeenWallet FCM] permission status:', receive);
@@ -459,15 +752,10 @@ async function initializeDeenWalletWebPushNotifications() {
     await registerWebFcmToken(token);
 
     // While the site is open and visible, Firebase hands the message to the
-    // page instead of showing a popup, so show one ourselves.
+    // page instead of showing a popup, so the page shows its own popup.
     messaging.onMessage((payload) => {
       console.log('[DeenWallet Web FCM] Foreground message:', payload);
-      const n = payload.notification || {};
-      registration.showNotification(n.title || 'DeenWallet', {
-        body: n.body || '',
-        icon: '/deenwallet-logo.png',
-        data: payload.data || {}
-      });
+      handleForegroundPush(payload);
     });
 
   } catch (error) {

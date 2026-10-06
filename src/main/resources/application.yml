@@ -62,12 +62,12 @@ app:
   release-id: ${APP_RELEASE_ID:${random.uuid}}
 
   android-update:
-    version-code: ${APP_ANDROID_UPDATE_VERSION_CODE:2}
-    version-name: ${APP_ANDROID_UPDATE_VERSION_NAME:1.1}
-    download-url: ${APP_ANDROID_UPDATE_DOWNLOAD_URL:https://deenwallapp.com/downloads/DeenWallet-1.1.apk}
+    version-code: ${APP_ANDROID_UPDATE_VERSION_CODE:3}
+    version-name: ${APP_ANDROID_UPDATE_VERSION_NAME:1.2}
+    download-url: ${APP_ANDROID_UPDATE_DOWNLOAD_URL:https://deenwallapp.com/downloads/DeenWallet-1.2.apk}
     force-update: ${APP_ANDROID_UPDATE_FORCE:false}
     release-notes: ${APP_ANDROID_UPDATE_RELEASE_NOTES:Improved update system|Bug fixes}
-    apk-path: ${APP_ANDROID_UPDATE_APK_PATH:downloads/DeenWallet-1.1.apk}
+    apk-path: ${APP_ANDROID_UPDATE_APK_PATH:downloads/DeenWallet-1.2.apk}
 
   mail:
     from-email: ${MAIL_FROM_EMAIL:no-reply@deenwallapp.com}

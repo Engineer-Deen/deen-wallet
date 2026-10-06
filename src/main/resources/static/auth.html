@@ -510,6 +510,17 @@
     .login-or::before,.login-or::after { content:"";height:1px;flex:1;background:#E4ECEF; }
     .biometric-btn { width:100%;border:1px solid #DDE9EC;background:#fff;color:#173A45;border-radius:14px;padding:14px;font-size:13px;font-weight:750;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px; }
     .biometric-btn:active { transform:scale(.99); }
+    .bio-accounts { display:grid;gap:10px; }
+    .bio-chip { width:100%;display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid #DDE9EC;background:#fff;color:#173A45;border-radius:16px;text-align:left;cursor:pointer;font-family:inherit; }
+    .bio-chip:active { transform:scale(.99); }
+    .bio-chip:disabled { opacity:.65;cursor:default; }
+    .bio-chip:focus-visible { outline:3px solid rgba(28,122,145,.45);outline-offset:2px; }
+    .bio-avatar { flex:none;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#E3F2F5;color:#1C7A91;font-size:16px;font-weight:800; }
+    .bio-text { flex:1;min-width:0; }
+    .bio-text b { display:block;font-size:14px;font-weight:800;line-height:1.3; }
+    .bio-text span { display:block;font-size:12px;color:#6E7C82;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+    .bio-go { flex:none;color:#1C7A91;font-size:18px; }
+    .bio-hint { margin:0;color:#6E7C82;font-size:12px;line-height:1.5;text-align:center; }
     .login-security-row { display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:24px; }
     .login-security-item { text-align:center;color:#6E7C82;font-size:10px;line-height:1.35; }
     .login-security-item .icon { display:flex;align-items:center;justify-content:center;width:36px;height:36px;margin:0 auto 6px;border-radius:50%;background:#EFF8FA;color:var(--primary);font-size:16px; }
@@ -724,7 +735,52 @@
       #screen-login .login-panel { padding-top: calc(18px + env(safe-area-inset-top, 0px)); }
       #screen-register, #screen-confirm { padding: calc(18px + env(safe-area-inset-top, 0px)) 20px 28px; }
     }
-  </style>
+  
+/* ============================================================
+   RESPONSIVE LAYOUT HARDENING
+   ============================================================ */
+html { width:100%; min-width:0; overflow-x:hidden; }
+body { width:100%; min-width:0; overflow-x:hidden; }
+*, *::before, *::after { min-width:0; }
+img, svg, video, canvas { max-width:100%; }
+button, input, select, textarea { max-width:100%; font:inherit; }
+
+@media (min-width:481px) and (max-width:768px) {
+  #app {
+    width:100%;
+    max-width:768px;
+    min-width:0;
+    min-height:100dvh;
+    margin:0 auto;
+  }
+  .screen { width:100%; min-width:0; }
+  .login-panel { padding-left:clamp(20px,5vw,42px); padding-right:clamp(20px,5vw,42px); }
+  .login-form-wrap { width:100%; max-width:520px; }
+}
+
+@media (max-width:480px) {
+  #app { width:100%; max-width:none; min-width:0; }
+  .screen { width:100%; min-width:0; }
+  .login-panel { padding-left:max(16px, env(safe-area-inset-left)); padding-right:max(16px, env(safe-area-inset-right)); }
+  .login-form-wrap { width:100%; max-width:none; }
+  .login-form-title { font-size:clamp(24px,7.5vw,30px); }
+  .login-form-subtitle { margin-bottom:20px; }
+  .login-field .text-input { width:100%; min-width:0; }
+  .recovery-actions { flex-wrap:wrap; }
+  .recovery-actions > * { flex:1 1 140px; min-width:0; }
+  .login-security-row { gap:6px; }
+  .login-security-item { min-width:0; }
+}
+
+@media (max-width:360px) {
+  .login-visual { padding-left:14px; padding-right:14px; }
+  .login-panel { padding-left:12px; padding-right:12px; }
+  .login-visual-copy h2 { font-size:29px; letter-spacing:-1px; }
+  .login-feature { padding-left:4px; padding-right:4px; }
+  .login-feature strong { font-size:9px; }
+}
+
+</style>
 </head>
 
 <body>
@@ -1003,8 +1059,11 @@
             <button class="btn-primary" id="login-btn">Log in</button>
           </div>
 
-          <div class="login-or"><span>OR</span></div>
-          <button type="button" class="biometric-btn" id="biometric-login-btn"><span aria-hidden="true">⌁</span> Use biometric login</button>
+          <div id="biometric-section" hidden>
+            <div class="login-or"><span>OR</span></div>
+            <div class="bio-accounts" id="biometric-accounts"></div>
+            <p class="bio-hint" id="biometric-hint" hidden>Biometric login isn't set up on this phone yet. Log in with your password, then turn it on from the menu.</p>
+          </div>
 
           <div class="login-security-row">
             <div class="login-security-item"><span class="icon">✓</span>Secure<br />Transactions</div>
@@ -1103,7 +1162,6 @@
       const forgotPasswordSend = document.getElementById('forgot-password-send');
       const forgotPasswordCancel = document.getElementById('forgot-password-cancel');
       const forgotPasswordMessage = document.getElementById('forgot-password-message');
-      const biometricLoginBtn = document.getElementById('biometric-login-btn');
 
       const accountLockModal = document.getElementById('account-lock-modal');
       const accountLockWhatsApp = document.getElementById('account-lock-whatsapp');
@@ -1185,27 +1243,107 @@
           }
         });
       }
-      if (biometricLoginBtn) {
-        biometricLoginBtn.addEventListener('click', async function () {
-          biometricLoginBtn.disabled = true;
-          const originalText = biometricLoginBtn.textContent;
-          biometricLoginBtn.textContent = 'Authenticating…';
-          try {
-            if (typeof window.biometricLogin !== 'function') {
-              throw new Error('Biometric login is not available in this app version.');
-            }
-            await window.biometricLogin();
-            showLoginSuccessPopup();
-            setTimeout(function () { window.location.href = AFTER_LOGIN_REDIRECT; }, 900);
-          } catch (error) {
-            console.error('Biometric login error:', error);
-            showToastSafe(error && error.message ? error.message : 'Biometric login failed.');
-          } finally {
-            biometricLoginBtn.disabled = false;
-            biometricLoginBtn.textContent = originalText;
-          }
+      // ---- Biometric login: the person chooses WHICH account to sign in to ----
+      const biometricSection = document.getElementById('biometric-section');
+      const biometricAccountsEl = document.getElementById('biometric-accounts');
+      const biometricHintEl = document.getElementById('biometric-hint');
+
+      async function renderBiometricAccounts() {
+        if (!biometricSection || !biometricAccountsEl) return;
+        const hasPlugin = !!(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.DeenWalletBiometric);
+        if (!hasPlugin || typeof window.listBiometricAccounts !== 'function') {
+          biometricSection.hidden = true;   // not the Android app: nothing to offer
+          return;
+        }
+        const available = typeof window.isBiometricAvailable === 'function' ? await window.isBiometricAvailable() : true;
+        const accounts = available ? await window.listBiometricAccounts() : [];
+
+        biometricAccountsEl.textContent = '';
+        biometricSection.hidden = false;
+        biometricHintEl.hidden = accounts.length > 0;
+        if (!available) {
+          biometricHintEl.textContent = 'Biometric login is not available on this phone.';
+          biometricHintEl.hidden = false;
+        }
+
+        accounts.forEach(function (account) {
+          const isOld = !account.accountId;
+          const chip = document.createElement('button');
+          chip.type = 'button';
+          chip.className = 'bio-chip';
+
+          const avatar = document.createElement('span');
+          avatar.className = 'bio-avatar';
+          avatar.setAttribute('aria-hidden', 'true');
+          avatar.textContent = (account.firstName || '?').trim().charAt(0).toUpperCase() || '?';
+
+          const text = document.createElement('span');
+          text.className = 'bio-text';
+          const title = document.createElement('b');
+          title.textContent = isOld ? 'Biometric login needs setting up again'
+                  : 'Sign in as ' + (account.firstName || 'your account');
+          const sub = document.createElement('span');
+          sub.textContent = isOld ? 'Log in with your password, then turn it on again.'
+                  : (account.maskedEmail || ('Account ' + (account.accountNumber || '')));
+          text.appendChild(title);
+          text.appendChild(sub);
+
+          const go = document.createElement('span');
+          go.className = 'bio-go';
+          go.setAttribute('aria-hidden', 'true');
+          go.textContent = '\u2192';
+
+          chip.appendChild(avatar);
+          chip.appendChild(text);
+          chip.appendChild(go);
+          if (isOld) chip.disabled = true;
+
+          chip.addEventListener('click', function () { signInWithBiometrics(account, chip, title, sub); });
+          biometricAccountsEl.appendChild(chip);
         });
       }
+
+      let biometricSigningIn = false;
+      async function signInWithBiometrics(account, chip, titleEl, subEl) {
+        if (biometricSigningIn) return;
+        biometricSigningIn = true;
+        const chips = biometricAccountsEl.querySelectorAll('.bio-chip');
+        chips.forEach(function (c) { c.disabled = true; });
+        // Instant feedback: the very first tap must visibly do something.
+        const oldTitle = titleEl.textContent, oldSub = subEl.textContent;
+        titleEl.textContent = 'Waiting for your fingerprint\u2026';
+        subEl.textContent = 'Touch the sensor to continue';
+        try {
+          if (typeof window.biometricLogin !== 'function') {
+            throw new Error('Biometric login is not available in this app version.');
+          }
+          await window.biometricLogin(account);
+          window.location.href = AFTER_LOGIN_REDIRECT;
+          return;   // leaving the page: keep the buttons locked
+        } catch (error) {
+          const code = error && error.code;
+          const message = (error && error.message) || '';
+          if (code === 'CANCELED') {
+            // The person closed the prompt. Nothing to report.
+          } else {
+            console.error('Biometric login error:', error);
+            showToastSafe(message || 'Biometric login failed.');
+            // A credential the server no longer knows is removed from the phone
+            // so the list never offers something that cannot work.
+            if (/no longer set up|belongs to a different account/i.test(message)) {
+              try {
+                const plugin = window.Capacitor.Plugins.DeenWalletBiometric;
+                await plugin.clearCredential({ credentialId: account.credentialId });
+              } catch (_) {}
+            }
+          }
+        }
+        biometricSigningIn = false;
+        titleEl.textContent = oldTitle;
+        subEl.textContent = oldSub;
+        await renderBiometricAccounts();
+      }
+      renderBiometricAccounts();
       function showToastSafe(message) {
         if (typeof window.showToast === 'function') {
           window.showToast(message);

@@ -407,7 +407,38 @@
       margin-top: 18px;
       line-height: 16px;
     }
-  </style>
+  
+/* ============================================================
+   RESPONSIVE LAYOUT HARDENING
+   ============================================================ */
+html { width:100%; min-width:0; overflow-x:hidden; }
+body { width:100%; min-width:0; overflow-x:hidden; }
+*, *::before, *::after { min-width:0; }
+img, svg, video, canvas { max-width:100%; }
+button, input, select, textarea { max-width:100%; font:inherit; }
+
+@media (min-width:421px) and (max-width:768px) {
+  #app {
+    width:100%;
+    max-width:760px;
+    min-width:0;
+    margin:0 auto;
+  }
+}
+
+@media (max-width:420px) {
+  #app { width:100%; max-width:none; min-width:0; }
+  .scroll, .top-nav { min-width:0; }
+  .scroll { padding-left:max(12px,env(safe-area-inset-left)); padding-right:max(12px,env(safe-area-inset-right)); }
+  .receipt-body, .receipt-card, .transaction-card { width:100%; max-width:100%; }
+  .modal-box, .modal-content { width:calc(100vw - 24px); max-width:100%; max-height:calc(100dvh - 24px); overflow-y:auto; }
+}
+
+@media (max-width:360px) {
+  .scroll { padding-left:10px; padding-right:10px; }
+}
+
+</style>
 
 </head>
 
