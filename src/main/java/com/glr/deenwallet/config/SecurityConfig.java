@@ -83,6 +83,7 @@ public class SecurityConfig {
                                 "/index.html",
                                 "/auth.html",
                                 "/reset-password.html",
+                                "/reset-pin.html",
                                 "/admin.html",
                                 "/transactions.html",
                                 "/config.js",

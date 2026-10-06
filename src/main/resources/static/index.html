@@ -2846,7 +2846,8 @@
             <button class="btn-fill pin-key" data-value="submit" style="grid-column:span 1;">↵</button>
         </div>
 
-        <button class="btn-secondary" id="pin-logout-btn" style="margin-top:12px;width:100%;">Log out instead</button>
+        <button class="btn-secondary" id="pin-forgot-btn" type="button" style="margin-top:12px;width:100%;">Forgot PIN?</button>
+        <button class="btn-secondary" id="pin-logout-btn" style="margin-top:8px;width:100%;">Log out instead</button>
     </div>
 </div>
 
@@ -3129,6 +3130,7 @@
         const pinHiddenInput = document.getElementById('pin-hidden-input');
         const pinErrorMsg = document.getElementById('pin-error-msg');
         const pinLogoutBtn = document.getElementById('pin-logout-btn');
+        const pinForgotBtn = document.getElementById('pin-forgot-btn');
         const pinKeys = document.querySelectorAll('.pin-key');
 
         const lockedModalOverlay = document.getElementById('locked-modal-overlay');
@@ -4947,6 +4949,10 @@
 
         pinLogoutBtn.addEventListener('click', function () {
             logout();
+        });
+
+        pinForgotBtn.addEventListener('click', function () {
+            window.location.href = 'reset-pin.html';
         });
 
         pinHiddenInput.addEventListener('keydown', function (e) {

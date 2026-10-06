@@ -22,6 +22,7 @@ import java.util.Base64;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
@@ -41,6 +42,14 @@ public class AuthService {
     private static final Duration PASSWORD_RESET_TOKEN_LIFETIME = Duration.ofMinutes(30);
     private static final SecureRandom PASSWORD_RESET_RANDOM = new SecureRandom();
 
+    // Forgot-PIN recovery is deliberately isolated from the password-reset token system.
+    private static final SecureRandom PIN_RESET_OTP_RANDOM = new SecureRandom();
+    private static final int PIN_RESET_OTP_LENGTH = 6;
+    private static final int PIN_RESET_OTP_MAX_ATTEMPTS = 5;
+    private static final Duration PIN_RESET_OTP_LIFETIME = Duration.ofMinutes(10);
+    private static final Duration PIN_RESET_TOKEN_LIFETIME = Duration.ofMinutes(10);
+    private final ConcurrentHashMap<String, Object> pinResetLocks = new ConcurrentHashMap<>();
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
@@ -49,6 +58,7 @@ public class AuthService {
     private final OtpService otpService;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final PinResetChallengeRepository pinResetChallengeRepository;
     private final BiometricCredentialRepository biometricCredentialRepository;
 
     @Transactional
@@ -318,6 +328,231 @@ public class AuthService {
         passwordResetTokenRepository.save(resetToken);
     }
 
+    /**
+     * Starts the separate Forgot-PIN recovery flow.
+     *
+     * This does not use PasswordResetToken or issue a login token.
+     * A generic successful response is returned by the controller whether or
+     * not a USER account exists for the supplied email.
+     */
+    @Transactional
+    public void requestPinReset(String email) {
+        String normalizedEmail = normalizeEmail(email);
+        if (normalizedEmail.isBlank()) {
+            return;
+        }
+
+        Object lock = pinResetLocks.computeIfAbsent(normalizedEmail, key -> new Object());
+        try {
+            synchronized (lock) {
+                Instant now = Instant.now();
+
+                Optional<PinResetChallenge> latest =
+                        pinResetChallengeRepository.findTopByEmailOrderByCreatedAtDesc(normalizedEmail);
+
+                if (latest.isPresent()) {
+                    Instant nextAllowed = latest.get().getCreatedAt().plusSeconds(60);
+                    if (nextAllowed.isAfter(now)) {
+                        throw new IllegalArgumentException(
+                                "Please wait before requesting another PIN recovery code."
+                        );
+                    }
+                }
+
+                if (pinResetChallengeRepository.countByEmailAndCreatedAtAfter(
+                        normalizedEmail,
+                        now.minus(Duration.ofMinutes(15))
+                ) >= 5) {
+                    throw new IllegalStateException(
+                            "Too many PIN recovery requests. Please try again later."
+                    );
+                }
+
+                Optional<User> userOptional =
+                        userRepository.findByEmailAndRole(normalizedEmail, "USER");
+
+                // Do not reveal whether the email belongs to an account.
+                if (userOptional.isEmpty()) {
+                    return;
+                }
+
+                User user = userOptional.get();
+
+                if (!user.isActive() || !user.isEmailVerified()) {
+                    return;
+                }
+
+                pinResetChallengeRepository.invalidateActiveChallenges(
+                        normalizedEmail,
+                        now
+                );
+
+                String otp = randomPinResetOtp();
+                PinResetChallenge challenge = PinResetChallenge.create(
+                        user.getId(),
+                        normalizedEmail,
+                        passwordEncoder.encode(otp),
+                        now.plus(PIN_RESET_OTP_LIFETIME)
+                );
+
+                pinResetChallengeRepository.save(challenge);
+
+                emailService.sendOtpEmail(
+                        normalizedEmail,
+                        otp,
+                        (int) PIN_RESET_OTP_LIFETIME.toMinutes()
+                );
+
+                log.info("PIN recovery code requested.");
+            }
+        } finally {
+            pinResetLocks.remove(normalizedEmail, lock);
+        }
+    }
+
+    /**
+     * Verifies the separate Forgot-PIN email OTP and returns a short-lived,
+     * one-time recovery authorization. No JWT access or refresh token is issued.
+     */
+    @Transactional
+    public String verifyPinResetCode(String email, String code) {
+        String normalizedEmail = normalizeEmail(email);
+
+        if (normalizedEmail.isBlank()
+                || code == null
+                || !code.trim().matches("\\d{6}")) {
+            throw new IllegalArgumentException("Invalid or expired verification code");
+        }
+
+        Object lock = pinResetLocks.computeIfAbsent(normalizedEmail, key -> new Object());
+        try {
+            synchronized (lock) {
+                PinResetChallenge challenge =
+                        pinResetChallengeRepository
+                                .findTopByEmailAndOtpUsedFalseOrderByCreatedAtDesc(normalizedEmail)
+                                .orElseThrow(() ->
+                                        new IllegalArgumentException(
+                                                "Invalid or expired verification code"
+                                        ));
+
+                Instant now = Instant.now();
+
+                if (challenge.isOtpExpired()
+                        || challenge.getOtpAttempts() >= PIN_RESET_OTP_MAX_ATTEMPTS) {
+                    throw new IllegalArgumentException("Invalid or expired verification code");
+                }
+
+                if (!passwordEncoder.matches(code.trim(), challenge.getOtpHash())) {
+                    challenge.setOtpAttempts(challenge.getOtpAttempts() + 1);
+                    pinResetChallengeRepository.save(challenge);
+                    throw new IllegalArgumentException("Invalid or expired verification code");
+                }
+
+                challenge.setOtpUsed(true);
+
+                String rawRecoveryToken = generatePinRecoveryToken();
+                challenge.setResetTokenHash(hashPinResetToken(rawRecoveryToken));
+                challenge.setResetTokenExpiresAt(now.plus(PIN_RESET_TOKEN_LIFETIME));
+                challenge.setResetTokenUsedAt(null);
+
+                pinResetChallengeRepository.save(challenge);
+
+                return rawRecoveryToken;
+            }
+        } finally {
+            pinResetLocks.remove(normalizedEmail, lock);
+        }
+    }
+
+    /**
+     * Completes Forgot-PIN recovery using the dedicated recovery authorization.
+     * This does not authenticate the user or issue access/refresh tokens.
+     */
+    @Transactional
+    public void resetPin(String rawRecoveryToken, String newPin) {
+        if (rawRecoveryToken == null || rawRecoveryToken.isBlank()) {
+            throw new IllegalArgumentException("Invalid or expired PIN recovery authorization");
+        }
+
+        if (newPin == null || !newPin.matches("\\d{4}")) {
+            throw new IllegalArgumentException("PIN must be exactly 4 digits");
+        }
+
+        String tokenHash = hashPinResetToken(rawRecoveryToken.trim());
+
+        PinResetChallenge challenge =
+                pinResetChallengeRepository
+                        .findByResetTokenHashAndResetTokenUsedAtIsNull(tokenHash)
+                        .orElseThrow(() ->
+                                new IllegalArgumentException(
+                                        "Invalid or expired PIN recovery authorization"
+                                ));
+
+        if (challenge.isResetTokenExpired()) {
+            throw new IllegalArgumentException(
+                    "Invalid or expired PIN recovery authorization"
+            );
+        }
+
+        User user = userRepository.findById(challenge.getUserId())
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "Invalid or expired PIN recovery authorization"
+                        ));
+
+        if (!"USER".equals(user.getRole())) {
+            throw new IllegalArgumentException(
+                    "Invalid or expired PIN recovery authorization"
+            );
+        }
+
+        ensureUsable(user);
+
+        user.setPinHash(passwordEncoder.encode(newPin));
+        user.setPinAttempts(0);
+        userRepository.save(user);
+
+        challenge.setResetTokenUsedAt(Instant.now());
+        pinResetChallengeRepository.save(challenge);
+
+        log.info("PIN recovery completed.");
+    }
+
+    private String randomPinResetOtp() {
+        StringBuilder code = new StringBuilder(PIN_RESET_OTP_LENGTH);
+        for (int i = 0; i < PIN_RESET_OTP_LENGTH; i++) {
+            code.append(PIN_RESET_OTP_RANDOM.nextInt(10));
+        }
+        return code.toString();
+    }
+
+    private String generatePinRecoveryToken() {
+        byte[] randomBytes = new byte[32];
+        PIN_RESET_OTP_RANDOM.nextBytes(randomBytes);
+
+        return Base64.getUrlEncoder()
+                .withoutPadding()
+                .encodeToString(randomBytes);
+    }
+
+    private String hashPinResetToken(String rawToken) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(
+                    rawToken.getBytes(StandardCharsets.UTF_8)
+            );
+
+            return Base64.getUrlEncoder()
+                    .withoutPadding()
+                    .encodeToString(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(
+                    "Unable to create PIN recovery authorization",
+                    e
+            );
+        }
+    }
+
     private String hashPasswordResetToken(String rawToken) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
@@ -562,7 +797,7 @@ public class AuthService {
                 USER_LOGIN_MAX_FAILURES - failures
         );
 
-        return "Invalid email or password. "
+        return "Invalid password. "
                 + remaining
                 + " login attempt(s) remaining before a temporary security pause.";
     }

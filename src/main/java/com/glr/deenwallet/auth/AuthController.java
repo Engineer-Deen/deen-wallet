@@ -151,6 +151,42 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * Starts the separate Forgot-PIN recovery flow.
+     * The response is intentionally identical for registered and
+     * non-registered addresses.
+     */
+    @PostMapping("/forgot-pin")
+    public ResponseEntity<Void> forgotPin(
+            @Valid @RequestBody ForgotPinRequest r
+    ) {
+        authService.requestPinReset(r.email);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Verifies the 6-digit PIN recovery code and returns a short-lived,
+     * one-time recovery authorization. No login tokens are issued.
+     */
+    @PostMapping("/verify-pin-reset-code")
+    public ResponseEntity<VerifyPinResetCodeResponse> verifyPinResetCode(
+            @Valid @RequestBody VerifyPinResetCodeRequest r
+    ) {
+        String resetToken = authService.verifyPinResetCode(r.email, r.code);
+        return ResponseEntity.ok(new VerifyPinResetCodeResponse(resetToken));
+    }
+
+    /**
+     * Completes the Forgot-PIN flow using the dedicated recovery authorization.
+     */
+    @PostMapping("/reset-pin")
+    public ResponseEntity<Void> resetPin(
+            @Valid @RequestBody ResetPinRequest r
+    ) {
+        authService.resetPin(r.token, r.newPin);
+        return ResponseEntity.noContent().build();
+    }
+
     @Getter
     @Setter
     public static class ConfirmEmailRequest {
@@ -183,6 +219,41 @@ public class AuthController {
         @NotBlank
         @Email
         private String email;
+    }
+
+    @Getter
+    @Setter
+    public static class ForgotPinRequest {
+        @NotBlank
+        @Email
+        private String email;
+    }
+
+    @Getter
+    @Setter
+    public static class VerifyPinResetCodeRequest {
+        @NotBlank
+        @Email
+        private String email;
+
+        @NotBlank
+        private String code;
+    }
+
+    @Getter
+    @Setter
+    public static class ResetPinRequest {
+        @NotBlank
+        private String token;
+
+        @NotBlank
+        private String newPin;
+    }
+
+    @Getter
+    @AllArgsConstructor
+    public static class VerifyPinResetCodeResponse {
+        private String resetToken;
     }
 
     @Getter

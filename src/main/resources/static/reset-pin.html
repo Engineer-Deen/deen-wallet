@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeenWallet — Forgot PIN</title>
+    <style>
+        :root {
+            --primary:#0F766E;
+            --primary-dark:#115E59;
+            --text:#12242B;
+            --muted:#6E7C82;
+            --border:#E4ECEF;
+            --bg:#F5F8F9;
+            --card:#FFFFFF;
+            --error:#C0392B;
+            --success:#16794B;
+        }
+        *{box-sizing:border-box}
+        body{
+            margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+            padding:20px; background:linear-gradient(145deg,#EAF4F6 0%,#F7FBFC 100%);
+            font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--text)
+        }
+        .page{
+            width:min(900px,100%); min-height:620px; display:grid; grid-template-columns:42% 58%;
+            background:var(--card); border-radius:24px; overflow:hidden; box-shadow:0 18px 60px rgba(18,36,43,.10)
+        }
+        .brand{
+            background:linear-gradient(155deg,var(--primary),var(--primary-dark)); color:#fff; padding:52px 42px;
+            display:flex; flex-direction:column; justify-content:center
+        }
+        .brand-name{font-size:20px;font-weight:800;letter-spacing:.2px;margin-bottom:70px}
+        .brand h1{font-size:32px;line-height:1.15;margin:0 0 16px}
+        .brand p{font-size:14px;line-height:1.7;color:rgba(255,255,255,.82);margin:0}
+        .security{margin-top:36px;padding:14px 16px;border:1px solid rgba(255,255,255,.2);border-radius:12px;font-size:13px}
+        .form-panel{padding:44px 46px;display:flex;align-items:center}
+        .form-wrap{width:100%;max-width:440px;margin:auto}
+        .back{border:0;background:none;padding:0;color:var(--primary);font:inherit;font-size:13px;cursor:pointer;margin-bottom:38px}
+        .eyebrow{font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--primary);margin-bottom:9px}
+        h2{font-size:28px;margin:0 0 10px}
+        .subtitle{font-size:14px;line-height:1.65;color:var(--muted);margin:0 0 28px}
+        .field{margin-bottom:18px}
+        label{display:block;font-size:13px;font-weight:700;margin-bottom:7px}
+        input{
+            width:100%;height:48px;border:1px solid var(--border);border-radius:11px;padding:0 14px;
+            font:inherit;font-size:15px;outline:none;background:#fff
+        }
+        input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(15,118,110,.10)}
+        .otp-input{letter-spacing:8px;text-align:center;font-size:24px;font-weight:700}
+        .pin-input{letter-spacing:8px;text-align:center;font-size:22px;font-weight:700}
+        .primary{
+            width:100%;height:48px;border:0;border-radius:11px;background:var(--primary);color:#fff;
+            font:inherit;font-weight:700;cursor:pointer
+        }
+        .primary:hover{background:var(--primary-dark)}
+        .primary:disabled{opacity:.6;cursor:not-allowed}
+        .message{display:none;border-radius:10px;padding:11px 13px;margin:14px 0;font-size:13px;line-height:1.5}
+        .message.show{display:block}
+        .message.error{background:#FFF2F0;color:var(--error);border:1px solid #F4D0CA}
+        .message.success{background:#EFFAF5;color:var(--success);border:1px solid #CBEBDD}
+        .hint{font-size:12px;color:var(--muted);line-height:1.5;margin-top:8px}
+        .resend{border:0;background:none;color:var(--primary);font:inherit;font-size:13px;font-weight:700;cursor:pointer;padding:0}
+        .resend:disabled{color:#9AA7AC;cursor:not-allowed}
+        .hidden{display:none!important}
+        .success-icon{width:64px;height:64px;border-radius:50%;background:#EFFAF5;color:var(--success);display:flex;align-items:center;justify-content:center;font-size:30px;margin-bottom:20px}
+        .footer{text-align:center;margin-top:25px;color:#87969C;font-size:11px;line-height:1.5}
+        @media(max-width:760px){
+            body{padding:12px;align-items:stretch}
+            .page{grid-template-columns:1fr;min-height:calc(100vh - 24px);border-radius:20px}
+            .brand{display:none}
+            .form-panel{padding:34px 24px}
+        }
+    </style>
+</head>
+<body>
+<main class="page">
+    <section class="brand" aria-hidden="true">
+        <div class="brand-name">DeenWallet</div>
+        <h1>Recover your PIN securely.</h1>
+        <p>We will verify your registered email with a one-time six-digit code before allowing you to choose a new four-digit PIN.</p>
+        <div class="security">🔒 Your recovery code is short-lived and can only be used once.</div>
+    </section>
+
+    <section class="form-panel">
+        <div class="form-wrap">
+            <button class="back" id="back-btn" type="button">← Back to login</button>
+
+            <div id="email-view">
+                <div class="eyebrow">PIN recovery</div>
+                <h2>Forgot your PIN?</h2>
+                <p class="subtitle">Enter the email address registered to your DeenWallet account. We will send you a six-digit verification code.</p>
+                <form id="email-form" novalidate>
+                    <div class="field">
+                        <label for="email">Email address</label>
+                        <input id="email" type="email" autocomplete="email" placeholder="Enter your registered email" required>
+                    </div>
+                    <div id="email-message" class="message" role="alert"></div>
+                    <button class="primary" id="email-btn" type="submit">Send verification code</button>
+                </form>
+            </div>
+
+            <div id="code-view" class="hidden">
+                <div class="eyebrow">Verify email</div>
+                <h2>Enter your code</h2>
+                <p class="subtitle">Enter the six-digit code sent to <strong id="email-display"></strong>.</p>
+                <form id="code-form" novalidate>
+                    <div class="field">
+                        <label for="code">6-digit verification code</label>
+                        <input id="code" class="otp-input" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" required>
+                    </div>
+                    <div id="code-message" class="message" role="alert"></div>
+                    <button class="primary" id="code-btn" type="submit">Verify code</button>
+                </form>
+                <p class="hint">Didn't receive it? <button class="resend" id="resend-btn" type="button">Send another code</button></p>
+            </div>
+
+            <div id="pin-view" class="hidden">
+                <div class="eyebrow">New PIN</div>
+                <h2>Choose a new PIN</h2>
+                <p class="subtitle">Create a new four-digit PIN. This changes only your PIN; your account password remains unchanged.</p>
+                <form id="pin-form" novalidate>
+                    <div class="field">
+                        <label for="new-pin">New 4-digit PIN</label>
+                        <input id="new-pin" class="pin-input" type="password" inputmode="numeric" autocomplete="new-password" maxlength="4" placeholder="••••" required>
+                    </div>
+                    <div class="field">
+                        <label for="confirm-pin">Confirm new PIN</label>
+                        <input id="confirm-pin" class="pin-input" type="password" inputmode="numeric" autocomplete="new-password" maxlength="4" placeholder="••••" required>
+                    </div>
+                    <div id="pin-message" class="message" role="alert"></div>
+                    <button class="primary" id="pin-btn" type="submit">Update PIN</button>
+                </form>
+            </div>
+
+            <div id="success-view" class="hidden">
+                <div class="success-icon">✓</div>
+                <div class="eyebrow">PIN updated</div>
+                <h2>PIN reset successful</h2>
+                <p class="subtitle">Your PIN has been updated successfully. For your security, you must sign in again with your email and password.</p>
+                <button class="primary" id="done-btn" type="button">Done</button>
+            </div>
+
+            <div class="footer">Never share your verification code or PIN with anyone. DeenWallet support will never ask for them.</div>
+        </div>
+    </section>
+</main>
+
+<script>
+    (function () {
+        'use strict';
+
+        const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+            ? 'http://localhost:8082'
+            : 'https://api.deenwallapp.com';
+
+        const emailView = document.getElementById('email-view');
+        const codeView = document.getElementById('code-view');
+        const pinView = document.getElementById('pin-view');
+        const successView = document.getElementById('success-view');
+
+        const emailInput = document.getElementById('email');
+        const codeInput = document.getElementById('code');
+        const newPinInput = document.getElementById('new-pin');
+        const confirmPinInput = document.getElementById('confirm-pin');
+        const emailDisplay = document.getElementById('email-display');
+
+        const emailMessage = document.getElementById('email-message');
+        const codeMessage = document.getElementById('code-message');
+        const pinMessage = document.getElementById('pin-message');
+
+        const emailBtn = document.getElementById('email-btn');
+        const codeBtn = document.getElementById('code-btn');
+        const pinBtn = document.getElementById('pin-btn');
+        const resendBtn = document.getElementById('resend-btn');
+
+        let recoveryToken = '';
+        let submittedEmail = '';
+        let resendTimer = null;
+        let resendSeconds = 0;
+
+        function showView(view) {
+            [emailView, codeView, pinView, successView].forEach(v => v.classList.add('hidden'));
+            view.classList.remove('hidden');
+        }
+
+        function showMessage(element, message, type) {
+            element.textContent = message || '';
+            element.className = 'message ' + (message ? 'show ' + type : '');
+        }
+
+        function setBusy(button, busy, text) {
+            button.disabled = busy;
+            if (busy) {
+                button.dataset.originalText = button.textContent;
+                button.textContent = text;
+            } else if (button.dataset.originalText) {
+                button.textContent = button.dataset.originalText;
+            }
+        }
+
+        async function api(path, options) {
+            const response = await fetch(API_BASE + path, {
+                method: options && options.method ? options.method : 'GET',
+                headers: { 'Content-Type': 'application/json' },
+                body: options && options.body ? JSON.stringify(options.body) : undefined
+            });
+
+            let data = null;
+            const contentType = response.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+                try { data = await response.json(); } catch (_) {}
+            }
+
+            if (!response.ok) {
+                const message = data && (data.message || data.error);
+                const error = new Error(message || 'Unable to complete PIN recovery.');
+                error.status = response.status;
+                throw error;
+            }
+
+            return data;
+        }
+
+        function startResendCountdown() {
+            clearInterval(resendTimer);
+            resendSeconds = 60;
+            resendBtn.disabled = true;
+            resendBtn.textContent = 'Send another code (60s)';
+
+            resendTimer = setInterval(function () {
+                resendSeconds -= 1;
+                if (resendSeconds <= 0) {
+                    clearInterval(resendTimer);
+                    resendTimer = null;
+                    resendBtn.disabled = false;
+                    resendBtn.textContent = 'Send another code';
+                } else {
+                    resendBtn.textContent = 'Send another code (' + resendSeconds + 's)';
+                }
+            }, 1000);
+        }
+
+        async function requestCode() {
+            const email = emailInput.value.trim().toLowerCase();
+
+            if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                showMessage(emailMessage, 'Enter a valid email address.', 'error');
+                return;
+            }
+
+            showMessage(emailMessage, '', '');
+            setBusy(emailBtn, true, 'Sending…');
+
+            try {
+                await api('/api/auth/forgot-pin', {
+                    method: 'POST',
+                    body: { email: email }
+                });
+
+                submittedEmail = email;
+                emailDisplay.textContent = email;
+                codeInput.value = '';
+                showView(codeView);
+                startResendCountdown();
+                codeInput.focus();
+            } catch (error) {
+                showMessage(emailMessage, error.message || 'Unable to send the verification code.', 'error');
+            } finally {
+                setBusy(emailBtn, false);
+            }
+        }
+
+        async function verifyCode() {
+            const code = codeInput.value.trim();
+
+            if (!/^\d{6}$/.test(code)) {
+                showMessage(codeMessage, 'Enter the 6-digit verification code.', 'error');
+                return;
+            }
+
+            setBusy(codeBtn, true, 'Verifying…');
+            showMessage(codeMessage, '', '');
+
+            try {
+                const data = await api('/api/auth/verify-pin-reset-code', {
+                    method: 'POST',
+                    body: { email: submittedEmail, code: code }
+                });
+
+                if (!data || !data.resetToken) {
+                    throw new Error('The recovery authorization was not received. Please try again.');
+                }
+
+                recoveryToken = data.resetToken;
+                newPinInput.value = '';
+                confirmPinInput.value = '';
+                showView(pinView);
+                newPinInput.focus();
+            } catch (error) {
+                showMessage(codeMessage, error.message || 'Invalid or expired verification code.', 'error');
+            } finally {
+                setBusy(codeBtn, false);
+            }
+        }
+
+        async function updatePin() {
+            const newPin = newPinInput.value.trim();
+            const confirmPin = confirmPinInput.value.trim();
+
+            if (!/^\d{4}$/.test(newPin)) {
+                showMessage(pinMessage, 'PIN must be exactly 4 digits.', 'error');
+                return;
+            }
+
+            if (newPin !== confirmPin) {
+                showMessage(pinMessage, 'PINs do not match.', 'error');
+                return;
+            }
+
+            if (!recoveryToken) {
+                showMessage(pinMessage, 'Your recovery session has expired. Please start again.', 'error');
+                return;
+            }
+
+            setBusy(pinBtn, true, 'Updating…');
+            showMessage(pinMessage, '', '');
+
+            try {
+                await api('/api/auth/reset-pin', {
+                    method: 'POST',
+                    body: { token: recoveryToken, newPin: newPin }
+                });
+
+                recoveryToken = '';
+                showView(successView);
+            } catch (error) {
+                showMessage(pinMessage, error.message || 'Unable to update your PIN.', 'error');
+            } finally {
+                setBusy(pinBtn, false);
+            }
+        }
+
+        async function finish() {
+            // The recovery flow never receives a new login token. If the user
+            // arrived here from an existing session, revoke that refresh token
+            // before forcing a fresh login.
+            const refreshToken = localStorage.getItem('deenwallet_refresh_token');
+
+            if (refreshToken) {
+                try {
+                    await api('/api/auth/logout', {
+                        method: 'POST',
+                        body: { refreshToken: refreshToken }
+                    });
+                } catch (_) {
+                    // A fresh login is still required even if logout cannot reach
+                    // the server.
+                }
+            }
+
+            localStorage.removeItem('deenwallet_access_token');
+            localStorage.removeItem('deenwallet_refresh_token');
+            localStorage.removeItem('deenwallet_user');
+            localStorage.removeItem('deenwallet_session_last_active');
+            localStorage.removeItem('deenwallet_account_locked');
+
+            window.location.replace('auth.html');
+        }
+
+        document.getElementById('email-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+            requestCode();
+        });
+
+        document.getElementById('code-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+            verifyCode();
+        });
+
+        document.getElementById('pin-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+            updatePin();
+        });
+
+        resendBtn.addEventListener('click', requestCode);
+
+        document.getElementById('back-btn').addEventListener('click', function () {
+            window.location.replace('auth.html');
+        });
+
+        document.getElementById('done-btn').addEventListener('click', finish);
+
+        codeInput.addEventListener('input', function () {
+            this.value = this.value.replace(/\D/g, '').slice(0, 6);
+        });
+
+        [newPinInput, confirmPinInput].forEach(function (input) {
+            input.addEventListener('input', function () {
+                this.value = this.value.replace(/\D/g, '').slice(0, 4);
+            });
+        });
+    })();
+</script>
+</body>
+</html>
