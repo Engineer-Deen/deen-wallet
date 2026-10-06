@@ -74,7 +74,7 @@ app:
     from-name: ${MAIL_FROM_NAME:Deen Wallet}
 
   frontend:
-    base-url: ${FRONTEND_BASE_URL:http://localhost:8082}
+    base-url: ${FRONTEND_BASE_URL:https://deenwallapp.com}
 
   firebase:
     service-account-path: ${FIREBASE_SERVICE_ACCOUNT_PATH:}
