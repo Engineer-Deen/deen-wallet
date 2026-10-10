@@ -1,5 +1,6 @@
 package com.glr.deenwallet.auth;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -12,8 +13,10 @@ public interface PinResetChallengeRepository extends JpaRepository<PinResetChall
 
     Optional<PinResetChallenge> findTopByEmailOrderByCreatedAtDesc(String email);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<PinResetChallenge> findTopByEmailAndOtpUsedFalseOrderByCreatedAtDesc(String email);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<PinResetChallenge> findByResetTokenHashAndResetTokenUsedAtIsNull(String resetTokenHash);
 
     long countByEmailAndCreatedAtAfter(String email, Instant createdAt);

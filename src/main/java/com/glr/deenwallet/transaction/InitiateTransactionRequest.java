@@ -28,6 +28,7 @@ public class InitiateTransactionRequest {
     private BigDecimal amount;
 
     @NotBlank(message = "Source provider is required")
+    @Pattern(regexp = "m17|m18", message = "Only Orange Money or Africell is supported as the funding provider")
     private String sourceProviderId;
 
     @NotBlank(message = "Source phone number is required")
@@ -35,6 +36,7 @@ public class InitiateTransactionRequest {
     private String sourcePhone;
 
     @NotBlank(message = "Destination provider is required")
+    @Pattern(regexp = "m17|m18", message = "Only Orange Money or Africell is supported as the destination provider")
     private String destinationProviderId;
 
     @NotBlank(message = "Destination phone number is required")

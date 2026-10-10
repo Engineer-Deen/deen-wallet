@@ -7,7 +7,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.MessageDigest;
@@ -23,10 +22,9 @@ public class WebhookController {
 
     private final WebhookSignatureVerifier verifier;
     private final TransactionService tx;
-    private final ObjectMapper mapper;
+    private final ObjectMapper mapper = new ObjectMapper();
     private final WebhookEventRepository events;
 
-    @Transactional
     @PostMapping("/monime")
     public ResponseEntity<Map<String, Object>> receive(
             HttpServletRequest req,
@@ -53,14 +51,12 @@ public class WebhookController {
             return ResponseEntity.ok(Map.of("success", true, "duplicate", true));
         }
 
-        events.save(WebhookEvent.builder()
-                .eventKey(key)
-                .eventName(name)
-                .resourceId(resource)
-                .build());
-
         String reason = extractFailureReason(payload);
 
+        // Process the financial state transition BEFORE recording the webhook
+        // as handled. If the database/provider call fails, the request fails
+        // and Monime can retry. Recording the event first would permanently
+        // acknowledge an event whose financial work had not completed.
         switch (name) {
             case "payment_code.processed" -> tx.handlePaymentCodeProcessed(resource);
             case "payment_code.failed", "payment_code.expired", "payment_code.canceled" ->
@@ -69,6 +65,18 @@ public class WebhookController {
             case "payout.failed", "payout.rejected", "payout.canceled" ->
                     tx.handlePayoutFailed(resource, reason);
             default -> log.info("Ignoring unhandled webhook event: {}", name);
+        }
+
+        try {
+            events.save(WebhookEvent.builder()
+                    .eventKey(key)
+                    .eventName(name)
+                    .resourceId(resource)
+                    .build());
+        } catch (org.springframework.dao.DataIntegrityViolationException duplicate) {
+            // Another concurrent delivery completed the same event. The
+            // financial handlers are idempotent, so this is safe to acknowledge.
+            log.debug("Concurrent duplicate Monime webhook {}", key);
         }
 
         return ResponseEntity.ok(Map.of("success", true));

@@ -9,6 +9,12 @@ async function loadFirebaseWebConfig() {
       `${window.DEENWALLET_API_BASE_URL}/api/config/firebase-web`
   );
 
+  if (response.status === 404) {
+    // Web push is optional. A deployment without Firebase web config should
+    // simply skip web push instead of producing a client error on every page load.
+    return null;
+  }
+
   if (!response.ok) {
     throw new Error(
         `Failed to load Firebase Web config: HTTP ${response.status}`
@@ -27,6 +33,8 @@ async function loadFirebaseWebConfig() {
  */
 
 let refreshPromise = null;
+const recentErrorReports = new Map();
+const ERROR_REPORT_DEDUPE_MS = 30000;
 
 const CLIENT_RELEASE_MARKER = 'deenwallet-client-v2';
 
@@ -36,7 +44,7 @@ const DEENWALLET_CONFIG = {
   USER_STORAGE_KEY: 'deenwallet_user',
   AUTH_PAGE: 'auth.html',
   TRANSACTION_POLL_INTERVAL_MS: 3000,
-  APP_UPDATE_CHECK_INTERVAL_MS: 60000,
+  APP_UPDATE_CHECK_INTERVAL_MS: 300000,
 };
 
 // ==============================================================
@@ -50,6 +58,15 @@ const DEENWALLET_CONFIG = {
 // valid access token is present.
 function reportErrorToBackend(errorType, message, stack, url, line, col, extra) {
   try {
+    const endpoint = extra && extra.endpointPath ? extra.endpointPath : '';
+    const status = extra && extra.statusCode ? String(extra.statusCode) : '';
+    const key = [errorType || 'JS_ERROR', endpoint, status, String(message || '').slice(0, 300)].join('|');
+    const now = Date.now();
+    const previous = recentErrorReports.get(key);
+    if (previous && now - previous < ERROR_REPORT_DEDUPE_MS) return;
+    if (recentErrorReports.size >= 200) recentErrorReports.clear();
+    recentErrorReports.set(key, now);
+
     const token = getAccessToken();
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = 'Bearer ' + token;
@@ -696,6 +713,10 @@ async function initializeDeenWalletWebPushNotifications() {
 
   try {
     const firebaseConfig = await loadFirebaseWebConfig();
+    if (!firebaseConfig) {
+      console.log('[DeenWallet Web FCM] Web Firebase config is not configured. Skipping.');
+      return;
+    }
 
     if (!window.firebase) {
       console.error('[DeenWallet Web FCM] Firebase SDK is not loaded.');
@@ -937,7 +958,7 @@ async function refreshAccessToken() {
 // ENHANCED API CLIENT – NO FORCED REDIRECT
 // ==============================================================
 
-async function apiRequest(path, { method = 'GET', params, body } = {}) {
+async function apiRequest(path, { method = 'GET', params, body, headers: extraHeaders = {}, timeoutMs = 15000 } = {}) {
   // Wraps the ENTIRE function, including building the URL/headers below - so a bug
   // there (like a past release that referenced an undefined `headers` variable and
   // crashed every request with no trace at all) is now caught, reported with a full
@@ -951,26 +972,29 @@ async function apiRequest(path, { method = 'GET', params, body } = {}) {
     }
 
     let token = getAccessToken();
-    const headers = { 'Content-Type': 'application/json' };
+    const headers = { 'Content-Type': 'application/json', ...extraHeaders };
     if (token) headers['Authorization'] = 'Bearer ' + token;
 
     const doRequest = async (tokenToUse) => {
       if (tokenToUse) headers['Authorization'] = 'Bearer ' + tokenToUse;
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
       try {
         return await fetch(url.toString(), { method, headers, body: body ? JSON.stringify(body) : undefined, signal: controller.signal });
       } finally {
         clearTimeout(timeoutId);
       }
-      window.apiRequest = apiRequest;
     };
 
     // Reports a failed call to THIS endpoint, so it shows up traceable to the exact
     // path + method in the admin Errors tab. Skips expected 401s (a stale token
     // refreshing is normal, not a bug worth an admin's time).
     const reportApiFailure = (message, statusCode) => {
-      if (statusCode === 401) return;
+      // 4xx responses are normally user/business validation results, not
+      // application faults. Do not flood the error table when a customer
+      // is correcting an input. Keep rate-limit/lock responses visible.
+      if (statusCode >= 400 && statusCode < 500
+          && statusCode !== 423 && statusCode !== 429) return;
       reportErrorToBackend('API_ERROR', message, '', window.location.href, 0, 0,
           { endpointPath: path, httpMethod: method, statusCode });
     };
@@ -1131,6 +1155,12 @@ function normalizeTransaction(raw) {
       transactionCode: raw.transactionCode || raw.id,
       failureReason: raw.failureReason || null,
       createdAt: raw.createdAt || null,
+      serviceType: raw.serviceType || 'MOBILE_MONEY',
+      bankProviderId: raw.bankProviderId || null,
+      bankName: raw.bankName || null,
+      bankAccountNumber: raw.bankAccountNumber || null,
+      bankAccountHolderName: cleanName(raw.bankAccountHolderName) || null,
+      bankAccountKycVerified: raw.bankAccountKycVerified === true,
     };
   }
 
@@ -1150,6 +1180,12 @@ function normalizeTransaction(raw) {
     transactionCode: raw.transactionCode || raw.id,
     failureReason: raw.failureReason || null,
     createdAt: raw.createdAt || null,
+    serviceType: raw.serviceType || 'MOBILE_MONEY',
+    bankProviderId: raw.bankProviderId || null,
+    bankName: raw.bankName || null,
+    bankAccountNumber: raw.bankAccountNumber || null,
+    bankAccountHolderName: cleanName(raw.bankAccountHolderName) || null,
+    bankAccountKycVerified: raw.bankAccountKycVerified === true,
   };
 }
 
@@ -1399,7 +1435,7 @@ async function detectProviderFromPrefix(phoneNumber) {
   let updateInProgress = false;
 
   async function checkRelease() {
-    if (updateInProgress) return;
+    if (updateInProgress || document.hidden) return;
     if (window.DEENWALLET_TRANSACTION_ACTIVE) return;
     if (document.querySelector('.modal-overlay.active, #pin-modal-overlay.active')) return;
     try {
@@ -1540,7 +1576,7 @@ function isNetworkError(error) {
   // alone can't tell these apart or catch the second case at all.
   let probing = false;
   async function probeServer() {
-    if (probing) return;
+    if (probing || document.hidden) return;
     probing = true;
     try {
       const controller = new AbortController();
@@ -1562,7 +1598,7 @@ function isNetworkError(error) {
   window.addEventListener('online', probeServer);
   if (!navigator.onLine) showOfflineBanner();
   probeServer();
-  setInterval(probeServer, 5000);
+  setInterval(probeServer, 30000);
 })();
 
 // ==============================================================

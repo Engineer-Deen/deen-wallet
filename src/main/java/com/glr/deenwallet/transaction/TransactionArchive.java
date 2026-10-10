@@ -63,11 +63,30 @@ public class TransactionArchive {
     @Column(name = "source_phone", nullable = false)
     private String sourcePhone;
 
-    @Column(name = "destination_provider_id", nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "service_type", nullable = false, length = 30)
+    private TransactionServiceType serviceType;
+
+    @Column(name = "destination_provider_id")
     private String destinationProviderId;
 
-    @Column(name = "destination_phone", nullable = false)
+    @Column(name = "destination_phone")
     private String destinationPhone;
+
+    @Column(name = "destination_bank_provider_id", length = 64)
+    private String destinationBankProviderId;
+
+    @Column(name = "destination_bank_name", length = 200)
+    private String destinationBankName;
+
+    @Column(name = "destination_bank_account_number", length = 64)
+    private String destinationBankAccountNumber;
+
+    @Column(name = "destination_bank_holder_name", length = 200)
+    private String destinationBankHolderName;
+
+    @Column(name = "destination_bank_kyc_verified", nullable = false)
+    private boolean destinationBankKycVerified;
 
     @Column(name = "destination_holder_name")
     private String destinationHolderName;
@@ -114,8 +133,14 @@ public class TransactionArchive {
                 .totalChargedValue(t.getTotalChargedValue())
                 .sourceProviderId(t.getSourceProviderId())
                 .sourcePhone(t.getSourcePhone())
+                .serviceType(t.getServiceType())
                 .destinationProviderId(t.getDestinationProviderId())
                 .destinationPhone(t.getDestinationPhone())
+                .destinationBankProviderId(t.getDestinationBankProviderId())
+                .destinationBankName(t.getDestinationBankName())
+                .destinationBankAccountNumber(t.getDestinationBankAccountNumber())
+                .destinationBankHolderName(t.getDestinationBankHolderName())
+                .destinationBankKycVerified(t.isDestinationBankKycVerified())
                 .destinationHolderName(t.getDestinationHolderName())
                 .monimePaymentCodeId(t.getMonimePaymentCodeId())
                 .monimeUssdCode(t.getMonimeUssdCode())

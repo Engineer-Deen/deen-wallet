@@ -51,22 +51,25 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 String role = jwtService.extractRole(token);
 
                 if (role != null && !role.isBlank()) {
-                    // 2. Real-time DB check for privileged Admin sessions
-                    if ("ADMIN".equals(role) || "SUPER_ADMIN".equals(role)) {
-                        User current = userRepository.findById(UUID.fromString(uid)).orElse(null);
+                    // 2. Real-time DB check for EVERY role, so a locked/deactivated account (e.g. after
+                    //    suspected fraud) stops working immediately, not when its 5-minute token expires.
+                    boolean privileged = "ADMIN".equals(role) || "SUPER_ADMIN".equals(role);
+                    User current = userRepository.findById(UUID.fromString(uid)).orElse(null);
 
-                        if (current == null
-                                || !role.equals(current.getRole())
-                                || !current.isActive()
-                                || current.isLocked()
-                                || current.getPinAttempts() >= 2
-                                || ("SUPER_ADMIN".equals(role) && current.isAdminRecoveryRequired())) {
-
-                            SecurityContextHolder.clearContext();
-                            sendErrorResponse(res, HttpServletResponse.SC_FORBIDDEN,
-                                    "Admin session is no longer authorized. Please log in or complete recovery again.");
-                            return;
-                        }
+                    boolean invalid = current == null
+                            || !role.equals(current.getRole())
+                            || !current.isActive()
+                            || current.isLocked();
+                    if (!invalid && privileged) {
+                        invalid = current.getPinAttempts() >= 2
+                                || ("SUPER_ADMIN".equals(role) && current.isAdminRecoveryRequired());
+                    }
+                    if (invalid) {
+                        SecurityContextHolder.clearContext();
+                        sendErrorResponse(res, HttpServletResponse.SC_FORBIDDEN, privileged
+                                ? "Admin session is no longer authorized. Please log in or complete recovery again."
+                                : "Your account is not currently active. Please contact support.");
+                        return;
                     }
 
                     // 3. Populate Spring Security Context

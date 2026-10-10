@@ -65,11 +65,30 @@ public class Transaction {
     @Column(name = "source_phone", nullable = false)
     private String sourcePhone;
 
-    @Column(name = "destination_provider_id", nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "service_type", nullable = false, length = 30)
+    private TransactionServiceType serviceType;
+
+    @Column(name = "destination_provider_id")
     private String destinationProviderId;
 
-    @Column(name = "destination_phone", nullable = false)
+    @Column(name = "destination_phone")
     private String destinationPhone;
+
+    @Column(name = "destination_bank_provider_id", length = 64)
+    private String destinationBankProviderId;
+
+    @Column(name = "destination_bank_name", length = 200)
+    private String destinationBankName;
+
+    @Column(name = "destination_bank_account_number", length = 64)
+    private String destinationBankAccountNumber;
+
+    @Column(name = "destination_bank_holder_name", length = 200)
+    private String destinationBankHolderName;
+
+    @Column(name = "destination_bank_kyc_verified", nullable = false)
+    private boolean destinationBankKycVerified;
 
     @Column(name = "destination_holder_name")
     private String destinationHolderName;
@@ -82,6 +101,18 @@ public class Transaction {
 
     @Column(name = "monime_payout_id")
     private String monimePayoutId;
+
+    @Column(name = "paid_in_at")
+    private Instant paidInAt;
+
+    @Column(name = "payout_failed_at")
+    private Instant payoutFailedAt;
+
+    @Column(name = "payout_attempt", nullable = false)
+    private int payoutAttempt;
+
+    @Column(name = "refund_payout_id", length = 100)
+    private String refundPayoutId;
 
     @Column(name = "failure_reason", length = 1000)
     private String failureReason;
@@ -106,6 +137,9 @@ public class Transaction {
         updatedAt = now;
         if (status == null) {
             status = TransactionStatus.AWAITING_PAYMENT;
+        }
+        if (serviceType == null) {
+            serviceType = TransactionServiceType.MOBILE_MONEY;
         }
         // ==============================================================
         // ✅ AUTO-GENERATE TRANSACTION CODE

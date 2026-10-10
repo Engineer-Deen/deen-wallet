@@ -20,7 +20,7 @@ import java.util.Map;
 @RequestMapping("/api/app")
 public class AndroidUpdateController {
 
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${app.android-update.metadata-path:/var/www/deenwallet/android-update.json}")
     private String metadataPath;
@@ -39,10 +39,6 @@ public class AndroidUpdateController {
 
     @Value("${app.android-update.release-notes:}")
     private String releaseNotes;
-
-    public AndroidUpdateController(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
 
     @GetMapping("/android-update")
     public ResponseEntity<Map<String, Object>> androidUpdate() {

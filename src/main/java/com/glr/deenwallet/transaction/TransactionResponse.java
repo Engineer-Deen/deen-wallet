@@ -17,7 +17,13 @@ public record TransactionResponse(
         String destinationProviderId,
         String ussdCode,
         String failureReason,
-        Instant createdAt
+        Instant createdAt,
+        String serviceType,
+        String bankProviderId,
+        String bankName,
+        String bankAccountNumber,
+        String bankAccountHolderName,
+        boolean bankAccountKycVerified
 ) {
     public static TransactionResponse from(Transaction t) {
         return new TransactionResponse(
@@ -33,7 +39,13 @@ public record TransactionResponse(
                 t.getDestinationProviderId(),
                 t.getMonimeUssdCode(),
                 t.getFailureReason(),
-                t.getCreatedAt()
+                t.getCreatedAt(),
+                t.getServiceType() == null ? TransactionServiceType.MOBILE_MONEY.name() : t.getServiceType().name(),
+                t.getDestinationBankProviderId(),
+                t.getDestinationBankName(),
+                t.getDestinationBankAccountNumber(),
+                t.getDestinationBankHolderName(),
+                t.isDestinationBankKycVerified()
         );
     }
 

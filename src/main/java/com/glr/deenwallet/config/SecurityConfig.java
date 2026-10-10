@@ -25,6 +25,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
+    private final RateLimitFilter rateLimitFilter;
 
     @Value("${app.cors.allowed-origins:http://localhost:8081,http://127.0.0.1:8081,https://deenwallapp.com,https://api.deenwallapp.com}")
     private String origins;
@@ -113,6 +114,7 @@ public class SecurityConfig {
                                 "/api/transactions/**",
                                 "/api/recipients/**",
                                 "/api/accounts/**",
+                                "/api/bank-transfers/**",
                                 "/api/notifications/**"
                         ).hasRole("USER")
 
@@ -127,7 +129,16 @@ public class SecurityConfig {
                 .addFilterBefore(
                         jwtAuthFilter,
                         UsernamePasswordAuthenticationFilter.class
-                );
+                )
+                .addFilterAfter(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
+                .headers(h -> h
+                        .contentSecurityPolicy(csp -> csp.reportOnly().policyDirectives(
+                                "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com; "
+                                        + "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; "
+                                        + "img-src 'self' data: https:; connect-src 'self' https://api.deenwallapp.com https://*.googleapis.com https://*.firebaseio.com; "
+                                        + "frame-ancestors 'none'; base-uri 'self'; form-action 'self'"))
+                        .httpStrictTransportSecurity(hsts -> hsts.includeSubDomains(true).maxAgeInSeconds(31536000))
+                        .referrerPolicy(rp -> rp.policy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN)));
 
         return http.build();
     }

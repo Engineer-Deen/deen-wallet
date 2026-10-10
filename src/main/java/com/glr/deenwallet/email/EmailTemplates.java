@@ -265,7 +265,8 @@ final class EmailTemplates {
     }
 
     static String transactionCompletedEmail(String transactionCode, String amount, String totalCharged,
-                                            String recipientName, String recipientPhone, String recipientProvider) {
+                                            String recipientName, String recipientPhone, String recipientProvider,
+                                            boolean bankTransfer, String bankName, String bankAccountNumber) {
         String body = """
             <div>
                 <div style="text-align: center; margin-bottom: 24px;">
@@ -296,15 +297,16 @@ final class EmailTemplates {
                 BORDER_COLOR,
                 row("Amount sent", "SLE " + amount),
                 row("Total charged", "SLE " + totalCharged),
-                row("Operator", providerLabel(recipientProvider)),
+                bankTransfer ? row("Destination bank", escape(bankName)) : row("Operator", providerLabel(recipientProvider)),
                 row("Recipient name", escape(recipientName)),
-                row("Recipient number", maskTail(recipientPhone))
+                bankTransfer ? row("Bank account", maskTail(bankAccountNumber)) : row("Recipient number", maskTail(recipientPhone))
         );
 
         return wrap("Transfer complete", body);
     }
 
-    static String transactionFailedEmail(String transactionCode, String amount, String recipientPhone, String failureReason) {
+    static String transactionFailedEmail(String transactionCode, String amount, String recipientPhone, String failureReason,
+                                         boolean bankTransfer, String bankName, String bankAccountNumber, String bankHolderName) {
         String body = """
             <div>
                 <div style="text-align: center; margin-bottom: 24px;">
@@ -323,7 +325,7 @@ final class EmailTemplates {
                         <strong>What happened:</strong> %7$s
                     </p>
                     <p style="margin: 0; color: %4$s; font-size: 14px; line-height: 1.5;">
-                        <strong>Your money:</strong> if any amount was deducted, it will be automatically returned through the payment process.
+                        <strong>Your money:</strong> %8$s
                     </p>
                 </div>
             </div>
@@ -333,11 +335,80 @@ final class EmailTemplates {
                 transactionCode,
                 TEXT_COLOR,
                 amount,
-                maskTail(recipientPhone),
-                escape(failureReason == null || failureReason.isBlank() ? "The operator was unable to process this transaction." : failureReason)
+                bankTransfer
+                        ? escape((bankName == null ? "the selected bank" : bankName) + " account " + maskTail(bankAccountNumber))
+                        : maskTail(recipientPhone),
+                escape(failureReason == null || failureReason.isBlank() ? "The operator was unable to process this transaction." : failureReason),
+                bankTransfer
+                        ? "If your mobile-money payment was received but the bank payout failed, please contact Deen Wallet Support so the transaction can be reconciled."
+                        : "If any amount was deducted, it will be automatically returned through the payment process."
         );
 
         return wrap("We couldn't complete your transfer", body);
+    }
+
+    // ---------------- Failed payout / refund emails ----------------
+    static String payoutFailedEmail(String transactionCode, String amount, String totalCharged,
+                                    String recipientLabel, String reason, String payerPhone) {
+        String body = """
+            <div>
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <h2 style="margin: 0; color: %1$s; font-size: 22px; font-weight: 700;">We couldn't deliver your transfer</h2>
+                    <p style="margin: 6px 0 0 0; color: %2$s; font-size: 14px;">
+                        Reference: <span style="font-family: monospace; font-weight: 600; background: #F3F4F6; padding: 2px 8px; border-radius: 4px;">%3$s</span>
+                    </p>
+                </div>
+                <p style="margin: 0 0 20px 0; color: %1$s; font-size: 15px; line-height: 1.6; text-align: center;">
+                    Your payment of <strong>SLE %4$s</strong> was received, but the transfer of <strong>SLE %5$s</strong> to <strong>%6$s</strong> could not be completed.
+                </p>
+                <div style="background-color: #F9FAFB; border-left: 4px solid %1$s; padding: 16px; border-radius: 4px; margin-bottom: 16px;">
+                    <p style="margin: 0 0 8px; color: %1$s; font-size: 14px; line-height: 1.5;"><strong>Why it failed:</strong> %7$s</p>
+                    <p style="margin: 0 0 8px; color: %1$s; font-size: 14px; line-height: 1.5;"><strong>Your money is safe.</strong> It is being held by Deen Wallet and has not been lost.</p>
+                    <p style="margin: 0; color: %1$s; font-size: 14px; line-height: 1.5;"><strong>What happens next:</strong> our support team will either retry the transfer or refund SLE %4$s to the number you paid from (%8$s).</p>
+                </div>
+                <p style="margin: 0; color: %2$s; font-size: 13px; line-height: 1.5; text-align: center;">
+                    To speed things up, contact Deen Wallet Support and quote reference <strong>%3$s</strong>.
+                </p>
+            </div>
+            """.formatted(TEXT_COLOR, MUTED_COLOR, escape(transactionCode), escape(totalCharged), escape(amount),
+                escape(recipientLabel),
+                escape(reason == null || reason.isBlank() ? "The provider was unable to process this transfer." : reason),
+                escape(maskTail(payerPhone)));
+        return wrap("We couldn't deliver your transfer", body);
+    }
+
+    static String refundInitiatedEmail(String transactionCode, String totalCharged, String payerPhone) {
+        String body = """
+            <div>
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <h2 style="margin: 0; color: %1$s; font-size: 22px; font-weight: 700;">Your refund is on its way</h2>
+                    <p style="margin: 6px 0 0 0; color: %2$s; font-size: 14px;">
+                        Reference: <span style="font-family: monospace; font-weight: 600; background: #F3F4F6; padding: 2px 8px; border-radius: 4px;">%3$s</span>
+                    </p>
+                </div>
+                <p style="margin: 0; color: %1$s; font-size: 15px; line-height: 1.6; text-align: center;">
+                    We are refunding <strong>SLE %4$s</strong> to <strong>%5$s</strong>, the number you paid from. You will get another email when it arrives.
+                </p>
+            </div>
+            """.formatted(TEXT_COLOR, MUTED_COLOR, escape(transactionCode), escape(totalCharged), escape(maskTail(payerPhone)));
+        return wrap("Your refund is on its way", body);
+    }
+
+    static String refundCompletedEmail(String transactionCode, String totalCharged, String payerPhone) {
+        String body = """
+            <div>
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <h2 style="margin: 0; color: %1$s; font-size: 22px; font-weight: 700;">Refund sent</h2>
+                    <p style="margin: 6px 0 0 0; color: %2$s; font-size: 14px;">
+                        Reference: <span style="font-family: monospace; font-weight: 600; background: #F3F4F6; padding: 2px 8px; border-radius: 4px;">%3$s</span>
+                    </p>
+                </div>
+                <p style="margin: 0; color: %1$s; font-size: 15px; line-height: 1.6; text-align: center;">
+                    <strong>SLE %4$s</strong> has been refunded to <strong>%5$s</strong>. Thank you for your patience, and we are sorry for the inconvenience.
+                </p>
+            </div>
+            """.formatted(TEXT_COLOR, MUTED_COLOR, escape(transactionCode), escape(totalCharged), escape(maskTail(payerPhone)));
+        return wrap("Refund sent", body);
     }
 
     private static String row(String label, String value) {

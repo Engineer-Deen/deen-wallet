@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -85,6 +86,15 @@ public class AdminInitializer {
                         repo.save(user);
                     }
                 }, () -> {
+                    // A "superadmin" account already exists but its email/role does not match
+                    // ADMIN_EMAIL. Never crash the whole application because of that - the
+                    // username is unique, so creating another one would only fail.
+                    if (repo.findByUsername("superadmin").isPresent()) {
+                        log.warn("Admin bootstrap skipped: a 'superadmin' account already exists but does not match " +
+                                "ADMIN_EMAIL. No account was created or changed.");
+                        return;
+                    }
+
                     if (phone == null || !phone.matches("^\\+232\\d{8}$")) {
                         throw new IllegalStateException("ADMIN_PHONE is required in +232XXXXXXXX format when creating the initial super admin.");
                     }
@@ -104,9 +114,15 @@ public class AdminInitializer {
                             .role("SUPER_ADMIN")
                             .build();
 
-                    repo.save(admin);
-                    log.info("Super admin created for configured email");
+                    try {
+                        repo.save(admin);
+                        log.info("Super admin created for configured email");
+                    } catch (DataIntegrityViolationException e) {
+                        // Duplicate email/phone/username: report it, but keep the application running.
+                        log.error("Admin bootstrap failed (email, phone or username already in use). " +
+                                "The application will continue without creating the admin. " +
+                                "Check ADMIN_EMAIL / ADMIN_PHONE against existing accounts.");
+                    }
                 });
     }
 }
-

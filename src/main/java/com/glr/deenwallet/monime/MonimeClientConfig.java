@@ -47,7 +47,7 @@ public class MonimeClientConfig {
                 .defaultHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
                 .requestInterceptor((request, body, execution) -> {
                     if (request.getMethod().name().equals("POST")
-                            && !request.getHeaders().containsKey("Idempotency-Key")) {
+                            && request.getHeaders().getFirst("Idempotency-Key") == null) {
                         request.getHeaders().add("Idempotency-Key", UUID.randomUUID().toString());
                     }
                     return execution.execute(request, body);

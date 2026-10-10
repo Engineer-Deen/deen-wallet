@@ -2,6 +2,8 @@ package com.glr.deenwallet.recipient;
 
 import com.glr.deenwallet.monime.MonimeClient;
 import com.glr.deenwallet.monime.ProviderKycResult;
+import com.glr.deenwallet.transaction.BankAccountVerificationResponse;
+import com.glr.deenwallet.transaction.BankTransferService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +21,7 @@ public class SavedRecipientController {
 
     private final SavedRecipientService savedRecipientService;
     private final MonimeClient monimeClient;
+    private final BankTransferService bankTransferService;
 
     @GetMapping
     public ResponseEntity<List<SavedRecipient>> list() {
@@ -28,6 +31,22 @@ public class SavedRecipientController {
     @PostMapping
     public ResponseEntity<SavedRecipient> save(@Valid @RequestBody SaveRecipientRequest request) {
         return ResponseEntity.ok(savedRecipientService.save(currentUserId(), request));
+    }
+
+    @PostMapping("/bank")
+    public ResponseEntity<SavedRecipient> saveBank(@Valid @RequestBody SaveBankRecipientRequest request) {
+        String accountNumber = com.glr.deenwallet.transaction.BankTransferService.normalizeAccountNumber(request.getBankAccountNumber());
+        BankAccountVerificationResponse verification = bankTransferService.consumeVerification(
+                currentUserId(), request.getVerificationToken(), request.getBankProviderId(), accountNumber);
+
+        SaveBankRecipientRequest normalized = new SaveBankRecipientRequest();
+        normalized.setBankProviderId(verification.providerId());
+        normalized.setBankAccountNumber(verification.accountNumber());
+        normalized.setVerificationToken(null);
+        normalized.setLabel(request.getLabel());
+
+        return ResponseEntity.ok(savedRecipientService.saveBank(
+                currentUserId(), normalized, verification.bankName(), verification.holderName()));
     }
 
     @PutMapping("/{id}")

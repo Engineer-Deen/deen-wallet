@@ -1838,6 +1838,36 @@ button, input, select, textarea { max-width:100%; }
     .pin-change-form .pin-input-group input { min-width:0; width:100%; }
 }
 
+
+        /* ===== Failed Payouts section ===== */
+        .fp-toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+        .fp-toolbar .search-bar { flex:1; min-width:180px; margin:0; }
+        .fp-check { font-size:12px; color:var(--muted); display:flex; align-items:center; gap:4px; }
+        .fp-card { background:#fff; border:1px solid var(--border); border-left:4px solid var(--error); border-radius:12px;
+                   padding:12px 14px; margin-bottom:10px; cursor:pointer; }
+        .fp-card:active { background:var(--card); }
+        .fp-card.refund { border-left-color:var(--warning-text); }
+        .fp-card.done { border-left-color:#1E8449; }
+        .fp-card-top { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+        .fp-code { font-family:monospace; font-weight:700; font-size:13px; }
+        .fp-amount { font-weight:700; font-size:15px; }
+        .fp-sub { font-size:12px; color:var(--muted); margin-top:4px; line-height:1.4; }
+        .fp-reason { font-size:12px; color:var(--error); margin-top:6px; }
+        .fp-status { font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; background:#FBEAEA; color:var(--error); }
+        .fp-status.refund { background:var(--warning-bg); color:var(--warning-text); }
+        .fp-status.done { background:#E7F7EC; color:#1E8449; }
+        .fp-section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); margin:14px 0 4px; }
+        .fp-row { display:flex; justify-content:space-between; gap:12px; padding:6px 0; border-bottom:1px solid var(--border); font-size:13px; }
+        .fp-row .l { color:var(--muted); flex:0 0 38%; }
+        .fp-row .v { text-align:right; word-break:break-word; font-weight:600; }
+        .fp-modal { background:#fff; border-radius:20px; width:100%; max-width:460px; max-height:90vh; overflow-y:auto; padding:20px; }
+        .fp-verify { background:var(--warning-bg); border-radius:10px; padding:10px 12px; margin-top:14px; font-size:12px; color:var(--warning-text); }
+        .fp-verify input { width:100%; box-sizing:border-box; margin-top:6px; padding:10px; border:1px solid var(--border); border-radius:8px; font-family:monospace; font-size:14px; text-transform:uppercase; }
+        .fp-note { width:100%; box-sizing:border-box; margin-top:8px; padding:10px; border:1px solid var(--border); border-radius:8px; font-size:13px; }
+        .fp-actions { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+        .fp-actions button { flex:1; min-width:120px; }
+        .fp-history { font-size:12px; margin-top:4px; }
+        .fp-history div { padding:5px 0; border-bottom:1px dashed var(--border); }
 </style>
 </head>
 
@@ -1907,6 +1937,7 @@ button, input, select, textarea { max-width:100%; }
                 <button type="button" class="admin-drawer-item" data-drawer-action="users"><span class="admin-drawer-icon">♙</span><span class="admin-drawer-label">Users</span><span class="admin-drawer-chevron">›</span></button>
                 <button type="button" class="admin-drawer-item" data-drawer-action="errors"><span class="admin-drawer-icon">▤</span><span class="admin-drawer-label">Error Logs</span><span class="admin-drawer-chevron">›</span></button>
                 <button type="button" class="admin-drawer-item" data-drawer-action="support"><span class="admin-drawer-icon">◉</span><span class="admin-drawer-label">Support</span><span class="admin-drawer-chevron">›</span></button>
+                <button type="button" class="admin-drawer-item" data-drawer-action="failed-payouts"><span class="admin-drawer-icon">⚠</span><span class="admin-drawer-label">Failed Payouts</span><span class="admin-drawer-chevron">›</span></button>
                 <div class="admin-drawer-divider"></div>
                 <button type="button" class="admin-drawer-item" data-drawer-action="profile"><span class="admin-drawer-icon">♙</span><span class="admin-drawer-label">Admin Profile</span><span class="admin-drawer-chevron">›</span></button>
                 <button type="button" class="admin-drawer-item" data-drawer-action="pin"><span class="admin-drawer-icon">⚿</span><span class="admin-drawer-label">Change PIN</span><span class="admin-drawer-chevron">›</span></button>
@@ -2105,6 +2136,22 @@ button, input, select, textarea { max-width:100%; }
             </div>
         </div>
 
+        <!-- ===== FAILED PAYOUTS ===== -->
+        <div class="scroll hidden" id="tab-failed-payouts">
+            <div class="admin-card">
+                <p class="admin-card-title">Failed Payouts</p>
+                <p class="admin-card-sub">Customer paid, but the payout failed or was rejected. Ask the customer for their transaction number, find the card, then send again or refund.</p>
+                <div class="fp-toolbar">
+                    <div class="search-bar"><input id="fp-search" placeholder="Transaction number (e.g. DW-20260905-A7B3C)" autocomplete="off" /></div>
+                    <label class="fp-check"><input type="checkbox" id="fp-resolved" /> Show refunded</label>
+                    <button class="btn-sm refresh" id="fp-refresh">Refresh</button>
+                </div>
+                <div id="fp-loading" class="loading-state hidden"><div class="spinner"></div>Loading failed payouts…</div>
+                <div id="fp-error" class="error-state hidden"></div>
+                <div id="fp-list"></div>
+            </div>
+        </div>
+
         <!-- ===== CUSTOMER RECIPIENT PICKER ===== -->
         <div class="messaging-picker-overlay" id="messaging-picker-overlay" aria-hidden="true">
             <section class="messaging-picker" role="dialog" aria-modal="true" aria-labelledby="messaging-picker-title">
@@ -2289,6 +2336,11 @@ button, input, select, textarea { max-width:100%; }
     </div>
 
     <!-- ===== MODAL: CONFIRM ===== -->
+    <!-- Failed payout detail -->
+    <div class="modal-overlay" id="fp-modal-overlay">
+        <div class="fp-modal" id="fp-modal"></div>
+    </div>
+
     <div class="modal-overlay" id="modal-overlay">
         <div class="modal">
             <h3 id="modal-title">Confirm</h3>
@@ -2445,7 +2497,7 @@ button, input, select, textarea { max-width:100%; }
                     var el = document.getElementById(id);
                     if (el) { el.classList.remove('open'); el.setAttribute('aria-hidden', 'true'); }
                 });
-                ['user-modal-overlay', 'pin-modal-overlay', 'modal-overlay'].forEach(function (id) {
+                ['user-modal-overlay', 'pin-modal-overlay', 'modal-overlay', 'fp-modal-overlay'].forEach(function (id) {
                     var el = document.getElementById(id);
                     if (el) el.classList.remove('active');
                 });
@@ -2512,7 +2564,28 @@ button, input, select, textarea { max-width:100%; }
             function setToken(token) { localStorage.setItem(TOKEN_KEY, token); }
             function getRefreshToken() { return localStorage.getItem('deenwallet_admin_refresh_token'); }
             function setRefreshToken(token) { if (token) localStorage.setItem('deenwallet_admin_refresh_token', token); }
-            async function refreshAdminToken() { var rt=getRefreshToken(); if(!rt) throw new Error('No refresh token'); var r=await fetch(API_BASE_URL+'/api/admin/auth/refresh',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({refreshToken:rt})}); if(!r.ok) throw new Error('Admin session expired'); var d=await r.json(); setToken(d.accessToken); setRefreshToken(d.refreshToken); return d.accessToken; }
+            var adminRefreshInFlight = null;
+            function refreshAdminToken() {
+                // Several admin calls fire together. Share ONE refresh between them instead of
+                // sending one refresh per call (that used up the rate limit and, with rotating
+                // refresh tokens, made the later ones fail and log the admin out).
+                if (adminRefreshInFlight) return adminRefreshInFlight;
+                var rt = getRefreshToken();
+                if (!rt) return Promise.reject(new Error('No refresh token'));
+                adminRefreshInFlight = fetch(API_BASE_URL + '/api/admin/auth/refresh', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ refreshToken: rt })
+                }).then(function (r) {
+                    if (!r.ok) throw new Error('Admin session expired');
+                    return r.json();
+                }).then(function (d) {
+                    setToken(d.accessToken);
+                    setRefreshToken(d.refreshToken);
+                    return d.accessToken;
+                }).finally(function () { adminRefreshInFlight = null; });
+                return adminRefreshInFlight;
+            }
 
             function clearToken() {
                 localStorage.removeItem(TOKEN_KEY);
@@ -3133,7 +3206,8 @@ button, input, select, textarea { max-width:100%; }
                 errors: document.getElementById('tab-errors'),
                 support: document.getElementById('tab-support'),
                 wallet: document.getElementById('tab-wallet'),
-                messaging: document.getElementById('tab-admin-messaging')
+                messaging: document.getElementById('tab-admin-messaging'),
+                'failed-payouts': document.getElementById('tab-failed-payouts')
             };
 
             function showMainSection(section) {
@@ -3148,6 +3222,7 @@ button, input, select, textarea { max-width:100%; }
                 if (section === 'errors') { loadErrors(); startErrorAutoRefresh(); }
                 else { stopErrorAutoRefresh(); }
                 if (section === 'messaging') updateMessagingRecipientCount();
+                if (section === 'failed-payouts') loadFailedPayouts();
             }
 
             function setBottomNavActive(section) {
@@ -3244,6 +3319,180 @@ button, input, select, textarea { max-width:100%; }
             document.getElementById('admin-drawer-profile').addEventListener('click',function(){ drawerNavigate('profile'); });
             document.querySelectorAll('[data-drawer-action]').forEach(function(item){ item.addEventListener('click',function(){ drawerNavigate(item.dataset.drawerAction); }); });
             document.addEventListener('keydown',function(e){ if(e.key==='Escape' && adminDrawer.classList.contains('open')) closeAdminDrawer(); });
+
+
+            // ==============================================================
+            // FAILED PAYOUTS (customer paid, payout failed / rejected)
+            // ==============================================================
+            var fpCurrent = null;
+
+            function fpMoney(v) { return 'SLE ' + Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+            function fpTime(v) { return v ? new Date(v).toLocaleString() : '—'; }
+            function fpStatusInfo(s) {
+                if (s === 'PAYOUT_FAILED') return { label: 'Needs action', cls: '' };
+                if (s === 'REFUND_PENDING') return { label: 'Refund in progress', cls: 'refund' };
+                if (s === 'NEEDS_REVIEW') return { label: 'Refund rejected: manual', cls: '' };
+                if (s === 'REFUNDED') return { label: 'Refunded', cls: 'done' };
+                return { label: s, cls: '' };
+            }
+
+            function loadFailedPayouts() {
+                var loading = document.getElementById('fp-loading');
+                var error = document.getElementById('fp-error');
+                var list = document.getElementById('fp-list');
+                var q = (document.getElementById('fp-search').value || '').trim();
+                var resolved = document.getElementById('fp-resolved').checked;
+                show(loading); hide(error); list.innerHTML = '';
+                adminApiRequest('/api/admin/failed-payouts', { params: { q: q || undefined, includeResolved: resolved ? 'true' : 'false' } })
+                    .then(function (cards) {
+                        hide(loading);
+                        if (!cards || cards.length === 0) {
+                            list.innerHTML = '<div class="empty-state">' + (q ? 'No failed payout matches that transaction number.' : 'No failed payouts. 🎉') + '</div>';
+                            return;
+                        }
+                        cards.forEach(function (c) {
+                            var info = fpStatusInfo(c.status);
+                            var card = document.createElement('div');
+                            card.className = 'fp-card' + (info.cls ? ' ' + info.cls : '');
+                            card.innerHTML =
+                                '<div class="fp-card-top"><span class="fp-code">' + escapeHtml(c.transactionCode) + '</span>' +
+                                '<span class="fp-status ' + info.cls + '">' + escapeHtml(info.label) + '</span></div>' +
+                                '<div class="fp-card-top" style="margin-top:6px;"><span class="fp-amount">' + escapeHtml(fpMoney(c.totalCharged)) + '</span>' +
+                                '<span class="fp-sub">' + escapeHtml(fpTime(c.failedAt)) + '</span></div>' +
+                                '<div class="fp-sub">' + escapeHtml(c.customerName || 'Unknown customer') + ' · paid from ' + escapeHtml(c.sourcePhone || '—') + '</div>' +
+                                '<div class="fp-sub">To: ' + escapeHtml(c.recipient || '—') + '</div>' +
+                                (c.failureReason ? '<div class="fp-reason">' + escapeHtml(c.failureReason) + '</div>' : '');
+                            card.addEventListener('click', function () { openFailedPayout(c.id); });
+                            list.appendChild(card);
+                        });
+                    })
+                    .catch(function (e) {
+                        hide(loading);
+                        error.textContent = e.message || 'Failed to load failed payouts.';
+                        show(error);
+                    });
+            }
+
+            function fpRow(label, value) {
+                return '<div class="fp-row"><span class="l">' + escapeHtml(label) + '</span><span class="v">' + escapeHtml(value === null || value === undefined || value === '' ? '—' : value) + '</span></div>';
+            }
+
+            function openFailedPayout(id) {
+                var overlay = document.getElementById('fp-modal-overlay');
+                var box = document.getElementById('fp-modal');
+                box.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading…</div>';
+                overlay.classList.add('active');
+                adminApiRequest('/api/admin/failed-payouts/' + encodeURIComponent(id))
+                    .then(renderFailedPayout)
+                    .catch(function (e) {
+                        box.innerHTML = '<div class="error-state">' + escapeHtml(e.message || 'Could not load.') + '</div><div class="fp-actions"><button class="btn-outline" id="fp-close">Close</button></div>';
+                        document.getElementById('fp-close').addEventListener('click', closeFailedPayout);
+                    });
+            }
+
+            function closeFailedPayout() { document.getElementById('fp-modal-overlay').classList.remove('active'); }
+
+            function renderFailedPayout(d) {
+                fpCurrent = d;
+                var info = fpStatusInfo(d.status);
+                var c = d.customer;
+                var html = '';
+                html += '<div class="fp-card-top"><h3 style="margin:0;font-size:17px;">Failed payout</h3><span class="fp-status ' + info.cls + '">' + escapeHtml(info.label) + '</span></div>';
+                html += '<div class="fp-code" style="margin-top:6px;">' + escapeHtml(d.transactionCode) + '</div>';
+                if (d.failureReason) html += '<div class="fp-reason" style="margin-top:8px;"><strong>Why it failed:</strong> ' + escapeHtml(d.failureReason) + '</div>';
+
+                html += '<div class="fp-section-title">Customer who paid</div>';
+                if (c) {
+                    html += fpRow('Name', c.fullName) + fpRow('Email', c.email) + fpRow('Phone', c.phone) +
+                        fpRow('Account number', c.accountNumber) + fpRow('Account status', (c.active ? 'Active' : 'Deactivated') + (c.locked ? ' · Locked' : '')) +
+                        fpRow('Member since', fpTime(c.joinedAt));
+                } else { html += fpRow('Customer', 'Account not found'); }
+
+                html += '<div class="fp-section-title">Payment</div>' +
+                    fpRow('Paid from', (d.sourceProviderId || '') + ' ' + (d.sourcePhone || '')) +
+                    fpRow('Amount to deliver', fpMoney(d.amount)) + fpRow('Fees', fpMoney(d.fee)) + fpRow('Total paid by customer', fpMoney(d.totalCharged)) +
+                    fpRow('Transaction created', fpTime(d.createdAt)) + fpRow('Payment received', fpTime(d.paidInAt)) + fpRow('Payout failed', fpTime(d.failedAt));
+
+                html += '<div class="fp-section-title">Intended recipient</div>';
+                if (d.serviceType === 'BANK_TRANSFER') {
+                    html += fpRow('Bank', d.bankName) + fpRow('Account number', d.bankAccountNumber) + fpRow('Account holder', d.bankHolderName);
+                } else {
+                    html += fpRow('Provider', d.destinationProviderId) + fpRow('Phone', d.destinationPhone) + fpRow('Name', d.destinationHolderName);
+                }
+
+                html += '<div class="fp-section-title">Provider references</div>' +
+                    fpRow('Payment code', d.paymentCodeId) + fpRow('Payout', d.payoutId) + fpRow('Refund payout', d.refundPayoutId) + fpRow('Payout attempts', String(d.payoutAttempts));
+
+                html += '<div class="fp-section-title">Recovery history</div><div class="fp-history">';
+                if (d.history && d.history.length) {
+                    d.history.forEach(function (e) {
+                        html += '<div><strong>' + escapeHtml(e.action) + '</strong> · ' + escapeHtml(fpTime(e.at)) + (e.actor ? ' · ' + escapeHtml(e.actor) : ' · system') +
+                            (e.detail ? '<br><span style="color:var(--muted);">' + escapeHtml(e.detail) + '</span>' : '') + '</div>';
+                    });
+                } else { html += '<div style="color:var(--muted);">No recovery actions yet.</div>'; }
+                html += '</div>';
+
+                if (d.canResend || d.canRefund) {
+                    html += '<div class="fp-verify">Ask the customer for their transaction number and type it below. Actions stay locked until it matches.' +
+                        '<input id="fp-verify-code" placeholder="Transaction number from customer" autocomplete="off" /></div>' +
+                        '<input class="fp-note" id="fp-note" maxlength="300" placeholder="Optional note for the audit log" />' +
+                        '<div class="fp-actions">' +
+                        '<button class="btn-primary" id="fp-resend" disabled>Send again</button>' +
+                        '<button class="btn-danger" id="fp-refund" disabled>Refund to payer</button></div>' +
+                        '<div class="fp-sub" style="margin-top:6px;">Send again retries the payout to the recipient. If it fails again, use Refund to return ' + escapeHtml(fpMoney(d.totalCharged)) + ' to ' + escapeHtml(d.sourcePhone || 'the paying number') + '.</div>';
+                } else if (d.status === 'REFUND_PENDING') {
+                    html += '<div class="fp-verify">Refund is being sent to the paying number. This page will show Refunded once it completes.</div>';
+                } else if (d.status === 'NEEDS_REVIEW') {
+                    html += '<div class="fp-verify">The provider rejected the refund. The money is safe in the Monime account: refund the customer manually and note it with support.</div>';
+                }
+                html += '<div class="fp-actions"><button class="btn-outline" id="fp-close">Close</button></div>';
+                document.getElementById('fp-modal').innerHTML = html;
+
+                document.getElementById('fp-close').addEventListener('click', closeFailedPayout);
+                var input = document.getElementById('fp-verify-code');
+                if (input) {
+                    input.addEventListener('input', function () {
+                        var ok = input.value.trim().toUpperCase() === String(d.transactionCode).toUpperCase();
+                        document.getElementById('fp-resend').disabled = !ok;
+                        document.getElementById('fp-refund').disabled = !ok;
+                    });
+                    document.getElementById('fp-resend').addEventListener('click', function () { fpAct('resend'); });
+                    document.getElementById('fp-refund').addEventListener('click', function () { fpAct('refund'); });
+                }
+            }
+
+            function fpAct(kind) {
+                var d = fpCurrent;
+                if (!d) return;
+                var verify = (document.getElementById('fp-verify-code').value || '').trim();
+                var note = (document.getElementById('fp-note').value || '').trim();
+                var msg = kind === 'resend'
+                    ? 'Send ' + fpMoney(d.amount) + ' to the recipient again for ' + d.transactionCode + '?'
+                    : 'Refund ' + fpMoney(d.totalCharged) + ' to ' + (d.sourcePhone || 'the paying number') + ' for ' + d.transactionCode + '? The customer will be emailed.';
+                showModal(kind === 'resend' ? 'Send again' : 'Refund customer', msg, function () {
+                    var b1 = document.getElementById('fp-resend'), b2 = document.getElementById('fp-refund');
+                    if (b1) b1.disabled = true; if (b2) b2.disabled = true;
+                    adminApiRequest('/api/admin/failed-payouts/' + encodeURIComponent(d.id) + '/' + kind, { method: 'POST', body: { verifiedTransactionCode: verify, note: note } })
+                        .then(function (updated) {
+                            showToast(kind === 'resend' ? 'Payout sent again.' : 'Refund started.');
+                            renderFailedPayout(updated);
+                            loadFailedPayouts();
+                        })
+                        .catch(function (e) {
+                            showToast(e.message || 'Action failed.');
+                            if (b1) b1.disabled = false; if (b2) b2.disabled = false;
+                        });
+                });
+            }
+
+            document.getElementById('fp-refresh').addEventListener('click', loadFailedPayouts);
+            document.getElementById('fp-resolved').addEventListener('change', loadFailedPayouts);
+            var fpSearchTimer = null;
+            document.getElementById('fp-search').addEventListener('input', function () {
+                clearTimeout(fpSearchTimer);
+                fpSearchTimer = setTimeout(loadFailedPayouts, 350);
+            });
+            document.getElementById('fp-modal-overlay').addEventListener('click', function (e) { if (e.target === this) closeFailedPayout(); });
 
             // ==============================================================
             // DASHBOARD
@@ -3405,7 +3654,7 @@ button, input, select, textarea { max-width:100%; }
 
                                 adminApiRequest(endpoint, options)
                                     .then(function () {
-                                        showToast('User ' + action + 'd successfully.');
+                                        showToast('User ' + (action === 'unlock' ? 'unlocked' : action + 'd') + ' successfully.');
                                         loadUsers();
                                     })
                                     .catch(function (err) {
@@ -3572,18 +3821,28 @@ button, input, select, textarea { max-width:100%; }
                     toggleBtn.addEventListener('click', function () {
                         var id = user.id;
                         var action = isLocked ? 'unlock' : (isActive ? 'deactivate' : 'activate');
+                        var doneWord = action === 'unlock' ? 'unlocked' : (action === 'activate' ? 'activated' : 'deactivated');
                         if (!confirm('Are you sure you want to ' + action + ' this account?')) return;
+                        var originalLabel = toggleBtn.textContent;
                         toggleBtn.disabled = true;
                         toggleBtn.textContent = action === 'unlock' ? 'Unlocking…' : (action === 'activate' ? 'Activating…' : 'Deactivating…');
                         var endpoint = isLocked ? '/api/admin/users/' + id + '/unlock' : '/api/admin/users/' + id + '/toggle';
                         var options = isLocked ? { method: 'PUT' } : { method: 'PUT', body: { active: !isActive } };
                         adminApiRequest(endpoint, options)
                             .then(function (updated) {
-                                showToast('Account ' + action + 'd successfully.');
+                                showToast('Account ' + doneWord + ' successfully.');
                                 if (returnScreen === 'admin-management') loadAdminList(); else loadUsers();
-                                openUserDetail(updated, accountDetailReturnScreen);
+                                if (updated) {
+                                    openUserDetail(updated, accountDetailReturnScreen);
+                                } else {
+                                    returnFromAccountDetail();
+                                }
                             })
-                            .catch(function (err) { showToast(err.message || 'Failed to update account.'); toggleBtn.disabled = false; });
+                            .catch(function (err) {
+                                showToast(err.message || 'Failed to update account.');
+                                toggleBtn.disabled = false;
+                                toggleBtn.textContent = originalLabel;
+                            });
                     });
                 }
 
@@ -3917,7 +4176,7 @@ button, input, select, textarea { max-width:100%; }
                         document.getElementById('support-txn-amount').textContent = data.amount ? 'SLE ' + Number(data.amount).toFixed(2) : '—';
                         document.getElementById('support-txn-total').textContent = data.totalCharged ? 'SLE ' + Number(data.totalCharged).toFixed(2) : '—';
                         document.getElementById('support-txn-source').textContent = data.sourcePhone || data.sourceProviderId || '—';
-                        document.getElementById('support-txn-recipient').textContent = data.destinationPhone || data.destinationHolderName || '—';
+                        document.getElementById('support-txn-recipient').textContent = data.serviceType === 'BANK_TRANSFER' ? ((data.bankName || 'Bank') + ' · ' + (data.bankAccountHolderName || data.destinationHolderName || data.bankAccountNumber || '—')) : (data.destinationPhone || data.destinationHolderName || '—');
                         document.getElementById('support-txn-user').textContent = data.accountHolderAccountNumber ? data.accountHolderAccountNumber + (data.accountHolderName ? ' — ' + data.accountHolderName : '') : (data.accountHolderEmail || data.accountHolderName || '—');
                         document.getElementById('support-txn-created').textContent = data.createdAt ? new Date(data.createdAt).toLocaleString() : '—';
                         var reasonRow = document.getElementById('support-txn-reason-row');
@@ -4474,7 +4733,7 @@ button, input, select, textarea { max-width:100%; }
 
                             adminApiRequest(endpoint, options)
                                 .then(function () {
-                                    showToast('Admin ' + action + 'd successfully.');
+                                    showToast('Admin ' + (action === 'unlock' ? 'unlocked' : action + 'd') + ' successfully.');
                                     loadAdminList();
                                 })
                                 .catch(function (err) {

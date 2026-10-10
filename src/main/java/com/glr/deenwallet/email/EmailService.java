@@ -144,7 +144,10 @@ public class EmailService {
                         toDisplayAmount(transaction.getTotalChargedValue()),
                         transaction.getDestinationHolderName(),
                         transaction.getDestinationPhone(),
-                        transaction.getDestinationProviderId()
+                        transaction.getDestinationProviderId(),
+                        transaction.getServiceType() == com.glr.deenwallet.transaction.TransactionServiceType.BANK_TRANSFER,
+                        transaction.getDestinationBankName(),
+                        transaction.getDestinationBankAccountNumber()
                 )
         );
     }
@@ -164,9 +167,32 @@ public class EmailService {
                         transactionCode,
                         toDisplayAmount(transaction.getAmountValue()),
                         transaction.getDestinationPhone(),
-                        transaction.getFailureReason()
+                        transaction.getFailureReason(),
+                        transaction.getServiceType() == com.glr.deenwallet.transaction.TransactionServiceType.BANK_TRANSFER,
+                        transaction.getDestinationBankName(),
+                        transaction.getDestinationBankAccountNumber(),
+                        transaction.getDestinationBankHolderName()
                 )
         );
+    }
+
+    @Async("emailTaskExecutor")
+    public void sendPayoutFailedEmail(String toEmail, String transactionCode, String amount,
+                                      String totalCharged, String recipientLabel, String reason, String payerPhone) {
+        send(toEmail, "We couldn't deliver your transfer " + transactionCode,
+                EmailTemplates.payoutFailedEmail(transactionCode, amount, totalCharged, recipientLabel, reason, payerPhone));
+    }
+
+    @Async("emailTaskExecutor")
+    public void sendRefundInitiatedEmail(String toEmail, String transactionCode, String totalCharged, String payerPhone) {
+        send(toEmail, "Your refund is on its way " + transactionCode,
+                EmailTemplates.refundInitiatedEmail(transactionCode, totalCharged, payerPhone));
+    }
+
+    @Async("emailTaskExecutor")
+    public void sendRefundCompletedEmail(String toEmail, String transactionCode, String totalCharged, String payerPhone) {
+        send(toEmail, "Refund sent " + transactionCode,
+                EmailTemplates.refundCompletedEmail(transactionCode, totalCharged, payerPhone));
     }
 
     private void sendRequired(

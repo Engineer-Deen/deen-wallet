@@ -498,15 +498,15 @@ button, input, select, textarea { max-width:100%; font:inherit; }
               <span class="value" id="receipt-total"></span>
             </div>
             <div class="receipt-row">
-              <span class="label">Operator</span>
+              <span class="label" id="receipt-operator-label">Operator</span>
               <span class="value" id="receipt-operator"></span>
             </div>
             <div class="receipt-row">
-              <span class="label">Recipient name</span>
+              <span class="label" id="receipt-recipient-label">Recipient name</span>
               <span class="value" id="receipt-recipient-name"></span>
             </div>
             <div class="receipt-row" style="border-bottom:none;">
-              <span class="label">Recipient number</span>
+              <span class="label" id="receipt-recipient-destination-label">Recipient number</span>
               <span class="value" id="receipt-recipient-phone"></span>
             </div>
           </div>
@@ -548,8 +548,11 @@ button, input, select, textarea { max-width:100%; font:inherit; }
     const receiptAmount = document.getElementById('receipt-amount');
     const receiptTotal = document.getElementById('receipt-total');
     const receiptOperator = document.getElementById('receipt-operator');
+    const receiptOperatorLabel = document.getElementById('receipt-operator-label');
     const receiptRecipientName = document.getElementById('receipt-recipient-name');
+    const receiptRecipientLabel = document.getElementById('receipt-recipient-label');
     const receiptRecipientPhone = document.getElementById('receipt-recipient-phone');
+    const receiptRecipientDestinationLabel = document.getElementById('receipt-recipient-destination-label');
     const receiptCanceledNote = document.getElementById('receipt-canceled-note');
     const receiptFailureReason = document.getElementById('receipt-failure-reason');
     const receiptFailureReasonText = document.getElementById('receipt-failure-reason-text');
@@ -629,7 +632,9 @@ button, input, select, textarea { max-width:100%; font:inherit; }
         top.className = 'txn-top';
         const name = document.createElement('span');
         name.className = 'txn-name';
-        name.textContent = txn.destinationHolderName || txn.destinationPhone || 'Transfer';
+        name.textContent = txn.serviceType === 'BANK_TRANSFER'
+          ? (txn.bankAccountHolderName || txn.destinationHolderName || 'Bank Transfer')
+          : (txn.destinationHolderName || txn.destinationPhone || 'Transfer');
         const amount = document.createElement('span');
         amount.className = 'txn-amount';
         amount.textContent = txn.amount !== null ? formatMoney(txn.amount) + ' SLE' : '—';
@@ -729,9 +734,15 @@ button, input, select, textarea { max-width:100%; font:inherit; }
       receiptTxnId.textContent = 'Transaction ID: ' + txnDisplay;
       receiptAmount.textContent = txn.amount !== null ? formatMoney(txn.amount) + ' SLE' : '—';
       receiptTotal.textContent = txn.totalCharged !== null ? formatMoney(txn.totalCharged) + ' SLE' : '—';
-      receiptOperator.textContent = providerName(txn.destinationProviderId);
-      receiptRecipientName.textContent = txn.destinationHolderName || '—';
-      receiptRecipientPhone.textContent = maskPhone(txn.destinationPhone);
+      const bankTransfer = txn.serviceType === 'BANK_TRANSFER';
+      receiptOperatorLabel.textContent = bankTransfer ? 'Bank' : 'Operator';
+      receiptOperator.textContent = bankTransfer ? (txn.bankName || '—') : providerName(txn.destinationProviderId);
+      receiptRecipientLabel.textContent = bankTransfer ? 'Account holder' : 'Recipient name';
+      receiptRecipientName.textContent = bankTransfer
+        ? (txn.bankAccountHolderName || txn.destinationHolderName || '—')
+        : (txn.destinationHolderName || '—');
+      receiptRecipientDestinationLabel.textContent = bankTransfer ? 'Bank account' : 'Recipient number';
+      receiptRecipientPhone.textContent = bankTransfer ? maskPhone(txn.bankAccountNumber) : maskPhone(txn.destinationPhone);
 
       receiptCanceledNote.hidden = status !== 'CANCELED';
       const failureReason = txn.failureReason || '';

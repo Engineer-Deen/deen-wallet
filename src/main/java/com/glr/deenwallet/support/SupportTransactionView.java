@@ -24,7 +24,13 @@ public record SupportTransactionView(
         Instant createdAt,
         Instant updatedAt,
         String accountHolderEmail,
-        String accountHolderAccountNumber
+        String accountHolderAccountNumber,
+        String serviceType,
+        String bankProviderId,
+        String bankName,
+        String bankAccountNumber,
+        String bankAccountHolderName,
+        boolean bankAccountKycVerified
 ) {
     public static SupportTransactionView from(Transaction t, String accountHolderEmail, String accountNumber) {
         return new SupportTransactionView(
@@ -45,7 +51,13 @@ public record SupportTransactionView(
                 t.getCreatedAt(),
                 t.getUpdatedAt(),
                 accountHolderEmail,
-                accountNumber
+                accountNumber,
+                t.getServiceType() == null ? "MOBILE_MONEY" : t.getServiceType().name(),
+                t.getDestinationBankProviderId(),
+                t.getDestinationBankName(),
+                t.getDestinationBankAccountNumber(),
+                t.getDestinationBankHolderName(),
+                t.isDestinationBankKycVerified()
         );
     }
 

@@ -24,4 +24,19 @@ public record CreatePaymentCodeRequest(
                 reference
         );
     }
+
+    public static CreatePaymentCodeRequest oneTimeForProvider(String name, Money amount,
+                                                              String providerId,
+                                                              String payerPhone,
+                                                              String reference) {
+        return new CreatePaymentCodeRequest(
+                "one_time",
+                name,
+                amount,
+                "10m",
+                List.of(providerId),
+                payerPhone,
+                reference
+        );
+    }
 }

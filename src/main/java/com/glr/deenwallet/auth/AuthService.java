@@ -159,7 +159,7 @@ public class AuthService {
          * for the USER role instead of using findByEmail().
          */
         User user = userRepository.findByEmailAndRole(email, "USER")
-                .orElseThrow(() -> new IllegalArgumentException("User account not found"));
+                .orElseThrow(() -> new InvalidUserLoginException("Invalid email or password."));
 
         checkUserLoginRateLimit(user);
 
@@ -290,6 +290,9 @@ public class AuthService {
 
         if (newPassword == null || newPassword.isBlank()) {
             throw new IllegalArgumentException("Password is required");
+        }
+        if (newPassword.length() < 8 || newPassword.length() > 128) {
+            throw new IllegalArgumentException("Password must be between 8 and 128 characters");
         }
 
         String tokenHash = hashPasswordResetToken(rawToken.trim());

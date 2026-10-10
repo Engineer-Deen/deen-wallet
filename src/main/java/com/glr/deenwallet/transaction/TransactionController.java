@@ -18,8 +18,10 @@ public class TransactionController {
     private final TransactionService transactionService;
 
     @PostMapping
-    public ResponseEntity<TransactionResponse> initiate(@Valid @RequestBody InitiateTransactionRequest request) {
-        return ResponseEntity.ok(transactionService.initiate(currentUserId(), request));
+    public ResponseEntity<TransactionResponse> initiate(
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @Valid @RequestBody InitiateTransactionRequest request) {
+        return ResponseEntity.ok(transactionService.initiate(currentUserId(), request, idempotencyKey));
     }
 
     // ✅ FIXED: Return TransactionResponse (which includes transactionCode)
@@ -50,7 +52,12 @@ public class TransactionController {
      */
     @GetMapping("/preview-fee")
     public ResponseEntity<FeePreviewResponse> previewFee(@RequestParam BigDecimal amount) {
-        if (amount == null || amount.compareTo(BigDecimal.ONE) < 0 || amount.scale() > 2) throw new IllegalArgumentException("Amount must be at least 1.00 and have at most 2 decimal places");
+        if (amount == null
+                || amount.compareTo(BigDecimal.ONE) < 0
+                || amount.compareTo(new BigDecimal("50000.00")) > 0
+                || amount.scale() > 2) {
+            throw new IllegalArgumentException("Amount must be between 1.00 and 50000.00 SLE and have at most 2 decimal places");
+        }
         long minorUnits = amount.movePointRight(2).longValueExact();
         ConversionFee fee = ConversionFee.calculate(minorUnits);
 

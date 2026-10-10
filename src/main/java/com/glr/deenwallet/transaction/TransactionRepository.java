@@ -1,6 +1,7 @@
 package com.glr.deenwallet.transaction;
 
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -25,6 +26,12 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     Optional<Transaction> findByMonimePayoutId(String monimePayoutId);
     List<Transaction> findByStatusAndCreatedAtBefore(TransactionStatus status, Instant cutoff);
 
+    @Query("SELECT t FROM Transaction t WHERE t.status = :status AND t.createdAt < :cutoff ORDER BY t.createdAt")
+    List<Transaction> findByStatusAndCreatedAtBefore(
+            @Param("status") TransactionStatus status,
+            @Param("cutoff") Instant cutoff,
+            Pageable pageable);
+
     // Codes are stored upper-case. Upper-casing the PARAMETER (not the column) keeps the
     // unique index usable; LOWER(column) forced a full table scan (126 ms at 200k rows).
     @Query("SELECT t FROM Transaction t WHERE t.transactionCode = UPPER(:transactionCode)")
@@ -37,6 +44,34 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT t FROM Transaction t WHERE t.monimePayoutId = :payoutId")
     Optional<Transaction> findByMonimePayoutIdForUpdate(@Param("payoutId") String payoutId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT t FROM Transaction t WHERE t.id = :id")
+    Optional<Transaction> findByIdForUpdate(@Param("id") UUID id);
+
+    /** Failed-payout queue: bounded, newest failure first. */
+    @Query("SELECT t FROM Transaction t WHERE t.status IN :statuses ORDER BY COALESCE(t.payoutFailedAt, t.updatedAt) DESC")
+    List<Transaction> findQueue(@Param("statuses") List<TransactionStatus> statuses, Pageable pageable);
+
+    long countByUserIdAndStatus(UUID userId, TransactionStatus status);
+
+    @Query("SELECT COUNT(t) FROM Transaction t WHERE t.userId = :userId AND t.createdAt > :since")
+    long countByUserIdSince(@Param("userId") UUID userId, @Param("since") Instant since);
+
+    @Query("SELECT COALESCE(SUM(t.amountValue), 0) FROM Transaction t WHERE t.userId = :userId "
+            + "AND t.createdAt > :since AND t.status NOT IN (com.glr.deenwallet.transaction.TransactionStatus.CANCELED)")
+    long sumAmountByUserIdSince(@Param("userId") UUID userId, @Param("since") Instant since);
+
+    /** Double-tap protection: the same still-unpaid request created moments ago. */
+    @Query("SELECT t FROM Transaction t WHERE t.userId = :userId AND t.status = com.glr.deenwallet.transaction.TransactionStatus.AWAITING_PAYMENT "
+            + "AND t.createdAt > :since AND t.amountValue = :amount AND t.sourcePhone = :sourcePhone "
+            + "AND t.serviceType = :serviceType AND COALESCE(t.destinationPhone, '') = :destPhone "
+            + "AND COALESCE(t.destinationBankAccountNumber, '') = :bankAcct "
+            + "ORDER BY t.createdAt DESC")
+    List<Transaction> findRecentDuplicates(@Param("userId") UUID userId, @Param("since") Instant since,
+                                           @Param("amount") Long amount, @Param("sourcePhone") String sourcePhone,
+                                           @Param("serviceType") TransactionServiceType serviceType,
+                                           @Param("destPhone") String destPhone, @Param("bankAcct") String bankAcct);
 
     /** Admin list, bounded + paged. Pass PageRequest.of(page, size, Sort.by(DESC, "createdAt")). */
     List<Transaction> findAllBy(Pageable pageable);
@@ -64,4 +99,5 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
             @Param("finalStatuses") List<TransactionStatus> finalStatuses,
             @Param("cutoff") Instant cutoff,
             Pageable pageable);
+
 }

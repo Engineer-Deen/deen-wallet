@@ -18,6 +18,9 @@ public interface SavedRecipientRepository extends JpaRepository<SavedRecipient, 
     boolean existsByUserIdAndPhoneNumberAndProviderId(
             UUID userId, String phoneNumber, String providerId);
 
+    boolean existsByUserIdAndBankProviderIdAndBankAccountNumber(
+            UUID userId, String bankProviderId, String bankAccountNumber);
+
     /**
      * Checks if a recipient has any associated transactions.
      * This is used to prevent deletion of recipients with transaction history.

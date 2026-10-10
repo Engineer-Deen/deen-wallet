@@ -5,6 +5,8 @@ public record PayoutResult(
         String status,
         Money amount,
         String createTime,
-        String updateTime
+        String updateTime,
+        FailureDetail failureDetail
 ) {
+    public record FailureDetail(String code, String message) {}
 }

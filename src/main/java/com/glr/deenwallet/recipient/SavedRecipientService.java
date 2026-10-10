@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -36,6 +37,29 @@ public class SavedRecipientService {
         return savedRecipientRepository.save(recipient);
     }
 
+
+    public SavedRecipient saveBank(UUID userId, SaveBankRecipientRequest request, String bankName, String holderName) {
+        boolean alreadySaved = savedRecipientRepository.existsByUserIdAndBankProviderIdAndBankAccountNumber(
+                userId, request.getBankProviderId(), request.getBankAccountNumber());
+
+        if (alreadySaved) {
+            throw new IllegalArgumentException("This bank recipient is already saved");
+        }
+
+        SavedRecipient recipient = SavedRecipient.builder()
+                .userId(userId)
+                .recipientType(SavedRecipientType.BANK)
+                .bankProviderId(request.getBankProviderId())
+                .bankName(bankName)
+                .bankAccountNumber(request.getBankAccountNumber())
+                .bankHolderName(holderName)
+                .bankKycVerified(true)
+                .label(request.getLabel())
+                .build();
+
+        return savedRecipientRepository.save(recipient);
+    }
+
     /**
      * Updates a recipient. Supports both label-only updates and full updates.
      * - If only label is provided: updates just the label
@@ -61,8 +85,13 @@ public class SavedRecipientService {
                     userId, request.getPhoneNumber(), request.getProviderId());
 
             // If the existing one is a different recipient, prevent duplicate
-            if (alreadyExists && !recipient.getPhoneNumber().equals(request.getPhoneNumber())) {
-                throw new IllegalArgumentException("This phone number is already saved for another recipient");
+            if (alreadyExists) {
+                Optional<SavedRecipient> existing = savedRecipientRepository
+                        .findByUserIdAndPhoneNumberAndProviderId(
+                                userId, request.getPhoneNumber(), request.getProviderId());
+                if (existing.isPresent() && !existing.get().getId().equals(recipient.getId())) {
+                    throw new IllegalArgumentException("This phone number is already saved for another recipient");
+                }
             }
 
             recipient.setPhoneNumber(request.getPhoneNumber());

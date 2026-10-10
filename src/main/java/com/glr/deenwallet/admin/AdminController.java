@@ -177,7 +177,7 @@ public class AdminController {
     }
 
     @PutMapping("/users/{userId}/unlock")
-    public ResponseEntity<Void> unlockUser(@PathVariable UUID userId) {
+    public ResponseEntity<AdminUserResponse> unlockUser(@PathVariable UUID userId) {
         validateAdmin();
         User targetUser = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("User not found"));
         if ("SUPER_ADMIN".equals(targetUser.getRole())) {
@@ -186,8 +186,8 @@ public class AdminController {
         if ("ADMIN".equals(targetUser.getRole()) && !"SUPER_ADMIN".equals(getCurrentUser().getRole())) {
             throw new SecurityException("Only a super admin can manage another admin account.");
         }
-        adminService.unlockUser(userId);
-        return ResponseEntity.noContent().build();
+        User unlocked = adminService.unlockUser(userId);
+        return ResponseEntity.ok(AdminUserResponse.from(unlocked));
     }
 
     @PutMapping("/users/{userId}/reset-login-protection")

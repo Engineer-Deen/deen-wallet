@@ -2,12 +2,17 @@ package com.glr.deenwallet.config;
 
 import com.glr.deenwallet.admin.AdminAuthController;
 import com.glr.deenwallet.auth.AuthService;
+import com.glr.deenwallet.transaction.BankKycUnavailableException;
+import com.glr.deenwallet.transaction.TooManyRequestsException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.catalina.connector.ClientAbortException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClientResponseException;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -108,6 +113,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body(message));
     }
 
+    @ExceptionHandler(BankKycUnavailableException.class)
+    public ResponseEntity<Map<String, String>> handleBankKycUnavailable(BankKycUnavailableException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body(ex.getMessage()));
+    }
+
     // ---- Generic fallbacks (must stay below the specific handlers above) ----
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
@@ -115,6 +125,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.METHOD_NOT_ALLOWED)
                 .body(body("HTTP method not allowed for this endpoint."));
+    }
+
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<Map<String, String>> handle(TooManyRequestsException ex) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Retry-After", "30");
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).headers(headers).body(body(ex.getMessage()));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
@@ -138,6 +155,30 @@ public class GlobalExceptionHandler {
         // already gone, and trying anyway is what previously caused a
         // second, more alarming-looking exception right after this one.
         log.debug("Client disconnected before response completed: {}", ex.getMessage());
+    }
+
+    @ExceptionHandler(AsyncRequestNotUsableException.class)
+    public void handleAsyncRequestNotUsable(AsyncRequestNotUsableException ex) {
+        // Spring Framework 7 wraps the client disconnect (ClientAbortException) in this
+        // exception. Same situation as above: the client is gone, so log quietly and
+        // write nothing.
+        log.debug("Client disconnected before response completed: {}", ex.getMessage());
+    }
+
+    @ExceptionHandler(RestClientResponseException.class)
+    public ResponseEntity<Map<String, String>> handleUpstream(RestClientResponseException ex) {
+        // Monime (or another upstream) answered with a non-2xx. Log the real body so the
+        // cause is visible in server logs, but don't leak it to the client.
+        log.error("Upstream call failed: status={} body={}", ex.getStatusCode(), ex.getResponseBodyAsString());
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(body("The payment provider could not complete this request. Please try again."));
+    }
+
+    @ExceptionHandler(ResourceAccessException.class)
+    public ResponseEntity<Map<String, String>> handleUpstreamTimeout(ResourceAccessException ex) {
+        log.error("Upstream call timed out or was unreachable", ex);
+        return ResponseEntity.status(HttpStatus.GATEWAY_TIMEOUT)
+                .body(body("The payment provider is taking too long to respond. Please try again."));
     }
 
     @ExceptionHandler(Exception.class)

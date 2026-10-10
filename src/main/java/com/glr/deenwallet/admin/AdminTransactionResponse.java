@@ -32,7 +32,13 @@ public record AdminTransactionResponse(
         String transactionCode,
         String accountHolderName,
         String accountHolderEmail,
-        String accountHolderAccountNumber
+        String accountHolderAccountNumber,
+        String serviceType,
+        String bankProviderId,
+        String bankName,
+        String bankAccountNumber,
+        String bankAccountHolderName,
+        boolean bankAccountKycVerified
 ) {
     public static AdminTransactionResponse from(Transaction t) {
         return from(t, null);
@@ -64,7 +70,13 @@ public record AdminTransactionResponse(
                 t.getTransactionCode(),
                 user == null ? null : user.getFullName(),
                 user == null ? null : user.getEmail(),
-                user == null ? null : user.getAccountNumber()
+                user == null ? null : user.getAccountNumber(),
+                t.getServiceType() == null ? "MOBILE_MONEY" : t.getServiceType().name(),
+                t.getDestinationBankProviderId(),
+                t.getDestinationBankName(),
+                t.getDestinationBankAccountNumber(),
+                t.getDestinationBankHolderName(),
+                t.isDestinationBankKycVerified()
         );
     }
 
@@ -95,7 +107,13 @@ public record AdminTransactionResponse(
                 t.getTransactionCode(),
                 user == null ? null : user.getFullName(),
                 user == null ? null : user.getEmail(),
-                user == null ? null : user.getAccountNumber()
+                user == null ? null : user.getAccountNumber(),
+                t.getServiceType() == null ? "MOBILE_MONEY" : t.getServiceType().name(),
+                t.getDestinationBankProviderId(),
+                t.getDestinationBankName(),
+                t.getDestinationBankAccountNumber(),
+                t.getDestinationBankHolderName(),
+                t.isDestinationBankKycVerified()
         );
     }
 

@@ -195,6 +195,61 @@
             background: var(--muted);
         }
 
+        .bank-form-card { margin-top:18px; padding:18px; border:1px solid var(--border); border-radius:16px; background:#fff; box-shadow:0 6px 20px rgba(18,36,43,.05); }
+        .bank-field-label { display:block; margin:0 0 8px; font-size:12px; font-weight:800; color:var(--muted); }
+        .bank-select, .bank-account-input { width:100%; box-sizing:border-box; min-height:50px; border:1px solid #DCE7EA; border-radius:14px; background:#F9FBFC; color:var(--text); padding:0 14px; font-size:15px; outline:none; }
+        .bank-select:focus, .bank-account-input:focus { border-color:#8CCFD9; background:#fff; }
+        .bank-select-hidden { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+        .bank-picker { position:relative; }
+        .bank-picker-trigger { width:100%; min-height:56px; box-sizing:border-box; border:1px solid #DCE7EA; border-radius:14px; background:#F9FBFC; color:var(--text); padding:8px 14px; display:flex; align-items:center; justify-content:space-between; gap:12px; font:inherit; cursor:pointer; text-align:left; }
+        .bank-picker-trigger:focus, .bank-picker-trigger[aria-expanded="true"] { outline:none; border-color:#8CCFD9; background:#fff; }
+        .bank-picker-selected { display:flex; align-items:center; gap:12px; min-width:0; }
+        .bank-picker-selected-name { font-size:15px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .bank-picker-chevron { color:var(--muted); font-size:20px; line-height:1; flex:0 0 auto; align-self:center; transform:translateY(-5px); }
+        .bank-picker-menu { position:absolute; left:0; right:0; top:calc(100% + 8px); z-index:80; max-height:290px; overflow:auto; padding:7px; border:1px solid #DCE7EA; border-radius:16px; background:#fff; box-shadow:0 16px 35px rgba(18,36,43,.14); }
+        .bank-picker-menu.hidden { display:none; }
+        .bank-picker-option { width:100%; display:flex; align-items:center; gap:12px; padding:10px; border:0; border-radius:12px; background:transparent; color:var(--text); cursor:pointer; text-align:left; }
+        .bank-picker-option:hover, .bank-picker-option.selected { background:#F1FAFC; }
+        .bank-picker-option-name { flex:1; min-width:0; font-size:14px; font-weight:700; }
+        .bank-picker-option-check { width:22px; height:22px; border-radius:50%; border:1px solid #D5E3E6; display:flex; align-items:center; justify-content:center; color:transparent; flex:0 0 auto; font-size:13px; }
+        .bank-picker-option.selected .bank-picker-option-check { background:var(--primary); border-color:var(--primary); color:#fff; }
+        .bank-logo { position:relative; width:38px; height:38px; border-radius:10px; background:#fff; border:1px solid #E2ECEF; display:inline-flex; align-items:center; justify-content:center; flex:0 0 38px; overflow:hidden; box-sizing:border-box; }
+        .bank-logo img { position:absolute; inset:0; width:100%; height:100%; box-sizing:border-box; padding:6px; object-fit:contain; object-position:center; display:block; background:#fff; image-rendering:auto; }
+        .bank-logo-placeholder { font-size:11px; font-weight:900; color:var(--primary); background:#F1FAFC; letter-spacing:.02em; }
+        .bank-logo.has-img { background:#fff; color:transparent; }
+        .bank-picker-option.unavailable { opacity:.6; cursor:not-allowed; }
+        .bank-picker-option.unavailable:hover { background:transparent; }
+        .bank-unavailable-tag { flex:0 0 auto; font-size:11px; font-weight:800; color:#8A5A00; background:#FFF4D6; border:1px solid #F3DDA0; border-radius:999px; padding:3px 9px; white-space:nowrap; }
+        .bank-picker-note { margin:6px 4px 2px; padding:10px 12px; border-radius:12px; background:#FFF9E8; border:1px solid #F3E4B5; color:#6F5200; font-size:12px; line-height:1.45; }
+        .bank-friendly-note { display:flex; gap:8px; align-items:flex-start; }
+        .bank-account-hint { margin:6px 4px 0; font-size:12px; color:var(--muted); line-height:1.4; }
+        .bank-recipient-option .bank-logo { width:42px; height:42px; flex-basis:42px; }
+        .bank-verify-row { display:flex; gap:10px; align-items:stretch; margin-top:10px; }
+        .bank-verify-row .bank-account-input { flex:1; min-width:0; }
+        .bank-verify-btn { flex:0 0 auto; min-width:108px; border:0; border-radius:14px; background:#EAF6F8; color:var(--primary); font-weight:800; cursor:pointer; padding:0 14px; }
+        .bank-verify-btn:disabled { opacity:.55; cursor:not-allowed; }
+        .bank-account-result { margin-top:12px; padding:13px 14px; border-radius:12px; background:#F7FAFB; border:1px solid #E8F0F2; }
+        .bank-account-result.ok { background:#F0FAF4; border-color:#CDEBDD; }
+        .bank-account-result.error { background:#FEF2F2; border-color:#F5C2C2; color:#8B1E1E; }
+        .bank-account-result-label { display:block; font-size:11px; color:var(--muted); margin-bottom:3px; }
+        .bank-account-result-name { font-size:16px; font-weight:800; color:var(--text); }
+        .bank-review { margin-top:16px; padding:15px; border-radius:14px; background:#F7FAFB; border:1px solid #E8F0F2; }
+        .bank-review-row { display:flex; justify-content:space-between; gap:12px; padding:7px 0; font-size:13px; }
+        .bank-review-row .label { color:var(--muted); }
+        .bank-review-row .value { color:var(--text); font-weight:700; text-align:right; word-break:break-word; }
+        .bank-review-row.total { border-top:1px solid #DCE7EA; margin-top:5px; padding-top:12px; font-size:15px; }
+        .bank-review-row.total .value { color:var(--primary); }
+        .bank-note { margin-top:14px; font-size:12px; line-height:1.5; color:var(--muted); }
+        #screen-bank-step2 .top-bar > div,
+        #screen-bank-add-recipient .top-bar > div,
+        #screen-bank-confirmation .top-bar > div { grid-column:1 / -1; min-width:0; }
+        #screen-bank-step2 .greeting-title,
+        #screen-bank-add-recipient .greeting-title,
+        #screen-bank-confirmation .greeting-title { white-space:nowrap; font-size:clamp(24px, 6.2vw, 30px); line-height:1.12; }
+        #screen-bank-step2 .greeting-sub,
+        #screen-bank-add-recipient .greeting-sub,
+        #screen-bank-confirmation .greeting-sub { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
         /* ============================================================ */
         /* TOP BAR */
         /* ============================================================ */
@@ -602,6 +657,22 @@
             color: var(--muted);
             margin-top: 2px;
         }
+        .recipient-provider-logo {
+            width: 42px;
+            height: 42px;
+            flex: 0 0 42px;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #F1FAFC;
+            border: 1px solid #DCECEF;
+            color: var(--primary);
+            font-size: 10px;
+            font-weight: 900;
+            letter-spacing: .02em;
+            box-sizing: border-box;
+        }
 
         .recipient-option .actions {
             display: flex;
@@ -665,6 +736,30 @@
             background: var(--card);
             border-color: var(--primary-light);
         }
+        .bank-recipient-option {
+            display:flex; align-items:center; justify-content:space-between; gap:12px;
+            padding:14px 16px; margin-bottom:10px; border:1px solid var(--border);
+            border-radius:14px; background:#fff; cursor:pointer;
+        }
+        .bank-recipient-option.selected { border-color:#2CA4B6; background:#F3FBFC; }
+        .bank-recipient-option .info { min-width:0; flex:1; }
+        .bank-recipient-option .name { display:block; font-weight:700; color:var(--text); }
+        .bank-recipient-option .meta { display:block; margin-top:4px; color:var(--muted); font-size:13px; }
+        .bank-recipient-option .check { width:24px; height:24px; border-radius:50%; border:1px solid #D5E3E6; display:flex; align-items:center; justify-content:center; color:transparent; flex:0 0 auto; }
+        .bank-recipient-option.selected .check { background:var(--primary); border-color:var(--primary); color:#fff; }
+        .bank-recipient-option .delete-bank-recipient { border:0; background:transparent; color:#789098; cursor:pointer; font-size:18px; padding:4px; }
+        .bank-recipient-option .delete-bank-recipient:hover { color:#C84B4B; }
+        .bank-add-result { margin-top:14px; padding:14px; border:1px solid #DCE7EA; border-radius:14px; background:#F7FAFB; }
+        .bank-add-result.ok { border-color:#A9DCC5; background:#F1FBF6; }
+        .bank-add-result.error { border-color:#F1B7B7; background:#FFF6F6; }
+        .bank-add-result.unavailable { border-color:#F3DDA0; background:#FFF9E8; }
+        .bank-add-result.unavailable .bank-add-result-row .label { color:#8A5A00; font-weight:800; }
+        .bank-add-result.unavailable .bank-add-result-row .value { color:#6F5200; font-weight:600; }
+        .bank-add-result-row { display:flex; justify-content:space-between; gap:12px; padding:6px 0; font-size:13px; }
+        .bank-add-result-row .label { color:var(--muted); }
+        .bank-add-result-row .value { color:var(--text); font-weight:700; text-align:right; word-break:break-word; }
+        .bank-add-actions { display:flex; gap:10px; margin-top:16px; }
+        .bank-confirm-card { margin-top:18px; padding:18px; border:1px solid var(--border); border-radius:16px; background:#fff; box-shadow:0 6px 20px rgba(18,36,43,.05); }
 
         .recipient-loading {
             display: flex;
@@ -2157,8 +2252,8 @@
             </div>
 
             <div class="convert-card">
-                <p class="convert-card-title">Convert Money</p>
-                <p class="convert-card-sub">Between Orange Money and Africell, instantly.</p>
+                <p class="convert-card-title" id="step1-service-title">Convert Money</p>
+                <p class="convert-card-sub" id="step1-service-subtitle">Between Orange Money and Africell, instantly.</p>
 
                 <div style="display:none;height:0;width:0;overflow:hidden;">
                     <input type="text" autocomplete="off" />
@@ -2301,6 +2396,142 @@
         </div>
     </div>
 
+    <!-- ===================== BANK TRANSFER: SELECT RECIPIENT ===================== -->
+    <div class="screen" id="screen-bank-step2">
+        <div class="scroll">
+            <div class="top-bar">
+                <div>
+                    <h1 class="greeting-title">Select Recipient</h1>
+                    <p class="greeting-sub" id="bank-step2-amount-display"></p>
+                </div>
+            </div>
+
+            <div class="step-indicator">
+                <div class="step-dot done"></div>
+                <div class="step-dot active"></div>
+                <div class="step-dot"></div>
+            </div>
+
+            <div class="convert-card">
+                <p class="recipient-step-title">Choose a bank recipient</p>
+                <p class="recipient-step-sub">Select from your saved bank recipients or add a new one.</p>
+
+                <div id="bank-recipient-list-loading" class="recipient-loading">
+                    <div class="spinner dark"></div>
+                    <span>Loading saved bank recipients…</span>
+                </div>
+                <div id="bank-recipient-list-error" class="inline-error hidden">
+                    <span>&#9888;</span><span id="bank-recipient-list-error-text"></span>
+                </div>
+                <div id="bank-recipient-list" class="recipient-list hidden"></div>
+                <button class="add-recipient-btn hidden" id="add-bank-recipient-btn">+ Add a recipient bank</button>
+
+                <div class="warning-banner">
+                    <span class="icon">&#9888;</span>
+                    <p>Double check the bank account. Your mobile-money payment funds the bank transfer.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div class="step-actions">
+                <button class="btn-back" id="bank-recipient-list-back-btn">&#8592; Back</button>
+                <button class="btn-primary" id="bank-recipient-continue-btn" disabled style="flex:1;">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== BANK TRANSFER: ADD RECIPIENT ===================== -->
+    <div class="screen" id="screen-bank-add-recipient">
+        <div class="scroll">
+            <div class="top-bar">
+                <div>
+                    <h1 class="greeting-title">Add Recipient Bank</h1>
+                    <p class="greeting-sub" id="bank-add-amount-display"></p>
+                </div>
+            </div>
+
+            <div class="step-indicator">
+                <div class="step-dot done"></div>
+                <div class="step-dot active"></div>
+                <div class="step-dot"></div>
+            </div>
+
+            <div class="bank-form-card">
+                <div class="bank-field-label">Bank</div>
+                <div class="bank-picker" id="bank-add-picker">
+                    <button type="button" class="bank-picker-trigger" id="bank-add-picker-trigger" aria-haspopup="listbox" aria-expanded="false">
+                        <span class="bank-picker-selected">
+                            <span class="bank-logo bank-logo-placeholder" id="bank-add-picker-logo">BK</span>
+                            <span class="bank-picker-selected-name" id="bank-add-picker-name">Select bank</span>
+                        </span>
+                        <span class="bank-picker-chevron" aria-hidden="true">⌄</span>
+                    </button>
+                    <div class="bank-picker-menu hidden" id="bank-add-picker-menu" role="listbox"></div>
+                    <select class="bank-select bank-select-hidden" id="bank-add-select" aria-hidden="true" tabindex="-1">
+                        <option value="">Select bank</option>
+                    </select>
+                </div>
+
+                <div class="bank-field-label" style="margin-top:18px;">Bank account number</div>
+                <input class="bank-account-input" id="bank-add-account-number" type="text" inputmode="numeric"
+                       autocomplete="off" maxlength="24" placeholder="Enter bank account number" />
+                <div id="bank-add-account-hint" class="bank-account-hint hidden"></div>
+
+                <div id="bank-add-account-result" class="bank-add-result hidden" aria-live="polite"></div>
+
+                <div id="bank-add-error" class="inline-error hidden">
+                    <span>&#9888;</span><span id="bank-add-error-text"></span>
+                </div>
+
+                <div class="bank-add-actions">
+                    <button type="button" class="btn-outline" id="bank-add-back-btn" style="flex:1;">&#8592; Back</button>
+                    <button type="button" class="btn-fill" id="bank-add-save-btn" disabled style="flex:1;">Add recipient</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== BANK TRANSFER: CONFIRMATION ===================== -->
+    <div class="screen" id="screen-bank-confirmation">
+        <div class="scroll">
+            <div class="top-bar">
+                <div>
+                    <h1 class="greeting-title">Confirm Bank Transfer</h1>
+                    <p class="greeting-sub" id="bank-confirm-amount-display"></p>
+                </div>
+            </div>
+
+            <div class="step-indicator">
+                <div class="step-dot done"></div>
+                <div class="step-dot done"></div>
+                <div class="step-dot active"></div>
+            </div>
+
+            <div class="bank-confirm-card">
+                <div class="bank-review-row"><span class="label">Bank</span><span class="value" id="bank-confirm-name">—</span></div>
+                <div class="bank-review-row"><span class="label">Account number</span><span class="value" id="bank-confirm-account">—</span></div>
+                <div class="bank-review-row"><span class="label">Account holder</span><span class="value" id="bank-confirm-holder">—</span></div>
+                <div class="bank-review-row"><span class="label">Amount</span><span class="value" id="bank-confirm-amount">—</span></div>
+                <div class="bank-review-row"><span class="label">Fee</span><span class="value" id="bank-confirm-fee">—</span></div>
+                <div class="bank-review-row total"><span class="label">Debited amount</span><span class="value" id="bank-confirm-total">—</span></div>
+
+                <p class="bank-note">Check the bank, account number and account holder carefully. After you confirm, you will be taken to the payment page to fund this transfer.</p>
+
+                <div id="bank-confirm-error" class="inline-error hidden">
+                    <span>&#9888;</span><span id="bank-confirm-error-text"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div class="step-actions">
+                <button class="btn-back" id="bank-confirm-back-btn">&#8592; Back</button>
+                <button class="btn-primary" id="bank-confirm-btn" disabled style="flex:1;">Confirm</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ===================== STEP 3: USSD CONFIRMATION ===================== -->
     <div class="screen" id="screen-step3">
         <button class="ussd-back" id="step3-back-btn">&#8592;</button>
@@ -2322,7 +2553,7 @@
                 <div class="ussd-countdown" id="ussd-countdown"></div>
                 <div class="warning-banner">
                     <span class="icon">&#9888;</span>
-                    <p>Double check the recipient before paying. Transactions to the wrong number cannot be reversed.</p>
+                    <p id="ussd-payment-warning">Double check the recipient before paying. Transactions to the wrong number cannot be reversed.</p>
                 </div>
             </div>
 
@@ -2337,11 +2568,11 @@
 
             <div class="ussd-summary">
                 <div class="fee-row">
-                    <span class="label">Recipient</span>
+                    <span class="label" id="ussd-recipient-label">Recipient</span>
                     <span class="value" id="ussd-recipient-name"></span>
                 </div>
                 <div class="fee-row">
-                    <span class="label">Number</span>
+                    <span class="label" id="ussd-destination-label">Number</span>
                     <span class="value" id="ussd-recipient-phone"></span>
                 </div>
                 <div class="fee-divider"></div>
@@ -2713,6 +2944,22 @@
                 <span class="service-card-arrow" aria-hidden="true">›</span>
             </button>
 
+            <button type="button" class="service-card" id="services-bank-transfer-card">
+                <div class="service-card-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M3 10h18"/>
+                        <path d="M5 10v8"/><path d="M9 10v8"/><path d="M15 10v8"/><path d="M19 10v8"/>
+                        <path d="M2 20h20"/>
+                        <path d="M12 4l9 5H3l9-5z"/>
+                    </svg>
+                </div>
+                <div class="service-card-content">
+                    <strong>Bank Transfer</strong>
+                    <span>Send money from Orange Money or Africell to a bank account.</span>
+                </div>
+                <span class="service-card-arrow" aria-hidden="true">›</span>
+            </button>
+
             <div class="services-coming-card">
                 <div class="services-coming-icon" aria-hidden="true">✦</div>
                 <div>
@@ -2955,6 +3202,7 @@
         // ==============================================================
         // STATE
         // ==============================================================
+        let activeService = 'MOBILE_MONEY';
         let sourceProviderId = null;
         let savedRecipients = [];
         let selectedRecipient = null;
@@ -2963,6 +3211,23 @@
         let editingRecipientId = null;
         let currentFeePreview = null;
         let transaction = null;
+        // One idempotency key represents one logical transfer attempt. Keep it
+        // across network/5xx retries so a lost response can never create a
+        // second payment code.
+        let transactionRequestKey = null;
+
+        function getTransactionRequestKey() {
+            if (!transactionRequestKey) {
+                transactionRequestKey = (window.crypto && crypto.randomUUID)
+                    ? crypto.randomUUID()
+                    : 'dw-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+            }
+            return transactionRequestKey;
+        }
+
+        function resetTransactionRequestKey() {
+            transactionRequestKey = null;
+        }
         let countdownInterval = null;
         let pollInterval = null;
         window.DEENWALLET_TRANSACTION_ACTIVE = false;
@@ -2973,6 +3238,14 @@
         let pinAttempts = 0;
         const MAX_PIN_ATTEMPTS = 3;
         let supportWhatsApp = '+23280613600';
+        let availableBanks = [];
+        let selectedBank = null;
+        let bankAccountVerification = null;
+        let bankVerifyRequestId = 0;
+        let savedBankRecipients = [];
+        let selectedBankRecipient = null;
+        let bankRecipientVerifyRequestId = 0;
+        let bankRecipientLastVerifiedKey = null;
 
         // ==============================================================
         // ELEMENTS - STEP 1
@@ -2993,6 +3266,8 @@
         const step1Error = document.getElementById('step1-error');
         const step1ErrorText = document.getElementById('step1-error-text');
         const step1ContinueBtn = document.getElementById('step1-continue-btn');
+        const step1ServiceTitle = document.getElementById('step1-service-title');
+        const step1ServiceSubtitle = document.getElementById('step1-service-subtitle');
 
         // ==============================================================
         // ELEMENTS - STEP 2
@@ -3000,6 +3275,7 @@
         const screenStep1 = document.getElementById('screen-step1');
         const screenStep2 = document.getElementById('screen-step2');
         const screenStep3 = document.getElementById('screen-step3');
+        const screenBankStep2 = document.getElementById('screen-bank-step2');
         const screenProfile = document.getElementById('screen-profile');
         const screenWallet = document.getElementById('screen-wallet');
         const screenPayment = document.getElementById('screen-payment');
@@ -3093,6 +3369,46 @@
         const step2BackBtn = document.getElementById('step2-back-btn');
 
         // ==============================================================
+        // ELEMENTS - BANK TRANSFER FLOW
+        // ==============================================================
+        const screenBankAddRecipient = document.getElementById('screen-bank-add-recipient');
+        const screenBankConfirmation = document.getElementById('screen-bank-confirmation');
+        const bankStep2AmountDisplay = document.getElementById('bank-step2-amount-display');
+        const bankRecipientListLoading = document.getElementById('bank-recipient-list-loading');
+        const bankRecipientListError = document.getElementById('bank-recipient-list-error');
+        const bankRecipientListErrorText = document.getElementById('bank-recipient-list-error-text');
+        const bankRecipientListEl = document.getElementById('bank-recipient-list');
+        const addBankRecipientBtn = document.getElementById('add-bank-recipient-btn');
+        const bankRecipientListBackBtn = document.getElementById('bank-recipient-list-back-btn');
+        const bankRecipientContinueBtn = document.getElementById('bank-recipient-continue-btn');
+        const bankAddAmountDisplay = document.getElementById('bank-add-amount-display');
+        const bankAddSelect = document.getElementById('bank-add-select');
+        const bankAddPickerTrigger = document.getElementById('bank-add-picker-trigger');
+        const bankAddPickerMenu = document.getElementById('bank-add-picker-menu');
+        const bankAddPickerName = document.getElementById('bank-add-picker-name');
+        const bankAddPickerLogo = document.getElementById('bank-add-picker-logo');
+        let bankPickerOptions = [];
+        const bankAddAccountNumberInput = document.getElementById('bank-add-account-number');
+        const bankAddAccountResult = document.getElementById('bank-add-account-result');
+        const bankAddAccountHint = document.getElementById('bank-add-account-hint');
+        const bankAddError = document.getElementById('bank-add-error');
+        const bankAddErrorText = document.getElementById('bank-add-error-text');
+        const bankAddBackBtn = document.getElementById('bank-add-back-btn');
+        const bankAddSaveBtn = document.getElementById('bank-add-save-btn');
+        const bankConfirmAmountDisplay = document.getElementById('bank-confirm-amount-display');
+        const bankConfirmName = document.getElementById('bank-confirm-name');
+        const bankConfirmAccount = document.getElementById('bank-confirm-account');
+        const bankConfirmHolder = document.getElementById('bank-confirm-holder');
+        const bankConfirmAmount = document.getElementById('bank-confirm-amount');
+        const bankConfirmFee = document.getElementById('bank-confirm-fee');
+        const bankConfirmTotal = document.getElementById('bank-confirm-total');
+        const bankConfirmError = document.getElementById('bank-confirm-error');
+        const bankConfirmErrorText = document.getElementById('bank-confirm-error-text');
+        const bankConfirmBackBtn = document.getElementById('bank-confirm-back-btn');
+        const bankConfirmBtn = document.getElementById('bank-confirm-btn');
+
+
+        // ==============================================================
         // ELEMENTS - STEP 3
         // ==============================================================
         const statusPill = document.getElementById('status-pill');
@@ -3109,6 +3425,9 @@
         const ussdCountdownEl = document.getElementById('ussd-countdown');
         const ussdRecipientName = document.getElementById('ussd-recipient-name');
         const ussdRecipientPhone = document.getElementById('ussd-recipient-phone');
+        const ussdRecipientLabel = document.getElementById('ussd-recipient-label');
+        const ussdDestinationLabel = document.getElementById('ussd-destination-label');
+        const ussdPaymentWarning = document.getElementById('ussd-payment-warning');
         const ussdTotalEl = document.getElementById('ussd-total');
         const ussdFooter = document.getElementById('ussd-footer');
         const payBtn = document.getElementById('pay-btn');
@@ -3791,8 +4110,60 @@
             });
         }
 
-        document.getElementById('services-convert-card').addEventListener('click', () => {
+        function openCustomerService(serviceType) {
+            activeService = serviceType;
+            selectedRecipient = null;
+            selectedBank = null;
+            sourceProviderId = null;
+            currentFeePreview = null;
+            sourcePhoneInput.value = '';
+            amountInput.value = '';
+            hide(feeCard);
+            hide(feeError);
+            hide(step1Error);
+            hide(step1Error);
+            sourceDetectRequestId++;            // ignore any detection still in flight
+            hide(sourceDetectStatus);
+            sourceDetectStatus.innerHTML = '';
+            bankAccountVerification = null;
+            selectedBank = null;
+            updateBankAccountHint();
+            selectedBankRecipient = null;
+            bankRecipientVerifyRequestId++;
+            bankRecipientLastVerifiedKey = null;
+            bankAddAccountNumberInput.value = '';
+            bankAddAccountResult.className = 'bank-add-result hidden';
+            bankAddAccountResult.textContent = '';
+            bankAddSaveBtn.disabled = true;
+            bankAddSelect.value = '';
+            bankAddPickerName.textContent = 'Select bank';
+            bankAddPickerLogo.innerHTML = '';
+            bankAddPickerLogo.className = 'bank-logo bank-logo-placeholder';
+            bankAddPickerLogo.removeAttribute('style');
+            bankAddPickerLogo.textContent = 'BK';
+            bankAddPickerMenu.classList.add('hidden');
+            bankAddPickerTrigger.setAttribute('aria-expanded', 'false');
+            bankConfirmBtn.disabled = true;
+            hide(bankAddError);
+            hide(bankConfirmError);
+
+            if (serviceType === 'BANK_TRANSFER') {
+                step1ServiceTitle.textContent = 'Bank Transfer';
+                step1ServiceSubtitle.textContent = 'Send money from Orange Money or Africell to a bank account.';
+            } else {
+                step1ServiceTitle.textContent = 'Convert Money';
+                step1ServiceSubtitle.textContent = 'Between Orange Money and Africell, instantly.';
+            }
+
             if (typeof window.showPrimaryScreen === 'function') window.showPrimaryScreen('home');
+        }
+
+        document.getElementById('services-convert-card').addEventListener('click', () => {
+            openCustomerService('MOBILE_MONEY');
+        });
+
+        document.getElementById('services-bank-transfer-card').addEventListener('click', () => {
+            openCustomerService('BANK_TRANSFER');
         });
 
         document.getElementById('recent-activity-history-btn').addEventListener('click', () => {
@@ -4252,21 +4623,20 @@
         // ==============================================================
         // STEP 1: FROM + AMOUNT
         // ==============================================================
-        let sourceDetectDebounce = null;
         let sourceDetectRequestId = 0;
         let feeDebounce = null;
         let feeRequestId = 0;
 
         sourcePhoneInput.addEventListener('input', (e) => {
-            e.target.value = onlyDigits(e.target.value).slice(0, 9);
+            resetTransactionRequestKey();
+            e.target.value = onlyDigits(e.target.value).slice(0, 8);
             sourceProviderId = null;
             hide(sourceDetectStatus);
             updateStep1State();
 
-            if (sourceDetectDebounce) clearTimeout(sourceDetectDebounce);
             const localPhone = e.target.value;
-            if (localPhone.length < 8) return;
-            sourceDetectDebounce = setTimeout(() => runSourceDetect(localPhone), 600);
+            if (localPhone.length !== 8) return;
+            runSourceDetect(localPhone);
         });
 
         async function runSourceDetect(localPhone) {
@@ -4301,6 +4671,7 @@
         });
 
         amountInput.addEventListener('input', (e) => {
+            resetTransactionRequestKey();
             e.target.value = e.target.value.replace(/[^\d.]/g, '');
             if (e.target.value.includes('@') || e.target.value.includes('mail')) {
                 e.target.value = '';
@@ -4357,6 +4728,15 @@
         step1ContinueBtn.addEventListener('click', () => {
             if (!sourceProviderId || !currentFeePreview) return;
 
+            if (activeService === 'BANK_TRANSFER') {
+                bankStep2AmountDisplay.textContent = 'Amount: SLE ' + formatMoney(currentFeePreview.totalCharged);
+                screenStep1.classList.remove('active');
+                screenBankStep2.classList.add('active');
+                hidePrimaryNav();
+                loadBankRecipients();
+                return;
+            }
+
             step2AmountDisplay.textContent = 'Amount: SLE ' + formatMoney(currentFeePreview.totalCharged);
 
             screenStep1.classList.remove('active');
@@ -4377,7 +4757,7 @@
 
             try {
                 const data = await apiRequest('/api/recipients');
-                savedRecipients = data || [];
+                savedRecipients = (data || []).filter((recipient) => !recipient.recipientType || recipient.recipientType === 'MOBILE_MONEY');
                 renderRecipientList();
             } catch (error) {
                 if (error.status === 401 || error.status === 403) {
@@ -4391,6 +4771,23 @@
             } finally {
                 hide(recipientListLoading);
             }
+        }
+
+        function createMobileMoneyLogo(providerId) {
+            const logo = document.createElement('span');
+            logo.className = 'recipient-provider-logo';
+            logo.setAttribute('aria-hidden', 'true');
+            if (providerId === 'm17') {
+                logo.textContent = 'OM';
+                logo.title = 'Orange Money';
+            } else if (providerId === 'm18') {
+                logo.textContent = 'AF';
+                logo.title = 'Africell';
+            } else {
+                logo.textContent = 'MM';
+                logo.title = providerName(providerId);
+            }
+            return logo;
         }
 
         function renderRecipientList() {
@@ -4451,6 +4848,8 @@
                 actions.appendChild(deleteBtn);
                 actions.appendChild(check);
 
+                const logo = createMobileMoneyLogo(recipient.providerId);
+                row.appendChild(logo);
                 row.appendChild(info);
                 row.appendChild(actions);
 
@@ -4469,6 +4868,7 @@
         }
 
         step2BackBtn.addEventListener('click', () => {
+            resetTransactionRequestKey();
             screenStep2.classList.remove('active');
             screenStep1.classList.add('active');
             appBottomNav.classList.remove('hidden');
@@ -4495,11 +4895,20 @@
 
             try {
                 window.DEENWALLET_TRANSACTION_ACTIVE = true;
-                const data = await apiRequest('/api/transactions', { method: 'POST', body: payload });
+                const data = await apiRequest('/api/transactions', {
+                    method: 'POST',
+                    headers: { 'Idempotency-Key': getTransactionRequestKey() },
+                    body: payload
+                });
                 transaction = normalizeTransaction(data);
+                resetTransactionRequestKey();
                 openStep3();
             } catch (error) {
                 window.DEENWALLET_TRANSACTION_ACTIVE = false;
+                if (error.status >= 400 && error.status < 500
+                        && ![401, 403, 423, 429].includes(error.status)) {
+                    resetTransactionRequestKey();
+                }
                 if (error.status === 401 || error.status === 403) {
                     showAuthRequiredModal(error.message || 'Your session has expired. Please log in again.');
                 } else {
@@ -4513,9 +4922,727 @@
         });
 
         // ==============================================================
+        // BANK TRANSFER - RECIPIENT FLOW
+        // ==============================================================
+        // ==============================================================
+        // BANK DISPLAY HELPERS
+        // ==============================================================
+        function maskBankAccount(account) {
+            if (!account) return '—';
+            const value = String(account).replace(/\s+/g, '');
+            if (value.length <= 4) return value;
+            return '*'.repeat(Math.max(0, value.length - 4)) + value.slice(-4);
+        }
+
+        // Candidate website domains per bank. Several are listed where a bank has more than
+        // one site, because we try them in order until a real logo loads.
+        function bankLogoDomains(bankName) {
+            const n = String(bankName || '').toLowerCase().replace(/\(.*?\)/g, ' ').replace(/[^a-z0-9& ]/g, ' ').replace(/\s+/g, ' ').trim();
+            const has = (...words) => words.some((w) => n.includes(w));
+            if (has('sierra leone commercial', 'slcb')) return ['slcb.com', 'slcb.sl'];
+            if (has('rokel')) return ['rokelbank.sl', 'rokelcommercialbank.com'];
+            if (has('standard chartered', 'stanchart')) return ['sc.com'];
+            if (has('union trust', 'utb')) return ['utb.sl', 'utbsl.com', 'uniontrustbank.sl'];
+            if (has('guaranty trust', 'gtbank', 'gtb')) return ['gtbank.com'];
+            if (has('vista')) return ['vistabankgroup.com'];
+            if (has('first bank', 'firstbank', 'fbn')) return ['firstbankgroup.com', 'firstbanknigeria.com'];
+            if (has('ecobank')) return ['ecobank.com'];
+            if (has('access bank', 'access')) return ['accessbankplc.com', 'sierraleone.accessbankplc.com'];
+            if (has('united bank for africa', 'uba')) return ['ubagroup.com'];
+            if (has('skye', 'sky bank', 'polaris')) return ['polarisbanklimited.com'];
+            if (has('zenith')) return ['zenithbank.com'];
+            if (has('bloom', 'keystone')) return ['bloombankafrica.com', 'keystonebankng.com'];
+            if (has('commerce') && has('mortgage')) return ['cmbsl.com', 'cmb.sl'];
+            if (has('commerce & mortgage', 'cmb')) return ['cmbsl.com', 'cmb.sl'];
+            return [];
+        }
+
+        // Two logo sources per domain. Google's faviconV2 with fallback_opts answers 404 when
+        // it has no real icon (the older /s2/favicons endpoint returns a generic globe with
+        // a 200, which looked like a "logo"). DuckDuckGo is the second chance.
+        function bankLogoSources(domain) {
+            return [
+                'https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=' +
+                encodeURIComponent('https://' + domain) + '&size=128',
+                'https://icons.duckduckgo.com/ip3/' + encodeURIComponent(domain) + '.ico'
+            ];
+        }
+
+        function bankInitials(bankName) {
+            const words = String(bankName || 'Bank').replace(/\(.*?\)/g, ' ').replace(/[^A-Za-z0-9 ]/g, ' ').trim().split(/\s+/).filter(Boolean);
+            if (!words.length) return 'BK';
+            if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+            return (words[0][0] + words[1][0]).toUpperCase();
+        }
+
+        // Stable colour per bank so banks without a logo still look intentional.
+        const BANK_BADGE_COLORS = [
+            ['#E3F4F7', '#1D7F8F'], ['#E8F1FF', '#2F5FB3'], ['#EAF7EE', '#2E7D4F'],
+            ['#FFF1E3', '#B35C14'], ['#F3EAFB', '#7A3FB0'], ['#FDE9EC', '#B3364A']
+        ];
+        function bankBadgeColors(bankName) {
+            let h = 0;
+            const str = String(bankName || '');
+            for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+            return BANK_BADGE_COLORS[h % BANK_BADGE_COLORS.length];
+        }
+
+        // Set to false to turn off the online logo lookup and use only logo files placed in
+        // /assets/bank-logos/ (then banks without a file simply show their initials).
+        const ENABLE_ONLINE_BANK_LOGOS = true;
+
+        // bank name -> working logo URL, or null when none worked (remembered for the session).
+        const bankLogoCache = new Map();
+        // slug -> local logo URL, filled from the server's bank list (the server only reports
+        // logos that really exist, so no failing requests are made for missing files).
+        const bankLogoUrlBySlug = new Map();
+        let bankLogoMapPromise = null;
+
+        // File name for a locally supplied logo: "Union Trust Bank" -> "union-trust-bank".
+        function bankLogoSlug(bankName) {
+            return String(bankName || '').toLowerCase().replace(/\(.*?\)/g, ' ')
+                .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+        }
+
+        function rememberBankLogos(banks) {
+            (banks || []).forEach((b) => {
+                if (b && b.name && b.logoUrl) bankLogoUrlBySlug.set(bankLogoSlug(b.name), b.logoUrl);
+            });
+        }
+
+        // Screens that only know a bank's name (e.g. saved recipients) still get local logos.
+        function ensureBankLogoMap() {
+            if (!bankLogoMapPromise) {
+                bankLogoMapPromise = apiRequest('/api/bank-transfers/banks')
+                    .then(rememberBankLogos)
+                    .catch(() => { bankLogoMapPromise = null; });
+            }
+            return bankLogoMapPromise;
+        }
+
+        // minSize rejects tiny images: unknown sites come back as a 16px generic globe with
+        // a normal 200 response, which is NOT a real logo and must not be shown as one.
+        function tryLoadImage(url, minSize) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.referrerPolicy = 'no-referrer';
+                img.decoding = 'async';
+                img.onload = () => resolve(img.naturalWidth >= minSize && img.naturalHeight >= minSize ? img : null);
+                img.onerror = () => resolve(null);
+                img.src = url;
+            });
+        }
+
+        async function resolveBankLogo(bank) {
+            const name = bank && bank.name;
+            const key = bankLogoSlug(name);
+            if (!key) return null;
+            if (bankLogoCache.has(key)) return bankLogoCache.get(key);
+
+            // 1) A logo file you placed in /assets/bank-logos/ always wins.
+            let found = (bank && bank.logoUrl) || bankLogoUrlBySlug.get(key) || null;
+            if (!found) {
+                await ensureBankLogoMap();
+                found = bankLogoUrlBySlug.get(key) || null;
+            }
+
+            // 2) Optional online lookup by the bank's website; only real, reasonably large icons count.
+            if (!found && ENABLE_ONLINE_BANK_LOGOS) {
+                outer:
+                    for (const domain of bankLogoDomains(name)) {
+                        for (const url of bankLogoSources(domain)) {
+                            if (await tryLoadImage(url, 32)) { found = url; break outer; }
+                        }
+                    }
+            }
+
+            bankLogoCache.set(key, found);
+            return found;
+        }
+
+        // Fills a .bank-logo element: coloured initials immediately, the real logo on top
+        // only if a source returns a usable image.
+        function applyBankLogo(el, bank) {
+            const name = bank && bank.name;
+            const [bg, fg] = bankBadgeColors(name);
+            el.className = 'bank-logo bank-logo-placeholder';
+            el.style.background = bg;
+            el.style.color = fg;
+            el.textContent = bankInitials(name);
+            el.dataset.logoFor = String(name);
+            resolveBankLogo(bank).then((url) => {
+                // The element may have been reused for another bank while loading.
+                if (!url || el.dataset.logoFor !== String(name)) return;
+                const img = new Image();
+                img.alt = '';
+                img.referrerPolicy = 'no-referrer';
+                img.onload = () => {
+                    el.textContent = '';
+                    el.classList.add('has-img');
+                    el.style.background = '#fff';
+                    // Small icons (16-32px) are drawn small and centred instead of stretched.
+                    img.style.padding = url.startsWith('/assets/') ? '4px' : (img.naturalWidth < 48 ? '9px' : '6px');
+                    el.appendChild(img);
+                };
+                img.src = url;
+            });
+            return el;
+        }
+
+        function createBankLogoElement(bank) {
+            return applyBankLogo(document.createElement('span'), bank);
+        }
+
+        function setBankPickerSelection(bank) {
+            selectedBank = bank || null;
+            bankAddSelect.value = selectedBank ? selectedBank.providerId : '';
+            bankAddPickerName.textContent = selectedBank ? selectedBank.name : 'Select bank';
+            if (selectedBank) {
+                applyBankLogo(bankAddPickerLogo, selectedBank);
+            } else {
+                bankAddPickerLogo.className = 'bank-logo bank-logo-placeholder';
+                bankAddPickerLogo.removeAttribute('style');
+                bankAddPickerLogo.textContent = 'BK';
+            }
+            bankPickerOptions.forEach((option) => option.classList.toggle('selected', !!selectedBank && option.dataset.providerId === selectedBank.providerId));
+            bankAddPickerTrigger.setAttribute('aria-expanded', 'false');
+            bankAddPickerMenu.classList.add('hidden');
+        }
+
+        function bankIsUnavailable(bank) {
+            return !bank || bank.available === false;
+        }
+
+        function bankUnavailableMessage(bank) {
+            return (bank && bank.name ? bank.name : 'This bank') +
+                ' is currently unavailable. Please check back later or choose a different bank.';
+        }
+
+        function renderBankPicker() {
+            bankAddPickerMenu.innerHTML = '';
+            bankPickerOptions = [];
+
+            if (!availableBanks.length) {
+                const empty = document.createElement('div');
+                empty.className = 'bank-picker-note';
+                empty.textContent = 'Bank transfers are temporarily unavailable. Please check back later.';
+                bankAddPickerMenu.appendChild(empty);
+                return;
+            }
+
+            // Available banks first, unavailable ones (greyed out) after them.
+            const ordered = availableBanks.slice().sort((x, y) => Number(bankIsUnavailable(x)) - Number(bankIsUnavailable(y)));
+            let anyUnavailable = false;
+
+            ordered.forEach((bank) => {
+                const unavailable = bankIsUnavailable(bank);
+                anyUnavailable = anyUnavailable || unavailable;
+                const option = document.createElement('button');
+                option.type = 'button';
+                option.className = 'bank-picker-option' + (unavailable ? ' unavailable' : '');
+                option.dataset.providerId = bank.providerId;
+                option.setAttribute('role', 'option');
+                if (unavailable) option.setAttribute('aria-disabled', 'true');
+                option.setAttribute('aria-selected', !unavailable && selectedBank && selectedBank.providerId === bank.providerId ? 'true' : 'false');
+                option.appendChild(createBankLogoElement(bank));
+                const name = document.createElement('span');
+                name.className = 'bank-picker-option-name';
+                name.textContent = bank.name;
+                option.appendChild(name);
+                if (unavailable) {
+                    const tag = document.createElement('span');
+                    tag.className = 'bank-unavailable-tag';
+                    tag.textContent = 'Unavailable';
+                    option.appendChild(tag);
+                } else {
+                    const check = document.createElement('span');
+                    check.className = 'bank-picker-option-check';
+                    check.textContent = '✓';
+                    option.appendChild(check);
+                }
+                option.addEventListener('click', () => {
+                    if (unavailable) {
+                        // Friendly message instead of selecting a bank we can't use right now.
+                        bankAddErrorText.textContent = bankUnavailableMessage(bank);
+                        show(bankAddError);
+                        return;
+                    }
+                    selectBankForRecipient(bank);
+                });
+                bankAddPickerMenu.appendChild(option);
+                bankPickerOptions.push(option);
+            });
+
+            if (anyUnavailable) {
+                const note = document.createElement('div');
+                note.className = 'bank-picker-note';
+                note.textContent = 'Banks marked "Unavailable" can\u2019t be used right now. Please check back later.';
+                bankAddPickerMenu.appendChild(note);
+            }
+        }
+
+        // Account numbers: 10 to 18 digits for every bank (normal accounts are ~10-13 digits,
+        // the BBAN is exactly 18). The name check starts automatically from 10 digits.
+        const ACCOUNT_MIN_DIGITS = 10;
+        const ACCOUNT_MAX_DIGITS = 18;
+
+        function bankAccountRule(bank) {
+            if (!bank) return null;
+            return {
+                minDigits: ACCOUNT_MIN_DIGITS,
+                maxDigits: ACCOUNT_MAX_DIGITS,
+                allowSlash: false,
+                hint: 'Enter 10 to 18 digits (numbers only). Checking starts at 10 digits.'
+            };
+        }
+
+        // Keeps only allowed characters and never more than 18 digits.
+        function cleanAccountInput(value, allowSlash) {
+            const allowed = allowSlash ? /[^0-9\/]/g : /[^0-9]/g;
+            let out = '';
+            let digits = 0;
+            for (const ch of String(value).replace(allowed, '')) {
+                if (ch !== '/') {
+                    if (digits >= ACCOUNT_MAX_DIGITS) continue;
+                    digits++;
+                }
+                out += ch;
+            }
+            return out;
+        }
+
+        function updateBankAccountHint() {
+            const rule = bankAccountRule(selectedBank);
+            if (rule) {
+                bankAddAccountHint.textContent = rule.hint;
+                bankAddAccountHint.classList.remove('hidden');
+            } else {
+                bankAddAccountHint.textContent = '';
+                bankAddAccountHint.classList.add('hidden');
+            }
+            // Phone number pads usually have no "/" key, so use the full keyboard when "/" is allowed.
+            bankAddAccountNumberInput.inputMode = rule && rule.allowSlash ? 'text' : 'numeric';
+        }
+
+        function selectBankForRecipient(bank) {
+            clearTimeout(bankVerifyTimer);
+            setBankPickerSelection(bank);
+            updateBankAccountHint();
+            bankAccountVerification = null;
+            bankRecipientVerifyRequestId++;
+            bankAddAccountNumberInput.value = '';
+            bankAddAccountResult.className = 'bank-add-result hidden';
+            bankAddAccountResult.textContent = '';
+            bankAddSaveBtn.disabled = true;
+            hide(bankAddError);
+        }
+
+        async function loadBanksForRecipientForm() {
+            if (availableBanks.length) return;
+            availableBanks = await apiRequest('/api/bank-transfers/banks');
+            availableBanks = availableBanks || [];
+            rememberBankLogos(availableBanks);
+        }
+
+        async function loadBankRecipients() {
+            show(bankRecipientListLoading);
+            hide(bankRecipientListError);
+            hide(bankRecipientListEl);
+            hide(addBankRecipientBtn);
+            bankRecipientContinueBtn.disabled = !selectedBankRecipient;
+
+            try {
+                const data = await apiRequest('/api/recipients');
+                savedBankRecipients = (data || []).filter((recipient) =>
+                    recipient.recipientType === 'BANK' || !!recipient.bankProviderId
+                );
+                renderBankRecipientList();
+            } catch (error) {
+                if (error.status === 401 || error.status === 403) {
+                    showAuthRequiredModal(error.message || 'Your session has expired. Please log in again.');
+                } else {
+                    bankRecipientListErrorText.textContent = error.message || 'Could not load your saved bank recipients.';
+                    show(bankRecipientListError);
+                    show(addBankRecipientBtn);
+                }
+            } finally {
+                hide(bankRecipientListLoading);
+            }
+        }
+
+        function renderBankRecipientList() {
+            bankRecipientListEl.innerHTML = '';
+            show(addBankRecipientBtn);
+
+            if (!savedBankRecipients.length) {
+                hide(bankRecipientListEl);
+                bankRecipientContinueBtn.disabled = true;
+                return;
+            }
+
+            show(bankRecipientListEl);
+            savedBankRecipients.forEach((recipient) => {
+                const row = document.createElement('div');
+                row.className = 'bank-recipient-option' +
+                    (selectedBankRecipient && selectedBankRecipient.id === recipient.id ? ' selected' : '');
+
+                const logo = createBankLogoElement({ name: recipient.bankName || 'Bank' });
+
+                const info = document.createElement('div');
+                info.className = 'info';
+                const name = document.createElement('span');
+                name.className = 'name';
+                name.textContent = recipient.bankHolderName || recipient.holderName || 'Bank recipient';
+                const meta = document.createElement('span');
+                meta.className = 'meta';
+                meta.textContent = (recipient.bankName || 'Bank') + ' · ' + maskBankAccount(recipient.bankAccountNumber);
+                info.appendChild(name);
+                info.appendChild(meta);
+
+                const actions = document.createElement('div');
+                actions.style.display = 'flex';
+                actions.style.alignItems = 'center';
+                actions.style.gap = '6px';
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
+                deleteBtn.className = 'delete-bank-recipient';
+                deleteBtn.title = 'Remove bank recipient';
+                deleteBtn.textContent = '\u2716';
+                deleteBtn.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    deleteBankRecipient(recipient);
+                });
+
+                const check = document.createElement('span');
+                check.className = 'check';
+                check.textContent = '\u2713';
+                actions.appendChild(deleteBtn);
+                actions.appendChild(check);
+
+                row.appendChild(info);
+                row.appendChild(actions);
+                row.addEventListener('click', () => {
+                    selectedBankRecipient = recipient;
+                    renderBankRecipientList();
+                });
+                bankRecipientListEl.appendChild(row);
+            });
+
+            bankRecipientContinueBtn.disabled = !selectedBankRecipient;
+        }
+
+        function openBankAddRecipient() {
+            hide(bankRecipientListError);
+            hide(bankAddError);
+            selectedBank = null;
+            updateBankAccountHint();
+            bankAccountVerification = null;
+            bankAddSelect.value = '';
+            bankAddPickerName.textContent = 'Select bank';
+            bankAddPickerLogo.innerHTML = '';
+            bankAddPickerLogo.className = 'bank-logo bank-logo-placeholder';
+            bankAddPickerLogo.removeAttribute('style');
+            bankAddPickerLogo.textContent = 'BK';
+            bankAddPickerMenu.classList.add('hidden');
+            bankAddPickerTrigger.setAttribute('aria-expanded', 'false');
+            bankAddAccountNumberInput.value = '';
+            bankAddAccountResult.className = 'bank-add-result hidden';
+            bankAddAccountResult.textContent = '';
+            bankAddSaveBtn.disabled = true;
+            bankAddAmountDisplay.textContent = 'Amount: SLE ' + formatMoney(currentFeePreview.totalCharged);
+
+            screenBankStep2.classList.remove('active');
+            screenBankConfirmation.classList.remove('active');
+            screenBankAddRecipient.classList.add('active');
+            hidePrimaryNav();
+
+            loadBanksForRecipientForm().then(() => {
+                bankAddSelect.innerHTML = '<option value="">Select bank</option>';
+                availableBanks.forEach((bank) => {
+                    const option = document.createElement('option');
+                    option.value = bank.providerId;
+                    option.textContent = bank.name;
+                    if (bankIsUnavailable(bank)) option.disabled = true;
+                    bankAddSelect.appendChild(option);
+                });
+                renderBankPicker();
+            }).catch((error) => {
+                bankAddErrorText.textContent = error.message || 'Could not load the available banks.';
+                show(bankAddError);
+            });
+        }
+
+        function renderBankAccountVerification() {
+            if (!selectedBank || !bankAccountVerification || !bankAccountVerification.verified) {
+                bankAddSaveBtn.disabled = true;
+                return;
+            }
+            bankAddAccountResult.className = 'bank-add-result ok';
+            bankAddAccountResult.innerHTML =
+                '<div class="bank-add-result-row"><span class="label">Bank</span><span class="value">' + escapeHtml(bankAccountVerification.bankName) + '</span></div>' +
+                '<div class="bank-add-result-row"><span class="label">Account holder</span><span class="value">' + escapeHtml(bankAccountVerification.holderName) + '</span></div>' +
+                '<div class="bank-add-result-row"><span class="label">Account number</span><span class="value">' + escapeHtml(maskBankAccount(bankAccountVerification.accountNumber)) + '</span></div>';
+            bankAddSaveBtn.disabled = false;
+        }
+
+        async function verifyBankRecipientAccount() {
+            const account = bankAddAccountNumberInput.value.replace(/[\s\/\-.]/g, '');
+            if (!selectedBank || account.length < 1) {
+                bankAccountVerification = null;
+                bankRecipientLastVerifiedKey = null;
+                bankAddSaveBtn.disabled = true;
+                bankAddAccountResult.className = 'bank-add-result hidden';
+                bankAddAccountResult.textContent = '';
+                return;
+            }
+
+            if (!/^\d+$/.test(account) || account.length < ACCOUNT_MIN_DIGITS || account.length > ACCOUNT_MAX_DIGITS) {
+                bankAccountVerification = null;
+                bankRecipientLastVerifiedKey = null;
+                bankAddSaveBtn.disabled = true;
+                bankAddAccountResult.className = 'bank-add-result';
+                bankAddAccountResult.innerHTML = '<div class="bank-add-result-row"><span class="label">Account number</span><span class="value">Enter at least ' + ACCOUNT_MIN_DIGITS + ' digits (up to ' + ACCOUNT_MAX_DIGITS + ').</span></div>';
+                return;
+            }
+
+            const verificationKey = selectedBank.providerId + ':' + account;
+            if (verificationKey === bankRecipientLastVerifiedKey) return;
+            bankRecipientLastVerifiedKey = verificationKey;
+
+            const requestId = ++bankRecipientVerifyRequestId;
+            bankAccountVerification = null;
+            bankAddSaveBtn.disabled = true;
+            bankAddAccountResult.className = 'bank-add-result';
+            bankAddAccountResult.innerHTML = '<div class="bank-add-result-row"><span class="label">Account</span><span class="value">Checking account…</span></div>';
+
+            try {
+                const result = await apiRequest('/api/bank-transfers/verify-account', {
+                    params: { providerId: selectedBank.providerId, accountNumber: account },
+                    // The server gives Monime at most ~8s; allow a little extra for the network.
+                    timeoutMs: 12000
+                });
+                if (requestId !== bankRecipientVerifyRequestId) return;
+                bankAccountVerification = result;
+                if (result.verified) {
+                    renderBankAccountVerification();
+                } else {
+                    bankAddAccountResult.className = 'bank-add-result error';
+                    bankAddAccountResult.innerHTML = '<div class="bank-add-result-row"><span class="label">Verification</span><span class="value">' + escapeHtml(result.message || 'The bank account could not be verified.') + '</span></div>';
+                    bankAddSaveBtn.disabled = true;
+                }
+            } catch (error) {
+                if (requestId !== bankRecipientVerifyRequestId) return;
+                bankAccountVerification = null;
+                const bankDown = error.status === 503;
+                bankAddAccountResult.className = bankDown ? 'bank-add-result unavailable' : 'bank-add-result error';
+                bankAddAccountResult.innerHTML = '<div class="bank-add-result-row"><span class="label">' + (bankDown ? 'Bank unavailable' : 'Verification failed') + '</span><span class="value">' + escapeHtml(error.message || (bankDown ? 'This bank is currently unavailable. Please check back later.' : 'Could not verify this bank account.')) + '</span></div>';
+                bankAddSaveBtn.disabled = true;
+            }
+        }
+
+        async function saveBankRecipient() {
+            if (!selectedBank || !bankAccountVerification || !bankAccountVerification.verified) return;
+
+            bankAddSaveBtn.disabled = true;
+            bankAddSaveBtn.innerHTML = '<div class="spinner"></div>';
+            hide(bankAddError);
+
+            try {
+                const saved = await apiRequest('/api/recipients/bank', {
+                    method: 'POST',
+                    body: {
+                        bankProviderId: selectedBank.providerId,
+                        bankAccountNumber: bankAccountVerification.accountNumber,
+                        verificationToken: bankAccountVerification.verificationToken
+                    }
+                });
+                savedBankRecipients.push(saved);
+                selectedBankRecipient = saved;
+                screenBankAddRecipient.classList.remove('active');
+                screenBankStep2.classList.add('active');
+                renderBankRecipientList();
+                showToast('Bank recipient added successfully');
+            } catch (error) {
+                if (error.status === 401 || error.status === 403) {
+                    showAuthRequiredModal(error.message || 'Session expired. Please log in again.');
+                } else {
+                    bankAddErrorText.textContent = error.message || 'Could not add this bank recipient.';
+                    show(bankAddError);
+                }
+            } finally {
+                bankAddSaveBtn.disabled = !selectedBank || !bankAccountVerification || !bankAccountVerification.verified;
+                bankAddSaveBtn.textContent = 'Add recipient';
+            }
+        }
+
+        async function deleteBankRecipient(recipient) {
+            const displayName = recipient.bankHolderName || recipient.bankName || 'this bank recipient';
+            const confirmed = await showConfirmModal(
+                '🗑️',
+                'Remove Bank Recipient',
+                'Remove ' + displayName + ' from your saved bank recipients? This cannot be undone.',
+                'Remove',
+                true
+            );
+            if (!confirmed) return;
+
+            try {
+                await apiRequest('/api/recipients/' + recipient.id, { method: 'DELETE' });
+                savedBankRecipients = savedBankRecipients.filter((r) => r.id !== recipient.id);
+                if (selectedBankRecipient && selectedBankRecipient.id === recipient.id) selectedBankRecipient = null;
+                renderBankRecipientList();
+                showToast('Bank recipient removed successfully');
+            } catch (error) {
+                if (error.status === 401 || error.status === 403) {
+                    showAuthRequiredModal(error.message || 'Session expired. Please log in again.');
+                } else {
+                    showModal('⚠️', 'Remove Failed', error.message || 'Could not remove this bank recipient.', 'OK', true);
+                }
+            }
+        }
+
+        function openBankConfirmation() {
+            if (!selectedBankRecipient || !currentFeePreview) return;
+            bankConfirmAmountDisplay.textContent = 'Amount: SLE ' + formatMoney(currentFeePreview.amount);
+            bankConfirmName.textContent = selectedBankRecipient.bankName || '—';
+            bankConfirmAccount.textContent = maskBankAccount(selectedBankRecipient.bankAccountNumber);
+            bankConfirmHolder.textContent = selectedBankRecipient.bankHolderName || '—';
+            bankConfirmAmount.textContent = formatMoney(currentFeePreview.amount) + ' SLE';
+            bankConfirmFee.textContent = formatMoney(currentFeePreview.fee) + ' SLE';
+            bankConfirmTotal.textContent = formatMoney(currentFeePreview.totalCharged) + ' SLE';
+            bankConfirmBtn.disabled = false;
+
+            screenBankStep2.classList.remove('active');
+            screenBankConfirmation.classList.add('active');
+            hidePrimaryNav();
+        }
+
+        bankRecipientListBackBtn.addEventListener('click', () => {
+            screenBankStep2.classList.remove('active');
+            screenStep1.classList.add('active');
+            appBottomNav.classList.remove('hidden');
+            setPrimaryNavActive('home');
+        });
+
+        addBankRecipientBtn.addEventListener('click', openBankAddRecipient);
+
+        bankRecipientContinueBtn.addEventListener('click', () => {
+            openBankConfirmation();
+        });
+
+        bankAddPickerTrigger.addEventListener('click', () => {
+            const opening = bankAddPickerMenu.classList.contains('hidden');
+            bankAddPickerMenu.classList.toggle('hidden', !opening);
+            bankAddPickerTrigger.setAttribute('aria-expanded', opening ? 'true' : 'false');
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!event.target.closest('#bank-add-picker')) {
+                bankAddPickerMenu.classList.add('hidden');
+                bankAddPickerTrigger.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        // Starts the name lookup from 10 digits and checks again each time the user adds a
+        // digit (and pauses). Below 10 digits nothing is sent and nothing is shown.
+        let bankVerifyTimer = null;
+        function scheduleBankVerification() {
+            clearTimeout(bankVerifyTimer);
+            if (!selectedBank) return;
+            const digits = bankAddAccountNumberInput.value.replace(/\//g, '');
+            if (digits.length < ACCOUNT_MIN_DIGITS) return;
+            // A short pause (0.3s) so fast typing or pasting sends one lookup, not one per key.
+            bankVerifyTimer = setTimeout(verifyBankRecipientAccount, 300);
+        }
+
+        bankAddAccountNumberInput.addEventListener('input', () => {
+            const rule = bankAccountRule(selectedBank);
+            bankAddAccountNumberInput.value = cleanAccountInput(bankAddAccountNumberInput.value, !!(rule && rule.allowSlash));
+            bankAccountVerification = null;
+            bankRecipientLastVerifiedKey = null;
+            bankRecipientVerifyRequestId++;
+            bankAddSaveBtn.disabled = true;
+            bankAddAccountResult.className = 'bank-add-result hidden';
+            bankAddAccountResult.textContent = '';
+            hide(bankAddError);
+            scheduleBankVerification();
+        });
+
+        // Verify only after the customer has finished entering the account number.
+        // Verifying on every keystroke sent partial account numbers to Monime and
+        // produced a burst of 400 "Provider account invalid" requests.
+        bankAddAccountNumberInput.addEventListener('blur', () => {
+            verifyBankRecipientAccount();
+        });
+
+        bankAddAccountNumberInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                verifyBankRecipientAccount();
+            }
+        });
+
+        bankAddBackBtn.addEventListener('click', () => {
+            screenBankAddRecipient.classList.remove('active');
+            screenBankStep2.classList.add('active');
+            hidePrimaryNav();
+        });
+
+        bankAddSaveBtn.addEventListener('click', saveBankRecipient);
+
+        bankConfirmBackBtn.addEventListener('click', () => {
+            resetTransactionRequestKey();
+            screenBankConfirmation.classList.remove('active');
+            screenBankStep2.classList.add('active');
+            hidePrimaryNav();
+        });
+
+        bankConfirmBtn.addEventListener('click', async () => {
+            if (!selectedBankRecipient || !currentFeePreview) return;
+
+            hide(bankConfirmError);
+            bankConfirmBtn.disabled = true;
+            bankConfirmBtn.innerHTML = '<div class="spinner"></div>';
+
+            try {
+                window.DEENWALLET_TRANSACTION_ACTIVE = true;
+                const data = await apiRequest('/api/bank-transfers', {
+                    method: 'POST',
+                    headers: { 'Idempotency-Key': getTransactionRequestKey() },
+                    body: {
+                        amount: currentFeePreview.amount,
+                        sourceProviderId: sourceProviderId,
+                        sourcePhone: toE164SL(onlyDigits(sourcePhoneInput.value)),
+                        recipientId: selectedBankRecipient.id,
+                        bankProviderId: selectedBankRecipient.bankProviderId,
+                        bankAccountNumber: selectedBankRecipient.bankAccountNumber
+                    }
+                });
+                transaction = normalizeTransaction(data);
+                resetTransactionRequestKey();
+                openStep3();
+            } catch (error) {
+                window.DEENWALLET_TRANSACTION_ACTIVE = false;
+                if (error.status >= 400 && error.status < 500
+                        && ![401, 403, 423, 429].includes(error.status)) {
+                    resetTransactionRequestKey();
+                }
+                if (error.status === 401 || error.status === 403) {
+                    showAuthRequiredModal(error.message || 'Your session has expired. Please log in again.');
+                } else {
+                    bankConfirmErrorText.textContent = error.message || 'Could not create the bank transfer. Please try again.';
+                    show(bankConfirmError);
+                }
+            } finally {
+                bankConfirmBtn.disabled = false;
+                bankConfirmBtn.textContent = 'Confirm';
+            }
+        });
+
+        // ==============================================================
         // RECIPIENT CRUD
         // ==============================================================
-        let recipientDetectDebounce = null;
         let recipientDetectRequestId = 0;
 
         addRecipientBtnEmpty.addEventListener('click', openAddRecipientForm);
@@ -4562,16 +5689,15 @@
         });
 
         newRecipientPhone.addEventListener('input', (e) => {
-            e.target.value = onlyDigits(e.target.value).slice(0, 9);
+            e.target.value = onlyDigits(e.target.value).slice(0, 8);
             recipientProviderId = null;
             recipientHolderName = null;
             hide(recipientDetectStatus);
             saveRecipientBtn.disabled = true;
 
-            if (recipientDetectDebounce) clearTimeout(recipientDetectDebounce);
             const localPhone = e.target.value;
-            if (localPhone.length < 8) return;
-            recipientDetectDebounce = setTimeout(() => runRecipientDetect(localPhone), 600);
+            if (localPhone.length !== 8) return;
+            runRecipientDetect(localPhone);
         });
 
         async function runRecipientDetect(localPhone) {
@@ -4740,6 +5866,9 @@
         // ==============================================================
         function openStep3() {
             screenStep2.classList.remove('active');
+            screenBankStep2.classList.remove('active');
+            screenBankAddRecipient.classList.remove('active');
+            screenBankConfirmation.classList.remove('active');
             screenStep3.classList.add('active');
             hidePrimaryNav();
             renderTransactionState();
@@ -4750,8 +5879,18 @@
         function renderTransactionState() {
             const txnDisplay = transaction.transactionCode || transaction.id;
 
-            ussdRecipientName.textContent = transaction.destinationHolderName || '—';
-            ussdRecipientPhone.textContent = transaction.destinationPhone || '—';
+            const bankTransfer = transaction.serviceType === 'BANK_TRANSFER';
+            ussdRecipientName.textContent = bankTransfer
+                ? (transaction.bankAccountHolderName || transaction.destinationHolderName || '—')
+                : (transaction.destinationHolderName || '—');
+            ussdRecipientPhone.textContent = bankTransfer
+                ? maskBankAccount(transaction.bankAccountNumber)
+                : (transaction.destinationPhone || '—');
+            ussdRecipientLabel.textContent = bankTransfer ? 'Account holder' : 'Recipient';
+            ussdDestinationLabel.textContent = bankTransfer ? 'Bank account' : 'Number';
+            ussdPaymentWarning.textContent = bankTransfer
+                ? 'Double check the bank account before paying. Your mobile-money payment funds this bank transfer.'
+                : 'Double check the recipient before paying. Transactions to the wrong number cannot be reversed.';
             ussdTotalEl.textContent = formatMoney(transaction.totalCharged) + ' SLE';
             ussdCodeText.textContent = transaction.ussdCode || '';
 
@@ -4776,7 +5915,9 @@
                     resultNote.textContent = 'Payment received. Preparing the transfer…';
                 } else if (status === 'PAYING_OUT') {
                     resultIcon.textContent = '\u23F3';
-                    resultNote.textContent = "Sending funds to the recipient's mobile money account…";
+                    resultNote.textContent = transaction.serviceType === 'BANK_TRANSFER'
+                        ? 'Sending funds to the selected bank account…'
+                        : "Sending funds to the recipient's mobile money account…";
                 } else if (status === 'COMPLETED') {
                     resultIcon.textContent = '\u2705';
                     resultNote.textContent = 'Done — the recipient has received the funds.';
@@ -4892,8 +6033,13 @@
                 completionOverlay.classList.remove('active');
                 completionOverlay.setAttribute('aria-hidden', 'true');
             }
-            screenStep2.classList.add('active');
-            hidePrimaryNav();
+            if (transaction && transaction.serviceType === 'BANK_TRANSFER') {
+                screenBankConfirmation.classList.add('active');
+                hidePrimaryNav();
+            } else {
+                screenStep2.classList.add('active');
+                hidePrimaryNav();
+            }
         });
 
         // ==============================================================

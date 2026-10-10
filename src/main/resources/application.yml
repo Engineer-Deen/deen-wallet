@@ -2,14 +2,20 @@ spring:
   application:
     name: deen-wallet
 
-  mvc:
-    pathmatch:
-      matching-strategy: ant_path_matcher
+  # Loads the .env file from the folder the app is started in (replaces the spring-dotenv library).
+  # "optional:" = no error if the file is missing (e.g. when real environment variables are used).
+  # Real environment variables always take priority over values in .env.
+  config:
+    import: optional:file:.env[.properties]
+
+  # Keeps JSON output the same as it was on Spring Boot 3 (dates, numbers, field handling)
+  jackson:
+    use-jackson2-defaults: true
 
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/deenwallet_db}
-    username: ${DB_USERNAME:deenwallet}
-    password: ${DB_PASSWORD:Abdul@10737}
+    username: ${DB_USERNAME:}
+    password: ${DB_PASSWORD:}
 
     hikari:
       maximum-pool-size: 30
@@ -45,6 +51,9 @@ spring:
 
 server:
   port: ${SERVER_PORT:8082}
+  # Needed so rate limiting sees the real client IP. Your nginx MUST overwrite X-Forwarded-For
+  # (proxy_set_header X-Forwarded-For $remote_addr;) and port 8082 must not be reachable publicly.
+  forward-headers-strategy: native
 
   tomcat:
     threads:
