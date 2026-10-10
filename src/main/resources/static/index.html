@@ -672,6 +672,24 @@
             font-weight: 900;
             letter-spacing: .02em;
             box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
+        }
+        .recipient-provider-logo img {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+            padding: 6px;
+            object-fit: contain;
+            object-position: center;
+            display: block;
+            background: #fff;
+        }
+        .recipient-provider-logo.has-img {
+            background: #fff;
+            color: transparent;
         }
 
         .recipient-option .actions {
@@ -3093,8 +3111,10 @@
             <button class="btn-fill pin-key" data-value="submit" style="grid-column:span 1;">↵</button>
         </div>
 
+        <button class="btn-fill" id="pin-biometric-btn" type="button" style="margin-top:12px;width:100%;display:none;">Use fingerprint</button>
         <button class="btn-secondary" id="pin-forgot-btn" type="button" style="margin-top:12px;width:100%;">Forgot PIN?</button>
         <button class="btn-secondary" id="pin-logout-btn" style="margin-top:8px;width:100%;">Log out instead</button>
+        <button class="btn-secondary" id="pin-cancel-btn" type="button" style="margin-top:8px;width:100%;display:none;">Cancel</button>
     </div>
 </div>
 
@@ -3450,6 +3470,8 @@
         const pinErrorMsg = document.getElementById('pin-error-msg');
         const pinLogoutBtn = document.getElementById('pin-logout-btn');
         const pinForgotBtn = document.getElementById('pin-forgot-btn');
+        const pinCancelBtn = document.getElementById('pin-cancel-btn');
+        const pinBiometricBtn = document.getElementById('pin-biometric-btn');
         const pinKeys = document.querySelectorAll('.pin-key');
 
         const lockedModalOverlay = document.getElementById('locked-modal-overlay');
@@ -3654,8 +3676,16 @@
         // ==============================================================
         // PIN MODAL FUNCTIONS
         // ==============================================================
-        function showPinModal(message) {
+        // Set only while the PIN modal is confirming a transfer (instead of unlocking the app).
+        let pendingPinAction = null;
+
+        function showPinModal(message, confirmAction) {
             pinModalActive = true;
+            pendingPinAction = typeof confirmAction === 'function' ? confirmAction : null;
+            const pinTitleEl = document.querySelector('#pin-modal-overlay .modal-title');
+            if (pinTitleEl) pinTitleEl.textContent = pendingPinAction ? 'Confirm Transfer' : 'Session Locked';
+            pinCancelBtn.style.display = pendingPinAction ? 'block' : 'none';
+            pinLogoutBtn.style.display = pendingPinAction ? 'none' : '';
             pinAttempts = 0;
             pinErrorMsg.textContent = '';
             pinHiddenInput.value = '';
@@ -3671,6 +3701,9 @@
             setTimeout(() => {
                 pinHiddenInput.focus();
             }, 200);
+
+            // Phones with fingerprint login set up: offer it (and try it straight away).
+            setupBiometricForPinModal();
         }
 
         function hidePinModal() {
@@ -3711,6 +3744,91 @@
         // SECURITY: verify the user's real PIN on the backend.
         // Never obtain or embed an admin credential in the user frontend.
         // ==============================================================
+        // Shared by a correct PIN and a successful fingerprint.
+        function onUnlockSuccess() {
+            pinAttempts = 0;
+            pinErrorMsg.textContent = '';
+            sessionStorage.removeItem('deenwallet_account_locked');
+            sessionStorage.setItem('deenwallet_pin_unlocked', '1');
+            const afterPin = pendingPinAction;
+            pendingPinAction = null;
+            hidePinModal();
+            if (typeof updateSessionLastActive === 'function') updateSessionLastActive();
+            if (afterPin) {
+                // Confirmed: continue the transfer (run outside any try/catch of the caller).
+                setTimeout(() => afterPin(), 0);
+            } else {
+                showToast('Session unlocked');
+            }
+        }
+
+        // ==============================================================
+        // FINGERPRINT UNLOCK (accounts that have biometric login on this phone)
+        // ==============================================================
+        let biometricUnlockState = null;
+        let biometricUnlockStateAt = 0;
+        let biometricUnlockBusy = false;
+        let biometricAutoTried = false;
+        let pinModalOpenId = 0;
+
+        async function getBiometricUnlockState() {
+            if (typeof getBiometricStateForCurrentUser !== 'function'
+                || typeof getBiometricPlugin !== 'function' || !getBiometricPlugin()) {
+                return { enabled: false };
+            }
+            if (biometricUnlockState && Date.now() - biometricUnlockStateAt < 60000) return biometricUnlockState;
+            try {
+                biometricUnlockState = await getBiometricStateForCurrentUser();
+            } catch (_) {
+                biometricUnlockState = { enabled: false };
+            }
+            biometricUnlockStateAt = Date.now();
+            return biometricUnlockState;
+        }
+
+        async function setupBiometricForPinModal() {
+            const openId = ++pinModalOpenId;
+            biometricAutoTried = false;
+            pinBiometricBtn.style.display = 'none';
+            const state = await getBiometricUnlockState();
+            if (openId !== pinModalOpenId || !pinModalActive) return;
+            if (!state || !state.enabled || !state.credential) return;
+            pinBiometricBtn.style.display = 'block';
+            if (!biometricAutoTried) {
+                biometricAutoTried = true;
+                unlockWithBiometric(true);
+            }
+        }
+
+        async function unlockWithBiometric(automatic) {
+            if (biometricUnlockBusy || pinVerifyInFlight || !pinModalActive) return;
+            const state = biometricUnlockState;
+            if (!state || !state.enabled || !state.credential) return;
+            biometricUnlockBusy = true;
+            pinErrorMsg.textContent = '';
+            try {
+                // Fingerprint prompt + server-checked sign-in for THIS account (same as the login screen).
+                await biometricLogin(state.credential);
+                if (pinModalActive) onUnlockSuccess();
+            } catch (error) {
+                if (isNetworkError(error)) {
+                    pinErrorMsg.textContent = 'No internet connection. Enter your PIN or try again.';
+                } else if (error && error.status === 423) {
+                    pendingPinAction = null;
+                    sessionStorage.setItem('deenwallet_account_locked', 'true');
+                    hidePinModal();
+                    showLockedModal('Your account has been locked. Contact support or wait for an administrator to unlock it.');
+                } else if (error && error.code === 'LEGACY_CREDENTIAL') {
+                    pinBiometricBtn.style.display = 'none';
+                } else if (!automatic) {
+                    pinErrorMsg.textContent = 'Fingerprint was not recognised. Enter your PIN instead.';
+                }
+                // If the person just cancelled the prompt, nothing is shown: the PIN pad is right there.
+            } finally {
+                biometricUnlockBusy = false;
+            }
+        }
+
         async function verifyPin(enteredPin) {
             if (pinVerifyInFlight || !pinModalActive) return;
             pinVerifyInFlight = true;
@@ -3718,12 +3836,7 @@
             pinHiddenInput.disabled = true;
             try {
                 await apiRequest('/api/users/me/verify-pin', { method: 'POST', body: { pin: enteredPin } });
-                pinAttempts = 0;
-                pinErrorMsg.textContent = '';
-                sessionStorage.removeItem('deenwallet_account_locked');
-                hidePinModal();
-                showToast('Session unlocked');
-                if (typeof updateSessionLastActive === 'function') updateSessionLastActive();
+                onUnlockSuccess();
             } catch (error) {
                 if (isNetworkError(error)) {
                     // The PIN was never actually checked - the request never
@@ -3738,12 +3851,14 @@
                 if (locked) {
                     pinAttempts = MAX_PIN_ATTEMPTS;
                     sessionStorage.setItem('deenwallet_account_locked', 'true');
+                    pendingPinAction = null;
                     hidePinModal();
                     showLockedModal('Your account has been blocked because the PIN was entered incorrectly 3 times. Contact support or wait for an administrator to unlock it.');
                 } else if (error.status === 401) {
                     // The session itself is dead (token expired and refresh also
                     // failed/unavailable) - this is not a wrong PIN, so don't burn
                     // an attempt. Send them back to a full login instead.
+                    pendingPinAction = null;
                     hidePinModal();
                     clearTokens();
                     pinErrorMsg.textContent = '';
@@ -4121,10 +4236,15 @@
             hide(feeCard);
             hide(feeError);
             hide(step1Error);
-            hide(step1Error);
-            sourceDetectRequestId++;            // ignore any detection still in flight
+            // Fresh visit: forget any provider lookup/fee preview from the previous section,
+            // including one that is still on its way back from the server.
+            sourceDetectRequestId++;
             hide(sourceDetectStatus);
             sourceDetectStatus.innerHTML = '';
+            feeRequestId++;
+            if (feeDebounce) clearTimeout(feeDebounce);
+            hide(feeLoading);
+            updateStep1State();
             bankAccountVerification = null;
             selectedBank = null;
             updateBankAccountHint();
@@ -4773,19 +4893,66 @@
             }
         }
 
+        // Mobile money provider logos, resolved the same way as bank logos:
+        //   1) a file you place in /assets/provider-logos/ (orange-money.png, africell.png)
+        //   2) otherwise an online lookup by the provider's website (real, larger icons only)
+        //   3) otherwise the initials badge stays, so nothing ever looks broken.
+        const MOBILE_MONEY_LOGOS = {
+            m17: { name: 'Orange Money', initials: 'OM', slug: 'orange-money', domains: ['orange.sl', 'orange.com'] },
+            m18: { name: 'Africell',     initials: 'AF', slug: 'africell',     domains: ['africell.sl', 'africell.com'] }
+        };
+        const mobileMoneyLogoPromises = new Map();   // slug -> Promise<url|null>
+        const mobileMoneyLogoUrls = new Map();       // slug -> url|null, once resolved
+
+        function resolveMobileMoneyLogo(info) {
+            if (mobileMoneyLogoPromises.has(info.slug)) return mobileMoneyLogoPromises.get(info.slug);
+            const promise = (async () => {
+                const local = '/assets/provider-logos/' + info.slug + '.png';
+                if (await tryLoadImage(local, 1)) return local;
+                if (ENABLE_ONLINE_BANK_LOGOS) {
+                    for (const domain of info.domains) {
+                        for (const url of bankLogoSources(domain)) {
+                            if (await tryLoadImage(url, 32)) return url;
+                        }
+                    }
+                }
+                return null;
+            })().then((url) => { mobileMoneyLogoUrls.set(info.slug, url); return url; });
+            mobileMoneyLogoPromises.set(info.slug, promise);
+            return promise;
+        }
+
+        function showMobileMoneyLogoImage(logo, url) {
+            const img = new Image();
+            img.alt = '';
+            img.referrerPolicy = 'no-referrer';
+            img.onload = () => {
+                logo.textContent = '';
+                logo.classList.add('has-img');
+                // Small icons are drawn small and centred instead of stretched.
+                img.style.padding = url.startsWith('/assets/') ? '4px' : (img.naturalWidth < 48 ? '10px' : '6px');
+                logo.appendChild(img);
+            };
+            img.src = url;
+        }
+
         function createMobileMoneyLogo(providerId) {
             const logo = document.createElement('span');
             logo.className = 'recipient-provider-logo';
             logo.setAttribute('aria-hidden', 'true');
-            if (providerId === 'm17') {
-                logo.textContent = 'OM';
-                logo.title = 'Orange Money';
-            } else if (providerId === 'm18') {
-                logo.textContent = 'AF';
-                logo.title = 'Africell';
-            } else {
+            const info = MOBILE_MONEY_LOGOS[providerId];
+            if (!info) {
                 logo.textContent = 'MM';
                 logo.title = providerName(providerId);
+                return logo;
+            }
+            logo.textContent = info.initials;   // shown at once, replaced by the logo when found
+            logo.title = info.name;
+            if (mobileMoneyLogoUrls.has(info.slug)) {
+                const known = mobileMoneyLogoUrls.get(info.slug);
+                if (known) showMobileMoneyLogoImage(logo, known);
+            } else {
+                resolveMobileMoneyLogo(info).then((url) => { if (url) showMobileMoneyLogoImage(logo, url); });
             }
             return logo;
         }
@@ -4875,7 +5042,14 @@
             setPrimaryNavActive('home');
         });
 
-        step2ContinueBtn.addEventListener('click', async () => {
+        // The PIN is asked at the very last step, right before the payment window opens.
+        step2ContinueBtn.addEventListener('click', () => {
+            if (!selectedRecipient || !currentFeePreview) return;
+            hide(step2Error);
+            showPinModal('Enter your PIN to confirm this transfer.', submitMobileMoneyTransfer);
+        });
+
+        async function submitMobileMoneyTransfer() {
             if (!selectedRecipient || !currentFeePreview) return;
 
             hide(step2Error);
@@ -4906,7 +5080,7 @@
             } catch (error) {
                 window.DEENWALLET_TRANSACTION_ACTIVE = false;
                 if (error.status >= 400 && error.status < 500
-                        && ![401, 403, 423, 429].includes(error.status)) {
+                    && ![401, 403, 423, 429].includes(error.status)) {
                     resetTransactionRequestKey();
                 }
                 if (error.status === 401 || error.status === 403) {
@@ -4919,7 +5093,7 @@
                 step2ContinueBtn.disabled = false;
                 step2ContinueBtn.textContent = 'Continue';
             }
-        });
+        }
 
         // ==============================================================
         // BANK TRANSFER - RECIPIENT FLOW
@@ -5598,7 +5772,14 @@
             hidePrimaryNav();
         });
 
-        bankConfirmBtn.addEventListener('click', async () => {
+        // The PIN is asked at the very last step, right before the payment window opens.
+        bankConfirmBtn.addEventListener('click', () => {
+            if (!selectedBankRecipient || !currentFeePreview) return;
+            hide(bankConfirmError);
+            showPinModal('Enter your PIN to confirm this transfer.', submitBankTransfer);
+        });
+
+        async function submitBankTransfer() {
             if (!selectedBankRecipient || !currentFeePreview) return;
 
             hide(bankConfirmError);
@@ -5625,7 +5806,7 @@
             } catch (error) {
                 window.DEENWALLET_TRANSACTION_ACTIVE = false;
                 if (error.status >= 400 && error.status < 500
-                        && ![401, 403, 423, 429].includes(error.status)) {
+                    && ![401, 403, 423, 429].includes(error.status)) {
                     resetTransactionRequestKey();
                 }
                 if (error.status === 401 || error.status === 403) {
@@ -5638,7 +5819,7 @@
                 bankConfirmBtn.disabled = false;
                 bankConfirmBtn.textContent = 'Confirm';
             }
-        });
+        }
 
         // ==============================================================
         // RECIPIENT CRUD
@@ -6054,7 +6235,11 @@
         // ==============================================================
         updateStep1State();
         updateStep2State();
-        if (getAccessToken() && !pinModalActive) {
+        // Ask for the PIN on a fresh app launch only. Moving between pages or reloading must not
+        // ask again; coming back after leaving is handled by handleVisibilityChange, and every
+        // transfer asks for the PIN at its final step.
+        if (getAccessToken() && !pinModalActive
+            && sessionStorage.getItem('deenwallet_pin_unlocked') !== '1') {
             showPinModal('Enter your PIN to continue.');
         }
         console.log('DeenWallet initialized successfully');
@@ -6099,6 +6284,15 @@
 
         pinForgotBtn.addEventListener('click', function () {
             window.location.href = 'reset-pin.html';
+        });
+
+        pinCancelBtn.addEventListener('click', function () {
+            pendingPinAction = null;
+            hidePinModal();
+        });
+
+        pinBiometricBtn.addEventListener('click', function () {
+            unlockWithBiometric(false);
         });
 
         pinHiddenInput.addEventListener('keydown', function (e) {

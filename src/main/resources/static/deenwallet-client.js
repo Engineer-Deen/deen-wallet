@@ -146,6 +146,7 @@ function clearTokens() {
   localStorage.removeItem('deenwallet_refresh_token');
   localStorage.removeItem(DEENWALLET_CONFIG.TOKEN_STORAGE_KEY);
   localStorage.removeItem(DEENWALLET_CONFIG.USER_STORAGE_KEY);
+  sessionStorage.removeItem('deenwallet_pin_unlocked');
 }
 
 
@@ -310,6 +311,7 @@ async function biometricLogin(account) {
   }
 
   setTokens(accessToken, refreshToken);
+  sessionStorage.setItem('deenwallet_pin_unlocked', '1');
   localStorage.setItem(DEENWALLET_CONFIG.USER_STORAGE_KEY, JSON.stringify({
     firstName: data.firstName, accountNumber: data.accountNumber, role: data.role
   }));

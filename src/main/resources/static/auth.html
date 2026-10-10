@@ -735,52 +735,52 @@
       #screen-login .login-panel { padding-top: calc(18px + env(safe-area-inset-top, 0px)); }
       #screen-register, #screen-confirm { padding: calc(18px + env(safe-area-inset-top, 0px)) 20px 28px; }
     }
-  
-/* ============================================================
-   RESPONSIVE LAYOUT HARDENING
-   ============================================================ */
-html { width:100%; min-width:0; overflow-x:hidden; }
-body { width:100%; min-width:0; overflow-x:hidden; }
-*, *::before, *::after { min-width:0; }
-img, svg, video, canvas { max-width:100%; }
-button, input, select, textarea { max-width:100%; font:inherit; }
 
-@media (min-width:481px) and (max-width:768px) {
-  #app {
-    width:100%;
-    max-width:768px;
-    min-width:0;
-    min-height:100dvh;
-    margin:0 auto;
-  }
-  .screen { width:100%; min-width:0; }
-  .login-panel { padding-left:clamp(20px,5vw,42px); padding-right:clamp(20px,5vw,42px); }
-  .login-form-wrap { width:100%; max-width:520px; }
-}
+    /* ============================================================
+       RESPONSIVE LAYOUT HARDENING
+       ============================================================ */
+    html { width:100%; min-width:0; overflow-x:hidden; }
+    body { width:100%; min-width:0; overflow-x:hidden; }
+    *, *::before, *::after { min-width:0; }
+    img, svg, video, canvas { max-width:100%; }
+    button, input, select, textarea { max-width:100%; font:inherit; }
 
-@media (max-width:480px) {
-  #app { width:100%; max-width:none; min-width:0; }
-  .screen { width:100%; min-width:0; }
-  .login-panel { padding-left:max(16px, env(safe-area-inset-left)); padding-right:max(16px, env(safe-area-inset-right)); }
-  .login-form-wrap { width:100%; max-width:none; }
-  .login-form-title { font-size:clamp(24px,7.5vw,30px); }
-  .login-form-subtitle { margin-bottom:20px; }
-  .login-field .text-input { width:100%; min-width:0; }
-  .recovery-actions { flex-wrap:wrap; }
-  .recovery-actions > * { flex:1 1 140px; min-width:0; }
-  .login-security-row { gap:6px; }
-  .login-security-item { min-width:0; }
-}
+    @media (min-width:481px) and (max-width:768px) {
+      #app {
+        width:100%;
+        max-width:768px;
+        min-width:0;
+        min-height:100dvh;
+        margin:0 auto;
+      }
+      .screen { width:100%; min-width:0; }
+      .login-panel { padding-left:clamp(20px,5vw,42px); padding-right:clamp(20px,5vw,42px); }
+      .login-form-wrap { width:100%; max-width:520px; }
+    }
 
-@media (max-width:360px) {
-  .login-visual { padding-left:14px; padding-right:14px; }
-  .login-panel { padding-left:12px; padding-right:12px; }
-  .login-visual-copy h2 { font-size:29px; letter-spacing:-1px; }
-  .login-feature { padding-left:4px; padding-right:4px; }
-  .login-feature strong { font-size:9px; }
-}
+    @media (max-width:480px) {
+      #app { width:100%; max-width:none; min-width:0; }
+      .screen { width:100%; min-width:0; }
+      .login-panel { padding-left:max(16px, env(safe-area-inset-left)); padding-right:max(16px, env(safe-area-inset-right)); }
+      .login-form-wrap { width:100%; max-width:none; }
+      .login-form-title { font-size:clamp(24px,7.5vw,30px); }
+      .login-form-subtitle { margin-bottom:20px; }
+      .login-field .text-input { width:100%; min-width:0; }
+      .recovery-actions { flex-wrap:wrap; }
+      .recovery-actions > * { flex:1 1 140px; min-width:0; }
+      .login-security-row { gap:6px; }
+      .login-security-item { min-width:0; }
+    }
 
-</style>
+    @media (max-width:360px) {
+      .login-visual { padding-left:14px; padding-right:14px; }
+      .login-panel { padding-left:12px; padding-right:12px; }
+      .login-visual-copy h2 { font-size:29px; letter-spacing:-1px; }
+      .login-feature { padding-left:4px; padding-right:4px; }
+      .login-feature strong { font-size:9px; }
+    }
+
+  </style>
 </head>
 
 <body>
@@ -1459,6 +1459,7 @@ button, input, select, textarea { max-width:100%; font:inherit; }
           const refreshToken = data.refreshToken;
           if (!accessToken || !refreshToken) throw new Error('Login response is missing authentication tokens.');
           setTokens(accessToken, refreshToken);
+          sessionStorage.setItem('deenwallet_pin_unlocked', '1');
           sessionStorage.removeItem('deenwallet_account_locked');
           localStorage.setItem(DEENWALLET_CONFIG.TOKEN_STORAGE_KEY, accessToken);
           localStorage.setItem(DEENWALLET_CONFIG.USER_STORAGE_KEY, JSON.stringify({
