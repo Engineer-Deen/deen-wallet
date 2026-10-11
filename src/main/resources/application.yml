@@ -64,9 +64,17 @@ app:
   transaction-archive:
     after-days: ${TRANSACTION_ARCHIVE_AFTER_DAYS:180}
     enabled: ${TRANSACTION_ARCHIVE_ENABLED:true}
-    rate-limit:
-      trust-forwarded-for: ${RATE_LIMIT_TRUST_FORWARDED_FOR:false}
-      errors:
+
+  # Where the rate limiter takes the client IP from.
+  # false (recommended): use the address Tomcat worked out. With server.forward-headers-strategy=native
+  #   (above) Tomcat already applies X-Forwarded-For from your own proxy, so this is already the real
+  #   client IP. Nobody can fake it by sending their own header.
+  # true: also read the X-Forwarded-For header directly. Only use this if forward-headers-strategy is NOT
+  #   native AND your proxy always overwrites that header.
+  rate-limit:
+    trust-forwarded-for: ${RATE_LIMIT_TRUST_FORWARDED_FOR:false}
+
+  errors:
     trust-forwarded-for: ${APP_ERRORS_TRUST_FORWARDED_FOR:false}
 
   release-id: ${APP_RELEASE_ID:${random.uuid}}

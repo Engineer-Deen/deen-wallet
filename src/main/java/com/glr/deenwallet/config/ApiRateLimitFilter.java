@@ -44,8 +44,12 @@ public class ApiRateLimitFilter extends OncePerRequestFilter {
 
     /**
      * Maximum requests from one unauthenticated client IP per minute.
+     *
+     * Many phones can share one public IP (mobile-network address sharing, family/office Wi-Fi),
+     * so this is deliberately generous. Real protection against guessing comes from the account
+     * lockouts and the stricter per-endpoint rules in RateLimitFilter.
      */
-    private static final int PUBLIC_REQUESTS_PER_MINUTE = 60;
+    private static final int PUBLIC_REQUESTS_PER_MINUTE = 240;
 
     /**
      * Financial transaction creation is deliberately much stricter.
@@ -66,11 +70,11 @@ public class ApiRateLimitFilter extends OncePerRequestFilter {
     private static final int LOOKUP_REQUESTS_PER_MINUTE = 60;
 
     /**
-     * Public authentication endpoints such as login, register, OTP,
-     * refresh and similar endpoints need a stricter limit than ordinary
-     * public API traffic.
+     * Public authentication endpoints (login, register, OTP, refresh, fingerprint login...) are
+     * counted together per client IP. Kept above what a few people on one shared IP legitimately
+     * need; the sensitive endpoints have their own stricter rules in RateLimitFilter.
      */
-    private static final int AUTH_PUBLIC_REQUESTS_PER_MINUTE = 12;
+    private static final int AUTH_PUBLIC_REQUESTS_PER_MINUTE = 60;
 
     /**
      * In-memory counters.
@@ -84,6 +88,10 @@ public class ApiRateLimitFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
 
+    /**
+     * Keep this false while server.forward-headers-strategy=native: Tomcat then already puts the real
+     * client IP into request.getRemoteAddr(). See application.yml (app.rate-limit).
+     */
     @Value("${app.rate-limit.trust-forwarded-for:false}")
     private boolean trustForwardedFor;
 
@@ -126,6 +134,15 @@ public class ApiRateLimitFilter extends OncePerRequestFilter {
          * Static frontend resources do not need API rate limiting.
          */
         if (isStaticResource(request)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        /*
+         * Tiny public endpoints that every open app calls on a timer. They must never use up the
+         * allowance that login and token refresh share on the same IP.
+         */
+        if (isLightweightPublic(request)) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -377,6 +394,22 @@ public class ApiRateLimitFilter extends OncePerRequestFilter {
 
         return "/api/v1/webhooks/monime"
                 .equals(request.getRequestURI());
+    }
+
+    /**
+     * Server reachability check and "is there a new release / Android update" check.
+     * They return a few bytes and are called every 30 s - 5 min by every open app (every 5 s by the
+     * admin panel).
+     */
+    private boolean isLightweightPublic(
+            HttpServletRequest request
+    ) {
+
+        String path =
+                request.getRequestURI();
+
+        return "/api/app/version".equals(path)
+                || "/api/app/android-update".equals(path);
     }
 
     /**
