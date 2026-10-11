@@ -91,6 +91,7 @@ public class SecurityConfig {
                                 "/deenwallet-client.js",
                                 "/firebase-messaging-sw.js",
                                 "/deenwallet-logo.png",
+                                "/deenwallet-logo-sm.png",
                                 "/favicon.ico",
                                 "/error",
                                 "/assets/**",
@@ -130,7 +131,7 @@ public class SecurityConfig {
                         jwtAuthFilter,
                         UsernamePasswordAuthenticationFilter.class
                 )
-                .addFilterAfter(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(rateLimitFilter, JwtAuthFilter.class)
                 .headers(h -> h
                         .contentSecurityPolicy(csp -> csp.reportOnly().policyDirectives(
                                 "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com; "

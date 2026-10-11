@@ -575,6 +575,9 @@ public class AuthService {
         }
     }
 
+    /** How long an already-used refresh token may be presented again (lost-response protection). */
+    private static final Duration REFRESH_REUSE_GRACE = Duration.ofMinutes(5);
+
     @Transactional
     public AuthController.LoginResponse refreshToken(String rawRefreshToken) {
         if (!jwtService.isValid(rawRefreshToken)
@@ -589,10 +592,23 @@ public class AuthService {
                 .orElseThrow(() ->
                         new IllegalArgumentException("Invalid or revoked refresh token"));
 
-        if (stored.isRevoked()
-                || stored.getExpiresAt().isBefore(Instant.now())) {
-
+        if (stored.getExpiresAt().isBefore(Instant.now())) {
             throw new IllegalArgumentException("Invalid or expired refresh token");
+        }
+
+        // Refresh tokens are single use. If the response of a refresh never reached the phone
+        // (network drop, app closed mid-refresh) the phone still holds the OLD token. Accept that
+        // same token again for a short time after it was rotated, so the person is not logged
+        // out because of a lost response. Tokens revoked by logout / password reset have no
+        // revokedAt, so they never get this grace.
+        boolean reusedInGrace = false;
+        if (stored.isRevoked()) {
+            Instant rotatedAt = stored.getRevokedAt();
+            reusedInGrace = rotatedAt != null
+                    && rotatedAt.plus(REFRESH_REUSE_GRACE).isAfter(Instant.now());
+            if (!reusedInGrace) {
+                throw new IllegalArgumentException("Invalid or expired refresh token");
+            }
         }
 
         UUID userId = UUID.fromString(
@@ -612,8 +628,11 @@ public class AuthService {
 
         ensureUsable(user);
 
-        stored.setRevoked(true);
-        refreshTokenRepository.save(stored);
+        if (!reusedInGrace) {
+            stored.setRevoked(true);
+            stored.setRevokedAt(Instant.now());
+            refreshTokenRepository.save(stored);
+        }
 
         return issueLoginResponse(user);
     }

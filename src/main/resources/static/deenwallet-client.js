@@ -147,7 +147,107 @@ function clearTokens() {
   localStorage.removeItem(DEENWALLET_CONFIG.TOKEN_STORAGE_KEY);
   localStorage.removeItem(DEENWALLET_CONFIG.USER_STORAGE_KEY);
   sessionStorage.removeItem('deenwallet_pin_unlocked');
+  try {
+    localStorage.removeItem('deenwallet_last_active_at');
+    localStorage.removeItem('deenwallet_pin_locked');
+  } catch (_) { /* ignore */ }
 }
+
+// ==============================================================
+// APP ACTIVITY + PIN LOCK TRACKING (shared by every page)
+// ==============================================================
+// The PIN is asked when the app was left for DEENWALLET_PIN_GRACE_MS or longer, or when a lock
+// is still pending (it survives a page reload / the app being closed while locked).
+// Everything is stored in localStorage so every phone behaves the same, even when Android
+// closes the app in the background and sessionStorage is lost.
+const DEENWALLET_ACTIVE_KEY = 'deenwallet_last_active_at';
+const DEENWALLET_PIN_LOCK_KEY = 'deenwallet_pin_locked';
+const DEENWALLET_PIN_GRACE_MS = 30000;      // how long the app may be left before the PIN is asked
+const DEENWALLET_HEARTBEAT_MS = 10000;      // "still here" tick while the app is on screen
+let deenwalletLeftAt = null;
+
+function touchAppActive() {
+  try { localStorage.setItem(DEENWALLET_ACTIVE_KEY, String(Date.now())); } catch (_) { /* ignore */ }
+}
+
+function msSinceAppActive() {
+  let v = 0;
+  try { v = Number(localStorage.getItem(DEENWALLET_ACTIVE_KEY)); } catch (_) { /* ignore */ }
+  if (!v) return Infinity;                  // never recorded: treat as away too long
+  const diff = Date.now() - v;
+  return diff < 0 ? Infinity : diff;        // clock moved backwards: treat as away too long
+}
+
+function isPinLockPending() {
+  try { return localStorage.getItem(DEENWALLET_PIN_LOCK_KEY) === '1'; } catch (_) { return false; }
+}
+
+function setPinLockPending(on) {
+  try {
+    if (on) localStorage.setItem(DEENWALLET_PIN_LOCK_KEY, '1');
+    else localStorage.removeItem(DEENWALLET_PIN_LOCK_KEY);
+  } catch (_) { /* ignore */ }
+}
+
+// Call after a successful login, PIN or fingerprint.
+function markAppUnlocked() {
+  setPinLockPending(false);
+  touchAppActive();
+}
+
+// True when the PIN must be asked right now (app start, or return from the background).
+function pinRequiredNow() {
+  if (!getAccessToken()) return false;
+  if (isPinLockPending()) return true;
+  return msSinceAppActive() >= DEENWALLET_PIN_GRACE_MS;
+}
+
+function appLeft() {
+  deenwalletLeftAt = Date.now();
+  touchAppActive();
+}
+
+function appReturned() {
+  const away = deenwalletLeftAt !== null ? Date.now() - deenwalletLeftAt : msSinceAppActive();
+  deenwalletLeftAt = null;
+  if (getAccessToken() && (away < 0 || away >= DEENWALLET_PIN_GRACE_MS)) setPinLockPending(true);
+  return pinRequiredNow();
+}
+
+(function startAppActivityTracking() {
+  if (typeof document === 'undefined' || typeof window === 'undefined') return;
+
+  const onReturn = () => {
+    const needPin = appReturned();
+    if (!needPin) return;
+    if (typeof window.onDeenwalletPinRequired === 'function') {
+      window.onDeenwalletPinRequired();               // pages with a PIN screen (home)
+    } else if (window.DEENWALLET_REDIRECT_WHEN_LOCKED) {
+      window.location.replace('index.html');          // other signed-in pages: back to home, which asks the PIN
+    }
+  };
+
+  document.addEventListener('visibilitychange', () => { if (document.hidden) appLeft(); else onReturn(); });
+  window.addEventListener('pagehide', appLeft);
+  window.addEventListener('pageshow', (e) => { if (e && e.persisted) onReturn(); });
+
+  // Android app (Capacitor / Cordova): pause/resume are more reliable than visibilitychange on some phones.
+  try {
+    const capApp = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+    if (capApp && typeof capApp.addListener === 'function') {
+      capApp.addListener('pause', appLeft);
+      capApp.addListener('resume', onReturn);
+    }
+  } catch (_) { /* ignore */ }
+  document.addEventListener('pause', appLeft, false);
+  document.addEventListener('resume', onReturn, false);
+
+  // While the app is on screen and unlocked, keep the "last active" time fresh. Timers do not run
+  // while the app is in the background, which is exactly what makes the away-time measurable.
+  setInterval(() => {
+    if (!document.hidden && getAccessToken() && !isPinLockPending()) touchAppActive();
+  }, DEENWALLET_HEARTBEAT_MS);
+})();
 
 
 // ==============================================================
@@ -311,7 +411,7 @@ async function biometricLogin(account) {
   }
 
   setTokens(accessToken, refreshToken);
-  sessionStorage.setItem('deenwallet_pin_unlocked', '1');
+  markAppUnlocked();
   localStorage.setItem(DEENWALLET_CONFIG.USER_STORAGE_KEY, JSON.stringify({
     firstName: data.firstName, accountNumber: data.accountNumber, role: data.role
   }));
@@ -937,20 +1037,49 @@ async function refreshAccessToken() {
   }
 
   refreshPromise = (async () => {
-    const response = await fetch(DEENWALLET_CONFIG.API_BASE_URL + '/api/auth/refresh', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken })
-    });
-    if (!response.ok) {
-      clearTokens();
-      throw new Error('Session expired. Please log in again.');
+    let lastError = null;
+    // Up to 3 tries: a weak mobile connection or a short server hiccup must NOT log the person out.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) await new Promise((r) => setTimeout(r, 700 * attempt));
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 15000);
+      let response;
+      try {
+        response = await fetch(DEENWALLET_CONFIG.API_BASE_URL + '/api/auth/refresh', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken }),
+          signal: controller.signal
+        });
+      } catch (networkError) {
+        lastError = networkError;            // no connection / timed out: try again, keep the login
+        continue;
+      } finally {
+        clearTimeout(timer);
+      }
+
+      if (response.ok) {
+        const data = await response.json();
+        const newAccessToken = data.accessToken || data.token;
+        if (!newAccessToken) throw new Error('Refresh response missing access token.');
+        setTokens(newAccessToken, data.refreshToken || refreshToken);
+        return newAccessToken;
+      }
+
+      // The server really said this refresh token is no good: only then is the login gone.
+      if (response.status === 400 || response.status === 401 || response.status === 403) {
+        clearTokens();
+        throw new Error('Session expired. Please log in again.');
+      }
+
+      // 408 / 429 / 5xx / proxy errors are temporary: keep the login and try again.
+      lastError = new Error('Server temporarily unavailable (' + response.status + ').');
     }
-    const data = await response.json();
-    const newAccessToken = data.accessToken || data.token;
-    if (!newAccessToken) throw new Error('Refresh response missing access token.');
-    setTokens(newAccessToken, data.refreshToken || refreshToken);
-    return newAccessToken;
+
+    const temporary = new Error('Unable to reach the server. Please check your connection and try again.');
+    temporary.isNetworkError = true;
+    temporary.cause = lastError;
+    throw temporary;
   })().finally(() => { refreshPromise = null; });
 
   return refreshPromise;

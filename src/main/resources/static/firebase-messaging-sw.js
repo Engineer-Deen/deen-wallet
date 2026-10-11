@@ -1,12 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/11.0.2/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/11.0.2/firebase-messaging-compat.js');
 
-// Firebase MUST be started synchronously, while this script is first run.
-// Browsers ignore push handlers that are added later (for example after an
-// await), and then no notification is ever shown.
-//
-// The page registers this worker as /firebase-messaging-sw.js?apiKey=...&...
-// so the (public) web config is available right here without a network call.
+
 const params = new URL(self.location.href).searchParams;
 
 firebase.initializeApp({

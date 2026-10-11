@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <link rel="preload" as="image" href="deenwallet-logo-sm.png" />
     <title>DeenWallet — Send money</title>
     <style>
         :root {
@@ -1712,6 +1713,48 @@
         }
 
         /* ============================================================ */
+        /* PIN MODAL - fits any Android screen, never scrolls.           */
+        /* Sizes follow the real visible height (dvh), so the browser    */
+        /* bars and the keyboard are accounted for. fitPinModal() only   */
+        /* shrinks it slightly if a screen is still extremely small.     */
+        /* ============================================================ */
+        #pin-modal-overlay {
+            height: 100vh;
+            height: 100dvh;
+            box-sizing: border-box;
+            padding: max(10px, env(safe-area-inset-top, 0px)) max(14px, env(safe-area-inset-right, 0px)) max(10px, env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));
+            overflow: hidden;
+            overscroll-behavior: contain;
+            touch-action: none;
+        }
+        #pin-modal-overlay .modal-box {
+            max-height: none;
+            overflow: visible;
+            box-sizing: border-box;
+            padding: clamp(12px, 2.4dvh, 26px) 22px clamp(12px, 2dvh, 20px);
+            transform-origin: center center;
+        }
+        #pin-modal-overlay .modal-icon { font-size: clamp(26px, 5dvh, 42px); margin-bottom: clamp(2px, .8dvh, 8px); line-height: 1.1; }
+        #pin-modal-overlay .modal-title { font-size: clamp(17px, 2.7dvh, 20px); margin: 0 0 4px; }
+        #pin-modal-overlay .modal-message { font-size: clamp(12.5px, 1.9dvh, 15px); line-height: 1.35; margin: 0 0 clamp(4px, 1.2dvh, 12px); }
+        #pin-modal-overlay .pin-dots { gap: clamp(8px, 1.6dvh, 12px); margin: clamp(6px, 1.6dvh, 18px) 0; }
+        #pin-modal-overlay .pin-dot { width: clamp(40px, 6.6dvh, 50px); height: clamp(42px, 7.2dvh, 55px); font-size: 22px; }
+        #pin-modal-overlay .pin-error-msg { font-size: 12.5px; min-height: clamp(15px, 2.3dvh, 20px); margin: 0 0 clamp(2px, 1dvh, 10px); }
+        #pin-modal-overlay .pin-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(6px, 1.1dvh, 9px); margin-top: clamp(2px, .8dvh, 10px); }
+        #pin-modal-overlay .pin-keypad .pin-key { height: clamp(40px, 6.8dvh, 54px); padding: 0; margin: 0; font-size: clamp(18px, 2.8dvh, 22px); line-height: 1; display: flex; align-items: center; justify-content: center; }
+        #pin-modal-overlay .pin-actions { margin-top: clamp(6px, 1.2dvh, 12px); display: flex; flex-direction: column; gap: clamp(5px, .9dvh, 8px); }
+        #pin-modal-overlay .pin-actions button { flex: 0 0 auto; width: 100%; margin: 0 !important; height: clamp(36px, 5.4dvh, 44px); padding: 0 10px; font-size: 13.5px; }
+        #pin-modal-overlay .pin-actions-row { display: flex; gap: 8px; }
+        #pin-modal-overlay .pin-actions-row button { flex: 1 1 0; min-width: 0; }
+        @media (max-height: 560px) {
+            #pin-modal-overlay .modal-icon { display: none; }
+        }
+        /* Phone turned sideways: info on the left, keypad on the right. */
+        @media (orientation: landscape) and (max-height: 560px) {
+            #pin-modal-overlay .modal-box { max-width: 640px; display: grid; grid-template-columns: 1fr 1fr; column-gap: 22px; align-items: center; }
+        }
+
+        /* ============================================================ */
         /* LOCKED MODAL - STAYS OPEN */
         /* ============================================================ */
         #locked-modal-overlay {
@@ -2251,7 +2294,7 @@
             <div class="top-bar">
                 <button class="menu-btn" id="menu-btn" type="button" aria-label="Open menu" aria-expanded="false"><span></span><span></span><span></span></button>
                 <div class="top-bar-brand">
-                    <img class="app-brand-logo" src="deenwallet-logo.png" alt="DeenWallet" />
+                    <img class="app-brand-logo" src="deenwallet-logo-sm.png" alt="DeenWallet" />
                 </div>
                 <button class="notification-btn" id="notification-btn" type="button" aria-label="Notifications" title="Notifications">
                     <span aria-hidden="true">&#128276;</span>
@@ -3081,40 +3124,48 @@
 <!-- ===================== PIN MODAL ===================== -->
 <div class="modal-overlay" id="pin-modal-overlay">
     <div class="modal-box">
-        <div class="modal-icon">&#128274;</div>
-        <h3 class="modal-title">Session Locked</h3>
-        <p class="modal-message" id="pin-modal-message">Enter your 4-digit PIN to continue</p>
+        <div class="pin-info">
+            <div class="modal-icon">&#128274;</div>
+            <h3 class="modal-title">Session Locked</h3>
+            <p class="modal-message" id="pin-modal-message">Enter your 4-digit PIN to continue</p>
 
-        <div class="pin-dots" id="pin-dots">
-            <div class="pin-dot" data-index="0">·</div>
-            <div class="pin-dot" data-index="1">·</div>
-            <div class="pin-dot" data-index="2">·</div>
-            <div class="pin-dot" data-index="3">·</div>
+            <div class="pin-dots" id="pin-dots">
+                <div class="pin-dot" data-index="0">·</div>
+                <div class="pin-dot" data-index="1">·</div>
+                <div class="pin-dot" data-index="2">·</div>
+                <div class="pin-dot" data-index="3">·</div>
+            </div>
+
+            <div class="pin-error-msg" id="pin-error-msg"></div>
+
+            <input class="pin-hidden-input" id="pin-hidden-input" type="password" inputmode="numeric" maxlength="4" readonly />
         </div>
 
-        <div class="pin-error-msg" id="pin-error-msg"></div>
+        <div class="pin-pad">
+            <div class="pin-keypad">
+                <button class="btn-outline pin-key" data-value="1">1</button>
+                <button class="btn-outline pin-key" data-value="2">2</button>
+                <button class="btn-outline pin-key" data-value="3">3</button>
+                <button class="btn-outline pin-key" data-value="4">4</button>
+                <button class="btn-outline pin-key" data-value="5">5</button>
+                <button class="btn-outline pin-key" data-value="6">6</button>
+                <button class="btn-outline pin-key" data-value="7">7</button>
+                <button class="btn-outline pin-key" data-value="8">8</button>
+                <button class="btn-outline pin-key" data-value="9">9</button>
+                <button class="btn-outline pin-key" data-value="clear">⌫</button>
+                <button class="btn-outline pin-key" data-value="0">0</button>
+                <button class="btn-fill pin-key" data-value="submit">↵</button>
+            </div>
 
-        <input class="pin-hidden-input" id="pin-hidden-input" type="password" inputmode="numeric" maxlength="4" readonly />
-
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px;">
-            <button class="btn-outline pin-key" data-value="1">1</button>
-            <button class="btn-outline pin-key" data-value="2">2</button>
-            <button class="btn-outline pin-key" data-value="3">3</button>
-            <button class="btn-outline pin-key" data-value="4">4</button>
-            <button class="btn-outline pin-key" data-value="5">5</button>
-            <button class="btn-outline pin-key" data-value="6">6</button>
-            <button class="btn-outline pin-key" data-value="7">7</button>
-            <button class="btn-outline pin-key" data-value="8">8</button>
-            <button class="btn-outline pin-key" data-value="9">9</button>
-            <button class="btn-outline pin-key" data-value="clear" style="grid-column:span 1;">⌫</button>
-            <button class="btn-outline pin-key" data-value="0">0</button>
-            <button class="btn-fill pin-key" data-value="submit" style="grid-column:span 1;">↵</button>
+            <div class="pin-actions">
+                <button class="btn-fill" id="pin-biometric-btn" type="button" style="display:none;">Use fingerprint</button>
+                <div class="pin-actions-row">
+                    <button class="btn-secondary" id="pin-forgot-btn" type="button">Forgot PIN?</button>
+                    <button class="btn-secondary" id="pin-logout-btn" type="button">Log out</button>
+                    <button class="btn-secondary" id="pin-cancel-btn" type="button" style="display:none;">Cancel</button>
+                </div>
+            </div>
         </div>
-
-        <button class="btn-fill" id="pin-biometric-btn" type="button" style="margin-top:12px;width:100%;display:none;">Use fingerprint</button>
-        <button class="btn-secondary" id="pin-forgot-btn" type="button" style="margin-top:12px;width:100%;">Forgot PIN?</button>
-        <button class="btn-secondary" id="pin-logout-btn" style="margin-top:8px;width:100%;">Log out instead</button>
-        <button class="btn-secondary" id="pin-cancel-btn" type="button" style="margin-top:8px;width:100%;display:none;">Cancel</button>
     </div>
 </div>
 
@@ -3686,6 +3737,13 @@
             if (pinTitleEl) pinTitleEl.textContent = pendingPinAction ? 'Confirm Transfer' : 'Session Locked';
             pinCancelBtn.style.display = pendingPinAction ? 'block' : 'none';
             pinLogoutBtn.style.display = pendingPinAction ? 'none' : '';
+            // Lock mode (not confirming a transfer): remember the lock until the PIN is entered, so
+            // reloading the page or closing the app cannot skip it.
+            if (!pendingPinAction) setPinLockPending(true);
+            // Close any open keyboard first: it would shrink the screen and squash this box.
+            try {
+                if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+            } catch (_) { /* ignore */ }
             pinAttempts = 0;
             pinErrorMsg.textContent = '';
             pinHiddenInput.value = '';
@@ -3702,9 +3760,28 @@
                 pinHiddenInput.focus();
             }, 200);
 
+            fitPinModal();
+            setTimeout(fitPinModal, 350);   // again once the open animation has finished
+
             // Phones with fingerprint login set up: offer it (and try it straight away).
             setupBiometricForPinModal();
         }
+
+        // Last-resort safety net: if a screen is so small that the PIN box still does not fit, shrink it
+        // a little (never scroll). Normally the CSS sizes already make it fit.
+        function fitPinModal() {
+            const box = pinModalOverlay.querySelector('.modal-box');
+            if (!box || !pinModalOverlay.classList.contains('active')) return;
+            box.style.transform = 'none';
+            const cs = getComputedStyle(pinModalOverlay);
+            const availH = pinModalOverlay.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+            const availW = pinModalOverlay.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+            const scale = Math.min(1, availH / box.offsetHeight, availW / box.offsetWidth);
+            box.style.transform = scale < 1 ? 'scale(' + Math.max(scale, 0.55).toFixed(3) + ')' : '';
+        }
+        window.addEventListener('resize', fitPinModal);
+        window.addEventListener('orientationchange', () => setTimeout(fitPinModal, 250));
+        if (window.visualViewport) window.visualViewport.addEventListener('resize', fitPinModal);
 
         function hidePinModal() {
             pinModalActive = false;
@@ -3749,7 +3826,7 @@
             pinAttempts = 0;
             pinErrorMsg.textContent = '';
             sessionStorage.removeItem('deenwallet_account_locked');
-            sessionStorage.setItem('deenwallet_pin_unlocked', '1');
+            markAppUnlocked();
             const afterPin = pendingPinAction;
             pendingPinAction = null;
             hidePinModal();
@@ -3886,37 +3963,13 @@
         // The PIN prompt is shown when the app has actually been left in
         // the background for the configured grace period. Normal activity
         // inside the app does not trigger the PIN prompt.
-        let appHiddenAt = null;
-
-        function handleVisibilityChange() {
-            if (document.hidden) {
-                appHiddenAt = Date.now();
-                if (typeof updateSessionLastActive === 'function') {
-                    updateSessionLastActive();
-                }
-                return;
-            }
-
-            const hiddenDuration = appHiddenAt === null
-                ? 0
-                : Date.now() - appHiddenAt;
-
-            appHiddenAt = null;
-
-            if (hiddenDuration >= PIN_BACKGROUND_GRACE_MS && !pinModalActive && getAccessToken()) {
+        // The shared tracker in deenwallet-client.js notices when the app is left and brought back
+        // (visibility, pagehide/pageshow and Android pause/resume) and calls this when the PIN is due.
+        window.onDeenwalletPinRequired = function () {
+            if (!pinModalActive && getAccessToken()) {
                 showPinModal('Enter your PIN to continue.');
-            } else if (typeof updateSessionLastActive === 'function') {
-                updateSessionLastActive();
             }
-        }
-
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-
-        window.addEventListener('blur', () => {
-            if (typeof updateSessionLastActive === 'function') {
-                updateSessionLastActive();
-            }
-        });
+        };
 
         // Primary app navigation is implemented in deenwallet-client.js.
 
@@ -4907,33 +4960,43 @@
         function resolveMobileMoneyLogo(info) {
             if (mobileMoneyLogoPromises.has(info.slug)) return mobileMoneyLogoPromises.get(info.slug);
             const promise = (async () => {
+                const remembered = getCachedLogo('mm:' + info.slug);
+                if (remembered !== undefined) return remembered;
+                let found = null;
                 const local = '/assets/provider-logos/' + info.slug + '.png';
-                if (await tryLoadImage(local, 1)) return local;
-                if (ENABLE_ONLINE_BANK_LOGOS) {
-                    for (const domain of info.domains) {
-                        for (const url of bankLogoSources(domain)) {
-                            if (await tryLoadImage(url, 32)) return url;
-                        }
-                    }
+                if (await tryLoadImage(local, 1)) {
+                    found = local;
+                } else if (ENABLE_ONLINE_BANK_LOGOS) {
+                    const urls = [];
+                    info.domains.forEach((domain) => urls.push(...bankLogoSources(domain)));
+                    found = await firstWorkingImage(urls, 32);
                 }
-                return null;
+                setCachedLogo('mm:' + info.slug, found);
+                return found;
             })().then((url) => { mobileMoneyLogoUrls.set(info.slug, url); return url; });
             mobileMoneyLogoPromises.set(info.slug, promise);
             return promise;
         }
 
-        function showMobileMoneyLogoImage(logo, url) {
+        function showMobileMoneyLogoImage(logo, url, slug) {
             const img = new Image();
             img.alt = '';
             img.referrerPolicy = 'no-referrer';
-            img.onload = () => {
+            const show = () => {
                 logo.textContent = '';
                 logo.classList.add('has-img');
                 // Small icons are drawn small and centred instead of stretched.
                 img.style.padding = url.startsWith('/assets/') ? '4px' : (img.naturalWidth < 48 ? '10px' : '6px');
                 logo.appendChild(img);
             };
+            img.onload = show;
+            img.onerror = () => {
+                mobileMoneyLogoUrls.delete(slug);
+                mobileMoneyLogoPromises.delete(slug);
+                setCachedLogo('mm:' + slug, undefined);
+            };
             img.src = url;
+            if (img.complete && img.naturalWidth > 0) { img.onload = null; show(); }
         }
 
         function createMobileMoneyLogo(providerId) {
@@ -4948,13 +5011,27 @@
             }
             logo.textContent = info.initials;   // shown at once, replaced by the logo when found
             logo.title = info.name;
-            if (mobileMoneyLogoUrls.has(info.slug)) {
-                const known = mobileMoneyLogoUrls.get(info.slug);
-                if (known) showMobileMoneyLogoImage(logo, known);
-            } else {
-                resolveMobileMoneyLogo(info).then((url) => { if (url) showMobileMoneyLogoImage(logo, url); });
+            const known = mobileMoneyLogoUrls.has(info.slug) ? mobileMoneyLogoUrls.get(info.slug) : getCachedLogo('mm:' + info.slug);
+            if (known) {
+                showMobileMoneyLogoImage(logo, known, info.slug);   // known from before: no waiting
+            } else if (known === undefined) {
+                resolveMobileMoneyLogo(info).then((url) => { if (url) showMobileMoneyLogoImage(logo, url, info.slug); });
             }
             return logo;
+        }
+
+        // Fetches known logos in the background so they are already in the browser cache
+        // before a screen needs them.
+        function warmLogos() {
+            try {
+                Object.values(MOBILE_MONEY_LOGOS).forEach((info) => {
+                    resolveMobileMoneyLogo(info).then((url) => { if (url) { const i = new Image(); i.referrerPolicy = 'no-referrer'; i.src = url; } });
+                });
+                const cache = logoCache();
+                Object.keys(cache).forEach((k) => {
+                    if (k.indexOf('bank:') === 0 && cache[k].u) { const i = new Image(); i.referrerPolicy = 'no-referrer'; i.src = cache[k].u; }
+                });
+            } catch (_) { /* warming is optional */ }
         }
 
         function renderRecipientList() {
@@ -5180,7 +5257,11 @@
 
         function rememberBankLogos(banks) {
             (banks || []).forEach((b) => {
-                if (b && b.name && b.logoUrl) bankLogoUrlBySlug.set(bankLogoSlug(b.name), b.logoUrl);
+                if (b && b.name && b.logoUrl) {
+                    const slug = bankLogoSlug(b.name);
+                    bankLogoUrlBySlug.set(slug, b.logoUrl);
+                    setCachedLogo('bank:' + slug, b.logoUrl);   // next visit: no server call needed
+                }
             });
         }
 
@@ -5194,17 +5275,60 @@
             return bankLogoMapPromise;
         }
 
+        // ---------- Logo memory: remembers what worked, so logos show at once on later visits ----------
+        const LOGO_CACHE_KEY = 'deenwallet_logo_cache_v1';
+        const LOGO_FOUND_TTL_MS = 7 * 24 * 60 * 60 * 1000;   // a working logo is trusted for a week
+        const LOGO_MISSING_TTL_MS = 10 * 60 * 1000;          // "no logo found" is checked again after 10 minutes
+        let logoCacheData = null;
+
+        function logoCache() {
+            if (!logoCacheData) {
+                try { logoCacheData = JSON.parse(localStorage.getItem(LOGO_CACHE_KEY) || '{}') || {}; }
+                catch (_) { logoCacheData = {}; }
+            }
+            return logoCacheData;
+        }
+
+        // undefined = not known yet, null = known to have no logo, string = working logo URL
+        function getCachedLogo(key) {
+            const entry = logoCache()[key];
+            if (!entry) return undefined;
+            const ttl = entry.u ? LOGO_FOUND_TTL_MS : LOGO_MISSING_TTL_MS;
+            if (Date.now() - entry.t > ttl) return undefined;
+            return entry.u || null;
+        }
+
+        function setCachedLogo(key, url) {
+            const cache = logoCache();
+            if (url === undefined) delete cache[key]; else cache[key] = { u: url || null, t: Date.now() };
+            try { localStorage.setItem(LOGO_CACHE_KEY, JSON.stringify(cache)); } catch (_) { /* storage full/blocked: fine */ }
+        }
+
         // minSize rejects tiny images: unknown sites come back as a 16px generic globe with
         // a normal 200 response, which is NOT a real logo and must not be shown as one.
+        // A slow source gives up after 4 seconds so it cannot hold a logo back.
         function tryLoadImage(url, minSize) {
             return new Promise((resolve) => {
                 const img = new Image();
+                let done = false;
+                const finish = (value) => { if (done) return; done = true; clearTimeout(timer); resolve(value); };
+                const timer = setTimeout(() => finish(null), 4000);
                 img.referrerPolicy = 'no-referrer';
                 img.decoding = 'async';
-                img.onload = () => resolve(img.naturalWidth >= minSize && img.naturalHeight >= minSize ? img : null);
-                img.onerror = () => resolve(null);
+                img.onload = () => finish(img.naturalWidth >= minSize && img.naturalHeight >= minSize ? img : null);
+                img.onerror = () => finish(null);
                 img.src = url;
             });
+        }
+
+        // Tries all sources at the same time (instead of one after another) and returns the first
+        // one, in the given order, that really works.
+        async function firstWorkingImage(urls, minSize) {
+            const attempts = urls.map((u) => tryLoadImage(u, minSize));
+            for (let i = 0; i < attempts.length; i++) {
+                if (await attempts[i]) return urls[i];
+            }
+            return null;
         }
 
         async function resolveBankLogo(bank) {
@@ -5215,23 +5339,55 @@
 
             // 1) A logo file you placed in /assets/bank-logos/ always wins.
             let found = (bank && bank.logoUrl) || bankLogoUrlBySlug.get(key) || null;
+
+            // Already worked out on an earlier visit: use it without asking the server or the web.
             if (!found) {
+                const remembered = getCachedLogo('bank:' + key);
+                if (remembered !== undefined) {
+                    bankLogoCache.set(key, remembered);
+                    return remembered;
+                }
                 await ensureBankLogoMap();
                 found = bankLogoUrlBySlug.get(key) || null;
             }
 
-            // 2) Optional online lookup by the bank's website; only real, reasonably large icons count.
+            // 2) Optional online lookup by the bank's website (all sources at once);
+            //    only real, reasonably large icons count.
             if (!found && ENABLE_ONLINE_BANK_LOGOS) {
-                outer:
-                    for (const domain of bankLogoDomains(name)) {
-                        for (const url of bankLogoSources(domain)) {
-                            if (await tryLoadImage(url, 32)) { found = url; break outer; }
-                        }
-                    }
+                const urls = [];
+                bankLogoDomains(name).forEach((domain) => urls.push(...bankLogoSources(domain)));
+                found = await firstWorkingImage(urls, 32);
             }
 
             bankLogoCache.set(key, found);
+            setCachedLogo('bank:' + key, found);
             return found;
+        }
+
+        // Puts the real logo on a .bank-logo badge. Shows at once if the browser already has the image.
+        function showBankLogoImage(el, name, url) {
+            const img = new Image();
+            img.alt = '';
+            img.referrerPolicy = 'no-referrer';
+            const show = () => {
+                // The element may have been reused for another bank while loading.
+                if (el.dataset.logoFor !== String(name)) return;
+                el.textContent = '';
+                el.classList.add('has-img');
+                el.style.background = '#fff';
+                // Small icons (16-32px) are drawn small and centred instead of stretched.
+                img.style.padding = url.startsWith('/assets/') ? '4px' : (img.naturalWidth < 48 ? '9px' : '6px');
+                el.appendChild(img);
+            };
+            img.onload = show;
+            img.onerror = () => {
+                // The remembered logo is gone: forget it so it is looked up again next time.
+                const key = bankLogoSlug(name);
+                bankLogoCache.delete(key);
+                setCachedLogo('bank:' + key, undefined);
+            };
+            img.src = url;
+            if (img.complete && img.naturalWidth > 0) { img.onload = null; show(); }
         }
 
         // Fills a .bank-logo element: coloured initials immediately, the real logo on top
@@ -5244,22 +5400,13 @@
             el.style.color = fg;
             el.textContent = bankInitials(name);
             el.dataset.logoFor = String(name);
-            resolveBankLogo(bank).then((url) => {
-                // The element may have been reused for another bank while loading.
-                if (!url || el.dataset.logoFor !== String(name)) return;
-                const img = new Image();
-                img.alt = '';
-                img.referrerPolicy = 'no-referrer';
-                img.onload = () => {
-                    el.textContent = '';
-                    el.classList.add('has-img');
-                    el.style.background = '#fff';
-                    // Small icons (16-32px) are drawn small and centred instead of stretched.
-                    img.style.padding = url.startsWith('/assets/') ? '4px' : (img.naturalWidth < 48 ? '9px' : '6px');
-                    el.appendChild(img);
-                };
-                img.src = url;
-            });
+            const key = bankLogoSlug(name);
+            const known = (bank && bank.logoUrl) || bankLogoUrlBySlug.get(key) || bankLogoCache.get(key) || getCachedLogo('bank:' + key) || null;
+            if (known) {
+                showBankLogoImage(el, name, known);   // known from before: no waiting
+            } else {
+                resolveBankLogo(bank).then((url) => { if (url) showBankLogoImage(el, name, url); });
+            }
             return el;
         }
 
@@ -6235,14 +6382,16 @@
         // ==============================================================
         updateStep1State();
         updateStep2State();
-        // Ask for the PIN on a fresh app launch only. Moving between pages or reloading must not
-        // ask again; coming back after leaving is handled by handleVisibilityChange, and every
+        // Ask for the PIN only when the app was left for 30 seconds or longer (or a lock is still
+        // pending). Moving between pages or reloading right away never asks again, and every
         // transfer asks for the PIN at its final step.
-        if (getAccessToken() && !pinModalActive
-            && sessionStorage.getItem('deenwallet_pin_unlocked') !== '1') {
+        if (!pinModalActive && pinRequiredNow()) {
             showPinModal('Enter your PIN to continue.');
+        } else if (getAccessToken()) {
+            touchAppActive();
         }
         console.log('DeenWallet initialized successfully');
+        setTimeout(warmLogos, 800);
 
         // ==============================================================
         // ✅ PIN MODAL EVENT LISTENERS

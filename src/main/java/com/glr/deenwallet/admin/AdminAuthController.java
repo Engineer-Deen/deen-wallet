@@ -45,12 +45,11 @@ public class AdminAuthController {
         String email = r.email.trim().toLowerCase(Locale.ROOT);
 
         /*
-         * USER and ADMIN/SUPER_ADMIN accounts may share the same email.
-         * Therefore admin authentication must explicitly search only
-         * administrator roles.
-         *
-         * SUPER_ADMIN is checked first so that an administrator email
-         * cannot accidentally resolve to a normal USER account.
+         USER and ADMIN/SUPER_ADMIN accounts may share the same email.
+         Therefore admin authentication must explicitly search only
+         administrator roles.
+         SUPER_ADMIN is checked first so that an administrator email
+         cannot accidentally resolve to a normal USER account.
          */
         User u = findAdminByEmail(email);
 
@@ -82,15 +81,6 @@ public class AdminAuthController {
 
         if (!encoder.matches(r.password, u.getPasswordHash())) {
 
-            // SECURITY: There is intentionally no "bootstrap password" bypass here.
-            // A static plaintext env var must never be able to reset a password hash
-            // or silently clear lock/recovery/active state from the public login
-            // endpoint - that turns one leaked/rotated value into a permanent
-            // skeleton key that defeats lockouts and recovery requirements.
-            // Legitimate account recovery goes through /recovery/send-otp and
-            // /recovery/verify-otp, which require access to the admin's own
-            // mailbox instead of a shared secret.
-
             Instant now = Instant.now();
 
             int changed = repo.recordAdminPasswordFailure(
@@ -104,9 +94,6 @@ public class AdminAuthController {
 
             if (failures >= MAX_ADMIN_PASSWORD_FAILURES) {
 
-                // Only the request that changes the counter to exactly 2 may
-                // send the lock/security email. Concurrent retries must not
-                // generate duplicate notices.
                 if (changed == 1
                         && failures == MAX_ADMIN_PASSWORD_FAILURES) {
 
@@ -174,19 +161,12 @@ public class AdminAuthController {
     ) {
         String email = r.email.trim().toLowerCase(Locale.ROOT);
 
-        /*
-         * Recovery is administrator-only.
-         * Do not use findByEmail() because a USER and ADMIN may share
-         * the same email address.
-         */
         User user = findAdminByEmailOrNull(email);
 
         if (user != null) {
             otpService.generateAndSend(email);
         }
 
-        // Keep the endpoint intentionally generic so it cannot be used
-        // as an email-enumeration oracle.
         return ResponseEntity.ok(
                 new RecoveryResponse(
                         "If the address belongs to an administrator, a recovery code has been sent."
@@ -199,11 +179,6 @@ public class AdminAuthController {
             @Valid @RequestBody RecoveryOtpRequest r
     ) {
         String email = r.email.trim().toLowerCase(Locale.ROOT);
-
-        /*
-         * Recovery verification must resolve an administrator account,
-         * never a normal USER account.
-         */
         User user = findAdminByEmail(email);
 
         if (!otpService.verify(email, r.code.trim())) {
@@ -348,15 +323,7 @@ public class AdminAuthController {
             String role
     ) {}
 
-    /**
-     * Finds an administrator by email.
-     *
-     * Administrator emails are unique across ADMIN and SUPER_ADMIN
-     * accounts through the database partial unique index.
-     *
-     * SUPER_ADMIN is checked first so the method remains deterministic
-     * even if legacy data ever contains an unexpected duplicate.
-     */
+
     private User findAdminByEmail(String email) {
         return repo.findByEmailAndRole(email, "SUPER_ADMIN")
                 .or(() -> repo.findByEmailAndRole(email, "ADMIN"))
@@ -366,13 +333,6 @@ public class AdminAuthController {
                         ));
     }
 
-    /**
-     * Same administrator lookup as findAdminByEmail(), but returns null
-     * when no administrator exists.
-     *
-     * Used by recovery/send-otp so the endpoint can remain generic and
-     * avoid becoming an email-enumeration oracle.
-     */
     private User findAdminByEmailOrNull(String email) {
         return repo.findByEmailAndRole(email, "SUPER_ADMIN")
                 .or(() -> repo.findByEmailAndRole(email, "ADMIN"))

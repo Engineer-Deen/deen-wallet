@@ -1459,7 +1459,7 @@
           const refreshToken = data.refreshToken;
           if (!accessToken || !refreshToken) throw new Error('Login response is missing authentication tokens.');
           setTokens(accessToken, refreshToken);
-          sessionStorage.setItem('deenwallet_pin_unlocked', '1');
+          markAppUnlocked();
           sessionStorage.removeItem('deenwallet_account_locked');
           localStorage.setItem(DEENWALLET_CONFIG.TOKEN_STORAGE_KEY, accessToken);
           localStorage.setItem(DEENWALLET_CONFIG.USER_STORAGE_KEY, JSON.stringify({

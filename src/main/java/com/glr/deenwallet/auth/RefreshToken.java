@@ -14,7 +14,8 @@ public class RefreshToken {
     @Column(name="user_id", nullable=false) private UUID userId;
     @Column(name="expires_at", nullable=false) private Instant expiresAt;
     @Column(nullable=false) private boolean revoked;
+    /** Set only when a refresh ROTATED this token (not on logout/password reset). Used for the reuse grace window. */
+    @Column(name="revoked_at") private Instant revokedAt;
     @Column(name="created_at", nullable=false, updatable=false) private Instant createdAt;
     @PrePersist void onCreate(){ if(createdAt==null) createdAt=Instant.now(); }
 }
-

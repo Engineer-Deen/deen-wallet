@@ -64,8 +64,9 @@ app:
   transaction-archive:
     after-days: ${TRANSACTION_ARCHIVE_AFTER_DAYS:180}
     enabled: ${TRANSACTION_ARCHIVE_ENABLED:true}
-
-  errors:
+    rate-limit:
+      trust-forwarded-for: ${RATE_LIMIT_TRUST_FORWARDED_FOR:false}
+      errors:
     trust-forwarded-for: ${APP_ERRORS_TRUST_FORWARDED_FOR:false}
 
   release-id: ${APP_RELEASE_ID:${random.uuid}}
