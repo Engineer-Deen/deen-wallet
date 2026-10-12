@@ -103,6 +103,8 @@ public class SecurityConfig {
                                 "/api/app/version",
                                 "/api/app/android-update",
                                 "/api/app/admin-android-update",
+                                "/api/app/admin-android-update/authorize",
+                                "/api/app/admin-android-update/download",
                                 "/api/providers/prefixes",
                                 "/api/config/firebase-web",
                                 "/api/auth/biometric/challenge",
@@ -117,7 +119,6 @@ public class SecurityConfig {
                                 "/api/recipients/**",
                                 "/api/accounts/**",
                                 "/api/bank-transfers/**",
-                                "/api/waec/**",
                                 "/api/notifications/**"
                         ).hasRole("USER")
 

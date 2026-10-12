@@ -27,6 +27,23 @@ public class JwtService {
     public String generateRefreshToken(String userId) { return generateRefreshToken(userId, "USER"); }
     public String generateRefreshToken(String userId, String role) { return create(userId, "refresh", role, refreshDays * 86_400_000L); }
 
+    /** A short-lived token that can only authorize the Admin APK download endpoint. */
+    public String generateAdminApkDownloadToken(String userId) {
+        return create(userId, "admin-apk-download", "ADMIN_APK_DOWNLOAD", 120_000L);
+    }
+
+    public boolean isAdminApkDownloadToken(String token) {
+        try {
+            Claims claims = parse(token);
+            return "admin-apk-download".equals(claims.get("type", String.class))
+                    && "ADMIN_APK_DOWNLOAD".equals(claims.get("role", String.class))
+                    && claims.getExpiration() != null
+                    && !claims.getExpiration().before(new Date());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     private String create(String userId, String type, String role, long ttl) {
         Date now = new Date();
         return Jwts.builder().id(UUID.randomUUID().toString()).claim("type", type).claim("role", role)
