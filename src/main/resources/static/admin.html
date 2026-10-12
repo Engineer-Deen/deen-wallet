@@ -1789,54 +1789,54 @@
             .account-detail-row { gap:10px; }
         }
 
-    
-/* ============================================================
-   RESPONSIVE LAYOUT HARDENING
-   ============================================================ */
-html { width:100%; min-width:0; overflow-x:hidden; }
-body { width:100%; min-width:0; overflow-x:hidden; }
-*, *::before, *::after { min-width:0; }
-img, svg, video, canvas { max-width:100%; }
-button, input, select, textarea { max-width:100%; }
 
-@media (max-width:768px) {
-    .top-bar { width:100%; min-width:0; }
-    .top-bar > * { min-width:0; }
-    .scroll { width:100%; min-width:0; }
-    .admin-card, .profile-hero-card, .account-detail-hero,
-    .account-detail-section, .messaging-card { width:100%; max-width:100%; }
+        /* ============================================================
+           RESPONSIVE LAYOUT HARDENING
+           ============================================================ */
+        html { width:100%; min-width:0; overflow-x:hidden; }
+        body { width:100%; min-width:0; overflow-x:hidden; }
+        *, *::before, *::after { min-width:0; }
+        img, svg, video, canvas { max-width:100%; }
+        button, input, select, textarea { max-width:100%; }
 
-    .nav-tabs, .admin-tabs, .filter-row, .toolbar,
-    .form-actions, .pin-input-group { min-width:0; max-width:100%; }
+        @media (max-width:768px) {
+            .top-bar { width:100%; min-width:0; }
+            .top-bar > * { min-width:0; }
+            .scroll { width:100%; min-width:0; }
+            .admin-card, .profile-hero-card, .account-detail-hero,
+            .account-detail-section, .messaging-card { width:100%; max-width:100%; }
 
-    table { width:100%; max-width:100%; }
-    .table-wrap, .table-responsive, .transaction-table-wrap {
-        max-width:100%;
-        overflow-x:auto;
-        -webkit-overflow-scrolling:touch;
-    }
+            .nav-tabs, .admin-tabs, .filter-row, .toolbar,
+            .form-actions, .pin-input-group { min-width:0; max-width:100%; }
 
-    .menu-dropdown {
-        right:max(12px, env(safe-area-inset-right));
-        max-width:calc(100vw - 24px);
-    }
+            table { width:100%; max-width:100%; }
+            .table-wrap, .table-responsive, .transaction-table-wrap {
+                max-width:100%;
+                overflow-x:auto;
+                -webkit-overflow-scrolling:touch;
+            }
 
-    .modal-box, .modal-content {
-        width:calc(100vw - 24px);
-        max-width:560px;
-        max-height:calc(100dvh - 24px);
-        overflow-y:auto;
-    }
-}
+            .menu-dropdown {
+                right:max(12px, env(safe-area-inset-right));
+                max-width:calc(100vw - 24px);
+            }
 
-@media (max-width:380px) {
-    .scroll { padding-left:10px; padding-right:10px; }
-    .stats-grid { grid-template-columns:1fr; }
-    .nav-tab { padding-left:8px; padding-right:8px; }
-    .menu-dropdown { min-width:0; width:min(160px, calc(100vw - 24px)); }
-    .pin-change-form .pin-input-group { display:grid; grid-template-columns:1fr; }
-    .pin-change-form .pin-input-group input { min-width:0; width:100%; }
-}
+            .modal-box, .modal-content {
+                width:calc(100vw - 24px);
+                max-width:560px;
+                max-height:calc(100dvh - 24px);
+                overflow-y:auto;
+            }
+        }
+
+        @media (max-width:380px) {
+            .scroll { padding-left:10px; padding-right:10px; }
+            .stats-grid { grid-template-columns:1fr; }
+            .nav-tab { padding-left:8px; padding-right:8px; }
+            .menu-dropdown { min-width:0; width:min(160px, calc(100vw - 24px)); }
+            .pin-change-form .pin-input-group { display:grid; grid-template-columns:1fr; }
+            .pin-change-form .pin-input-group input { min-width:0; width:100%; }
+        }
 
 
         /* ===== Failed Payouts section ===== */
@@ -1844,7 +1844,7 @@ button, input, select, textarea { max-width:100%; }
         .fp-toolbar .search-bar { flex:1; min-width:180px; margin:0; }
         .fp-check { font-size:12px; color:var(--muted); display:flex; align-items:center; gap:4px; }
         .fp-card { background:#fff; border:1px solid var(--border); border-left:4px solid var(--error); border-radius:12px;
-                   padding:12px 14px; margin-bottom:10px; cursor:pointer; }
+            padding:12px 14px; margin-bottom:10px; cursor:pointer; }
         .fp-card:active { background:var(--card); }
         .fp-card.refund { border-left-color:var(--warning-text); }
         .fp-card.done { border-left-color:#1E8449; }
@@ -1868,7 +1868,19 @@ button, input, select, textarea { max-width:100%; }
         .fp-actions button { flex:1; min-width:120px; }
         .fp-history { font-size:12px; margin-top:4px; }
         .fp-history div { padding:5px 0; border-bottom:1px dashed var(--border); }
-</style>
+        /* ===== WAEC Pins section ===== */
+        .wp-textarea { width:100%; box-sizing:border-box; padding:12px; border:1px solid var(--border); border-radius:10px; font-family:monospace; font-size:13px; line-height:1.5; resize:vertical; min-height:120px; }
+        .wp-textarea:focus { outline:none; border-color:var(--primary, #1C7A91); }
+        .wp-select { padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; background:#fff; }
+        .wp-result { margin-top:12px; padding:10px 12px; border-radius:10px; background:#F2FAFB; border:1px solid var(--border); font-size:13px; line-height:1.5; }
+        .wp-result ul { margin:6px 0 0 18px; padding:0; color:var(--muted); font-size:12px; }
+        .wp-pin-chip { display:inline-block; font-family:monospace; font-size:12px; background:#F2FAFB; border:1px solid var(--border); border-radius:8px; padding:2px 8px; margin:3px 6px 0 0; }
+        .wp-input { width:100%; box-sizing:border-box; margin-top:8px; padding:11px 12px; border:1px solid var(--border); border-radius:10px; font-size:15px; }
+        .wp-input.pin { letter-spacing:8px; text-align:center; font-size:20px; font-family:monospace; }
+        .wp-reveal-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:9px 0; border-bottom:1px solid var(--border); font-size:13px; }
+        .wp-reveal-row .v { font-family:monospace; font-weight:700; font-size:15px; word-break:break-all; }
+        .wp-err { margin-top:8px; font-size:12px; color:var(--error); min-height:16px; }
+    </style>
 </head>
 
 <body>
@@ -1938,6 +1950,7 @@ button, input, select, textarea { max-width:100%; }
                 <button type="button" class="admin-drawer-item" data-drawer-action="errors"><span class="admin-drawer-icon">▤</span><span class="admin-drawer-label">Error Logs</span><span class="admin-drawer-chevron">›</span></button>
                 <button type="button" class="admin-drawer-item" data-drawer-action="support"><span class="admin-drawer-icon">◉</span><span class="admin-drawer-label">Support</span><span class="admin-drawer-chevron">›</span></button>
                 <button type="button" class="admin-drawer-item" data-drawer-action="failed-payouts"><span class="admin-drawer-icon">⚠</span><span class="admin-drawer-label">Failed Payouts</span><span class="admin-drawer-chevron">›</span></button>
+                <button type="button" class="admin-drawer-item" data-drawer-action="waec-pins"><span class="admin-drawer-icon">▦</span><span class="admin-drawer-label">WAEC Pins</span><span class="admin-drawer-chevron">›</span></button>
                 <div class="admin-drawer-divider"></div>
                 <button type="button" class="admin-drawer-item" data-drawer-action="profile"><span class="admin-drawer-icon">♙</span><span class="admin-drawer-label">Admin Profile</span><span class="admin-drawer-chevron">›</span></button>
                 <button type="button" class="admin-drawer-item" data-drawer-action="pin"><span class="admin-drawer-icon">⚿</span><span class="admin-drawer-label">Change PIN</span><span class="admin-drawer-chevron">›</span></button>
@@ -2152,6 +2165,56 @@ button, input, select, textarea { max-width:100%; }
             </div>
         </div>
 
+        <!-- ===== WAEC PINS ===== -->
+        <div class="scroll hidden" id="tab-waec-pins">
+            <div class="stats-grid">
+                <div class="stat-card success">
+                    <div class="number" id="wp-stat-available">—</div>
+                    <div class="label">Available pins</div>
+                </div>
+                <div class="stat-card primary">
+                    <div class="number" id="wp-stat-sold">—</div>
+                    <div class="label">Sold out</div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="number" id="wp-stat-reserved">—</div>
+                    <div class="label">Reserved (awaiting payment)</div>
+                </div>
+                <div class="stat-card primary">
+                    <div class="number" id="wp-stat-purchases">—</div>
+                    <div class="label">Purchases</div>
+                </div>
+            </div>
+            <div id="wp-alert" class="error-state hidden" style="margin:12px 0;"></div>
+
+            <div class="admin-card">
+                <p class="admin-card-title">Add WAEC pins</p>
+                <p class="admin-card-sub">One card per line: PIN then SERIAL, separated by a comma or a space. Pins are stored encrypted. Duplicates are skipped.</p>
+                <textarea id="wp-pins-text" class="wp-textarea" rows="6" spellcheck="false" autocomplete="off" autocapitalize="characters"
+                          placeholder="278378765583,WRS240439564&#10;278378765584,WRS240439565"></textarea>
+                <div class="fp-actions"><button class="btn-primary" id="wp-add-btn" style="margin-top:0;">Add pins</button></div>
+                <div id="wp-add-result" class="wp-result hidden"></div>
+            </div>
+
+            <div class="admin-card" style="margin-top:14px;">
+                <p class="admin-card-title">Purchased pins</p>
+                <p class="admin-card-sub">Every sold pin, linked to the customer who bought it. Search by name, email, account number, transaction number, the email it was sent to, or a PIN / serial.</p>
+                <div class="fp-toolbar">
+                    <div class="search-bar"><input id="wp-search" placeholder="Name, email, account no., DW-… number, pin or serial" autocomplete="off" /></div>
+                    <select id="wp-status" class="wp-select" aria-label="Delivery status">
+                        <option value="ALL">All</option>
+                        <option value="FAILED">Not delivered</option>
+                        <option value="PENDING">Sending</option>
+                        <option value="SENT">Delivered</option>
+                    </select>
+                    <button class="btn-sm refresh" id="wp-refresh">Refresh</button>
+                </div>
+                <div id="wp-loading" class="loading-state hidden"><div class="spinner"></div>Loading purchases…</div>
+                <div id="wp-error" class="error-state hidden"></div>
+                <div id="wp-list"></div>
+            </div>
+        </div>
+
         <!-- ===== CUSTOMER RECIPIENT PICKER ===== -->
         <div class="messaging-picker-overlay" id="messaging-picker-overlay" aria-hidden="true">
             <section class="messaging-picker" role="dialog" aria-modal="true" aria-labelledby="messaging-picker-title">
@@ -2339,6 +2402,10 @@ button, input, select, textarea { max-width:100%; }
     <!-- Failed payout detail -->
     <div class="modal-overlay" id="fp-modal-overlay">
         <div class="fp-modal" id="fp-modal"></div>
+    </div>
+
+    <div class="modal-overlay" id="wp-modal-overlay">
+        <div class="fp-modal" id="wp-modal"></div>
     </div>
 
     <div class="modal-overlay" id="modal-overlay">
@@ -3207,7 +3274,8 @@ button, input, select, textarea { max-width:100%; }
                 support: document.getElementById('tab-support'),
                 wallet: document.getElementById('tab-wallet'),
                 messaging: document.getElementById('tab-admin-messaging'),
-                'failed-payouts': document.getElementById('tab-failed-payouts')
+                'failed-payouts': document.getElementById('tab-failed-payouts'),
+                'waec-pins': document.getElementById('tab-waec-pins')
             };
 
             function showMainSection(section) {
@@ -3223,6 +3291,7 @@ button, input, select, textarea { max-width:100%; }
                 else { stopErrorAutoRefresh(); }
                 if (section === 'messaging') updateMessagingRecipientCount();
                 if (section === 'failed-payouts') loadFailedPayouts();
+                if (section === 'waec-pins') loadWaecPins();
             }
 
             function setBottomNavActive(section) {
@@ -3416,6 +3485,8 @@ button, input, select, textarea { max-width:100%; }
                 html += '<div class="fp-section-title">Intended recipient</div>';
                 if (d.serviceType === 'BANK_TRANSFER') {
                     html += fpRow('Bank', d.bankName) + fpRow('Account number', d.bankAccountNumber) + fpRow('Account holder', d.bankHolderName);
+                } else if (d.serviceType === 'WAEC_RESULT_PIN') {
+                    html += fpRow('Service', 'WAEC Result Pin') + fpRow('If you press Send again', 'Retries selling the pin and emailing it. Check stock first (WAEC Pins tab).');
                 } else {
                     html += fpRow('Provider', d.destinationProviderId) + fpRow('Phone', d.destinationPhone) + fpRow('Name', d.destinationHolderName);
                 }
@@ -3493,6 +3564,235 @@ button, input, select, textarea { max-width:100%; }
                 fpSearchTimer = setTimeout(loadFailedPayouts, 350);
             });
             document.getElementById('fp-modal-overlay').addEventListener('click', function (e) { if (e.target === this) closeFailedPayout(); });
+
+            // ==============================================================
+            // WAEC PINS (stock, purchased-pin trace, reveal / resend)
+            // ==============================================================
+            var wpPurchases = {};
+            var wpRevealTimer = null;
+
+            function wpMoney(v) { return 'SLE ' + Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+            function wpTime(v) { return v ? new Date(v).toLocaleString() : '—'; }
+            function wpDelivery(s) {
+                if (s === 'SENT') return { label: 'Delivered', cls: 'done' };
+                if (s === 'PENDING') return { label: 'Sending', cls: 'refund' };
+                return { label: 'Not delivered', cls: '' };
+            }
+
+            function loadWaecPins() { loadWaecSummary(); loadWaecPurchases(); }
+
+            function loadWaecSummary() {
+                adminApiRequest('/api/admin/waec/summary').then(function (s) {
+                    document.getElementById('wp-stat-available').textContent = s.available;
+                    document.getElementById('wp-stat-sold').textContent = s.sold;
+                    document.getElementById('wp-stat-reserved').textContent = s.reserved;
+                    document.getElementById('wp-stat-purchases').textContent = s.purchases;
+                    var alertEl = document.getElementById('wp-alert');
+                    var msgs = [];
+                    if (!s.operational) msgs.push('WAEC encryption key is not set on the server: pins cannot be added or sold.');
+                    if (s.operational && s.available === 0) msgs.push('Out of stock: customers cannot buy WAEC pins until you add more.');
+                    else if (s.operational && s.available <= 10) msgs.push('Low stock: only ' + s.available + ' pin(s) left.');
+                    if (s.deliveryFailed > 0) msgs.push(s.deliveryFailed + ' purchase(s) were not emailed. Open them below and press Resend.');
+                    if (msgs.length) { alertEl.innerHTML = msgs.map(escapeHtml).join('<br>'); show(alertEl); } else { hide(alertEl); }
+                }).catch(function (e) {
+                    var alertEl = document.getElementById('wp-alert');
+                    alertEl.textContent = e.message || 'Could not load WAEC stock.'; show(alertEl);
+                });
+            }
+
+            function loadWaecPurchases() {
+                var loading = document.getElementById('wp-loading');
+                var error = document.getElementById('wp-error');
+                var list = document.getElementById('wp-list');
+                var q = (document.getElementById('wp-search').value || '').trim();
+                var status = document.getElementById('wp-status').value;
+                show(loading); hide(error); list.innerHTML = '';
+                adminApiRequest('/api/admin/waec/purchases', { params: { q: q || undefined, status: status } })
+                    .then(function (rows) {
+                        hide(loading);
+                        wpPurchases = {};
+                        if (!rows || rows.length === 0) {
+                            list.innerHTML = '<div class="empty-state">' + (q || status !== 'ALL' ? 'No purchase matches that search.' : 'No WAEC pins sold yet.') + '</div>';
+                            return;
+                        }
+                        rows.forEach(function (p) {
+                            wpPurchases[p.orderId] = p;
+                            var d = wpDelivery(p.deliveryStatus);
+                            var card = document.createElement('div');
+                            card.className = 'fp-card ' + d.cls;
+                            card.style.cursor = 'default';
+                            var pins = (p.pins || []).map(function (x) {
+                                return '<span class="wp-pin-chip">' + escapeHtml(x.pinMasked) + ' / ' + escapeHtml(x.serialMasked) + '</span>';
+                            }).join('');
+                            card.innerHTML =
+                                '<div class="fp-card-top"><span class="fp-code">' + escapeHtml(p.transactionCode) + '</span>' +
+                                '<span class="fp-status ' + d.cls + '">' + escapeHtml(d.label) + '</span></div>' +
+                                '<div class="fp-card-top" style="margin-top:6px;"><span class="fp-amount">' + escapeHtml(wpMoney(p.totalCharged)) +
+                                ' · ' + escapeHtml(String(p.quantity)) + ' pin' + (p.quantity === 1 ? '' : 's') + '</span>' +
+                                '<span class="fp-sub">' + escapeHtml(wpTime(p.purchasedAt)) + '</span></div>' +
+                                '<div class="fp-sub"><strong>' + escapeHtml(p.userName || 'Unknown customer') + '</strong> · ' + escapeHtml(p.userEmail || '—') +
+                                ' · Acc ' + escapeHtml(p.userAccountNumber || '—') + '</div>' +
+                                '<div class="fp-sub">Sent to: <strong>' + escapeHtml(p.deliveryEmail || '—') + '</strong>' +
+                                (p.deliveryAttempts ? ' · ' + escapeHtml(String(p.deliveryAttempts)) + ' attempt(s)' : '') + '</div>' +
+                                (p.lastDeliveryError ? '<div class="fp-reason">' + escapeHtml(p.lastDeliveryError) + '</div>' : '') +
+                                '<div style="margin-top:6px;">' + pins + '</div>' +
+                                '<div class="fp-actions">' +
+                                '<button class="btn-sm primary" data-wp-act="reveal">Show pin</button>' +
+                                '<button class="btn-sm refresh" data-wp-act="resend">Resend</button></div>';
+                            card.querySelector('[data-wp-act="reveal"]').addEventListener('click', function () { wpOpenReveal(p.orderId); });
+                            card.querySelector('[data-wp-act="resend"]').addEventListener('click', function () { wpOpenResend(p.orderId); });
+                            list.appendChild(card);
+                        });
+                    })
+                    .catch(function (e) {
+                        hide(loading);
+                        error.textContent = e.message || 'Failed to load purchases.';
+                        show(error);
+                    });
+            }
+
+            function wpCloseModal() {
+                if (wpRevealTimer) { clearTimeout(wpRevealTimer); wpRevealTimer = null; }
+                document.getElementById('wp-modal-overlay').classList.remove('active');
+                document.getElementById('wp-modal').innerHTML = '';   // never leave revealed pins in the page
+            }
+
+            function wpOpenModal(html) {
+                document.getElementById('wp-modal').innerHTML = html;
+                document.getElementById('wp-modal-overlay').classList.add('active');
+            }
+
+            function wpHeader(title, p) {
+                return '<h3 style="margin:0;font-size:17px;">' + escapeHtml(title) + '</h3>' +
+                    '<div class="fp-code" style="margin-top:6px;">' + escapeHtml(p.transactionCode) + '</div>' +
+                    '<div class="fp-sub">' + escapeHtml(p.userName || 'Unknown customer') + ' · ' + escapeHtml(p.userEmail || '—') + '</div>';
+            }
+
+            // The PIN box must only ever contain what the admin types. Browsers and password managers
+            // love to fill a "password" box with the saved LOGIN password (cut to 4 characters), which then
+            // counts as a wrong PIN. So: new-password + a unique name + readonly until the modal has settled,
+            // and anything that slipped in before the admin touches the box is wiped.
+            function wpPinInputHtml() {
+                return '<input class="wp-input pin" id="wp-admin-pin" name="wp-admin-pin-' + Date.now() + '" type="password" ' +
+                    'inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password" ' +
+                    'data-lpignore="true" data-1p-ignore="true" data-form-type="other" readonly placeholder="••••" />';
+            }
+
+            function wpArmPinInput(focusIt) {
+                var el = document.getElementById('wp-admin-pin');
+                if (!el) return;
+                setTimeout(function () {
+                    if (document.getElementById('wp-admin-pin') !== el) return;
+                    el.value = '';
+                    el.removeAttribute('readonly');
+                    if (focusIt) el.focus();
+                }, 350);
+            }
+
+            function wpOpenReveal(orderId) {
+                var p = wpPurchases[orderId]; if (!p) return;
+                wpOpenModal(wpHeader('Show pin', p) +
+                    '<div class="fp-verify">Enter your admin PIN to view the exact PIN and serial. This is recorded in the audit log.' +
+                    wpPinInputHtml() + '</div>' +
+                    '<div class="wp-err" id="wp-modal-err"></div>' +
+                    '<div class="fp-actions"><button class="btn-outline" id="wp-cancel">Cancel</button><button class="btn-primary" id="wp-go" style="margin-top:0;">Show</button></div>');
+                var pinEl = document.getElementById('wp-admin-pin'); wpArmPinInput(true);
+                document.getElementById('wp-cancel').addEventListener('click', wpCloseModal);
+                function go() {
+                    if (pinEl.readOnly) return;   // not ready yet: never submit whatever the browser put there
+                    var pin = pinEl.value.trim();
+                    if (!/^\d{4}$/.test(pin)) { document.getElementById('wp-modal-err').textContent = 'Enter your 4-digit admin PIN.'; return; }
+                    var btn = document.getElementById('wp-go'); btn.disabled = true;
+                    adminApiRequest('/api/admin/waec/purchases/' + encodeURIComponent(orderId) + '/reveal', { method: 'POST', body: { pin: pin } })
+                        .then(function (pins) {
+                            var html = wpHeader('Pin details', p);
+                            (pins || []).forEach(function (x, i) {
+                                var n = pins.length > 1 ? ' ' + (i + 1) : '';
+                                html += '<div class="wp-reveal-row"><span>PIN' + n + '</span><span class="v">' + escapeHtml(x.pin) + '</span><button class="btn-sm refresh" data-copy="' + escapeHtml(x.pin) + '">Copy</button></div>' +
+                                    '<div class="wp-reveal-row"><span>Serial' + n + '</span><span class="v">' + escapeHtml(x.serial) + '</span><button class="btn-sm refresh" data-copy="' + escapeHtml(x.serial) + '">Copy</button></div>';
+                            });
+                            html += '<div class="fp-sub" style="margin-top:8px;">This window closes by itself after 60 seconds.</div>' +
+                                '<div class="fp-actions"><button class="btn-outline" id="wp-cancel">Close</button></div>';
+                            wpOpenModal(html);
+                            document.getElementById('wp-cancel').addEventListener('click', wpCloseModal);
+                            document.querySelectorAll('#wp-modal [data-copy]').forEach(function (b) {
+                                b.addEventListener('click', function () {
+                                    navigator.clipboard.writeText(b.dataset.copy).then(function () { showToast('Copied'); }).catch(function () { showToast('Could not copy'); });
+                                });
+                            });
+                            wpRevealTimer = setTimeout(wpCloseModal, 60000);
+                            loadWaecPurchases();
+                        })
+                        .catch(function (e) {
+                            btn.disabled = false;
+                            var err = document.getElementById('wp-modal-err');
+                            if (err) err.textContent = e.message || 'Could not show the pin.';
+                        });
+                }
+                document.getElementById('wp-go').addEventListener('click', go);
+                pinEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') go(); });
+            }
+
+            function wpOpenResend(orderId) {
+                var p = wpPurchases[orderId]; if (!p) return;
+                wpOpenModal(wpHeader('Resend pin', p) +
+                    '<div class="fp-sub" style="margin-top:10px;">Send the pin email to this address. Change it only if the customer gave you a different one.</div>' +
+                    '<input class="wp-input" id="wp-resend-email" type="email" maxlength="254" autocomplete="off" value="' + escapeHtml(p.deliveryEmail || p.userEmail || '') + '" />' +
+                    '<div class="fp-verify">Enter your admin PIN to confirm. This is recorded in the audit log.' +
+                    wpPinInputHtml() + '</div>' +
+                    '<div class="wp-err" id="wp-modal-err"></div>' +
+                    '<div class="fp-actions"><button class="btn-outline" id="wp-cancel">Cancel</button><button class="btn-primary" id="wp-go" style="margin-top:0;">Send</button></div>');
+                document.getElementById('wp-cancel').addEventListener('click', wpCloseModal);
+                wpArmPinInput(false);
+                document.getElementById('wp-go').addEventListener('click', function () {
+                    if (document.getElementById('wp-admin-pin').readOnly) return;
+                    var pin = document.getElementById('wp-admin-pin').value.trim();
+                    var email = document.getElementById('wp-resend-email').value.trim();
+                    var err = document.getElementById('wp-modal-err');
+                    if (!email) { err.textContent = 'Enter an email address.'; return; }
+                    if (!/^\d{4}$/.test(pin)) { err.textContent = 'Enter your 4-digit admin PIN.'; return; }
+                    var btn = document.getElementById('wp-go'); btn.disabled = true; btn.textContent = 'Sending…';
+                    adminApiRequest('/api/admin/waec/purchases/' + encodeURIComponent(orderId) + '/resend', { method: 'POST', body: { pin: pin, email: email } })
+                        .then(function (r) {
+                            if (r && r.sent) { showToast('Pin email sent.'); wpCloseModal(); }
+                            else { btn.disabled = false; btn.textContent = 'Send'; err.textContent = 'The email could not be sent. Try again, or use a different address.'; }
+                            loadWaecPurchases(); loadWaecSummary();
+                        })
+                        .catch(function (e) {
+                            btn.disabled = false; btn.textContent = 'Send';
+                            err.textContent = e.message || 'Could not resend the pin.';
+                        });
+                });
+            }
+
+            document.getElementById('wp-add-btn').addEventListener('click', function () {
+                var btn = this, textEl = document.getElementById('wp-pins-text'), out = document.getElementById('wp-add-result');
+                var text = textEl.value.trim();
+                if (!text) { showToast('Paste at least one PIN and SERIAL.'); return; }
+                btn.disabled = true; btn.textContent = 'Adding…';
+                adminApiRequest('/api/admin/waec/pins', { method: 'POST', body: { text: text } })
+                    .then(function (r) {
+                        var html = '<strong>' + escapeHtml(String(r.added)) + ' added</strong>' +
+                            (r.duplicates ? ' · ' + escapeHtml(String(r.duplicates)) + ' duplicate(s) skipped' : '') +
+                            (r.invalid ? ' · ' + escapeHtml(String(r.invalid)) + ' invalid line(s)' : '');
+                        if (r.problems && r.problems.length) html += '<ul>' + r.problems.map(function (x) { return '<li>' + escapeHtml(x) + '</li>'; }).join('') + '</ul>';
+                        out.innerHTML = html; show(out);
+                        if (r.added > 0 && !r.invalid && !r.duplicates) textEl.value = '';
+                        if (r.added > 0) showToast(r.added + ' pin(s) added.');
+                        loadWaecSummary();
+                    })
+                    .catch(function (e) { out.textContent = e.message || 'Could not add pins.'; show(out); })
+                    .finally(function () { btn.disabled = false; btn.textContent = 'Add pins'; });
+            });
+
+            document.getElementById('wp-refresh').addEventListener('click', loadWaecPins);
+            document.getElementById('wp-status').addEventListener('change', loadWaecPurchases);
+            var wpSearchTimer = null;
+            document.getElementById('wp-search').addEventListener('input', function () {
+                clearTimeout(wpSearchTimer);
+                wpSearchTimer = setTimeout(loadWaecPurchases, 350);
+            });
+            document.getElementById('wp-modal-overlay').addEventListener('click', function (e) { if (e.target === this) wpCloseModal(); });
 
             // ==============================================================
             // DASHBOARD

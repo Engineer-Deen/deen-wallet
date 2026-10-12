@@ -176,6 +176,16 @@ public class EmailService {
         );
     }
 
+    /**
+     * Emails the pins of a WAEC purchase. Unlike the other receipts this reports success, so the
+     * caller can record delivered / failed and retry. Pins are never put in the subject line.
+     */
+    public boolean sendWaecPinsEmail(String toEmail, String transactionCode, String totalCharged,
+                                     java.util.List<String> pins, java.util.List<String> serials) {
+        return sendTracked(toEmail, "Your WAEC Result Pin " + transactionCode,
+                EmailTemplates.waecPinsEmail(transactionCode, totalCharged, pins, serials));
+    }
+
     @Async("emailTaskExecutor")
     public void sendPayoutFailedEmail(String toEmail, String transactionCode, String amount,
                                       String totalCharged, String recipientLabel, String reason, String payerPhone) {
@@ -193,6 +203,38 @@ public class EmailService {
     public void sendRefundCompletedEmail(String toEmail, String transactionCode, String totalCharged, String payerPhone) {
         send(toEmail, "Refund sent " + transactionCode,
                 EmailTemplates.refundCompletedEmail(transactionCode, totalCharged, payerPhone));
+    }
+
+    private boolean sendTracked(String toEmail, String subject, String htmlBody) {
+        if (toEmail == null || toEmail.isBlank()) {
+            log.warn("Skipping email '{}': no recipient address available", subject);
+            return false;
+        }
+        for (int attempt = 1; attempt <= 2; attempt++) {
+            try {
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message, false, StandardCharsets.UTF_8.name());
+                helper.setFrom(senderEmail, senderName);
+                helper.setReplyTo(supportEmail, "Deen Wallet Support");
+                helper.setTo(toEmail);
+                helper.setSubject(subject);
+                helper.setText(htmlBody, true);
+                mailSender.send(message);
+                log.info("Email '{}' sent to {}", subject, toEmail);
+                return true;
+            } catch (Exception e) {
+                log.error("Failed to send email '{}' to {} (attempt {}/2): {}", subject, toEmail, attempt, e.getMessage());
+                if (attempt < 2) {
+                    try {
+                        Thread.sleep(2000L);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        return false;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     private void sendRequired(

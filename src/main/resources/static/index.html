@@ -250,6 +250,11 @@
         #screen-bank-step2 .greeting-sub,
         #screen-bank-add-recipient .greeting-sub,
         #screen-bank-confirmation .greeting-sub { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        /* WAEC headers: the top bar is a 3-column grid, so the heading must span the whole row (same fix as the bank screens). */
+        #screen-waec-start .top-bar > div,
+        #screen-waec-confirm .top-bar > div { grid-column:1 / -1; min-width:0; }
+        #screen-waec-start .greeting-title,
+        #screen-waec-confirm .greeting-title { white-space:nowrap; font-size:clamp(24px, 6.2vw, 30px); line-height:1.12; }
 
         /* ============================================================ */
         /* TOP BAR */
@@ -1979,7 +1984,7 @@
         .notification-item-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
         .notification-item-title { margin:0; font-size:15px; font-weight:800; color:var(--text); }
         .notification-unread-dot { width:8px; height:8px; border-radius:50%; background:var(--primary-light); flex:0 0 auto; margin-top:6px; }
-        .notification-item-message { margin:7px 0 0; color:var(--muted); font-size:13px; line-height:1.55; }
+        .notification-item-message { margin:7px 0 0; color:var(--muted); font-size:13px; line-height:1.55; white-space:pre-line; overflow-wrap:anywhere; }
         .notification-item-meta { display:flex; flex-wrap:wrap; gap:6px 10px; margin-top:10px; color:#849298; font-size:11px; }
         .notification-empty { border:1px dashed var(--border); border-radius:16px; background:#F7FAFB; padding:28px 18px; text-align:center; color:var(--muted); font-size:13px; }
         .notification-loading { display:flex; justify-content:center; padding:28px 0; color:var(--muted); font-size:13px; }
@@ -2176,6 +2181,33 @@
         .service-card-content strong { font-size:16px; color:var(--text); }
         .service-card-content span { font-size:13px; color:var(--muted); line-height:1.45; }
         .service-card-arrow { font-size:28px; line-height:1; color:var(--primary); }
+        .service-card-icon.has-logo { background:#fff; border:1px solid var(--border); padding:5px; }
+        .service-card-icon.has-logo img { width:100%; height:100%; object-fit:contain; border-radius:10px; display:block; }
+        .waec-logo-fallback { font-weight:800; font-size:13px; color:var(--primary); letter-spacing:.3px; }
+        .waec-product { display:flex; align-items:center; gap:14px; }
+        .waec-product-logo { width:56px; height:56px; border-radius:16px; background:#fff; border:1px solid var(--border); padding:6px; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+        .waec-product-logo img { width:100%; height:100%; object-fit:contain; display:block; }
+        .waec-product strong { display:block; font-size:16px; color:var(--text); }
+        .waec-product span.waec-price { display:block; margin-top:3px; font-size:14px; color:var(--primary); font-weight:700; }
+        .waec-qty { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px; border:1.5px solid var(--border); border-radius:16px; background:#fff; }
+        .waec-qty-btn { width:46px; height:46px; border-radius:14px; border:1px solid var(--border); background:#F5FAFB; font-size:24px; line-height:1; color:var(--primary); cursor:pointer; }
+        .waec-qty-btn:disabled { opacity:.4; cursor:not-allowed; }
+        .waec-qty-value { font-size:26px; font-weight:800; min-width:56px; text-align:center; color:var(--text); }
+        .waec-choice { display:flex; gap:12px; align-items:flex-start; padding:14px; border:1.5px solid var(--border); border-radius:14px; cursor:pointer; background:#fff; margin-top:10px; }
+        .waec-choice.selected { border-color:var(--primary); background:#F2FAFB; }
+        .waec-choice input[type=radio] { margin-top:3px; accent-color:var(--primary); flex:0 0 auto; }
+        .waec-choice strong { display:block; font-size:14px; color:var(--text); }
+        .waec-choice small { display:block; margin-top:2px; font-size:13px; color:var(--muted); word-break:break-all; }
+        .waec-email-input { width:100%; margin-top:10px; padding:13px 14px; border:1.5px solid var(--border); border-radius:12px; font-size:15px; background:#fff; color:var(--text); box-sizing:border-box; }
+        .waec-email-input:focus { outline:none; border-color:var(--primary); }
+        .waec-pins { margin-top:12px; padding:12px 14px; border-radius:14px; background:#F2FAFB; border:1px solid var(--border); text-align:left; max-height:30vh; overflow-y:auto; }
+        .waec-pins-title { font-size:13px; font-weight:700; color:var(--text); margin-bottom:6px; }
+        .waec-pin-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 0; border-top:1px solid var(--border); font-size:13px; }
+        .waec-pin-row:first-of-type { border-top:none; }
+        .waec-pin-row .l { color:var(--muted); }
+        .waec-pin-row .v { font-family:monospace; font-weight:700; color:var(--text); letter-spacing:.5px; word-break:break-all; }
+        .waec-copy-btn { border:1px solid var(--border); background:#fff; color:var(--primary); border-radius:8px; font-size:12px; padding:4px 8px; cursor:pointer; flex:0 0 auto; }
+        .waec-pins-note { margin-top:8px; font-size:12px; color:var(--muted); line-height:1.5; }
         .services-coming-card { margin-top:14px; padding:15px 16px; display:flex; align-items:center; gap:12px; border:1px dashed #D5E4E8; border-radius:16px; background:#F9FBFC; }
         .services-coming-icon { width:38px; height:38px; border-radius:12px; background:#F1F5F6; color:#829197; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
         .services-coming-card strong { display:block; font-size:13px; color:var(--text); }
@@ -2593,6 +2625,136 @@
         </div>
     </div>
 
+    <!-- ===================== WAEC RESULT PIN ===================== -->
+    <div class="screen" id="screen-waec-start">
+        <div class="scroll">
+            <div class="top-bar">
+                <div>
+                    <h1 class="greeting-title">WAEC Result Pin</h1>
+                    <p class="greeting-sub">Purchase WAEC pin to scratch your result.</p>
+                </div>
+            </div>
+
+            <div class="step-indicator">
+                <div class="step-dot active"></div>
+                <div class="step-dot"></div>
+                <div class="step-dot"></div>
+            </div>
+
+            <div class="convert-card">
+                <div class="waec-product">
+                    <div class="waec-product-logo"><img src="assets/waec-logo.png" alt="WAEC" data-logo-fallback="WAEC" /></div>
+                    <div>
+                        <strong>WAEC Result Pin</strong>
+                        <span class="waec-price" id="waec-unit-price">&nbsp;</span>
+                    </div>
+                </div>
+
+                <div id="waec-stock-warning" class="inline-error hidden" style="margin-top:14px;">
+                    <span>&#9888;</span><span id="waec-stock-warning-text"></span>
+                </div>
+
+                <div class="section-label" style="margin-top:20px;">How many pins?</div>
+                <div class="waec-qty">
+                    <button type="button" class="waec-qty-btn" id="waec-qty-minus" aria-label="Fewer pins">&minus;</button>
+                    <div class="waec-qty-value" id="waec-qty-value">1</div>
+                    <button type="button" class="waec-qty-btn" id="waec-qty-plus" aria-label="More pins">+</button>
+                </div>
+
+                <div class="section-label" style="margin-top:20px;">Pay from</div>
+                <div class="phone-card">
+                    <div class="phone-prefix">
+                        <div class="flag-badge">
+                            <div style="background:#1EB53A"></div>
+                            <div style="background:#fff"></div>
+                            <div style="background:#0072C6"></div>
+                        </div>
+                        <span>+232</span>
+                    </div>
+                    <input id="waec-source-phone" type="tel" inputmode="numeric" maxlength="9" placeholder="Your mobile money number" autocomplete="off" />
+                </div>
+                <div id="waec-source-detect-status" class="hidden"></div>
+
+                <div class="section-label" style="margin-top:20px;">Send my pin to</div>
+                <label class="waec-choice selected" id="waec-choice-registered">
+                    <input type="radio" name="waec-email-mode" id="waec-email-registered" value="registered" checked />
+                    <span><strong>My registered email</strong><small id="waec-registered-email">&nbsp;</small></span>
+                </label>
+                <label class="waec-choice" id="waec-choice-other">
+                    <input type="radio" name="waec-email-mode" id="waec-email-other" value="other" />
+                    <span><strong>Another email address</strong><small>Type the email that should receive the pin.</small></span>
+                </label>
+                <input type="email" class="waec-email-input hidden" id="waec-other-email" placeholder="name@example.com" autocomplete="off" maxlength="254" />
+                <label class="waec-choice hidden" id="waec-phone-choice" aria-hidden="true">
+                    <input type="radio" name="waec-email-mode" value="phone" disabled />
+                    <span><strong>My phone number</strong><small>Coming soon</small></span>
+                </label>
+
+                <div id="waec-fee-status" class="hidden" style="margin-top:20px;"></div>
+                <div id="waec-fee-card" class="fee-card hidden" style="margin-top:20px;">
+                    <div class="fee-row"><span class="label">Price per pin</span><span class="value" id="waec-fee-unit"></span></div>
+                    <div class="fee-row"><span class="label">Pins</span><span class="value" id="waec-fee-qty"></span></div>
+                    <div class="fee-row"><span class="label">Pins total</span><span class="value" id="waec-fee-subtotal"></span></div>
+                    <div class="fee-row"><span class="label">Processing fee</span><span class="value" id="waec-fee-charge"></span></div>
+                    <div class="fee-divider"></div>
+                    <div class="fee-row total"><span class="label">Debited amount</span><span class="value" id="waec-fee-total"></span></div>
+                </div>
+
+                <div id="waec-start-error" class="inline-error hidden">
+                    <span>&#9888;</span><span id="waec-start-error-text"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div class="step-actions">
+                <button class="btn-back" id="waec-start-back-btn">&#8592; Back</button>
+                <button class="btn-primary" id="waec-start-continue-btn" disabled style="flex:1;">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="screen" id="screen-waec-confirm">
+        <div class="scroll">
+            <div class="top-bar">
+                <div>
+                    <h1 class="greeting-title">Confirm Purchase</h1>
+                    <p class="greeting-sub" id="waec-confirm-subtitle"></p>
+                </div>
+            </div>
+
+            <div class="step-indicator">
+                <div class="step-dot done"></div>
+                <div class="step-dot active"></div>
+                <div class="step-dot"></div>
+            </div>
+
+            <div class="bank-confirm-card">
+                <div class="bank-review-row"><span class="label">Service</span><span class="value">WAEC Result Pin</span></div>
+                <div class="bank-review-row"><span class="label">Pins</span><span class="value" id="waec-confirm-qty">&mdash;</span></div>
+                <div class="bank-review-row"><span class="label">Price per pin</span><span class="value" id="waec-confirm-unit">&mdash;</span></div>
+                <div class="bank-review-row"><span class="label">Pins total</span><span class="value" id="waec-confirm-subtotal">&mdash;</span></div>
+                <div class="bank-review-row"><span class="label">Processing fee</span><span class="value" id="waec-confirm-charge">&mdash;</span></div>
+                <div class="bank-review-row total"><span class="label">Debited amount</span><span class="value" id="waec-confirm-total">&mdash;</span></div>
+                <div class="bank-review-row"><span class="label">Pay from</span><span class="value" id="waec-confirm-from">&mdash;</span></div>
+                <div class="bank-review-row"><span class="label">Send pin to</span><span class="value" id="waec-confirm-email" style="word-break:break-all;">&mdash;</span></div>
+
+                <p class="bank-note">Check the email address carefully. Your pin is sent there as soon as your payment is confirmed, and it also appears in your Notifications. After you confirm, you will be taken to the payment page.</p>
+
+                <div id="waec-confirm-error" class="inline-error hidden">
+                    <span>&#9888;</span><span id="waec-confirm-error-text"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div class="step-actions">
+                <button class="btn-back" id="waec-confirm-back-btn">&#8592; Back</button>
+                <button class="btn-primary" id="waec-confirm-btn" style="flex:1;">Confirm</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ===================== STEP 3: USSD CONFIRMATION ===================== -->
     <div class="screen" id="screen-step3">
         <button class="ussd-back" id="step3-back-btn">&#8592;</button>
@@ -2673,6 +2835,7 @@
                     <span>Status</span>
                     <strong>Completed</strong>
                 </div>
+                <div id="waec-pins-block" class="waec-pins hidden"></div>
             </div>
         </div>
     </div>
@@ -3017,6 +3180,17 @@
                 <div class="service-card-content">
                     <strong>Bank Transfer</strong>
                     <span>Send money from Orange Money or Africell to a bank account.</span>
+                </div>
+                <span class="service-card-arrow" aria-hidden="true">›</span>
+            </button>
+
+            <button type="button" class="service-card" id="services-waec-card">
+                <div class="service-card-icon has-logo" aria-hidden="true">
+                    <img src="assets/waec-logo.png" alt="" data-logo-fallback="WAEC" />
+                </div>
+                <div class="service-card-content">
+                    <strong>WAEC Result Pin</strong>
+                    <span>Purchase WAEC pin to scratch your result.</span>
                 </div>
                 <span class="service-card-arrow" aria-hidden="true">›</span>
             </button>
@@ -4339,6 +4513,22 @@
             openCustomerService('BANK_TRANSFER');
         });
 
+        document.getElementById('services-waec-card').addEventListener('click', () => {
+            openWaecService();
+        });
+
+        // A logo image that is missing must never leave a blank box: show the text instead.
+        document.querySelectorAll('img[data-logo-fallback]').forEach((img) => {
+            const swap = () => {
+                const span = document.createElement('span');
+                span.className = 'waec-logo-fallback';
+                span.textContent = img.dataset.logoFallback || '';
+                img.replaceWith(span);
+            };
+            if (img.complete && img.naturalWidth === 0) swap();
+            else img.addEventListener('error', swap, { once: true });
+        });
+
         document.getElementById('recent-activity-history-btn').addEventListener('click', () => {
             window.location.href = 'transactions.html';
         });
@@ -4399,7 +4589,7 @@
 
                 const name = document.createElement('span');
                 name.className = 'recent-activity-name';
-                name.textContent = txn.destinationHolderName || txn.destinationPhone || 'Transfer';
+                name.textContent = txn.serviceType === 'WAEC_RESULT_PIN' ? 'WAEC Result Pin' : (txn.destinationHolderName || txn.destinationPhone || 'Transfer');
 
                 const meta = document.createElement('span');
                 meta.className = 'recent-activity-meta';
@@ -6190,6 +6380,342 @@
         }
 
         // ==============================================================
+        // WAEC RESULT PIN
+        // Same funding flow as a bank transfer: details -> confirm -> PIN -> USSD payment.
+        // The pin is sold and delivered by the backend only AFTER the payment is confirmed.
+        // ==============================================================
+        const screenWaecStart = document.getElementById('screen-waec-start');
+        const screenWaecConfirm = document.getElementById('screen-waec-confirm');
+        const waecPhoneInput = document.getElementById('waec-source-phone');
+        const waecDetectStatus = document.getElementById('waec-source-detect-status');
+        const waecQtyValue = document.getElementById('waec-qty-value');
+        const waecQtyMinus = document.getElementById('waec-qty-minus');
+        const waecQtyPlus = document.getElementById('waec-qty-plus');
+        const waecUnitPriceEl = document.getElementById('waec-unit-price');
+        const waecStockWarning = document.getElementById('waec-stock-warning');
+        const waecStockWarningText = document.getElementById('waec-stock-warning-text');
+        const waecFeeCard = document.getElementById('waec-fee-card');
+        const waecFeeStatus = document.getElementById('waec-fee-status');
+        const waecStartError = document.getElementById('waec-start-error');
+        const waecStartErrorText = document.getElementById('waec-start-error-text');
+        const waecContinueBtn = document.getElementById('waec-start-continue-btn');
+        const waecChoiceRegistered = document.getElementById('waec-choice-registered');
+        const waecChoiceOther = document.getElementById('waec-choice-other');
+        const waecRadioRegistered = document.getElementById('waec-email-registered');
+        const waecRadioOther = document.getElementById('waec-email-other');
+        const waecRegisteredEmailEl = document.getElementById('waec-registered-email');
+        const waecOtherEmailInput = document.getElementById('waec-other-email');
+        const waecConfirmBtn = document.getElementById('waec-confirm-btn');
+        const waecConfirmError = document.getElementById('waec-confirm-error');
+        const waecConfirmErrorText = document.getElementById('waec-confirm-error-text');
+        const waecPinsBlock = document.getElementById('waec-pins-block');
+
+        const WAEC_EMAIL_RE = /^[A-Za-z0-9._%+\-]{1,64}@[A-Za-z0-9.\-]{1,190}\.[A-Za-z]{2,24}$/;
+        let waecQuote = null;
+        let waecQuantity = 1;
+        let waecSourceProviderId = null;
+        let waecDetectRequestId = 0;
+        let waecQuoteRequestId = 0;
+        let waecState = null;          // { quantity, deliveryEmail } of the purchase being paid
+        let waecPinsLoadedFor = null;
+
+        function openWaecService() {
+            waecQuote = null;
+            waecQuantity = 0;   // nothing chosen yet: the price summary stays hidden until the customer picks pins
+            waecSourceProviderId = null;
+            waecDetectRequestId++;
+            waecQuoteRequestId++;
+            waecState = null;
+            waecPinsLoadedFor = null;
+            waecPhoneInput.value = '';
+            hide(waecDetectStatus);
+            waecDetectStatus.innerHTML = '';
+            waecRadioRegistered.checked = true;
+            waecOtherEmailInput.value = '';
+            syncWaecEmailMode();
+            hide(waecFeeCard);
+            hide(waecFeeStatus);
+            hide(waecStockWarning);
+            hide(waecStartError);
+            hide(waecConfirmError);
+            waecUnitPriceEl.innerHTML = '&nbsp;';
+            waecQtyValue.textContent = '0';
+            waecQtyMinus.disabled = true;
+            waecQtyPlus.disabled = true;
+            waecContinueBtn.disabled = true;
+
+            document.querySelectorAll('.screen').forEach((screen) => screen.classList.remove('active'));
+            screenWaecStart.classList.add('active');
+            hidePrimaryNav();
+            loadWaecQuote();
+        }
+
+        function showWaecFeeLoading() {
+            hide(waecFeeCard);
+            waecFeeStatus.className = 'detect-status loading';
+            waecFeeStatus.innerHTML = '<div class="spinner dark"></div><span>Calculating your total…</span>';
+        }
+
+        async function loadWaecQuote() {
+            const requestId = ++waecQuoteRequestId;
+            hide(waecStartError);
+            // Before any pin is chosen we still fetch the price (quantity 1) for the unit price,
+            // stock and email, but the breakdown stays hidden.
+            if (waecQuantity >= 1) showWaecFeeLoading();
+            try {
+                const quote = await previewWaecQuote(Math.max(1, waecQuantity));
+                if (requestId !== waecQuoteRequestId) return;
+                waecQuote = quote;
+                if (quote.registeredEmail) waecRegisteredEmailEl.textContent = quote.registeredEmail;
+                renderWaecQuote();
+            } catch (error) {
+                if (requestId !== waecQuoteRequestId) return;
+                hide(waecFeeStatus);
+                if (error.status === 401 || error.status === 403) {
+                    showAuthRequiredModal(error.message || 'Your session has expired. Please log in again.');
+                    return;
+                }
+                waecQuote = null;
+                waecStartErrorText.textContent = error.message || 'Could not load the WAEC pin price.';
+                show(waecStartError);
+            } finally {
+                if (requestId === waecQuoteRequestId) updateWaecStartState();
+            }
+        }
+
+        function renderWaecQuote() {
+            const q = waecQuote;
+            waecQtyValue.textContent = String(waecQuantity);
+            hide(waecFeeStatus);
+            if (!q) { hide(waecFeeCard); return; }
+            waecUnitPriceEl.textContent = formatMoney(q.unitPrice) + ' SLE per pin';
+
+            const max = Math.max(0, q.maxQuantity);
+            waecQtyMinus.disabled = waecQuantity <= 1;
+            waecQtyPlus.disabled = max === 0 || waecQuantity >= max;
+            if (max === 0) {
+                waecStockWarningText.textContent = 'WAEC Result Pins are out of stock right now. Please check back later.';
+                show(waecStockWarning);
+            } else {
+                hide(waecStockWarning);
+            }
+
+            if (waecQuantity >= 1 && q.quantity === waecQuantity) {
+                document.getElementById('waec-fee-unit').textContent = formatMoney(q.unitPrice) + ' SLE';
+                document.getElementById('waec-fee-qty').textContent = String(q.quantity);
+                document.getElementById('waec-fee-subtotal').textContent = formatMoney(q.subtotal) + ' SLE';
+                document.getElementById('waec-fee-charge').textContent = formatMoney(q.fee) + ' SLE';
+                document.getElementById('waec-fee-total').textContent = formatMoney(q.total) + ' SLE';
+                show(waecFeeCard);
+            } else {
+                hide(waecFeeCard);
+            }
+        }
+
+        function getWaecDeliveryEmail() {
+            if (waecRadioOther.checked) {
+                const v = waecOtherEmailInput.value.trim();
+                return WAEC_EMAIL_RE.test(v) && v.length <= 254 ? v.toLowerCase() : null;
+            }
+            return waecQuote && waecQuote.registeredEmail ? waecQuote.registeredEmail : null;
+        }
+
+        function syncWaecEmailMode() {
+            const other = waecRadioOther.checked;
+            waecChoiceRegistered.classList.toggle('selected', !other);
+            waecChoiceOther.classList.toggle('selected', other);
+            waecOtherEmailInput.classList.toggle('hidden', !other);
+        }
+
+        function updateWaecStartState() {
+            const quoteReady = !!(waecQuantity >= 1 && waecQuote && waecQuote.quantity === waecQuantity && waecQuote.inStock);
+            waecContinueBtn.disabled = !(quoteReady
+                && ['m17', 'm18'].includes(waecSourceProviderId)
+                && getWaecDeliveryEmail());
+        }
+
+        waecQtyMinus.addEventListener('click', () => {
+            if (waecQuantity <= 1) return;
+            waecQuantity -= 1;
+            waecQtyValue.textContent = String(waecQuantity);
+            updateWaecStartState();
+            loadWaecQuote();
+        });
+
+        waecQtyPlus.addEventListener('click', () => {
+            if (!waecQuote || waecQuantity >= waecQuote.maxQuantity) return;
+            waecQuantity += 1;
+            waecQtyValue.textContent = String(waecQuantity);
+            updateWaecStartState();
+            loadWaecQuote();
+        });
+
+        [waecRadioRegistered, waecRadioOther].forEach((radio) => {
+            radio.addEventListener('change', () => {
+                syncWaecEmailMode();
+                if (waecRadioOther.checked) waecOtherEmailInput.focus();
+                updateWaecStartState();
+            });
+        });
+        waecOtherEmailInput.addEventListener('input', updateWaecStartState);
+
+        waecPhoneInput.addEventListener('input', (e) => {
+            e.target.value = onlyDigits(e.target.value).slice(0, 8);
+            waecSourceProviderId = null;
+            hide(waecDetectStatus);
+            updateWaecStartState();
+            if (e.target.value.length === 8) runWaecSourceDetect(e.target.value);
+        });
+
+        async function runWaecSourceDetect(localPhone) {
+            const requestId = ++waecDetectRequestId;
+            renderDetectStatus(waecDetectStatus, { status: 'loading' });
+            try {
+                const result = await detectProviderAndName(localPhone);
+                if (requestId !== waecDetectRequestId) return;
+                waecSourceProviderId = result.status === 'ok' ? result.providerId : null;
+                renderDetectStatus(waecDetectStatus, result, { context: 'source' });
+                updateWaecStartState();
+            } catch (error) {
+                if (error.status === 401 || error.status === 403) {
+                    showAuthRequiredModal(error.message || 'Session expired. Please log in again.');
+                } else {
+                    renderDetectStatus(waecDetectStatus, { status: 'error', message: error.message || 'Could not check number.' });
+                }
+            }
+        }
+
+        document.getElementById('waec-start-back-btn').addEventListener('click', () => {
+            waecQuoteRequestId++;
+            if (typeof window.showPrimaryScreen === 'function') window.showPrimaryScreen('payment');
+        });
+
+        waecContinueBtn.addEventListener('click', () => {
+            const email = getWaecDeliveryEmail();
+            if (!waecQuote || !waecSourceProviderId || !email) return;
+            document.getElementById('waec-confirm-subtitle').textContent =
+                waecQuote.quantity + (waecQuote.quantity === 1 ? ' pin' : ' pins');
+            document.getElementById('waec-confirm-qty').textContent = String(waecQuote.quantity);
+            document.getElementById('waec-confirm-unit').textContent = formatMoney(waecQuote.unitPrice) + ' SLE';
+            document.getElementById('waec-confirm-subtotal').textContent = formatMoney(waecQuote.subtotal) + ' SLE';
+            document.getElementById('waec-confirm-charge').textContent = formatMoney(waecQuote.fee) + ' SLE';
+            document.getElementById('waec-confirm-total').textContent = formatMoney(waecQuote.total) + ' SLE';
+            document.getElementById('waec-confirm-from').textContent =
+                providerName(waecSourceProviderId) + ' +232 ' + waecPhoneInput.value;
+            document.getElementById('waec-confirm-email').textContent = email;
+            hide(waecConfirmError);
+            waecConfirmBtn.disabled = false;
+            screenWaecStart.classList.remove('active');
+            screenWaecConfirm.classList.add('active');
+            hidePrimaryNav();
+        });
+
+        document.getElementById('waec-confirm-back-btn').addEventListener('click', () => {
+            screenWaecConfirm.classList.remove('active');
+            screenWaecStart.classList.add('active');
+            hidePrimaryNav();
+        });
+
+        // The PIN is asked at the very last step, right before the payment window opens.
+        waecConfirmBtn.addEventListener('click', () => {
+            if (!waecQuote || !waecSourceProviderId || !getWaecDeliveryEmail()) return;
+            hide(waecConfirmError);
+            showPinModal('Enter your PIN to confirm this purchase.', submitWaecPurchase);
+            const pinTitleEl = document.querySelector('#pin-modal-overlay .modal-title');
+            if (pinTitleEl) pinTitleEl.textContent = 'Confirm Purchase';
+        });
+
+        async function submitWaecPurchase() {
+            const email = getWaecDeliveryEmail();
+            if (!waecQuote || !waecSourceProviderId || !email) return;
+
+            hide(waecConfirmError);
+            waecConfirmBtn.disabled = true;
+            waecConfirmBtn.innerHTML = '<div class="spinner"></div>';
+
+            try {
+                window.DEENWALLET_TRANSACTION_ACTIVE = true;
+                const data = await apiRequest('/api/waec/purchases', {
+                    method: 'POST',
+                    body: {
+                        sourceProviderId: waecSourceProviderId,
+                        sourcePhone: toE164SL(onlyDigits(waecPhoneInput.value)),
+                        quantity: waecQuote.quantity,
+                        deliveryEmail: waecRadioOther.checked ? email : null,
+                        deliveryChannel: 'EMAIL'
+                    }
+                });
+                transaction = normalizeTransaction(data);
+                waecState = { quantity: waecQuote.quantity, deliveryEmail: email };
+                waecPinsLoadedFor = null;
+                openStep3();
+            } catch (error) {
+                window.DEENWALLET_TRANSACTION_ACTIVE = false;
+                if (error.status === 401 || error.status === 403) {
+                    showAuthRequiredModal(error.message || 'Your session has expired. Please log in again.');
+                } else {
+                    waecConfirmErrorText.textContent = error.message || 'Could not start the purchase. Please try again.';
+                    show(waecConfirmError);
+                }
+            } finally {
+                waecConfirmBtn.disabled = false;
+                waecConfirmBtn.textContent = 'Confirm';
+            }
+        }
+
+        // ---- completion overlay (shared with the other services)
+        function applyCompletionTexts(waec) {
+            const push = document.querySelector('.completion-push-message');
+            const title = document.querySelector('.completion-title');
+            const msg = document.querySelector('.completion-message');
+            if (push) push.textContent = waec
+                ? 'Your WAEC Result Pin purchase was successful.'
+                : 'Your DeenWallet transaction has been completed successfully.';
+            if (title) title.textContent = waec ? 'Purchase complete' : 'Transaction complete';
+            if (msg) msg.textContent = waec
+                ? 'Your WAEC Result Pin is ready. It was also sent to your email.'
+                : 'The transaction status has been updated.';
+            if (!waec && waecPinsBlock) { waecPinsBlock.innerHTML = ''; hide(waecPinsBlock); }
+        }
+
+        async function loadWaecPins() {
+            if (!transaction || waecPinsLoadedFor === transaction.id) return;
+            waecPinsLoadedFor = transaction.id;
+            try {
+                renderWaecPins(await fetchWaecPurchase(transaction.id));
+            } catch (_) {
+                waecPinsLoadedFor = null; // try again on the next render
+            }
+        }
+
+        function renderWaecPins(data) {
+            if (!data || !data.fulfilled || !data.pins || !data.pins.length) return;
+            let html = '<div class="waec-pins-title">Your Result Pin' + (data.pins.length > 1 ? 's' : '') + '</div>';
+            data.pins.forEach((p, i) => {
+                const n = data.pins.length > 1 ? ' ' + (i + 1) : '';
+                html += '<div class="waec-pin-row"><span class="l">PIN' + n + '</span><span class="v">' + escapeHtml(p.pin) +
+                    '</span><button type="button" class="waec-copy-btn" data-copy="' + escapeHtml(p.pin) + '">Copy</button></div>';
+                html += '<div class="waec-pin-row"><span class="l">Serial' + n + '</span><span class="v">' + escapeHtml(p.serial) +
+                    '</span><button type="button" class="waec-copy-btn" data-copy="' + escapeHtml(p.serial) + '">Copy</button></div>';
+            });
+            const where = data.deliveryEmailMasked ? ' to ' + escapeHtml(data.deliveryEmailMasked) : '';
+            const note = data.deliveryStatus === 'SENT' ? 'Also sent' + where + '.'
+                : data.deliveryStatus === 'FAILED' ? 'We could not email it yet, but it is saved here and in Notifications. We will keep trying.'
+                : 'Sending to your email' + where + '…';
+            html += '<div class="waec-pins-note">' + note + ' Keep these codes private.</div>';
+            waecPinsBlock.innerHTML = html;
+            show(waecPinsBlock);
+        }
+
+        waecPinsBlock.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-copy]');
+            if (!btn) return;
+            navigator.clipboard.writeText(btn.dataset.copy)
+                .then(() => showToast('Copied'))
+                .catch(() => showToast('Could not copy — copy it manually'));
+        });
+
+        // ==============================================================
         // STEP 3: USSD
         // ==============================================================
         function openStep3() {
@@ -6197,6 +6723,8 @@
             screenBankStep2.classList.remove('active');
             screenBankAddRecipient.classList.remove('active');
             screenBankConfirmation.classList.remove('active');
+            screenWaecStart.classList.remove('active');
+            screenWaecConfirm.classList.remove('active');
             screenStep3.classList.add('active');
             hidePrimaryNav();
             renderTransactionState();
@@ -6206,6 +6734,7 @@
 
         function renderTransactionState() {
             const txnDisplay = transaction.transactionCode || transaction.id;
+            const waec = transaction.serviceType === 'WAEC_RESULT_PIN';
 
             const bankTransfer = transaction.serviceType === 'BANK_TRANSFER';
             ussdRecipientName.textContent = bankTransfer
@@ -6219,6 +6748,13 @@
             ussdPaymentWarning.textContent = bankTransfer
                 ? 'Double check the bank account before paying. Your mobile-money payment funds this bank transfer.'
                 : 'Double check the recipient before paying. Transactions to the wrong number cannot be reversed.';
+            if (waec) {
+                ussdRecipientLabel.textContent = 'Service';
+                ussdRecipientName.textContent = 'WAEC Result Pin';
+                ussdDestinationLabel.textContent = 'Pins';
+                ussdRecipientPhone.textContent = (waecState && waecState.quantity) ? String(waecState.quantity) : '—';
+                ussdPaymentWarning.textContent = 'Your mobile-money payment buys your WAEC Result Pin. Pay with the code before the timer ends.';
+            }
             ussdTotalEl.textContent = formatMoney(transaction.totalCharged) + ' SLE';
             ussdCodeText.textContent = transaction.ussdCode || '';
 
@@ -6240,7 +6776,7 @@
                 show(ussdResultBlock);
                 if (status === 'PAID_IN') {
                     resultIcon.textContent = '\u2705';
-                    resultNote.textContent = 'Payment received. Preparing the transfer…';
+                    resultNote.textContent = waec ? 'Payment received. Preparing your WAEC pin…' : 'Payment received. Preparing the transfer…';
                 } else if (status === 'PAYING_OUT') {
                     resultIcon.textContent = '\u23F3';
                     resultNote.textContent = transaction.serviceType === 'BANK_TRANSFER'
@@ -6248,12 +6784,16 @@
                         : "Sending funds to the recipient's mobile money account…";
                 } else if (status === 'COMPLETED') {
                     resultIcon.textContent = '\u2705';
-                    resultNote.textContent = 'Done — the recipient has received the funds.';
+                    resultNote.textContent = waec
+                        ? 'Done. Your WAEC pin was sent to your email and saved in Notifications.'
+                        : 'Done — the recipient has received the funds.';
+                    applyCompletionTexts(waec);
                     screenStep3.classList.add('completion-active');
                     if (completionOverlay) {
                         completionOverlay.classList.add('active');
                         completionOverlay.setAttribute('aria-hidden', 'false');
                     }
+                    if (waec) loadWaecPins();
                 } else if (status === 'FAILED') {
                     screenStep3.classList.remove('completion-active');
                     if (completionOverlay) {

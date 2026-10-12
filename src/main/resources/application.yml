@@ -65,12 +65,6 @@ app:
     after-days: ${TRANSACTION_ARCHIVE_AFTER_DAYS:180}
     enabled: ${TRANSACTION_ARCHIVE_ENABLED:true}
 
-  # Where the rate limiter takes the client IP from.
-  # false (recommended): use the address Tomcat worked out. With server.forward-headers-strategy=native
-  #   (above) Tomcat already applies X-Forwarded-For from your own proxy, so this is already the real
-  #   client IP. Nobody can fake it by sending their own header.
-  # true: also read the X-Forwarded-For header directly. Only use this if forward-headers-strategy is NOT
-  #   native AND your proxy always overwrites that header.
   rate-limit:
     trust-forwarded-for: ${RATE_LIMIT_TRUST_FORWARDED_FOR:false}
 
@@ -78,6 +72,13 @@ app:
     trust-forwarded-for: ${APP_ERRORS_TRUST_FORWARDED_FOR:false}
 
   release-id: ${APP_RELEASE_ID:${random.uuid}}
+
+  waec:
+    encryption-key: ${WAEC_PIN_ENCRYPTION_KEY:}
+    unit-price-minor: ${WAEC_PIN_PRICE_MINOR:100}
+    fee-rate: ${WAEC_PIN_FEE_RATE:0.02}
+    max-quantity: ${WAEC_MAX_QUANTITY:5}
+
 
   android-update:
     version-code: ${APP_ANDROID_UPDATE_VERSION_CODE:5}

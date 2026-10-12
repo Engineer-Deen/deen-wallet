@@ -1406,6 +1406,33 @@ async function previewFee(amount) {
 }
 
 // ==============================================================
+// WAEC RESULT PIN
+// ==============================================================
+async function previewWaecQuote(quantity) {
+  try {
+    const data = await apiRequest('/api/waec/quote', { params: { quantity } });
+    return {
+      currency: data.currency || 'SLE',
+      unitPrice: Number(data.unitPrice),
+      quantity: Number(data.quantity),
+      subtotal: Number(data.subtotal),
+      fee: Number(data.fee),
+      total: Number(data.total),
+      inStock: data.inStock === true,
+      maxQuantity: Number(data.maxQuantity) || 0,
+      registeredEmail: data.registeredEmail || '',
+    };
+  } catch (error) {
+    if (error.status === 401 || error.status === 403) throw error;
+    throw new Error(error.message || 'Could not load the WAEC pin price.');
+  }
+}
+
+async function fetchWaecPurchase(transactionId) {
+  return apiRequest('/api/waec/purchases/' + encodeURIComponent(transactionId));
+}
+
+// ==============================================================
 // PASSWORD STRENGTH
 // ==============================================================
 function checkPasswordStrength(password) {

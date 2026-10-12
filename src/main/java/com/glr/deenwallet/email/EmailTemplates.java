@@ -411,6 +411,46 @@ final class EmailTemplates {
         return wrap("Refund sent", body);
     }
 
+    static String waecPinsEmail(String transactionCode, String totalCharged,
+                                java.util.List<String> pins, java.util.List<String> serials) {
+        StringBuilder cards = new StringBuilder();
+        for (int i = 0; i < pins.size(); i++) {
+            String title = pins.size() > 1 ? "Result Pin " + (i + 1) : "Result Pin";
+            cards.append("""
+                <div style="border: 1px solid %1$s; border-radius: 12px; overflow: hidden; margin-bottom: 16px;">
+                    <div style="background: #F0FDFA; padding: 10px 16px; font-size: 13px; font-weight: 700; color: %2$s;">%3$s</div>
+                    <table cellpadding="0" cellspacing="0" style="width: 100%%; border-collapse: collapse;">
+                        <tr style="border-bottom: 1px solid %1$s;">
+                            <td style="padding: 14px 16px; font-size: 14px; color: %4$s;">PIN</td>
+                            <td style="padding: 14px 16px; font-size: 18px; font-weight: 700; color: %2$s; text-align: right; font-family: monospace; letter-spacing: 1px;">%5$s</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 14px 16px; font-size: 14px; color: %4$s;">Serial</td>
+                            <td style="padding: 14px 16px; font-size: 18px; font-weight: 700; color: %2$s; text-align: right; font-family: monospace; letter-spacing: 1px;">%6$s</td>
+                        </tr>
+                    </table>
+                </div>
+                """.formatted(BORDER_COLOR, TEXT_COLOR, title, MUTED_COLOR, escape(pins.get(i)), escape(serials.get(i))));
+        }
+        String body = """
+            <div>
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <h2 style="margin: 0; color: %1$s; font-size: 22px; font-weight: 700;">WAEC Result Pin purchase successful ✅</h2>
+                    <p style="margin: 6px 0 0 0; color: %2$s; font-size: 14px;">
+                        Trans. ID: <span style="font-family: monospace; font-weight: 600; background: #F0FDFA; padding: 2px 8px; border-radius: 4px;">%3$s</span>
+                    </p>
+                    <p style="margin: 6px 0 0 0; color: %2$s; font-size: 14px;">Total paid: SLE %4$s</p>
+                </div>
+                %5$s
+                <p style="margin: 0; color: %2$s; font-size: 13px; line-height: 1.5; text-align: center;">
+                    Keep these codes private and do not share them. You can also find them in the Notifications section of the Deen Wallet app.
+                    Thank you for using Deen Wallet.
+                </p>
+            </div>
+            """.formatted(TEXT_COLOR, MUTED_COLOR, escape(transactionCode), escape(totalCharged), cards.toString());
+        return wrap("WAEC Result Pin", body);
+    }
+
     private static String row(String label, String value) {
         return """
             <tr style="border-bottom: 1px solid %1$s;">

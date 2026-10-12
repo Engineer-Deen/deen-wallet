@@ -17,6 +17,10 @@ import com.glr.deenwallet.notification.PushNotificationService;
 import com.glr.deenwallet.config.ProviderConfig;
 import com.glr.deenwallet.user.User;
 import com.glr.deenwallet.user.UserRepository;
+import com.glr.deenwallet.waec.WaecFulfillmentService;
+import com.glr.deenwallet.waec.WaecPinService;
+import com.glr.deenwallet.waec.WaecPricing;
+import com.glr.deenwallet.waec.WaecPurchaseRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -58,6 +62,9 @@ public class TransactionService {
     private final SavedRecipientRepository savedRecipientRepository;
     private final ProviderConfig providerConfig;
     private final PayoutRecoveryActionRepository recoveryActions;
+    private final WaecPinService waecPinService;
+    private final WaecFulfillmentService waecFulfillmentService;
+    private final WaecPricing waecPricing;
 
     // ---- Abuse / velocity limits. SET THESE TO YOUR REAL COMPLIANCE LIMITS BEFORE LAUNCH. ----
     private static final int MAX_PENDING_PER_USER = 3;
@@ -326,6 +333,115 @@ public class TransactionService {
         return TransactionResponse.from(result);
     }
 
+    /**
+     * Starts a WAEC Result Pin purchase with the same funding mechanism as a bank transfer: the pins are
+     * reserved first (so nobody pays for stock that is not there), then a Monime payment code is created.
+     * Nothing is sold and nothing is emailed here; that happens only after Monime reports
+     * payment_code.processed (see completeWaecPurchase).
+     */
+    public TransactionResponse initiateWaecPurchase(UUID userId, WaecPurchaseRequest request) {
+        requireUsableUser(userId);
+        requireKnownProvider(request.getSourceProviderId());
+        if (request.getDeliveryChannel() != null && !request.getDeliveryChannel().isBlank()
+                && !"EMAIL".equalsIgnoreCase(request.getDeliveryChannel())) {
+            throw new IllegalArgumentException("Delivery by phone number is coming soon. Please use email.");
+        }
+        int quantity = waecPricing.requireQuantity(request.getQuantity());
+        User buyer = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        String deliveryEmail = waecPricing.resolveDeliveryEmail(request.getDeliveryEmail(), buyer.getEmail());
+        WaecPricing.Quote quote = waecPricing.quote(quantity);
+
+        if (!waecPinService.isOperational()) {
+            throw new IllegalStateException("WAEC pin sales are temporarily unavailable. Please try again later.");
+        }
+        if (waecPinService.availableCount() < quantity) {
+            throw new IllegalStateException("Not enough WAEC pins in stock right now. Please try again later.");
+        }
+
+        Money collectAmount = new Money("SLE", quote.totalMinor());
+        String transactionCode = generateTransactionCode();
+
+        Transaction saved = saveWithGuards(userId, quote.amountMinor(), request.getSourcePhone(),
+                TransactionServiceType.WAEC_RESULT_PIN, null, null, () ->
+                Transaction.builder()
+                        .userId(userId)
+                        .amountCurrency("SLE")
+                        .amountValue(quote.amountMinor())
+                        .feeValue(quote.feeMinor())
+                        .monimeDepositFeeValue(0L)
+                        .deenWalletFeeValue(quote.feeMinor())
+                        .monimeWithdrawalFeeValue(0L)
+                        .totalChargedValue(quote.totalMinor())
+                        .sourceProviderId(request.getSourceProviderId())
+                        .sourcePhone(request.getSourcePhone())
+                        .serviceType(TransactionServiceType.WAEC_RESULT_PIN)
+                        .destinationBankKycVerified(false)
+                        .status(TransactionStatus.AWAITING_PAYMENT)
+                        .smsSent(false)
+                        .transactionCode(transactionCode)
+                        .build());
+        if (saved.getMonimePaymentCodeId() != null) return TransactionResponse.from(saved); // idempotent replay
+        final UUID transactionId = saved.getId();
+
+        try {
+            transactionTemplate.executeWithoutResult(st ->
+                    waecPinService.reserveForTransaction(saved, quantity, deliveryEmail, quote));
+        } catch (RuntimeException e) {
+            transactionTemplate.executeWithoutResult(st -> transactionRepository.deleteById(transactionId));
+            throw e;
+        }
+
+        final PaymentCodeResult paymentCode;
+        try {
+            paymentCode = monimeClient.createPaymentCode(CreatePaymentCodeRequest.oneTime(
+                    "Deen Wallet WAEC result pin",
+                    collectAmount,
+                    request.getSourcePhone(),
+                    transactionId.toString()), "paycode-" + transactionId);
+        } catch (RuntimeException e) {
+            transactionTemplate.executeWithoutResult(st -> {
+                Transaction current = transactionRepository.findById(transactionId).orElse(null);
+                // Never delete a purchase that already holds a payment code: that code could be paid.
+                if (current != null && current.getMonimePaymentCodeId() == null) {
+                    waecPinService.deleteOrderAndRelease(transactionId);
+                    transactionRepository.deleteById(transactionId);
+                }
+            });
+            throw e;
+        }
+
+        Transaction result = transactionTemplate.execute(status -> {
+            Transaction t = transactionRepository.findById(transactionId)
+                    .orElseThrow(() -> new IllegalStateException("Transaction disappeared during initiation"));
+            if (paymentCode == null || paymentCode.id() == null || paymentCode.id().isBlank()) {
+                throw new IllegalStateException("Monime did not return a payment code.");
+            }
+            t.setMonimePaymentCodeId(paymentCode.id());
+            t.setMonimeUssdCode(paymentCode.ussdCode());
+            return t;
+        });
+
+        return TransactionResponse.from(result);
+    }
+
+    /**
+     * Payment confirmed for a WAEC purchase: sell the reserved pins, notify and email the buyer, then
+     * mark the transaction COMPLETED. If stock vanished (late payment after a release), the row goes to
+     * PAYOUT_FAILED so an admin can resend or refund; the customer's money is never silently kept.
+     * Runs inside the caller's transaction.
+     */
+    private void completeWaecPurchase(Transaction transaction) {
+        WaecFulfillmentService.Outcome outcome = waecFulfillmentService.fulfill(transaction);
+        if (outcome == WaecFulfillmentService.Outcome.OUT_OF_STOCK) {
+            moveToPayoutFailed(transaction,
+                    "WAEC pins are temporarily out of stock. Your payment is safe: support will send your pin or refund you.");
+            return;
+        }
+        transaction.setStatus(TransactionStatus.COMPLETED);
+        transactionRepository.save(transaction);
+    }
+
     public List<Transaction> listForUser(UUID userId) {
         return transactionRepository.findRecentByUserId(userId, PageRequest.of(0, MAX_USER_TRANSACTIONS));
     }
@@ -432,6 +548,9 @@ public class TransactionService {
             t.setStatus(TransactionStatus.CANCELED);
             t.setFailureReason(reason);
             transactionRepository.save(t);
+            if (t.getServiceType() == TransactionServiceType.WAEC_RESULT_PIN) {
+                waecPinService.releaseForTransaction(t.getId());
+            }
             notificationService.create(t.getUserId(), "TRANSACTION_CANCELED", "Transfer canceled",
                     reason, t.getId(), t.getTransactionCode());
             pushNotificationService.sendToUser(t.getUserId(), "Transfer canceled", reason,
@@ -483,6 +602,11 @@ public class TransactionService {
         if (current != TransactionStatus.PAID_IN) {
             transaction.setStatus(TransactionStatus.PAID_IN);
             transactionRepository.saveAndFlush(transaction);
+        }
+
+        if (transaction.getServiceType() == TransactionServiceType.WAEC_RESULT_PIN) {
+            completeWaecPurchase(transaction);
+            return;
         }
 
         // The payout is idempotent (key payout-{transactionId}), so resuming is always safe.
@@ -596,6 +720,9 @@ public class TransactionService {
     }
 
     private static String recipientLabel(Transaction t) {
+        if (t.getServiceType() == TransactionServiceType.WAEC_RESULT_PIN) {
+            return "WAEC Result Pin";
+        }
         if (t.getServiceType() == TransactionServiceType.BANK_TRANSFER) {
             return (t.getDestinationBankName() == null ? "the selected bank" : t.getDestinationBankName())
                     + " account " + mask(t.getDestinationBankAccountNumber());
@@ -712,6 +839,9 @@ public class TransactionService {
         transaction.setStatus(TransactionStatus.FAILED);
         transaction.setFailureReason(failureReason);
         transactionRepository.save(transaction);
+        if (transaction.getServiceType() == TransactionServiceType.WAEC_RESULT_PIN) {
+            waecPinService.releaseForTransaction(transaction.getId());
+        }
 
         notificationService.create(
                 transaction.getUserId(),
@@ -935,6 +1065,23 @@ public class TransactionService {
                 .orElseThrow(() -> new IllegalArgumentException("Transaction not found"));
         if (current.getStatus() != TransactionStatus.PAYOUT_FAILED) {
             throw new IllegalStateException("Only a failed payout can be sent again (current status: " + current.getStatus() + ").");
+        }
+        if (current.getServiceType() == TransactionServiceType.WAEC_RESULT_PIN) {
+            // WAEC rows have no payout to resend: "Send again" retries the pin sale and delivery.
+            transactionTemplate.executeWithoutResult(st -> {
+                Transaction t = transactionRepository.findByIdForUpdate(transactionId)
+                        .orElseThrow(() -> new IllegalArgumentException("Transaction not found"));
+                if (t.getStatus() != TransactionStatus.PAYOUT_FAILED) {
+                    throw new IllegalStateException("This purchase was already handled (status: " + t.getStatus() + ").");
+                }
+                t.setPayoutAttempt(t.getPayoutAttempt() + 1);
+                t.setStatus(TransactionStatus.PAID_IN);
+                t.setFailureReason(null);
+                transactionRepository.save(t);
+                recordAction(transactionId, "RESEND", adminId, adminEmail, "WAEC pin sale retry");
+                completeWaecPurchase(t);
+            });
+            return transactionRepository.findById(transactionId).orElseThrow();
         }
         assertPreviousPayoutFailed(current);
 
