@@ -1,3 +1,4 @@
+
 package com.glr.deenwallet.config;
 
 import com.glr.deenwallet.admin.AdminAuthController;
@@ -10,6 +11,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
@@ -23,31 +25,36 @@ import java.time.Instant;
 import java.util.Map;
 
 /**
- * Without this handler, every business-logic failure thrown by a service
- * (wrong password, locked account, rate limit, missing PIN, recovery
- * required, etc.) was an uncaught RuntimeException, so Spring's default
- * handler turned it into a bare 500 Internal Server Error with no body.
- * The frontend (see apiRequest() in deenwallet-client.js) already expects
- * a JSON body with a "message" field and correct status codes (400/401/
- * 403/409/423/429) - it was just never receiving them. This class is the
- * missing piece, not a change in behavior: it does not alter which
- * conditions are treated as errors, only how they're reported.
+ * Handles application exceptions and returns consistent JSON error responses.
+ *
+ * Business errors retain their intended HTTP status codes so that frontend
+ * and mobile clients can respond correctly to authentication failures,
+ * locked accounts, validation errors, rate limits, and other expected errors.
  */
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // ---- Most specific first ----
+    // ---- Authentication and account status ----
 
     @ExceptionHandler(AuthService.UserLoginRateLimitedException.class)
-    public ResponseEntity<Map<String, String>> handle(AuthService.UserLoginRateLimitedException ex) {
+    public ResponseEntity<Map<String, String>> handle(
+            AuthService.UserLoginRateLimitedException ex) {
+
         HttpHeaders headers = new HttpHeaders();
         Instant lockedUntil = ex.getLockedUntil();
+
         if (lockedUntil != null) {
-            long seconds = Math.max(0, Duration.between(Instant.now(), lockedUntil).getSeconds());
+            long seconds = Math.max(
+                    0,
+                    Duration.between(Instant.now(), lockedUntil).getSeconds()
+            );
             headers.add("Retry-After", String.valueOf(seconds));
         }
-        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).headers(headers).body(body(ex.getMessage()));
+
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .headers(headers)
+                .body(body(ex.getMessage()));
     }
 
     @ExceptionHandler({
@@ -56,139 +63,217 @@ public class GlobalExceptionHandler {
             AdminAuthController.AdminLockedException.class,
             AdminAuthController.AdminRecoveryRequiredException.class
     })
-    public ResponseEntity<Map<String, String>> handleLocked(RuntimeException ex) {
-        // admin.html's login handler specifically checks `error.status === 423`
-        // to decide whether to reveal the "Send recovery code" / OTP panel.
-        // AdminRecoveryRequiredException must return 423 for that panel to
-        // ever appear - it previously fell into the generic 403 handler
-        // below, so the backend was correctly rejecting the login but the
-        // frontend had no way to tell the user what to do about it.
-        return ResponseEntity.status(HttpStatus.LOCKED).body(body(ex.getMessage()));
+    public ResponseEntity<Map<String, String>> handleLocked(
+            RuntimeException ex) {
+
+        return ResponseEntity.status(HttpStatus.LOCKED)
+                .body(body(ex.getMessage()));
     }
 
-    @ExceptionHandler(AdminAuthController.AdminEmailVerificationRequiredException.class)
-    public ResponseEntity<Map<String, String>> handle(AdminAuthController.AdminEmailVerificationRequiredException ex) {
-        // admin.html checks the X-Recovery-Required response header (not the
-        // status code) to distinguish "email not verified" from "OTP
-        // recovery needed" and show the right instructions in the same
-        // panel. Without this header the panel never appeared for this case
-        // either, for the same reason as AdminRecoveryRequiredException above.
+    @ExceptionHandler(
+            AdminAuthController.AdminEmailVerificationRequiredException.class
+    )
+    public ResponseEntity<Map<String, String>> handle(
+            AdminAuthController.AdminEmailVerificationRequiredException ex) {
+
         HttpHeaders headers = new HttpHeaders();
         headers.add("X-Recovery-Required", "EMAIL_VERIFICATION");
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).headers(headers).body(body(ex.getMessage()));
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .headers(headers)
+                .body(body(ex.getMessage()));
     }
 
     @ExceptionHandler({
             AuthService.EmailVerificationRequiredException.class,
             AdminAuthController.AdminPinDisabledException.class
     })
-    public ResponseEntity<Map<String, String>> handleVerificationRequired(RuntimeException ex) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body(ex.getMessage()));
+    public ResponseEntity<Map<String, String>> handleVerificationRequired(
+            RuntimeException ex) {
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(body(ex.getMessage()));
     }
 
     @ExceptionHandler(AuthService.PinNotSetException.class)
-    public ResponseEntity<Map<String, String>> handle(AuthService.PinNotSetException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(body(ex.getMessage()));
+    public ResponseEntity<Map<String, String>> handle(
+            AuthService.PinNotSetException ex) {
+
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(body(ex.getMessage()));
     }
 
     @ExceptionHandler(SecurityException.class)
-    public ResponseEntity<Map<String, String>> handle(SecurityException ex) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body(ex.getMessage()));
+    public ResponseEntity<Map<String, String>> handle(
+            SecurityException ex) {
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(body(ex.getMessage()));
+    }
+
+    // ---- Explicit HTTP status exceptions ----
+
+    /**
+     * Preserve status codes deliberately thrown by controllers and services.
+     *
+     * For example, ResponseStatusException(HttpStatus.UNAUTHORIZED, ...)
+     * must return 401 rather than falling through to the generic 500 handler.
+     */
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<Map<String, String>> handleResponseStatusException(
+            ResponseStatusException ex) {
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.putAll(ex.getHeaders());
+
+        return ResponseEntity.status(ex.getStatusCode())
+                .headers(headers)
+                .body(body(ex.getReason()));
     }
 
     // ---- Validation ----
 
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<Void> handle(NoResourceFoundException ex) {
-        // Routine (favicon.ico, etc.) - not worth a full stack trace every time.
+
+        // Routine missing resources such as favicon.ico do not need a stack trace.
         return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> handle(MethodArgumentNotValidException ex) {
-        String message = ex.getBindingResult().getFieldErrors().stream()
+    public ResponseEntity<Map<String, String>> handle(
+            MethodArgumentNotValidException ex) {
+
+        String message = ex.getBindingResult()
+                .getFieldErrors()
+                .stream()
                 .findFirst()
                 .map(err -> err.getDefaultMessage())
                 .orElse("Invalid request.");
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body(message));
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(body(message));
     }
 
     @ExceptionHandler(BankKycUnavailableException.class)
-    public ResponseEntity<Map<String, String>> handleBankKycUnavailable(BankKycUnavailableException ex) {
-        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body(ex.getMessage()));
+    public ResponseEntity<Map<String, String>> handleBankKycUnavailable(
+            BankKycUnavailableException ex) {
+
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(body(ex.getMessage()));
     }
 
-    // ---- Generic fallbacks (must stay below the specific handlers above) ----
+    // ---- Generic application errors ----
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-    public ResponseEntity<Map<String, String>> handle(HttpRequestMethodNotSupportedException ex) {
-        return ResponseEntity
-                .status(HttpStatus.METHOD_NOT_ALLOWED)
+    public ResponseEntity<Map<String, String>> handle(
+            HttpRequestMethodNotSupportedException ex) {
+
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
                 .body(body("HTTP method not allowed for this endpoint."));
     }
 
     @ExceptionHandler(TooManyRequestsException.class)
-    public ResponseEntity<Map<String, String>> handle(TooManyRequestsException ex) {
+    public ResponseEntity<Map<String, String>> handle(
+            TooManyRequestsException ex) {
+
         HttpHeaders headers = new HttpHeaders();
         headers.add("Retry-After", "30");
-        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).headers(headers).body(body(ex.getMessage()));
+
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .headers(headers)
+                .body(body(ex.getMessage()));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Map<String, String>> handle(IllegalArgumentException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body(ex.getMessage()));
+    public ResponseEntity<Map<String, String>> handle(
+            IllegalArgumentException ex) {
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(body(ex.getMessage()));
     }
 
     @ExceptionHandler(IllegalStateException.class)
-    public ResponseEntity<Map<String, String>> handle(IllegalStateException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(body(ex.getMessage()));
+    public ResponseEntity<Map<String, String>> handle(
+            IllegalStateException ex) {
+
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(body(ex.getMessage()));
     }
 
-    // ---- Anything else: log the real cause server-side, never leak it to the client ----
+    // ---- Client disconnects ----
 
     @ExceptionHandler(ClientAbortException.class)
     public void handleClientAbort(ClientAbortException ex) {
-        // The client (browser, mobile app, tunnel) disconnected before the
-        // response finished - a tab closed, a page navigated away, a brief
-        // network hiccup. This is routine, not a server error. Deliberately
-        // don't attempt to write any response here: the connection is
-        // already gone, and trying anyway is what previously caused a
-        // second, more alarming-looking exception right after this one.
-        log.debug("Client disconnected before response completed: {}", ex.getMessage());
+
+        // The client disconnected before the response completed.
+        log.debug(
+                "Client disconnected before response completed: {}",
+                ex.getMessage()
+        );
     }
 
     @ExceptionHandler(AsyncRequestNotUsableException.class)
-    public void handleAsyncRequestNotUsable(AsyncRequestNotUsableException ex) {
-        // Spring Framework 7 wraps the client disconnect (ClientAbortException) in this
-        // exception. Same situation as above: the client is gone, so log quietly and
-        // write nothing.
-        log.debug("Client disconnected before response completed: {}", ex.getMessage());
+    public void handleAsyncRequestNotUsable(
+            AsyncRequestNotUsableException ex) {
+
+        // Spring may wrap a client disconnect in this exception.
+        log.debug(
+                "Client disconnected before response completed: {}",
+                ex.getMessage()
+        );
     }
 
+    // ---- Upstream service errors ----
+
     @ExceptionHandler(RestClientResponseException.class)
-    public ResponseEntity<Map<String, String>> handleUpstream(RestClientResponseException ex) {
-        // Monime (or another upstream) answered with a non-2xx. Log the real body so the
-        // cause is visible in server logs, but don't leak it to the client.
-        log.error("Upstream call failed: status={} body={}", ex.getStatusCode(), ex.getResponseBodyAsString());
+    public ResponseEntity<Map<String, String>> handleUpstream(
+            RestClientResponseException ex) {
+
+        log.error(
+                "Upstream call failed: status={} body={}",
+                ex.getStatusCode(),
+                ex.getResponseBodyAsString()
+        );
+
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
-                .body(body("The payment provider could not complete this request. Please try again."));
+                .body(body(
+                        "The payment provider could not complete this request. Please try again."
+                ));
     }
 
     @ExceptionHandler(ResourceAccessException.class)
-    public ResponseEntity<Map<String, String>> handleUpstreamTimeout(ResourceAccessException ex) {
+    public ResponseEntity<Map<String, String>> handleUpstreamTimeout(
+            ResourceAccessException ex) {
+
         log.error("Upstream call timed out or was unreachable", ex);
+
         return ResponseEntity.status(HttpStatus.GATEWAY_TIMEOUT)
-                .body(body("The payment provider is taking too long to respond. Please try again."));
+                .body(body(
+                        "The payment provider is taking too long to respond. Please try again."
+                ));
     }
+
+    // ---- Final fallback ----
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handle(Exception ex) {
+
         log.error("Unhandled exception", ex);
+
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(body("Something went wrong. Please try again."));
     }
 
+    // ---- JSON response helper ----
+
     private Map<String, String> body(String message) {
-        return Map.of("message", message == null || message.isBlank() ? "Something went wrong." : message);
+
+        return Map.of(
+                "message",
+                message == null || message.isBlank()
+                        ? "Something went wrong."
+                        : message
+        );
     }
 }
