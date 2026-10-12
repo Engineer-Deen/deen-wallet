@@ -75,7 +75,7 @@ app:
 
   waec:
     encryption-key: ${WAEC_PIN_ENCRYPTION_KEY:}
-    unit-price-minor: ${WAEC_PIN_PRICE_MINOR:100}
+    unit-price-minor: ${WAEC_PIN_PRICE_MINOR:3500}
     fee-rate: ${WAEC_PIN_FEE_RATE:0.02}
     max-quantity: ${WAEC_MAX_QUANTITY:5}
 
