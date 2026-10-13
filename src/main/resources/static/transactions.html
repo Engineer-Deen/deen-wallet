@@ -438,6 +438,17 @@
       .scroll { padding-left:10px; padding-right:10px; }
     }
 
+    /* ===== WAEC Result Pin receipt ===== */
+    .waec-extra { border-top: 1px solid var(--border); }
+    #receipt-recipient-phone { word-break: break-all; text-align: right; }
+    .waec-pins { margin: 14px 0 4px; padding: 14px 16px; border-radius: 14px; background: var(--card); border: 1px solid var(--border); text-align: left; }
+    .waec-pins-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .waec-pin-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 0; border-top: 1px solid var(--border); }
+    .waec-pin-row.first { border-top: none; }
+    .waec-pin-label { color: var(--muted); font-size: 13px; flex: 0 0 auto; }
+    .waec-pin-value { font-family: monospace; font-weight: 700; font-size: 15px; letter-spacing: .5px; word-break: break-all; text-align: right; flex: 1; color: var(--text); }
+    .waec-copy { border: 1px solid var(--border); background: #fff; color: var(--primary); border-radius: 8px; font-size: 12px; padding: 5px 10px; cursor: pointer; flex: 0 0 auto; }
+    .waec-pins-note { margin-top: 10px; font-size: 12px; color: var(--muted); line-height: 1.5; }
   </style>
 
 </head>
@@ -490,7 +501,7 @@
 
           <div class="receipt-rows">
             <div class="receipt-row">
-              <span class="label">Amount sent</span>
+              <span class="label" id="receipt-amount-label">Amount sent</span>
               <span class="value" id="receipt-amount"></span>
             </div>
             <div class="receipt-row">
@@ -509,6 +520,19 @@
               <span class="label" id="receipt-recipient-destination-label">Recipient number</span>
               <span class="value" id="receipt-recipient-phone"></span>
             </div>
+          </div>
+
+          <!-- WAEC Result Pin only: fee, delivery and the pin(s), like the email receipt -->
+          <div id="receipt-waec" class="waec-extra hidden">
+            <div class="receipt-row">
+              <span class="label">Processing fee</span>
+              <span class="value" id="receipt-waec-fee">—</span>
+            </div>
+            <div class="receipt-row hidden" id="receipt-waec-delivery-row" style="border-bottom:none;">
+              <span class="label">Delivery</span>
+              <span class="value" id="receipt-waec-delivery">—</span>
+            </div>
+            <div id="receipt-waec-pins" class="waec-pins hidden"></div>
           </div>
         </div>
       </div>
@@ -558,6 +582,12 @@
     const receiptFailureReason = document.getElementById('receipt-failure-reason');
     const receiptFailureReasonText = document.getElementById('receipt-failure-reason-text');
     const receiptBackBtn = document.getElementById('receipt-back-btn');
+    const receiptAmountLabel = document.getElementById('receipt-amount-label');
+    const receiptWaec = document.getElementById('receipt-waec');
+    const receiptWaecFee = document.getElementById('receipt-waec-fee');
+    const receiptWaecDeliveryRow = document.getElementById('receipt-waec-delivery-row');
+    const receiptWaecDelivery = document.getElementById('receipt-waec-delivery');
+    const receiptWaecPins = document.getElementById('receipt-waec-pins');
 
     function statusBadgeClass(status) {
       if (status === 'AWAITING_PAYMENT') return 'awaiting';
@@ -633,9 +663,11 @@
         top.className = 'txn-top';
         const name = document.createElement('span');
         name.className = 'txn-name';
-        name.textContent = txn.serviceType === 'BANK_TRANSFER'
-                ? (txn.bankAccountHolderName || txn.destinationHolderName || 'Bank Transfer')
-                : (txn.destinationHolderName || txn.destinationPhone || 'Transfer');
+        name.textContent = txn.serviceType === 'WAEC_RESULT_PIN'
+                ? 'WAEC Result Pin'
+                : txn.serviceType === 'BANK_TRANSFER'
+                        ? (txn.bankAccountHolderName || txn.destinationHolderName || 'Bank Transfer')
+                        : (txn.destinationHolderName || txn.destinationPhone || 'Transfer');
         const amount = document.createElement('span');
         amount.className = 'txn-amount';
         amount.textContent = txn.amount !== null ? formatMoney(txn.amount) + ' SLE' : '—';
@@ -655,7 +687,7 @@
 
         const badge = document.createElement('span');
         badge.className = 'status-badge ' + statusBadgeClass(status);
-        badge.textContent = statusLabel(status);
+        badge.textContent = (txn.serviceType === 'WAEC_RESULT_PIN' && status === 'COMPLETED') ? 'Purchase completed' : statusLabel(status);
 
         meta.appendChild(codeSpan);
         meta.appendChild(dateSpan);
@@ -709,6 +741,7 @@
       // ✅ Use transaction code if available
       var txnDisplay = txn.transactionCode || txn.id;
 
+      const waec = txn.serviceType === 'WAEC_RESULT_PIN';
       const titleByStatus = {
         AWAITING_PAYMENT: 'Waiting for Payment',
         PAID_IN: 'Payment Received',
@@ -726,7 +759,8 @@
         CANCELED: { icon: '\u2716', cls: 'canceled' },
       };
 
-      receiptTitle.textContent = titleByStatus[status] || status;
+      const waecTitles = { PAYING_OUT: 'Processing Purchase', COMPLETED: 'Purchase Completed Successfully', FAILED: 'Purchase Failed' };
+      receiptTitle.textContent = (waec && waecTitles[status]) || titleByStatus[status] || status;
       const iconInfo = iconByStatus[status] || { icon: '\u2139\uFE0F', cls: 'pending' };
       receiptIcon.textContent = iconInfo.icon;
       receiptIcon.className = 'receipt-icon ' + iconInfo.cls;
@@ -736,20 +770,124 @@
       receiptAmount.textContent = txn.amount !== null ? formatMoney(txn.amount) + ' SLE' : '—';
       receiptTotal.textContent = txn.totalCharged !== null ? formatMoney(txn.totalCharged) + ' SLE' : '—';
       const bankTransfer = txn.serviceType === 'BANK_TRANSFER';
-      receiptOperatorLabel.textContent = bankTransfer ? 'Bank' : 'Operator';
-      receiptOperator.textContent = bankTransfer ? (txn.bankName || '—') : providerName(txn.destinationProviderId);
-      receiptRecipientLabel.textContent = bankTransfer ? 'Account holder' : 'Recipient name';
-      receiptRecipientName.textContent = bankTransfer
-              ? (txn.bankAccountHolderName || txn.destinationHolderName || '—')
-              : (txn.destinationHolderName || '—');
-      receiptRecipientDestinationLabel.textContent = bankTransfer ? 'Bank account' : 'Recipient number';
-      receiptRecipientPhone.textContent = bankTransfer ? maskPhone(txn.bankAccountNumber) : maskPhone(txn.destinationPhone);
+      receiptAmountLabel.textContent = waec ? 'Pins total' : 'Amount sent';
+      receiptOperatorLabel.textContent = bankTransfer ? 'Bank' : (waec ? 'Service' : 'Operator');
+      receiptOperator.textContent = bankTransfer
+              ? (txn.bankName || '—')
+              : (waec ? 'WAEC Result Pin' : providerName(txn.destinationProviderId));
+      receiptRecipientLabel.textContent = bankTransfer ? 'Account holder' : (waec ? 'Pins' : 'Recipient name');
+      receiptRecipientName.textContent = waec
+              ? '—'   // the number of pins is filled in from the WAEC order below
+              : bankTransfer
+                      ? (txn.bankAccountHolderName || txn.destinationHolderName || '—')
+                      : (txn.destinationHolderName || '—');
+      receiptRecipientDestinationLabel.textContent = bankTransfer ? 'Bank account' : (waec ? 'Email for pin' : 'Recipient number');
+      receiptRecipientPhone.textContent = waec
+              ? '—'
+              : bankTransfer ? maskPhone(txn.bankAccountNumber) : maskPhone(txn.destinationPhone);
+
+      receiptWaec.classList.toggle('hidden', !waec);
+      if (waec) {
+        loadWaecDetails(txn);
+      } else {
+        waecDetailsToken++;
+        receiptWaecPins.innerHTML = '';
+        receiptWaecPins.classList.add('hidden');
+      }
 
       receiptCanceledNote.hidden = status !== 'CANCELED';
       const failureReason = txn.failureReason || '';
       if (receiptFailureReason && receiptFailureReasonText) {
         receiptFailureReason.hidden = !failureReason || (status !== 'FAILED' && status !== 'CANCELED');
         receiptFailureReasonText.textContent = failureReason;
+      }
+    }
+
+    // ==============================================================
+    // WAEC RESULT PIN receipt: number of pins, email it went to, delivery state and the pin(s),
+    // the same details the customer gets by email. Fetched from the buyer's own order.
+    // ==============================================================
+    let waecDetailsToken = 0;
+
+    function waecDeliveryText(deliveryStatus) {
+      if (deliveryStatus === 'SENT') return 'Delivered';
+      if (deliveryStatus === 'FAILED') return 'Not delivered yet. We will keep trying.';
+      return 'Sending…';
+    }
+
+    function renderWaecPins(data) {
+      receiptWaecPins.innerHTML = '';
+      if (!data.fulfilled || !data.pins || !data.pins.length) {
+        receiptWaecPins.classList.add('hidden');
+        return;
+      }
+      const title = document.createElement('div');
+      title.className = 'waec-pins-title';
+      title.textContent = data.pins.length > 1 ? 'Your Result Pins' : 'Your Result Pin';
+      receiptWaecPins.appendChild(title);
+
+      let first = true;
+      function addRow(label, value) {
+        const row = document.createElement('div');
+        row.className = 'waec-pin-row' + (first ? ' first' : '');
+        first = false;
+        const l = document.createElement('span');
+        l.className = 'waec-pin-label';
+        l.textContent = label;
+        const v = document.createElement('span');
+        v.className = 'waec-pin-value';
+        v.textContent = value;
+        const copy = document.createElement('button');
+        copy.type = 'button';
+        copy.className = 'waec-copy';
+        copy.textContent = 'Copy';
+        copy.addEventListener('click', () => {
+          navigator.clipboard.writeText(value).then(() => {
+            copy.textContent = 'Copied';
+            setTimeout(() => { copy.textContent = 'Copy'; }, 1500);
+          }).catch(() => {
+            copy.textContent = 'Select & copy';
+            setTimeout(() => { copy.textContent = 'Copy'; }, 2000);
+          });
+        });
+        row.appendChild(l);
+        row.appendChild(v);
+        row.appendChild(copy);
+        receiptWaecPins.appendChild(row);
+      }
+      data.pins.forEach((p, i) => {
+        const n = data.pins.length > 1 ? ' ' + (i + 1) : '';
+        addRow('PIN' + n, p.pin);
+        addRow('Serial' + n, p.serial);
+      });
+
+      const note = document.createElement('div');
+      note.className = 'waec-pins-note';
+      note.textContent = 'Keep these codes private. A copy was also sent to your email and saved in Notifications.';
+      receiptWaecPins.appendChild(note);
+      receiptWaecPins.classList.remove('hidden');
+    }
+
+    async function loadWaecDetails(txn) {
+      const token = ++waecDetailsToken;
+      receiptWaecFee.textContent = (txn.fee !== null && txn.fee !== undefined && !isNaN(txn.fee))
+              ? formatMoney(txn.fee) + ' SLE' : '—';
+      receiptWaecDeliveryRow.classList.add('hidden');
+      receiptWaecPins.classList.add('hidden');
+      receiptWaecPins.innerHTML = '';
+      try {
+        const data = await fetchWaecPurchase(txn.id);
+        if (token !== waecDetailsToken) return;   // a newer receipt is on screen
+        receiptRecipientName.textContent = data.quantity != null ? String(data.quantity) : '—';
+        receiptRecipientDestinationLabel.textContent = data.fulfilled ? 'Sent to' : 'Email for pin';
+        receiptRecipientPhone.textContent = data.deliveryEmail || data.deliveryEmailMasked || '—';
+        if (data.fulfilled) {
+          receiptWaecDelivery.textContent = waecDeliveryText(data.deliveryStatus);
+          receiptWaecDeliveryRow.classList.remove('hidden');
+        }
+        renderWaecPins(data);
+      } catch (_) {
+        // Keep the basic receipt; the pin stays available in Notifications and the email.
       }
     }
 

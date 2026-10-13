@@ -88,6 +88,15 @@ app:
     release-notes: ${APP_ANDROID_UPDATE_RELEASE_NOTES:Added faster responsiveness and improve the usage of our services}
     apk-path: ${APP_ANDROID_UPDATE_APK_PATH:downloads/DeenWallet.apk}
 
+  admin-android-update:
+    version-code: ${ADMIN_ANDROID_UPDATE_VERSION_CODE:4}
+    version-name: ${ADMIN_ANDROID_UPDATE_VERSION_NAME:1.4}
+    download-url: ${ADMIN_ANDROID_UPDATE_DOWNLOAD_URL:https://api.deenwallapp.com/api/app/admin-android-update/download}
+    force-update: ${ADMIN_ANDROID_UPDATE_FORCE:false}
+    release-notes: ${ADMIN_ANDROID_UPDATE_RELEASE_NOTES:Added faster responsiveness and performance}
+    metadata-path: ${ADMIN_ANDROID_UPDATE_METADATA_PATH:/var/www/deenwallet/admin-downloads/admin-android-update.json}
+    apk-path: ${ADMIN_ANDROID_UPDATE_APK_PATH:/var/www/deenwallet/admin-downloads/DeenWallet-Admin.apk}
+
   mail:
     from-email: ${MAIL_FROM_EMAIL:no-reply@deenwallapp.com}
     from-name: ${MAIL_FROM_NAME:Deen Wallet}

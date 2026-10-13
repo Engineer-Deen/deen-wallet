@@ -2631,7 +2631,7 @@
             <div class="top-bar">
                 <div>
                     <h1 class="greeting-title">WAEC Result Pin</h1>
-                    <p class="greeting-sub">Purchase WAEC pin to scratch your result.</p>
+                    <p class="greeting-sub">Purchase WAEC pin to scratch your result in the WAEC portal.</p>
                 </div>
             </div>
 
@@ -3190,7 +3190,7 @@
                 </div>
                 <div class="service-card-content">
                     <strong>WAEC Result Pin</strong>
-                    <span>Purchase WAEC pin to scratch your result.</span>
+                    <span>Purchase WAEC pin to scratch your result in the WAEC portal.</span>
                 </div>
                 <span class="service-card-arrow" aria-hidden="true">›</span>
             </button>
@@ -6419,7 +6419,33 @@
         let waecState = null;          // { quantity, deliveryEmail } of the purchase being paid
         let waecPinsLoadedFor = null;
 
+        // Browser Back (web version). This page has no history entries of its own, so without this a Back
+        // press during a pin purchase leaves the app and lands on whatever page was open before (for
+        // example an old receipt). We keep one spare history entry while the customer is inside the
+        // WAEC flow and turn each Back press into the same step back the on-screen arrow does.
+        let waecHistoryArmed = false;
+        function waecFlowActive() {
+            return screenWaecStart.classList.contains('active')
+                || screenWaecConfirm.classList.contains('active')
+                || (screenStep3.classList.contains('active') && !!transaction && transaction.serviceType === 'WAEC_RESULT_PIN');
+        }
+        function armWaecHistory() {
+            if (waecHistoryArmed) return;
+            try { window.history.pushState({ dwWaec: true }, ''); waecHistoryArmed = true; } catch (_) {}
+        }
+        window.addEventListener('popstate', () => {
+            if (!waecHistoryArmed) return;      // not ours: normal browser behaviour
+            waecHistoryArmed = false;           // this Back press used up our spare entry
+            if (waecFlowActive()) {
+                window.dwOnBackButton();        // same step back as the arrow / Android back
+                if (waecFlowActive()) armWaecHistory();
+            } else {
+                window.history.back();          // already left the flow: continue like a normal Back
+            }
+        });
+
         function openWaecService() {
+            armWaecHistory();
             waecQuote = null;
             waecQuantity = 0;   // nothing chosen yet: the price summary stays hidden until the customer picks pins
             waecSourceProviderId = null;
@@ -6701,7 +6727,7 @@
             const where = data.deliveryEmailMasked ? ' to ' + escapeHtml(data.deliveryEmailMasked) : '';
             const note = data.deliveryStatus === 'SENT' ? 'Also sent' + where + '.'
                 : data.deliveryStatus === 'FAILED' ? 'We could not email it yet, but it is saved here and in Notifications. We will keep trying.'
-                : 'Sending to your email' + where + '…';
+                    : 'Sending to your email' + where + '…';
             html += '<div class="waec-pins-note">' + note + ' Keep these codes private.</div>';
             waecPinsBlock.innerHTML = html;
             show(waecPinsBlock);
@@ -6901,7 +6927,19 @@
                 completionOverlay.classList.remove('active');
                 completionOverlay.setAttribute('aria-hidden', 'true');
             }
-            if (transaction && transaction.serviceType === 'BANK_TRANSFER') {
+            if (transaction && transaction.serviceType === 'WAEC_RESULT_PIN') {
+                // While the payment is still open, go back to the confirmation (like a bank transfer).
+                // Once the purchase has moved on or ended, go Home, so Confirm can never be pressed
+                // again for a purchase that already happened.
+                if (transaction.status === 'AWAITING_PAYMENT') {
+                    screenWaecConfirm.classList.add('active');
+                    hidePrimaryNav();
+                } else {
+                    waecState = null;
+                    returnToCustomerHome();
+                    if (typeof loadRecentActivity === 'function') loadRecentActivity();
+                }
+            } else if (transaction && transaction.serviceType === 'BANK_TRANSFER') {
                 screenBankConfirmation.classList.add('active');
                 hidePrimaryNav();
             } else {
@@ -7067,6 +7105,14 @@
             }
             if (screenProfile.classList.contains('active')) {
                 profileBackBtn.click();
+                return true;
+            }
+            if (screenWaecConfirm.classList.contains('active')) {
+                document.getElementById('waec-confirm-back-btn').click();
+                return true;
+            }
+            if (screenWaecStart.classList.contains('active')) {
+                document.getElementById('waec-start-back-btn').click();
                 return true;
             }
             if (document.getElementById('screen-step3').classList.contains('active')) {

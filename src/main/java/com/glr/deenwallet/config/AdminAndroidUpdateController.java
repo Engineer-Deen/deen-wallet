@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -29,7 +28,6 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
 
 @RestController
@@ -42,7 +40,6 @@ public class AdminAndroidUpdateController {
     private final UserRepository users;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
-    private final ConcurrentHashMap<String, long[]> authorizationAttempts = new ConcurrentHashMap<>();
 
     public AdminAndroidUpdateController(UserRepository users,
                                         PasswordEncoder passwordEncoder,
@@ -74,23 +71,13 @@ public class AdminAndroidUpdateController {
 
     /** Validate an existing active Admin account and issue a two-minute, APK-only token. */
     @PostMapping("/admin-android-update/authorize")
-    public ResponseEntity<Map<String, Object>> authorizeDownload(@RequestBody DownloadAuthorization request, HttpServletRequest httpRequest) {
+    public ResponseEntity<Map<String, Object>> authorizeDownload(@RequestBody DownloadAuthorization request) {
         if (request == null || request.getEmail() == null || request.getPassword() == null
                 || request.getEmail().isBlank() || request.getPassword().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Admin email and password are required");
         }
 
         String email = request.getEmail().trim().toLowerCase(Locale.ROOT);
-        String clientKey = httpRequest.getRemoteAddr() + "|" + email;
-        long now = System.currentTimeMillis();
-        long[] window = authorizationAttempts.compute(clientKey, (key, current) -> {
-            if (current == null || now - current[0] >= 300_000L) return new long[]{now, 1};
-            current[1]++;
-            return current;
-        });
-        if (window[1] > 5) {
-            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Too many authorization attempts. Try again later.");
-        }
 
         User user = users.findByEmailAndRole(email, "SUPER_ADMIN")
                 .or(() -> users.findByEmailAndRole(email, "ADMIN"))

@@ -15,6 +15,8 @@ import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Application-level API abuse protection.
@@ -36,6 +38,7 @@ public class ApiRateLimitFilter extends OncePerRequestFilter {
 
     private static final Duration WINDOW = Duration.ofMinutes(1);
     private static final Duration CLEANUP_AGE = Duration.ofMinutes(10);
+    private static final int MAX_TRACKED_COUNTERS = 200_000;
 
     /**
      * Maximum requests from one authenticated user per minute.
@@ -85,6 +88,7 @@ public class ApiRateLimitFilter extends OncePerRequestFilter {
      */
     private final Map<String, WindowCounter> counters =
             new ConcurrentHashMap<>();
+    private final AtomicInteger trackedCounters = new AtomicInteger();
 
     private final JwtService jwtService;
 
@@ -279,17 +283,21 @@ public class ApiRateLimitFilter extends OncePerRequestFilter {
             String key,
             Limit limit
     ) {
-
-        WindowCounter counter =
-                counters.computeIfAbsent(
-                        key,
-                        ignored -> new WindowCounter()
-                );
-
-        return counter.tryAcquire(
-                limit.maxRequests(),
-                WINDOW
-        );
+        AtomicBoolean allowed = new AtomicBoolean(false);
+        counters.compute(key, (ignored, existing) -> {
+            WindowCounter counter = existing;
+            if (counter == null) {
+                int count = trackedCounters.incrementAndGet();
+                if (count > MAX_TRACKED_COUNTERS) {
+                    trackedCounters.decrementAndGet();
+                    return null;
+                }
+                counter = new WindowCounter();
+            }
+            allowed.set(counter.tryAcquire(limit.maxRequests(), WINDOW));
+            return counter;
+        });
+        return allowed.get();
     }
 
     /**
@@ -469,12 +477,13 @@ public class ApiRateLimitFilter extends OncePerRequestFilter {
         Instant cutoff =
                 Instant.now().minus(CLEANUP_AGE);
 
-        counters.entrySet().removeIf(
-                entry ->
-                        entry.getValue()
-                                .lastSeen()
-                                .isBefore(cutoff)
-        );
+        counters.forEach((key, observed) -> counters.computeIfPresent(key, (ignored, current) -> {
+            if (current.lastSeen().isBefore(cutoff)) {
+                trackedCounters.decrementAndGet();
+                return null;
+            }
+            return current;
+        }));
     }
 
     private record Identity(

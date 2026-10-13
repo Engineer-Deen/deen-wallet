@@ -33,7 +33,7 @@ public class WaecController {
     public record PinPair(String pin, String serial) {}
 
     public record OrderSummary(UUID transactionId, String transactionCode, int quantity, String deliveryChannel,
-                               String deliveryEmailMasked, String deliveryStatus, Instant deliveredAt,
+                               String deliveryEmail, String deliveryEmailMasked, String deliveryStatus, Instant deliveredAt,
                                boolean fulfilled, List<PinPair> pins) {}
 
     /** Price preview for the cost screen and the confirmation screen. Purely a calculation. */
@@ -77,7 +77,7 @@ public class WaecController {
                 : List.of();
         return ResponseEntity.ok(new OrderSummary(
                 order.getTransactionId(), order.getTransactionCode(), order.getQuantity(), order.getDeliveryChannel(),
-                maskEmail(order.getDeliveryEmail()), order.getDeliveryStatus().name(), order.getDeliveredAt(),
+                order.getDeliveryEmail(), maskEmail(order.getDeliveryEmail()), order.getDeliveryStatus().name(), order.getDeliveredAt(),
                 fulfilled, pins));
     }
 
