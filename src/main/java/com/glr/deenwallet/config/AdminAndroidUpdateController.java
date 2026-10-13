@@ -29,6 +29,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.time.Instant;
 
 @RestController
 @RequestMapping("/api/app")
@@ -41,13 +42,20 @@ public class AdminAndroidUpdateController {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
+    private static final String AUTH_FAILED = "Invalid or unavailable Admin account";
+
+    private final String dummyHash;
+
     public AdminAndroidUpdateController(UserRepository users,
                                         PasswordEncoder passwordEncoder,
                                         JwtService jwtService) {
         this.users = users;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.dummyHash = passwordEncoder.encode("not-a-real-password");
     }
+
+
 
     @Value("${app.admin-android-update.metadata-path:/var/www/deenwallet/admin-downloads/admin-android-update.json}")
     private String metadataPath;
@@ -81,18 +89,35 @@ public class AdminAndroidUpdateController {
 
         User user = users.findByEmailAndRole(email, "SUPER_ADMIN")
                 .or(() -> users.findByEmailAndRole(email, "ADMIN"))
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid Admin credentials"));
+                .orElse(null);
 
-        if (!user.isActive() || !user.isEmailVerified() || user.isLocked()
-                || ("SUPER_ADMIN".equals(user.getRole()) && user.isAdminRecoveryRequired())
-                || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid or unavailable Admin account");
+        if (user == null) {
+            // Same bcrypt cost as a real check so timing does not reveal whether the email exists.
+            passwordEncoder.matches(request.getPassword(), dummyHash);
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, AUTH_FAILED);
         }
+
+        boolean passwordOk = passwordEncoder.matches(request.getPassword(), user.getPasswordHash());
+
+        if (!passwordOk) {
+            boolean recoveryBlocked = "SUPER_ADMIN".equals(user.getRole()) && user.isAdminRecoveryRequired();
+            if (user.isActive() && !user.isLocked() && !recoveryBlocked) {
+                users.recordAdminPasswordFailure(user.getId(), Instant.now());
+            }
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, AUTH_FAILED);
+        }
+
+        if (!isEligibleAdmin(user)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, AUTH_FAILED);
+        }
+
+        users.clearLoginFailures(user.getId());
 
         String token = jwtService.generateAdminApkDownloadToken(user.getId().toString());
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
                 .body(Map.of("downloadToken", token, "expiresInSeconds", 120));
     }
+
 
     /** The custom header is deliberately separate from normal Bearer access tokens. */
     @GetMapping("/admin-android-update/download")
