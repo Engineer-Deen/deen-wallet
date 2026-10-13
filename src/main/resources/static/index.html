@@ -5096,6 +5096,7 @@
                 screenStep1.classList.remove('active');
                 screenBankStep2.classList.add('active');
                 hidePrimaryNav();
+                armFlowHistory();
                 loadBankRecipients();
                 return;
             }
@@ -6423,29 +6424,33 @@
         // press during a pin purchase leaves the app and lands on whatever page was open before (for
         // example an old receipt). We keep one spare history entry while the customer is inside the
         // WAEC flow and turn each Back press into the same step back the on-screen arrow does.
-        let waecHistoryArmed = false;
-        function waecFlowActive() {
+        let flowHistoryArmed = false;
+        function flowActive() {
             return screenWaecStart.classList.contains('active')
                 || screenWaecConfirm.classList.contains('active')
-                || (screenStep3.classList.contains('active') && !!transaction && transaction.serviceType === 'WAEC_RESULT_PIN');
+                || screenBankStep2.classList.contains('active')
+                || screenBankAddRecipient.classList.contains('active')
+                || screenBankConfirmation.classList.contains('active')
+                || (screenStep3.classList.contains('active') && !!transaction
+                    && (transaction.serviceType === 'WAEC_RESULT_PIN' || transaction.serviceType === 'BANK_TRANSFER'));
         }
-        function armWaecHistory() {
-            if (waecHistoryArmed) return;
-            try { window.history.pushState({ dwWaec: true }, ''); waecHistoryArmed = true; } catch (_) {}
+        function armFlowHistory() {
+            if (flowHistoryArmed) return;
+            try { window.history.pushState({ dwFlow: true }, ''); flowHistoryArmed = true; } catch (_) {}
         }
         window.addEventListener('popstate', () => {
-            if (!waecHistoryArmed) return;      // not ours: normal browser behaviour
-            waecHistoryArmed = false;           // this Back press used up our spare entry
-            if (waecFlowActive()) {
+            if (!flowHistoryArmed) return;      // not ours: normal browser behaviour
+            flowHistoryArmed = false;           // this Back press used up our spare entry
+            if (flowActive()) {
                 window.dwOnBackButton();        // same step back as the arrow / Android back
-                if (waecFlowActive()) armWaecHistory();
+                if (flowActive()) armFlowHistory();
             } else {
                 window.history.back();          // already left the flow: continue like a normal Back
             }
         });
 
         function openWaecService() {
-            armWaecHistory();
+            armFlowHistory();
             waecQuote = null;
             waecQuantity = 0;   // nothing chosen yet: the price summary stays hidden until the customer picks pins
             waecSourceProviderId = null;
@@ -7105,6 +7110,18 @@
             }
             if (screenProfile.classList.contains('active')) {
                 profileBackBtn.click();
+                return true;
+            }
+            if (screenBankConfirmation.classList.contains('active')) {
+                bankConfirmBackBtn.click();             // confirmation -> recipient list
+                return true;
+            }
+            if (screenBankAddRecipient.classList.contains('active')) {
+                bankAddBackBtn.click();                 // add recipient -> recipient list
+                return true;
+            }
+            if (screenBankStep2.classList.contains('active')) {
+                bankRecipientListBackBtn.click();       // recipient list -> bank details (step 1)
                 return true;
             }
             if (screenWaecConfirm.classList.contains('active')) {
