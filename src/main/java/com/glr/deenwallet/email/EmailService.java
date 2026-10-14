@@ -50,6 +50,27 @@ public class EmailService {
                 ));
     }
 
+    /** Admin "forgot password": emails a one-time link to the admin reset page. Throws if the mail cannot be sent. */
+    public void sendAdminPasswordResetEmail(User admin, String rawToken) {
+        if (admin == null || admin.getEmail() == null || admin.getEmail().isBlank()) {
+            throw new IllegalArgumentException("Admin email is required");
+        }
+        if (rawToken == null || rawToken.isBlank()) {
+            throw new IllegalArgumentException("Password reset token is required");
+        }
+        String baseUrl = frontendBaseUrl == null ? "" : frontendBaseUrl.trim().replaceAll("/+$", "");
+        String resetLink = baseUrl + "/admin-reset-password.html?token=" + rawToken.trim();
+        sendRequired(admin.getEmail(), "Reset Your Deen Wallet Admin Password",
+                EmailTemplates.adminPasswordResetEmail(admin.getFirstName(), resetLink));
+    }
+
+    /** Security notice after an admin password or PIN was changed through recovery. */
+    @Async("emailTaskExecutor")
+    public void sendAdminSecurityChangeEmail(User admin, String what) {
+        send(admin.getEmail(), "Your Deen Wallet admin " + what + " was changed",
+                EmailTemplates.adminSecurityChangeEmail(admin.getFirstName(), what, supportEmail));
+    }
+
     public void sendPasswordResetEmail(User user, String rawToken) {
         if (user == null || user.getEmail() == null || user.getEmail().isBlank()) {
             throw new IllegalArgumentException("User email is required");

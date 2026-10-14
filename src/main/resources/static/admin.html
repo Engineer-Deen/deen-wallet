@@ -823,6 +823,9 @@
             background: var(--card);
         }
 
+        /* same placement and style as the customer login (.login-forgot-row / .login-link) */
+        .admin-forgot-row { display:flex; justify-content:flex-end; margin:-5px 0 2px; }
+        .admin-link-btn { border:0; background:none; padding:6px 0; color:var(--primary); font-weight:750; font-size:12px; cursor:pointer; }
         .recovery-btn {
             background: #eaf6f8 !important;
             border-color: var(--primary-light) !important;
@@ -1575,6 +1578,53 @@
             pointer-events: none;
         }
 
+        /* ============================================================ */
+        /* PIN MODAL - same tightened layout as the customer app:        */
+        /* fits any screen without scrolling; sizes follow the visible   */
+        /* height (dvh). fitPinModal() only shrinks it on tiny screens.  */
+        /* ============================================================ */
+        #pin-modal-overlay {
+            height: 100vh;
+            height: 100dvh;
+            box-sizing: border-box;
+            padding: max(10px, env(safe-area-inset-top, 0px)) max(14px, env(safe-area-inset-right, 0px)) max(10px, env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));
+            overflow: hidden;
+            overscroll-behavior: contain;
+            touch-action: none;
+        }
+        #pin-modal-overlay .modal-box {
+            max-height: none;
+            overflow: visible;
+            box-sizing: border-box;
+            padding: clamp(12px, 2.4dvh, 26px) 22px clamp(12px, 2dvh, 20px);
+            transform-origin: center center;
+        }
+        #pin-modal-overlay .modal-icon { font-size: clamp(26px, 5dvh, 42px); margin-bottom: clamp(2px, .8dvh, 8px); line-height: 1.1; }
+        #pin-modal-overlay .modal-title { font-size: clamp(17px, 2.7dvh, 20px); margin: 0 0 4px; }
+        #pin-modal-overlay .modal-message { font-size: clamp(12.5px, 1.9dvh, 15px); line-height: 1.35; margin: 0 0 clamp(4px, 1.2dvh, 12px); }
+        #pin-modal-overlay .pin-dots { gap: clamp(8px, 1.6dvh, 12px); margin: clamp(6px, 1.6dvh, 18px) 0; }
+        #pin-modal-overlay .pin-dot { width: clamp(40px, 6.6dvh, 50px); height: clamp(42px, 7.2dvh, 55px); font-size: 22px; }
+        #pin-modal-overlay .pin-error-msg { font-size: 12.5px; min-height: clamp(15px, 2.3dvh, 20px); margin: 0 0 clamp(2px, 1dvh, 10px); }
+        #pin-modal-overlay .pin-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(6px, 1.1dvh, 9px); margin-top: clamp(2px, .8dvh, 10px); }
+        #pin-modal-overlay .pin-keypad .pin-key { height: clamp(40px, 6.8dvh, 54px); padding: 0; margin: 0; font-size: clamp(18px, 2.8dvh, 22px); line-height: 1; display: flex; align-items: center; justify-content: center; }
+        #pin-modal-overlay .pin-actions { margin-top: clamp(6px, 1.2dvh, 12px); display: flex; flex-direction: column; gap: clamp(5px, .9dvh, 8px); }
+        #pin-modal-overlay .pin-actions button { flex: 0 0 auto; width: 100%; margin: 0 !important; height: clamp(36px, 5.4dvh, 44px); padding: 0 10px; font-size: 13.5px; }
+        #pin-modal-overlay .pin-actions-row { display: flex; gap: 8px; }
+        #pin-modal-overlay .pin-actions-row button { flex: 1 1 0; min-width: 0; }
+        /* the admin page has no global .btn-fill / .btn-secondary, so style them here exactly like the customer app */
+        #pin-modal-overlay .btn-fill { border: none; background: var(--primary-light); color: #fff; border-radius: 22px; font-weight: 600; cursor: pointer; }
+        #pin-modal-overlay .btn-fill:active, #pin-modal-overlay .btn-outline:active { transform: scale(0.98); }
+        #pin-modal-overlay .btn-fill:disabled { background: var(--primary-disabled, #A9D6DE); cursor: not-allowed; }
+        #pin-modal-overlay .btn-secondary { background: transparent; border: none; color: var(--primary); font-weight: 600; cursor: pointer; }
+        @media (max-height: 560px) {
+            #pin-modal-overlay .modal-icon { display: none; }
+        }
+        /* phone turned sideways: info on the left, keypad on the right */
+        @media (orientation: landscape) and (max-height: 560px) {
+            #pin-modal-overlay .modal-box { max-width: 640px; display: grid; grid-template-columns: 1fr 1fr; column-gap: 22px; align-items: center; }
+        }
+
+
         /* ===== Profile / Admin Management ===== */
         .profile-row {
             display: flex;
@@ -1909,6 +1959,9 @@
                 <input class="text-input" id="admin-password" type="password" placeholder="Enter your password"
                        value="" />
                 <button type="button" class="password-toggle-btn" data-target="admin-password" aria-label="Show password">&#128065;</button>
+            </div>
+            <div class="admin-forgot-row">
+                <button type="button" class="admin-link-btn" id="admin-forgot-password-btn">Forgot password?</button>
             </div>
             <div id="login-error" class="inline-error hidden"><span>&#9888;</span><span
                     id="login-error-text"></span></div>
@@ -2362,39 +2415,49 @@
         </div>
     </div>
 
-    <!-- ===== PIN MODAL ===== -->
+    <!-- ===== PIN MODAL (same layout as the customer app) ===== -->
     <div class="modal-overlay" id="pin-modal-overlay">
         <div class="modal-box">
-            <div class="modal-icon" style="font-size:48px;">🔐</div>
-            <h3 class="modal-title" style="font-size:20px;font-weight:700;margin:0 0 8px;">Session Locked</h3>
-            <p class="modal-message" style="font-size:15px;color:var(--muted);margin:0 0 20px;">Enter your 4-digit
-                PIN to continue</p>
-            <div class="pin-dots" id="pin-dots">
-                <div class="pin-dot" data-index="0">·</div>
-                <div class="pin-dot" data-index="1">·</div>
-                <div class="pin-dot" data-index="2">·</div>
-                <div class="pin-dot" data-index="3">·</div>
+            <div class="pin-info">
+                <div class="modal-icon">&#128274;</div>
+                <h3 class="modal-title">Session Locked</h3>
+                <p class="modal-message" id="pin-modal-message">Enter your 4-digit PIN to continue</p>
+
+                <div class="pin-dots" id="pin-dots">
+                    <div class="pin-dot" data-index="0">·</div>
+                    <div class="pin-dot" data-index="1">·</div>
+                    <div class="pin-dot" data-index="2">·</div>
+                    <div class="pin-dot" data-index="3">·</div>
+                </div>
+
+                <div class="pin-error-msg" id="pin-error-msg"></div>
+
+                <input class="pin-hidden-input" id="pin-hidden-input" type="password" inputmode="numeric" maxlength="4" readonly />
             </div>
-            <div class="pin-error-msg" id="pin-error-msg"></div>
-            <input class="pin-hidden-input" id="pin-hidden-input" type="password" inputmode="numeric"
-                   maxlength="4" readonly />
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px;">
-                <button class="btn-outline pin-key" data-value="1">1</button>
-                <button class="btn-outline pin-key" data-value="2">2</button>
-                <button class="btn-outline pin-key" data-value="3">3</button>
-                <button class="btn-outline pin-key" data-value="4">4</button>
-                <button class="btn-outline pin-key" data-value="5">5</button>
-                <button class="btn-outline pin-key" data-value="6">6</button>
-                <button class="btn-outline pin-key" data-value="7">7</button>
-                <button class="btn-outline pin-key" data-value="8">8</button>
-                <button class="btn-outline pin-key" data-value="9">9</button>
-                <button class="btn-outline pin-key" data-value="clear" style="grid-column:span 1;">⌫</button>
-                <button class="btn-outline pin-key" data-value="0">0</button>
-                <button class="btn-fill pin-key" data-value="submit" style="grid-column:span 1;">↵</button>
+
+            <div class="pin-pad">
+                <div class="pin-keypad">
+                    <button class="btn-outline pin-key" data-value="1">1</button>
+                    <button class="btn-outline pin-key" data-value="2">2</button>
+                    <button class="btn-outline pin-key" data-value="3">3</button>
+                    <button class="btn-outline pin-key" data-value="4">4</button>
+                    <button class="btn-outline pin-key" data-value="5">5</button>
+                    <button class="btn-outline pin-key" data-value="6">6</button>
+                    <button class="btn-outline pin-key" data-value="7">7</button>
+                    <button class="btn-outline pin-key" data-value="8">8</button>
+                    <button class="btn-outline pin-key" data-value="9">9</button>
+                    <button class="btn-outline pin-key" data-value="clear">⌫</button>
+                    <button class="btn-outline pin-key" data-value="0">0</button>
+                    <button class="btn-fill pin-key" data-value="submit">↵</button>
+                </div>
+
+                <div class="pin-actions">
+                    <div class="pin-actions-row">
+                        <button class="btn-secondary" id="pin-forgot-btn" type="button">Forgot PIN?</button>
+                        <button class="btn-secondary" id="pin-logout-btn" type="button">Log out</button>
+                    </div>
+                </div>
             </div>
-            <button class="btn-secondary" id="pin-logout-btn"
-                    style="margin-top:12px;width:100%;color:var(--primary);background:none;border:none;font-weight:600;cursor:pointer;">Log
-                out instead</button>
         </div>
     </div>
 
@@ -2849,7 +2912,24 @@
                     document.querySelector('#pin-modal-overlay .modal-message').textContent = message;
                 }
                 setTimeout(function () { pinHiddenInput.focus(); }, 200);
+                fitPinModal();
+                setTimeout(fitPinModal, 350);   // again once the open animation has finished
             }
+
+            // Only shrinks the box slightly if a screen is still too small for it (same helper as the customer app).
+            function fitPinModal() {
+                var box = pinModalOverlay.querySelector('.modal-box');
+                if (!box || !pinModalOverlay.classList.contains('active')) return;
+                box.style.transform = 'none';
+                var cs = getComputedStyle(pinModalOverlay);
+                var availH = pinModalOverlay.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+                var availW = pinModalOverlay.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+                var scale = Math.min(1, availH / box.offsetHeight, availW / box.offsetWidth);
+                box.style.transform = scale < 1 ? 'scale(' + Math.max(scale, 0.55).toFixed(3) + ')' : '';
+            }
+            window.addEventListener('resize', fitPinModal);
+            window.addEventListener('orientationchange', function () { setTimeout(fitPinModal, 250); });
+            if (window.visualViewport) window.visualViewport.addEventListener('resize', fitPinModal);
 
             function hideAdminPinModal() {
                 pinModalActive = false;
@@ -3081,6 +3161,20 @@
                 forceToLoginScreen();
                 hideAdminPinModal();
                 showToast('Logged out.');
+            });
+
+            // "Forgot PIN?" lives on the lock screen only; "Forgot password?" on the login screen.
+            // They open the same kind of pages the customer app uses, in their admin versions.
+            var pinForgotBtn = document.getElementById('pin-forgot-btn');
+            if (pinForgotBtn) pinForgotBtn.addEventListener('click', function () {
+                pinDisabledForSession = false;
+                clearToken();
+                hideAdminPinModal();
+                window.location.href = 'admin-reset-pin.html';
+            });
+            var adminForgotPasswordBtn = document.getElementById('admin-forgot-password-btn');
+            if (adminForgotPasswordBtn) adminForgotPasswordBtn.addEventListener('click', function () {
+                window.location.href = 'admin-reset-password.html';
             });
 
             // ==============================================================

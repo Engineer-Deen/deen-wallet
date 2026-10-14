@@ -51,8 +51,6 @@ spring:
 
 server:
   port: ${SERVER_PORT:8082}
-  # Needed so rate limiting sees the real client IP. Your nginx MUST overwrite X-Forwarded-For
-  # (proxy_set_header X-Forwarded-For $remote_addr;) and port 8082 must not be reachable publicly.
   forward-headers-strategy: native
 
   tomcat:

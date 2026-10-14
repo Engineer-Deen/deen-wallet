@@ -1,4 +1,3 @@
-
 package com.glr.deenwallet.config;
 
 import jakarta.servlet.FilterChain;
@@ -57,6 +56,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
             new Rule("adminrecovery", "POST", "/api/admin/auth/recovery", 10, 300, false),
             new Rule("adminapk-authorize", "POST", "/api/app/admin-android-update/authorize", 5, 300, false),
             new Rule("adminrefresh", "POST", "/api/admin/auth/refresh", 30, 60, false),
+            new Rule("adminforgotpw", "POST", "/api/admin/auth/forgot-password", 5, 900, false),
+            new Rule("adminresetpw", "POST", "/api/admin/auth/reset-password", 10, 900, false),
+            new Rule("adminforgotpin", "POST", "/api/admin/auth/forgot-pin", 5, 900, false),
+            new Rule("adminpincode", "POST", "/api/admin/auth/verify-pin-reset-code", 10, 900, false),
+            new Rule("adminresetpin", "POST", "/api/admin/auth/reset-pin", 10, 900, false),
 
             new Rule("pin", "POST", "/api/users/me/verify-pin", 10, 300, true),
             new Rule("pay", "POST", "/api/transactions", 6, 60, true),

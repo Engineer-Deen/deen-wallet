@@ -13,7 +13,10 @@ import org.springframework.web.client.HttpClientErrorException;
 
 import java.util.ArrayList;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 
+
+@Slf4j
 @RestController
 @RequestMapping("/api/accounts")
 @RequiredArgsConstructor
@@ -25,8 +28,12 @@ public class AccountLookupController {
     @GetMapping("/detect-provider")
     public ResponseEntity<DetectProviderResponse> detectProvider(@RequestParam String phone) {
         String normalized = normalizePhone(phone);
+        String local = normalized.replaceFirst("^\\+?232", "");
+        String prefix2 = local.length() >= 2 ? local.substring(0, 2) : local;
+
         String providerId = providerFromConfiguredPrefix(normalized);
         if (providerId == null || providerId.isBlank()) {
+            log.info("detect-provider: no configured provider for prefix={}", prefix2);
             return ResponseEntity.notFound().build();
         }
 
@@ -35,10 +42,12 @@ public class AccountLookupController {
             if (kyc != null && kyc.account() != null) {
                 return ResponseEntity.ok(new DetectProviderResponse(providerId, kyc.account().holderName()));
             }
+            log.info("detect-provider: Monime returned no account for provider={} prefix={}", providerId, prefix2);
         } catch (HttpClientErrorException ex) {
             // The configured YAML provider is authoritative. Never silently
-            // retry another provider, otherwise the detected provider can
-            // disagree with the prefix configuration.
+            // retry another provider.
+            log.warn("detect-provider: Monime rejected lookup provider={} prefix={} status={}",
+                    providerId, prefix2, ex.getStatusCode().value());
         }
         return ResponseEntity.notFound().build();
     }

@@ -225,6 +225,54 @@ final class EmailTemplates {
         return wrap("A quick security update", body);
     }
 
+    static String adminPasswordResetEmail(String firstName, String resetLink) {
+        String body = """
+            <div>
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <h2 style="margin: 0; color: %1$s; font-size: 22px; font-weight: 700;">Reset your admin password</h2>
+                </div>
+                <p style="margin: 0 0 16px 0; color: %2$s; font-size: 15px; line-height: 1.6;">Hello %3$s,</p>
+                <p style="margin: 0 0 16px 0; color: %2$s; font-size: 15px; line-height: 1.6;">
+                    We received a request to reset the password of your Deen Wallet administrator account.
+                </p>
+                <p style="margin: 0 0 24px 0; color: %2$s; font-size: 15px; line-height: 1.6;">
+                    Use the button below to choose a new password. This link expires in 30 minutes and can only be used once.
+                </p>
+                <div style="text-align: center; margin: 28px 0;">
+                    <a href="%4$s"
+                       style="display: inline-block; background-color: %1$s; color: #FFFFFF; text-decoration: none; font-size: 15px; font-weight: 700; padding: 13px 24px; border-radius: 8px;">
+                        Reset Admin Password
+                    </a>
+                </div>
+                <p style="margin: 0; color: %2$s; font-size: 13px; line-height: 1.5;">
+                    If you did not request this, ignore this email: your password stays the same. Never share this link with anyone.
+                </p>
+            </div>
+            """.formatted(BRAND_COLOR, MUTED_COLOR, escape(firstName), escape(resetLink));
+        return wrap("Reset your admin password", body);
+    }
+
+    static String adminSecurityChangeEmail(String firstName, String what, String supportEmail) {
+        String body = """
+            <div>
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <h2 style="margin: 0; color: %1$s; font-size: 22px; font-weight: 700;">Your admin %3$s was changed</h2>
+                </div>
+                <p style="margin: 0 0 16px 0; color: %2$s; font-size: 15px; line-height: 1.6;">Hello %4$s,</p>
+                <p style="margin: 0 0 16px 0; color: %2$s; font-size: 15px; line-height: 1.6;">
+                    The %3$s of your Deen Wallet administrator account was just changed using account recovery.
+                    For your security you have been signed out of all sessions and must sign in again.
+                </p>
+                <div style="background-color: #F9FAFB; border-left: 4px solid %1$s; padding: 16px; border-radius: 4px; margin: 20px 0 24px 0;">
+                    <p style="margin: 0; color: %2$s; font-size: 14px; line-height: 1.5;">
+                        If this was not you, contact <strong style="color: %1$s;">%5$s</strong> immediately.
+                    </p>
+                </div>
+            </div>
+            """.formatted(BRAND_COLOR, MUTED_COLOR, escape(what), escape(firstName), escape(supportEmail));
+        return wrap("Admin security notice", body);
+    }
+
     static String adminLoginBlockedEmail(String firstName, boolean superAdmin, String supportEmail) {
         String roleLabel = superAdmin ? "Super Administrator" : "Administrator";
 
