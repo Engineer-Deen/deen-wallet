@@ -355,44 +355,51 @@ final class EmailTemplates {
 
     static String transactionFailedEmail(String transactionCode, String amount, String recipientPhone, String failureReason,
                                          boolean bankTransfer, String bankName, String bankAccountNumber, String bankHolderName) {
+        String destination = bankTransfer
+                ? escape((bankName == null ? "the selected bank" : bankName) + " account " + maskTail(bankAccountNumber))
+                : escape(maskTail(recipientPhone));
+        String reason = escape(failureReason == null || failureReason.isBlank()
+                ? "The operator was unable to process this transaction." : failureReason);
+        String fundsNote = bankTransfer
+                ? "If your mobile-money payment was received but the bank payout failed, please contact Deen Wallet Support so the transaction can be reconciled."
+                : "If any amount was deducted, it will be returned automatically through the payment process.";
+
         String body = """
             <div>
                 <div style="text-align: center; margin-bottom: 24px;">
-                    <h2 style="margin: 0; color: %1$s; font-size: 22px; font-weight: 700;">We couldn't complete your transfer</h2>
+                    <h2 style="margin: 0; color: %1$s; font-size: 22px; font-weight: 700;">Transfer not completed</h2>
                     <p style="margin: 6px 0 0 0; color: %2$s; font-size: 14px;">
                         Reference: <span style="font-family: monospace; font-weight: 600; background: #F3F4F6; padding: 2px 8px; border-radius: 4px;">%3$s</span>
                     </p>
                 </div>
 
-                <p style="margin: 0 0 20px 0; color: %4$s; font-size: 15px; line-height: 1.6; text-align: center;">
-                    Your transfer of <strong style="color: %4$s;">SLE %5$s</strong> to <strong style="color: %4$s;">%6$s</strong> didn't go through.
-                </p>
+                <div style="border: 1px solid %4$s; border-radius: 12px; overflow: hidden; margin-bottom: 20px;">
+                    <table cellpadding="0" cellspacing="0" style="width: 100%%; border-collapse: collapse;">
+                        %5$s
+                        %6$s
+                        %7$s
+                    </table>
+                </div>
 
-                <div style="background-color: #F9FAFB; border-left: 4px solid %1$s; padding: 16px; border-radius: 4px; margin-bottom: 16px;">
-                    <p style="margin: 0 0 8px; color: %4$s; font-size: 14px; line-height: 1.5;">
-                        <strong>What happened:</strong> %7$s
-                    </p>
-                    <p style="margin: 0; color: %4$s; font-size: 14px; line-height: 1.5;">
-                        <strong>Your money:</strong> %8$s
-                    </p>
+                <div style="background-color: #F9FAFB; border-left: 4px solid %8$s; padding: 16px; border-radius: 4px;">
+                    <p style="margin: 0 0 8px; color: %1$s; font-size: 14px; line-height: 1.5;"><strong>Reason:</strong> %9$s</p>
+                    <p style="margin: 0; color: %1$s; font-size: 14px; line-height: 1.5;">%10$s</p>
                 </div>
             </div>
             """.formatted(
                 TEXT_COLOR,
                 MUTED_COLOR,
-                transactionCode,
-                TEXT_COLOR,
-                amount,
-                bankTransfer
-                        ? escape((bankName == null ? "the selected bank" : bankName) + " account " + maskTail(bankAccountNumber))
-                        : maskTail(recipientPhone),
-                escape(failureReason == null || failureReason.isBlank() ? "The operator was unable to process this transaction." : failureReason),
-                bankTransfer
-                        ? "If your mobile-money payment was received but the bank payout failed, please contact Deen Wallet Support so the transaction can be reconciled."
-                        : "If any amount was deducted, it will be automatically returned through the payment process."
+                escape(transactionCode),
+                BORDER_COLOR,
+                row("Amount", "SLE " + escape(amount)),
+                row("Sent to", destination),
+                row("Status", "Not completed"),
+                BRAND_COLOR,
+                reason,
+                fundsNote
         );
 
-        return wrap("We couldn't complete your transfer", body);
+        return wrap("Transfer not completed", body);
     }
 
     // ---------------- Failed payout / refund emails ----------------
