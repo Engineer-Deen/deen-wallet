@@ -41,6 +41,32 @@ public class OtpService {
         }
     }
 
+    /**
+     * Used when a registration is repeated (for example after a dropped connection). A code that was sent
+     * moments ago is still valid, so that case is reported as success instead of the "please wait" error.
+     * Any other problem (too many requests, mail failure) is still reported.
+     *
+     * @return true if a new code was sent, false if a recent code is already on its way
+     */
+    @Transactional
+    public boolean sendUnlessRecent(String rawEmail) {
+        String emailAddr = rawEmail.trim().toLowerCase(Locale.ROOT);
+        Object lock = emailLocks.computeIfAbsent(emailAddr, k -> new Object());
+        try {
+            synchronized (lock) {
+                Optional<EmailOtp> latest = repo.findTopByEmailAndUsedFalseOrderByCreatedAtDesc(emailAddr);
+                if (latest.isPresent()
+                        && latest.get().getCreatedAt().plusSeconds(resendCooldownSeconds).isAfter(Instant.now())) {
+                    return false;
+                }
+                generateAndSendLocked(emailAddr);
+                return true;
+            }
+        } finally {
+            emailLocks.remove(emailAddr, lock);
+        }
+    }
+
     protected void generateAndSendLocked(String emailAddr) {
         Instant now = Instant.now();
         Optional<EmailOtp> latest = repo.findTopByEmailAndUsedFalseOrderByCreatedAtDesc(emailAddr);

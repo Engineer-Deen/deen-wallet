@@ -1102,7 +1102,27 @@ async function apiRequest(path, { method = 'GET', params, body, headers: extraHe
       });
     }
 
+    // No connection at all: say so now instead of waiting for a timeout.
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      const offlineError = new Error('Unable to reach the server. Please check your connection and try again.');
+      offlineError.isNetworkError = true;
+      throw offlineError;
+    }
+
     let token = getAccessToken();
+    // The access token only lives a few minutes. If it has already expired (or is about to), renew it BEFORE
+    // sending: otherwise the request is sent, rejected, the token renewed, and the request sent again (3 round
+    // trips instead of 1, which is exactly what made the first PIN check after a pause feel slow).
+    if (token && tokenExpiresWithin(token, 15) && getRefreshToken()) {
+      try {
+        token = await refreshAccessToken();
+      } catch (refreshError) {
+        if (refreshError && refreshError.isNetworkError) throw refreshError;   // offline: report it right away
+        const dead = new Error('Session expired. Please log in again.');
+        dead.status = 401;
+        throw dead;
+      }
+    }
     const headers = { 'Content-Type': 'application/json', ...extraHeaders };
     if (token) headers['Authorization'] = 'Bearer ' + token;
 
@@ -1110,10 +1130,13 @@ async function apiRequest(path, { method = 'GET', params, body, headers: extraHe
       if (tokenToUse) headers['Authorization'] = 'Bearer ' + tokenToUse;
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      const onOffline = () => controller.abort();          // connection dropped mid-request: stop waiting
+      window.addEventListener('offline', onOffline);
       try {
         return await fetch(url.toString(), { method, headers, body: body ? JSON.stringify(body) : undefined, signal: controller.signal });
       } finally {
         clearTimeout(timeoutId);
+        window.removeEventListener('offline', onOffline);
       }
     };
 
@@ -1224,6 +1247,42 @@ async function apiRequest(path, { method = 'GET', params, body, headers: extraHe
     throw error;
   }
 }
+
+// ==============================================================
+// FAST REQUESTS: keep the login fresh and the connection open
+// ==============================================================
+let lastConnectionWarmAt = 0;
+
+// Opens (or reuses) the network connection to the server ahead of time, so the next real request does not
+// pay for the TCP/TLS handshake on a slow mobile network.
+function warmConnection() {
+  const now = Date.now();
+  if (now - lastConnectionWarmAt < 15000) return;
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+  lastConnectionWarmAt = now;
+  try {
+    fetch(DEENWALLET_CONFIG.API_BASE_URL + '/api/app/version', { method: 'GET', cache: 'no-store' }).catch(function () { });
+  } catch (_) { /* ignore */ }
+}
+
+// Call when the app wakes up or a PIN screen opens: renew an access token that is about to expire and open
+// the connection NOW, while the person is still typing, so the request that follows is a single quick trip.
+function prepareFastRequest() {
+  warmConnection();
+  if (getAccessToken() && getRefreshToken()) {
+    ensureFreshAccessToken(90).catch(function () { /* the request itself will report any real problem */ });
+  }
+}
+
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'visible') prepareFastRequest();
+});
+window.addEventListener('online', prepareFastRequest);
+setInterval(function () {
+  if (document.visibilityState === 'visible' && getAccessToken() && getRefreshToken()) {
+    ensureFreshAccessToken(75).catch(function () { });
+  }
+}, 45000);
 
 // ==============================================================
 // OTHER PUBLIC FUNCTIONS

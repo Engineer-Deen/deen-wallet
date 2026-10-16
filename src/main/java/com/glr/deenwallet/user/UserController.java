@@ -56,7 +56,7 @@ public class UserController {
 
     @PostMapping("/me/verify-pin")
     public ResponseEntity<Void> verifyPin(@Valid @RequestBody PinRequest request) {
-        authService.verifyPin(current().getId(), request.pin());
+        authService.verifyPin(currentUserId(), request.pin());   // no extra user lookup: verifyPin loads the user itself
         return ResponseEntity.noContent().build();
     }
 
@@ -76,6 +76,16 @@ public class UserController {
                 u.getLoginFailedAttempts(),
                 u.getLoginLockedUntil()
         );
+    }
+
+    private UUID currentUserId() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new SecurityException("Not authenticated");
+        }
+
+        return UUID.fromString((String) authentication.getPrincipal());
     }
 
     private User current() {

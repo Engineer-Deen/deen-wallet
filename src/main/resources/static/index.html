@@ -3905,6 +3905,8 @@
         let pendingPinAction = null;
 
         function showPinModal(message, confirmAction) {
+            // Warm the connection and renew the login while the person types, so checking the PIN is one quick trip.
+            if (typeof prepareFastRequest === 'function') prepareFastRequest();
             pinModalActive = true;
             pendingPinAction = typeof confirmAction === 'function' ? confirmAction : null;
             const pinTitleEl = document.querySelector('#pin-modal-overlay .modal-title');
@@ -4085,8 +4087,12 @@
             pinVerifyInFlight = true;
             pinKeys.forEach(btn => btn.disabled = true);
             pinHiddenInput.disabled = true;
+            // Immediate feedback, so the wait never feels like nothing is happening.
+            pinErrorMsg.style.color = 'var(--muted)';
+            pinErrorMsg.textContent = 'Checking…';
             try {
-                await apiRequest('/api/users/me/verify-pin', { method: 'POST', body: { pin: enteredPin } });
+                // A short limit: if the connection is bad the person must see the network message quickly.
+                await apiRequest('/api/users/me/verify-pin', { method: 'POST', body: { pin: enteredPin }, timeoutMs: 8000 });
                 onUnlockSuccess();
             } catch (error) {
                 if (isNetworkError(error)) {
@@ -4125,11 +4131,23 @@
                 }
             } finally {
                 pinVerifyInFlight = false;
+                pinErrorMsg.style.color = '';
+                if (pinErrorMsg.textContent === 'Checking…') pinErrorMsg.textContent = '';
                 pinKeys.forEach(btn => btn.disabled = false);
                 pinHiddenInput.disabled = false;
                 if (pinModalActive) setTimeout(() => pinHiddenInput.focus(), 20);
             }
         }
+
+        // Show the network message by itself the moment the connection drops while the PIN screen is open
+        // (and clear it again when the connection is back). No need to press anything to find out.
+        const PIN_OFFLINE_MESSAGE = 'No internet connection. Please check your connection and try again.';
+        window.addEventListener('offline', () => {
+            if (pinModalActive && !pinVerifyInFlight) pinErrorMsg.textContent = PIN_OFFLINE_MESSAGE;
+        });
+        window.addEventListener('online', () => {
+            if (pinModalActive && pinErrorMsg.textContent === PIN_OFFLINE_MESSAGE) pinErrorMsg.textContent = '';
+        });
 
         // ==============================================================
         // SESSION MANAGEMENT

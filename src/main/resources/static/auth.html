@@ -1219,20 +1219,20 @@
               body: { email }
             });
 
-            // Keep the response generic so the UI does not reveal whether
-            // an email address belongs to a registered USER account.
             if (forgotPasswordMessage) {
               forgotPasswordMessage.textContent =
-                      'If an account exists for that email, a password reset link has been sent. Please check your inbox.';
+                      'A password reset link has been sent to your email. Please check your inbox (and spam folder).';
               forgotPasswordMessage.style.color = '#2E9FB0';
             }
           } catch (error) {
-            // Do not expose account-existence information. The backend
-            // normally returns 204 for both existing and unknown emails.
             console.error('Password reset request error:', error);
             if (forgotPasswordMessage) {
-              forgotPasswordMessage.textContent =
-                      'We could not process the request right now. Please try again later.';
+              // An email that is not registered is rejected with a clear message.
+              forgotPasswordMessage.textContent = (error && error.status === 400 && error.message)
+                      ? error.message
+                      : (error && error.isNetworkError
+                          ? 'No internet connection. Please check your connection and try again.'
+                          : 'We could not process the request right now. Please try again later.');
               forgotPasswordMessage.style.color = 'var(--error)';
             }
           } finally {
@@ -1610,8 +1610,20 @@
             goToScreen('screen-confirm');
             startResendCooldown(60);
           } catch (error) {
-            if (registerErrorText) registerErrorText.textContent = error.message ||
-                    'Registration failed. Please try again.';
+            // This email already has an account that was never confirmed (typically from an earlier attempt whose
+            // answer was lost): carry on to the confirmation window instead of showing an error.
+            if (error && typeof error.message === 'string'
+                    && error.message.indexOf('This email is registered but not confirmed') === 0) {
+              if (confirmEmailInput) confirmEmailInput.value = email;
+              if (confirmEmailMasked) confirmEmailMasked.textContent = maskEmail(email);
+              if (confirmFallback) confirmFallback.classList.add('hidden');
+              goToScreen('screen-confirm');
+              startResendCooldown(5);
+              return;
+            }
+            if (registerErrorText) registerErrorText.textContent = error.isNetworkError
+                    ? 'Connection lost. Your details are still here: check your internet and tap Create account again.'
+                    : (error.message || 'Registration failed. Please try again.');
             if (registerError) registerError.classList.remove('hidden');
           } finally {
             registerBtn.disabled = false;

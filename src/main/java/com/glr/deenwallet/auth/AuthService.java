@@ -67,8 +67,24 @@ public class AuthService {
         String username = request.getUsername().trim();
         String phone = request.getPhone().trim();
 
-        if (userRepository.findByEmailAndRole(email, "USER").isPresent()) {
-            throw new IllegalArgumentException("Email already registered");
+        Optional<User> existingByEmail = userRepository.findByEmailAndRole(email, "USER");
+        if (existingByEmail.isPresent()) {
+            User existing = existingByEmail.get();
+            if (existing.isEmailVerified()) {
+                throw new IllegalArgumentException("Email already registered");
+            }
+            if (isSameUnconfirmedRegistration(existing, request, username, phone)) {
+                // The customer is repeating a registration whose answer never reached them (for example the
+                // connection dropped after the server had already saved it). The account is already waiting for
+                // its email code, so do NOT fail with "already registered": make sure a code is on its way and
+                // answer exactly like a first registration, so the app opens the confirmation window.
+                otpService.sendUnlessRecent(email);
+                log.info("Repeated registration resumed for unconfirmed account: {}", email);
+                return;
+            }
+            // Same email, but different details, and still unconfirmed: never overwrite the waiting account
+            // (that would let a stranger replace someone's pending password). Point to the confirmation step.
+            throw new IllegalArgumentException(PENDING_CONFIRMATION_MESSAGE);
         }
 
         if (userRepository.findByUsername(username).isPresent()) {
@@ -100,6 +116,22 @@ public class AuthService {
         userRepository.save(user);
         otpService.generateAndSend(email);
         log.info("User registered successfully: {}", email);
+    }
+
+    /** The frontend recognises the start of this text and opens the email confirmation window. */
+    public static final String PENDING_CONFIRMATION_MESSAGE =
+            "This email is registered but not confirmed yet. Enter the confirmation code we emailed you, or request a new code.";
+
+    /** Exactly the same submission as the waiting, unconfirmed account (name, username, phone, password and PIN). */
+    private boolean isSameUnconfirmedRegistration(User existing, RegisterRequest request, String username, String phone) {
+        return !existing.isEmailVerified()
+                && username.equals(existing.getUsername())
+                && phone.equals(existing.getPhone())
+                && request.getFullName().trim().equals(existing.getFullName())
+                && existing.getPasswordHash() != null
+                && passwordEncoder.matches(request.getPassword(), existing.getPasswordHash())
+                && existing.getPinHash() != null
+                && passwordEncoder.matches(request.getPin(), existing.getPinHash());
     }
 
     @Transactional
@@ -255,17 +287,14 @@ public class AuthService {
         String normalizedEmail = normalizeEmail(email);
 
         if (normalizedEmail.isBlank()) {
-            return Optional.empty();
+            throw new IllegalArgumentException("Enter your registered email address.");
         }
 
-        Optional<User> userOptional =
-                userRepository.findByEmailAndRole(normalizedEmail, "USER");
-
-        if (userOptional.isEmpty()) {
-            return Optional.empty();
-        }
-
-        User user = userOptional.get();
+        // Product decision: an email that is not registered with Deen Wallet is rejected, so a mistyped
+        // address is caught immediately instead of the customer waiting for an email that will never come.
+        User user = userRepository.findByEmailAndRole(normalizedEmail, "USER")
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "No account is registered with this email address."));
 
         String rawToken = createPasswordResetToken(user);
 
@@ -708,7 +737,9 @@ public class AuthService {
         }
 
         if (passwordEncoder.matches(pin, user.getPinHash())) {
-            userRepository.clearFailedPinAttempts(userId);
+            if (user.getPinAttempts() > 0) {          // nothing to clear on the normal, correct-first-time path
+                userRepository.clearFailedPinAttempts(userId);
+            }
             return;
         }
 
