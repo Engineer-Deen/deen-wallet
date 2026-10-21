@@ -11,8 +11,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.HttpClientErrorException;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 
 
@@ -24,6 +28,12 @@ public class AccountLookupController {
 
     private final MonimeClient monimeClient;
     private final ProviderConfig providerConfig;
+
+    /** Same number looked up again within this time is answered from memory, not from Monime. */
+    private static final Duration LOOKUP_TTL = Duration.ofMinutes(10);
+    private static final int MAX_CACHED_LOOKUPS = 5_000;
+    private record CachedLookup(DetectProviderResponse response, Instant expiresAt) {}
+    private final Map<String, CachedLookup> lookupCache = new ConcurrentHashMap<>();
 
     @GetMapping("/detect-provider")
     public ResponseEntity<DetectProviderResponse> detectProvider(@RequestParam String phone) {
@@ -37,10 +47,24 @@ public class AccountLookupController {
             return ResponseEntity.notFound().build();
         }
 
+        String cacheKey = providerId + "|" + normalized;
+        CachedLookup hit = lookupCache.get(cacheKey);
+        if (hit != null && hit.expiresAt().isAfter(Instant.now())) {
+            return ResponseEntity.ok(hit.response());
+        }
+
         try {
             ProviderKycResult kyc = monimeClient.getProviderKyc(providerId, normalized);
             if (kyc != null && kyc.account() != null) {
-                return ResponseEntity.ok(new DetectProviderResponse(providerId, kyc.account().holderName()));
+                DetectProviderResponse response = new DetectProviderResponse(providerId, kyc.account().holderName());
+                if (lookupCache.size() >= MAX_CACHED_LOOKUPS) {
+                    Instant now = Instant.now();
+                    lookupCache.values().removeIf(c -> c.expiresAt().isBefore(now));
+                }
+                if (lookupCache.size() < MAX_CACHED_LOOKUPS) {
+                    lookupCache.put(cacheKey, new CachedLookup(response, Instant.now().plus(LOOKUP_TTL)));
+                }
+                return ResponseEntity.ok(response);
             }
             log.info("detect-provider: Monime returned no account for provider={} prefix={}", providerId, prefix2);
         } catch (HttpClientErrorException ex) {

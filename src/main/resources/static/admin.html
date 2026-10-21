@@ -4987,14 +4987,14 @@
                         <p class="admin-card-title">Create Admin</p>
                         <p class="admin-card-sub">Only the Super Admin can create and manage administrator accounts.</p>
                         <div class="add-admin-form">
-                            <input type="email" id="new-admin-email" placeholder="Admin Email" />
+                            <input type="email" id="new-admin-email" name="new-admin-email" autocomplete="off" placeholder="Admin Email" />
                             <div class="password-field-wrap">
-                                <input type="password" id="new-admin-password" placeholder="Password" />
+                                <input type="password" id="new-admin-password" name="new-admin-password" autocomplete="new-password" placeholder="Password" />
                                 <button type="button" class="password-toggle-btn" data-target="new-admin-password" aria-label="Show password">&#128065;</button>
                             </div>
-                            <input type="text" id="new-admin-fullname" placeholder="Full Name" />
-                            <input type="text" id="new-admin-username" placeholder="Username" />
-                            <input type="text" id="new-admin-phone" placeholder="Phone (e.g. +23276123456)" />
+                            <input type="text" id="new-admin-fullname" name="new-admin-fullname" autocomplete="off" placeholder="Full Name" />
+                            <input type="text" id="new-admin-username" name="new-admin-username" autocomplete="off" placeholder="Username" />
+                            <input type="text" id="new-admin-phone" name="new-admin-phone" autocomplete="off" placeholder="Phone (e.g. +23276123456)" />
                             <button class="btn-primary" id="create-admin-btn">Create Admin</button>
                             <div id="create-admin-error" class="error-state hidden"></div>
                             <div id="create-admin-success" class="inline-success hidden"><span>&#10003;</span><span>Admin created successfully!</span></div>

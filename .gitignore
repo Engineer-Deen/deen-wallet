@@ -1,9 +1,12 @@
 # Secrets - never commit real credentials
 .env
 .env.*
-.env.example
 firebase-service-account*.json
 *firebase-adminsdk*.json
+secrets/*
+
+# Database backups (contain real customer data)
+*.dump
 
 # Build output
 target/
@@ -20,5 +23,3 @@ src/main/resources/build-commit.txt
 
 # Logs
 *.log
-
-secrets/

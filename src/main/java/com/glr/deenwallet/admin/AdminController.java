@@ -213,9 +213,10 @@ public class AdminController {
     public ResponseEntity<List<AdminUserResponse>> listAdmins() {
         User currentUser = getCurrentUser();
         validateSuperAdmin(currentUser);
-        List<User> admins = userRepository.findAll().stream()
-                .filter(u -> "ADMIN".equals(u.getRole()) || "SUPER_ADMIN".equals(u.getRole()))
-                .toList();
+        // Only the admin rows are read (the old findAll() loaded every customer into memory).
+        PageRequest firstPage = PageRequest.of(0, 200, Sort.by(Sort.Direction.DESC, "createdAt"));
+        List<User> admins = new java.util.ArrayList<>(userRepository.findByRole("SUPER_ADMIN", firstPage));
+        admins.addAll(userRepository.findByRole("ADMIN", firstPage));
         return ResponseEntity.ok(admins.stream().map(AdminUserResponse::from).toList());
     }
 

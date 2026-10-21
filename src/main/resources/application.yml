@@ -48,6 +48,9 @@ spring:
           auth: true
           starttls:
             enable: true
+            connectiontimeout: 5000
+            timeout: 10000
+            writetimeout: 10000
 
 server:
   port: ${SERVER_PORT:8082}
@@ -55,7 +58,7 @@ server:
 
   tomcat:
     threads:
-      max: 400
+      max: 200
     accept-count: 200
 
 app:

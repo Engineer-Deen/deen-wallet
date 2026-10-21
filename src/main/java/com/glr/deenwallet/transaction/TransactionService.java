@@ -175,26 +175,26 @@ public class TransactionService {
         // 2) Short transaction: persist the row (its id is assigned here).
         Transaction saved = saveWithGuards(userId, minorUnits, request.getSourcePhone(),
                 TransactionServiceType.MOBILE_MONEY, request.getDestinationPhone(), null, () ->
-                Transaction.builder()
-                        .userId(userId)
-                        .recipientId(request.getRecipientId())
-                        .amountCurrency("SLE")
-                        .amountValue(minorUnits)
-                        .feeValue(fee.feeValue())
-                        .monimeDepositFeeValue(fee.monimeDepositFeeValue())
-                        .deenWalletFeeValue(fee.deenWalletFeeValue())
-                        .monimeWithdrawalFeeValue(fee.monimeWithdrawalFeeValue())
-                        .totalChargedValue(fee.totalChargedValue())
-                        .sourceProviderId(request.getSourceProviderId())
-                        .sourcePhone(request.getSourcePhone())
-                        .serviceType(TransactionServiceType.MOBILE_MONEY)
-                        .destinationProviderId(request.getDestinationProviderId())
-                        .destinationPhone(request.getDestinationPhone())
-                        .destinationHolderName(kyc != null && kyc.account() != null ? kyc.account().holderName() : null)
-                        .status(TransactionStatus.AWAITING_PAYMENT)
-                        .smsSent(false)
-                        .transactionCode(transactionCode)
-                        .build());
+                        Transaction.builder()
+                                .userId(userId)
+                                .recipientId(request.getRecipientId())
+                                .amountCurrency("SLE")
+                                .amountValue(minorUnits)
+                                .feeValue(fee.feeValue())
+                                .monimeDepositFeeValue(fee.monimeDepositFeeValue())
+                                .deenWalletFeeValue(fee.deenWalletFeeValue())
+                                .monimeWithdrawalFeeValue(fee.monimeWithdrawalFeeValue())
+                                .totalChargedValue(fee.totalChargedValue())
+                                .sourceProviderId(request.getSourceProviderId())
+                                .sourcePhone(request.getSourcePhone())
+                                .serviceType(TransactionServiceType.MOBILE_MONEY)
+                                .destinationProviderId(request.getDestinationProviderId())
+                                .destinationPhone(request.getDestinationPhone())
+                                .destinationHolderName(kyc != null && kyc.account() != null ? kyc.account().holderName() : null)
+                                .status(TransactionStatus.AWAITING_PAYMENT)
+                                .smsSent(false)
+                                .transactionCode(transactionCode)
+                                .build());
         if (saved.getMonimePaymentCodeId() != null) return TransactionResponse.from(saved); // idempotent replay
         final UUID transactionId = saved.getId();
 
@@ -275,31 +275,31 @@ public class TransactionService {
 
         Transaction saved = saveWithGuards(userId, minorUnits, request.getSourcePhone(),
                 TransactionServiceType.BANK_TRANSFER, null, accountNumber, () ->
-                Transaction.builder()
-                        .userId(userId)
-                        .recipientId(request.getRecipientId())
-                        .amountCurrency("SLE")
-                        .amountValue(minorUnits)
-                        .feeValue(fee.feeValue())
-                        .monimeDepositFeeValue(fee.monimeDepositFeeValue())
-                        .deenWalletFeeValue(fee.deenWalletFeeValue())
-                        .monimeWithdrawalFeeValue(fee.monimeWithdrawalFeeValue())
-                        .totalChargedValue(fee.totalChargedValue())
-                        .sourceProviderId(request.getSourceProviderId())
-                        .sourcePhone(request.getSourcePhone())
-                        .serviceType(TransactionServiceType.BANK_TRANSFER)
-                        .destinationProviderId(null)
-                        .destinationPhone(null)
-                        .destinationBankProviderId(bank.providerId())
-                        .destinationBankName(bank.name())
-                        .destinationBankAccountNumber(accountNumber)
-                        .destinationBankHolderName(holderName)
-                        .destinationBankKycVerified(kycVerified)
-                        .destinationHolderName(holderName)
-                        .status(TransactionStatus.AWAITING_PAYMENT)
-                        .smsSent(false)
-                        .transactionCode(transactionCode)
-                        .build());
+                        Transaction.builder()
+                                .userId(userId)
+                                .recipientId(request.getRecipientId())
+                                .amountCurrency("SLE")
+                                .amountValue(minorUnits)
+                                .feeValue(fee.feeValue())
+                                .monimeDepositFeeValue(fee.monimeDepositFeeValue())
+                                .deenWalletFeeValue(fee.deenWalletFeeValue())
+                                .monimeWithdrawalFeeValue(fee.monimeWithdrawalFeeValue())
+                                .totalChargedValue(fee.totalChargedValue())
+                                .sourceProviderId(request.getSourceProviderId())
+                                .sourcePhone(request.getSourcePhone())
+                                .serviceType(TransactionServiceType.BANK_TRANSFER)
+                                .destinationProviderId(null)
+                                .destinationPhone(null)
+                                .destinationBankProviderId(bank.providerId())
+                                .destinationBankName(bank.name())
+                                .destinationBankAccountNumber(accountNumber)
+                                .destinationBankHolderName(holderName)
+                                .destinationBankKycVerified(kycVerified)
+                                .destinationHolderName(holderName)
+                                .status(TransactionStatus.AWAITING_PAYMENT)
+                                .smsSent(false)
+                                .transactionCode(transactionCode)
+                                .build());
         if (saved.getMonimePaymentCodeId() != null) return TransactionResponse.from(saved); // idempotent replay
         final UUID transactionId = saved.getId();
 
@@ -364,23 +364,23 @@ public class TransactionService {
 
         Transaction saved = saveWithGuards(userId, quote.amountMinor(), request.getSourcePhone(),
                 TransactionServiceType.WAEC_RESULT_PIN, null, null, () ->
-                Transaction.builder()
-                        .userId(userId)
-                        .amountCurrency("SLE")
-                        .amountValue(quote.amountMinor())
-                        .feeValue(quote.feeMinor())
-                        .monimeDepositFeeValue(0L)
-                        .deenWalletFeeValue(quote.feeMinor())
-                        .monimeWithdrawalFeeValue(0L)
-                        .totalChargedValue(quote.totalMinor())
-                        .sourceProviderId(request.getSourceProviderId())
-                        .sourcePhone(request.getSourcePhone())
-                        .serviceType(TransactionServiceType.WAEC_RESULT_PIN)
-                        .destinationBankKycVerified(false)
-                        .status(TransactionStatus.AWAITING_PAYMENT)
-                        .smsSent(false)
-                        .transactionCode(transactionCode)
-                        .build());
+                        Transaction.builder()
+                                .userId(userId)
+                                .amountCurrency("SLE")
+                                .amountValue(quote.amountMinor())
+                                .feeValue(quote.feeMinor())
+                                .monimeDepositFeeValue(0L)
+                                .deenWalletFeeValue(quote.feeMinor())
+                                .monimeWithdrawalFeeValue(0L)
+                                .totalChargedValue(quote.totalMinor())
+                                .sourceProviderId(request.getSourceProviderId())
+                                .sourcePhone(request.getSourcePhone())
+                                .serviceType(TransactionServiceType.WAEC_RESULT_PIN)
+                                .destinationBankKycVerified(false)
+                                .status(TransactionStatus.AWAITING_PAYMENT)
+                                .smsSent(false)
+                                .transactionCode(transactionCode)
+                                .build());
         if (saved.getMonimePaymentCodeId() != null) return TransactionResponse.from(saved); // idempotent replay
         final UUID transactionId = saved.getId();
 
@@ -487,7 +487,7 @@ public class TransactionService {
             if (t.getMonimePayoutId() == null && t.getMonimePaymentCodeId() != null) {
                 final String codeId = t.getMonimePaymentCodeId();
                 try {
-                    transactionTemplate.executeWithoutResult(st -> handlePaymentCodeProcessed(codeId));
+                    handlePaymentCodeProcessed(codeId);
                 } catch (Exception e) {
                     log.warn("Could not resume payout for PAID_IN transaction {}: {}", t.getTransactionCode(), e.toString());
                 }
@@ -532,7 +532,7 @@ public class TransactionService {
         String status = code == null || code.status() == null ? "" : code.status().toLowerCase();
         if (status.equals("processed")) {
             log.warn("Recovered missed payment_code.processed webhook for payment code {}", paymentCodeId);
-            transactionTemplate.executeWithoutResult(st -> handlePaymentCodeProcessed(paymentCodeId));
+            handlePaymentCodeProcessed(paymentCodeId);
         } else if (status.equals("expired") || status.equals("cancelled") || status.equals("canceled") || status.equals("failed")) {
             cancelIfStillAwaiting(transactionId, "Payment was not received before the payment window expired.");
         } else if (createdAt != null && createdAt.isBefore(Instant.now().minus(Duration.ofMinutes(60)))) {
@@ -561,14 +561,40 @@ public class TransactionService {
         });
     }
 
-    @Transactional
+    /**
+     * Money is in: record it, then send the payout to the recipient.
+     *
+     * Deliberately NOT @Transactional. The Monime payout call is slow network I/O (up to the 15 s
+     * read timeout), so it must not hold a database connection or a row lock. Three short steps:
+     *   1) transaction: lock the row, mark PAID_IN, decide what to pay out, COMMIT
+     *   2) no transaction, no DB connection: call Monime (idempotent key payout-{transactionId})
+     *   3) transaction: lock the row again and record what Monime answered
+     * If the app dies between 1 and 3 the row stays PAID_IN with no payout id, and the expiry
+     * scheduler resumes it after 120 s. Ambiguous Monime errors are rethrown so the webhook is retried.
+     */
     public void handlePaymentCodeProcessed(String paymentCodeId) {
+        PayoutJob job = transactionTemplate.execute(st -> preparePayout(paymentCodeId));
+        if (job == null) return;
+
+        PayoutOutcome outcome = callMonimePayout(job);
+
+        transactionTemplate.executeWithoutResult(st -> recordPayoutOutcome(paymentCodeId, outcome));
+    }
+
+    /** What step 2 needs. Plain data: no entity, so nothing depends on an open transaction. */
+    private record PayoutJob(CreatePayoutRequest request, String key, String transactionCode) {}
+
+    /** What Monime answered: either an accepted payout, or a definite rejection reason. */
+    private record PayoutOutcome(PayoutResult payout, String rejectedReason) {}
+
+    /** Step 1. Runs inside a short transaction. Returns null when there is nothing to pay out. */
+    private PayoutJob preparePayout(String paymentCodeId) {
         Optional<Transaction> maybeTransaction =
                 transactionRepository.findByMonimePaymentCodeIdForUpdate(paymentCodeId);
 
         if (maybeTransaction.isEmpty()) {
             log.warn("Received payment_code.processed for unknown payment code {}", paymentCodeId);
-            return;
+            return null;
         }
 
         Transaction transaction = maybeTransaction.get();
@@ -578,18 +604,18 @@ public class TransactionService {
         // Their money is in; it must be paid out, never ignored.
         boolean latePayment = current == TransactionStatus.CANCELED
                 || (current == TransactionStatus.FAILED
-                    && transaction.getPaidInAt() == null
-                    && transaction.getMonimePayoutId() == null);
+                && transaction.getPaidInAt() == null
+                && transaction.getMonimePayoutId() == null);
         boolean resumable = current == TransactionStatus.AWAITING_PAYMENT
                 || current == TransactionStatus.PAID_IN
                 || latePayment;
         if (!resumable) {
             log.info("Ignoring duplicate payment_code.processed for transaction {} (already in status {})",
                     transaction.getId(), current);
-            return;
+            return null;
         }
         if (current == TransactionStatus.PAID_IN && transaction.getMonimePayoutId() != null) {
-            return;
+            return null;
         }
         if (latePayment) {
             log.warn("Late payment received for {} transaction {}: recovering and paying out",
@@ -606,7 +632,7 @@ public class TransactionService {
 
         if (transaction.getServiceType() == TransactionServiceType.WAEC_RESULT_PIN) {
             completeWaecPurchase(transaction);
-            return;
+            return null;
         }
 
         // The payout is idempotent (key payout-{transactionId}), so resuming is always safe.
@@ -615,7 +641,7 @@ public class TransactionService {
             String accountNumber = transaction.getDestinationBankAccountNumber();
             if (accountNumber == null || accountNumber.isBlank()) {
                 moveToPayoutFailed(transaction, "The bank account details were missing when the funding payment was received.");
-                return;
+                return null;
             }
             payoutRequest = CreatePayoutRequest.toBank(
                     new Money(transaction.getAmountCurrency(), transaction.getAmountValue()),
@@ -627,7 +653,59 @@ public class TransactionService {
                     transaction.getDestinationProviderId(), transaction.getDestinationPhone(),
                     monimeProperties.defaultFinancialAccountId());
         }
-        submitPayout(transaction, payoutRequest);
+        return new PayoutJob(payoutRequest, payoutKey(transaction), transaction.getTransactionCode());
+    }
+
+    /** Step 2. NO transaction. Same error rules as submitPayout: ambiguous outcomes are rethrown. */
+    private PayoutOutcome callMonimePayout(PayoutJob job) {
+        try {
+            PayoutResult payout = monimeClient.createPayout(job.request(), job.key());
+            if (payout == null || payout.id() == null || payout.id().isBlank()) {
+                // Ambiguous: the payout may exist. Retry with the same idempotency key.
+                throw new IllegalStateException("Payment provider returned no payout id; will retry.");
+            }
+            return new PayoutOutcome(payout, null);
+        } catch (org.springframework.web.client.ResourceAccessException e) {
+            log.error("Payout request timed out for transaction {}", job.transactionCode(), e);
+            throw e;
+        } catch (org.springframework.web.client.RestClientResponseException e) {
+            int status = e.getStatusCode().value();
+            if (status == 429 || status == 408 || status == 409 || status >= 500) {
+                log.error("Transient Monime payout failure for transaction {}: status={}",
+                        job.transactionCode(), status, e);
+                throw e;
+            }
+            log.error("Monime rejected payout for transaction {}: status={} body={}",
+                    job.transactionCode(), status, e.getResponseBodyAsString());
+            return new PayoutOutcome(null, "The recipient payout was rejected by the payment provider.");
+        }
+    }
+
+    /** Step 3. Short transaction: write down what Monime answered. */
+    private void recordPayoutOutcome(String paymentCodeId, PayoutOutcome outcome) {
+        Transaction transaction = transactionRepository.findByMonimePaymentCodeIdForUpdate(paymentCodeId).orElse(null);
+        if (transaction == null) return;
+        if (transaction.getStatus() != TransactionStatus.PAID_IN || transaction.getMonimePayoutId() != null) {
+            // A retry or the scheduler already recorded this (idempotent) payout.
+            log.info("Payout for transaction {} already recorded (status {}); nothing to do",
+                    transaction.getTransactionCode(), transaction.getStatus());
+            return;
+        }
+        if (outcome.rejectedReason() != null) {
+            moveToPayoutFailed(transaction, outcome.rejectedReason());
+            return;
+        }
+        PayoutResult payout = outcome.payout();
+        transaction.setMonimePayoutId(payout.id());
+        if ("failed".equalsIgnoreCase(payout.status())) {
+            String reason = payout.failureDetail() != null && payout.failureDetail().message() != null
+                    ? payout.failureDetail().message()
+                    : "The recipient payout was rejected or could not be completed by the payment provider.";
+            moveToPayoutFailed(transaction, reason);
+            return;
+        }
+        transaction.setStatus(TransactionStatus.PAYING_OUT);
+        transactionRepository.save(transaction);
     }
 
     /**
