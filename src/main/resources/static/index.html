@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <link rel="preload" as="image" href="deenwallet-logo-sm.png?v=2" />
+    <link rel="preload" as="image" href="deenwallet-logo-sm.png" />
     <title>DeenWallet Transfer — Send money</title>
     <style>
         :root {
@@ -2313,6 +2313,75 @@
         .support-contact-row strong { color:var(--text); }
         .support-note { margin-top:12px !important; font-size:12px !important; }
 
+        /* ===================== HOME (swipe cards) ===================== */
+        #screen-home { background:#0B1F27; color:#EAF4F6; }
+        #screen-home .home-top { padding-top:6px; }
+        #screen-home .menu-btn, #screen-home .notification-btn { background:#122B35; border:1px solid #1F3C48; color:#EAF4F6; }
+        #screen-home .menu-btn span { background:#EAF4F6; }
+        #screen-home .home-hello { padding:20px 2px 0; }
+        #screen-home .home-hello-sub { margin:0; font-size:13.5px; font-weight:600; color:#8FB0B9; }
+        #screen-home .greeting-title { color:#EAF4F6; font-size:28px; font-weight:800; letter-spacing:-.8px; margin-top:3px; }
+        #screen-home .greeting-sub { color:#8FB0B9; margin-top:2px; }
+
+        .home-cards { display:flex; gap:14px; overflow-x:auto; scroll-snap-type:x mandatory; scroll-padding:0 22px; margin:20px -20px 0; padding:2px 22px 6px;
+            -webkit-overflow-scrolling:touch; scrollbar-width:none; cursor:grab; overscroll-behavior-x:contain; }
+        .home-cards::-webkit-scrollbar { display:none; }
+        .home-cards.dragging { cursor:grabbing; scroll-snap-type:none; }
+        .home-cards.dragging .home-card { pointer-events:none; }
+        .home-card { position:relative; flex:0 0 min(80%, 312px); height:248px; scroll-snap-align:start; border-radius:28px; padding:22px; box-sizing:border-box;
+            border:0; text-align:left; font:inherit; color:#fff; overflow:hidden; display:flex; flex-direction:column; align-items:flex-start; cursor:pointer;
+            user-select:none; -webkit-user-select:none; }
+        .home-card:active { transform:scale(.99); }
+        .home-card strong { position:relative; display:block; margin-top:18px; font-size:23px; font-weight:800; letter-spacing:-.5px; line-height:1.15; }
+        .home-card-text { position:relative; display:block; margin-top:6px; max-width:200px; font-size:13px; line-height:1.45; color:rgba(255,255,255,.82); }
+        .home-card-icon { position:relative; width:46px; height:46px; border-radius:15px; background:rgba(255,255,255,.16); display:flex; align-items:center; justify-content:center; flex:0 0 46px; }
+        .home-card-icon svg { width:25px; height:25px; stroke:#fff; fill:none; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+        .home-card-go { position:absolute; left:22px; bottom:22px; height:42px; padding:0 22px; border-radius:14px; background:#fff; color:#124F61; font-size:14px; font-weight:800; display:flex; align-items:center; }
+        .home-card-convert { background:linear-gradient(150deg,#1C7A91 0%,#2E9FB0 100%); }
+        .home-card-glow { position:absolute; right:-26px; top:-26px; width:150px; height:150px; border-radius:50%; background:rgba(255,255,255,.1); }
+        .home-card-logos { position:absolute; right:20px; bottom:22px; display:flex; }
+        .home-card-logos img { width:54px; height:54px; border-radius:16px; object-fit:cover; border:3px solid #fff; background:#fff; box-shadow:0 6px 16px rgba(0,0,0,.2); }
+        .home-card-logos img + img { margin-left:-16px; }
+        .home-card-bank { background:#16323D; box-shadow:inset 0 0 0 1px #24485A; }
+        .home-card-bank .home-card-icon { background:rgba(127,214,227,.14); }
+        .home-card-bank .home-card-icon svg { stroke:#7FD6E3; }
+        .home-card-bank .home-card-text { color:#A9C6CE; }
+        .home-card-bank .home-card-go { background:#2E9FB0; color:#fff; }
+        .home-card-waec { background:linear-gradient(150deg,#1B2B63 0%,#2F45A0 100%); }
+        .home-card-waec-logo { width:84px; height:56px; border-radius:14px; background:#fff; display:flex; align-items:center; justify-content:center; padding:5px; box-sizing:border-box; flex:0 0 56px; }
+        .home-card-waec-logo img { width:100%; height:100%; object-fit:contain; display:block; }
+        .home-card-waec .home-card-go { color:#1B2B63; }
+        .home-card-soon { background:transparent; box-shadow:inset 0 0 0 1.5px #2B4753; cursor:default; }
+        .home-card-soon .home-card-icon { background:rgba(255,255,255,.07); }
+        .home-card-soon .home-card-text { color:#8FB0B9; }
+        .home-dots { display:flex; justify-content:center; gap:7px; margin-top:12px; min-height:7px; }
+        .home-dots i { width:7px; height:7px; border-radius:7px; background:#2B4753; transition:width .2s ease, background .2s ease; }
+        .home-dots i.on { width:22px; background:#2E9FB0; }
+
+        .home-limit { width:100%; margin-top:18px; padding:13px 15px; border-radius:18px; background:#122B35; border:1px solid #1F3C48; color:#EAF4F6; font:inherit; text-align:left;
+            display:flex; align-items:center; gap:13px; cursor:pointer; }
+        .home-limit.hidden { display:none; }
+        .home-limit-icon { width:40px; height:40px; border-radius:13px; background:rgba(231,185,90,.14); display:flex; align-items:center; justify-content:center; flex:0 0 40px; }
+        .home-limit-icon svg { width:21px; height:21px; stroke:#E7B95A; fill:none; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+        .home-limit.ok .home-limit-icon { background:rgba(95,211,141,.14); }
+        .home-limit.ok .home-limit-icon svg { stroke:#5FD38D; }
+        .home-limit-body { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+        .home-limit-body strong { font-size:13.5px; font-weight:800; }
+        .home-limit-body span { font-size:12px; color:#8FB0B9; line-height:1.35; }
+        .home-limit-cta { font-size:13px; font-weight:800; color:#7FD6E3; }
+
+        #screen-home .recent-activity-card { background:#122B35; border-color:#1F3C48; box-shadow:none; margin-top:18px; }
+        #screen-home .recent-activity-title, #screen-home .recent-activity-name, #screen-home .recent-activity-amount { color:#EAF4F6; }
+        #screen-home .recent-activity-sub, #screen-home .recent-activity-meta { color:#8FB0B9; }
+        #screen-home .recent-activity-link { background:rgba(46,159,176,.18); color:#7FD6E3; }
+        #screen-home .recent-activity-empty { background:#0F2833; color:#8FB0B9; }
+        #screen-home .recent-activity-item { background:#0F2833; border-color:#1F3C48; }
+
+        .app-bottom-nav.on-dark { background:#0F2833; border-top-color:#1F3C48; }
+        .app-bottom-nav.on-dark .app-nav-item { color:#8FB0B9; }
+        .app-bottom-nav.on-dark .app-nav-item.active { color:#7FD6E3; background:rgba(46,159,176,.18); }
+        .app-bottom-nav.on-dark .app-nav-item.active .nav-icon { color:#7FD6E3; }
+
         /* ===================== KYC ===================== */
         #screen-kyc .scroll { padding-bottom: 28px; }
         .kyc-head { padding: 2px 2px 14px; }
@@ -2432,22 +2501,84 @@
 <div id="app">
 
     <!-- ===================== STEP 1: FROM + AMOUNT ===================== -->
-    <div class="screen active" id="screen-step1">
+    <!-- ===================== HOME ===================== -->
+    <div class="screen active" id="screen-home">
         <div class="scroll">
-            <div class="top-bar">
+            <div class="top-bar home-top">
                 <button class="menu-btn" id="menu-btn" type="button" aria-label="Open menu" aria-expanded="false"><span></span><span></span><span></span></button>
                 <div class="top-bar-brand">
-                    <img class="app-brand-logo" src="deenwallet-logo-sm.png?v=2" alt="DeenWallet Transfer" />
+                    <img class="app-brand-logo" src="deenwallet-logo-sm.png" alt="DeenWallet Transfer" />
                 </div>
                 <button class="notification-btn" id="notification-btn" type="button" aria-label="Notifications" title="Notifications">
                     <span aria-hidden="true">&#128276;</span>
                     <span class="notification-badge hidden" id="notification-badge">0</span>
                 </button>
             </div>
-            <div class="greeting-block">
+
+            <div class="home-hello">
+                <p class="home-hello-sub">What would you like to do?</p>
                 <h1 class="greeting-title" id="greeting-title">Hello</h1>
                 <p class="greeting-sub" id="greeting-account"></p>
             </div>
+
+            <div class="home-cards" id="home-cards" aria-label="Services">
+                <button type="button" class="home-card home-card-convert" data-home-service="MOBILE_MONEY">
+                    <span class="home-card-glow" aria-hidden="true"></span>
+                    <span class="home-card-logos" aria-hidden="true">
+                        <img src="assets/provider-logos/orange-money.png" alt="" />
+                        <img src="assets/provider-logos/africell.png" alt="" />
+                    </span>
+                    <span class="home-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 7h10l-2.5-2.5"/><path d="M17 7l-2.5 2.5"/><path d="M17 17H7l2.5 2.5"/><path d="M7 17l2.5-2.5"/></svg></span>
+                    <strong>Convert Money</strong>
+                    <span class="home-card-text">Between Orange Money and Africell, instantly.</span>
+                    <span class="home-card-go">Start</span>
+                </button>
+
+                <button type="button" class="home-card home-card-bank" data-home-service="BANK_TRANSFER">
+                    <span class="home-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 10h18"/><path d="M5 10v8"/><path d="M9 10v8"/><path d="M15 10v8"/><path d="M19 10v8"/><path d="M2 20h20"/><path d="M12 4l9 5H3l9-5z"/></svg></span>
+                    <strong>Bank Transfer</strong>
+                    <span class="home-card-text">Send money from Orange Money or Africell to a bank account.</span>
+                    <span class="home-card-go">Send</span>
+                </button>
+
+                <button type="button" class="home-card home-card-waec" data-home-service="WAEC">
+                    <span class="home-card-waec-logo" aria-hidden="true"><img src="assets/waec-logo.png" alt="" data-logo-fallback="WAEC" /></span>
+                    <strong>WAEC Result Pin</strong>
+                    <span class="home-card-text">Buy a WAEC pin to check your result on the WAEC portal.</span>
+                    <span class="home-card-go">Buy pin</span>
+                </button>
+
+                <div class="home-card home-card-soon" aria-label="More services coming soon">
+                    <span class="home-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 4v16"/><path d="M4 12h16"/></svg></span>
+                    <strong>More coming soon</strong>
+                    <span class="home-card-text">New services will appear here. Swipe to see them all.</span>
+                </div>
+            </div>
+            <div class="home-dots" id="home-dots" aria-hidden="true"></div>
+
+            <button type="button" class="home-limit hidden" id="home-limit">
+                <span class="home-limit-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z"/><path d="M9 12l2.2 2.2L15 10"/></svg></span>
+                <span class="home-limit-body"><strong id="home-limit-title"></strong><span id="home-limit-text"></span></span>
+                <span class="home-limit-cta" id="home-limit-cta">Verify</span>
+            </button>
+
+            <div class="recent-activity-card" id="recent-activity-card">
+                <div class="recent-activity-heading">
+                    <div>
+                        <p class="recent-activity-title">Recent Activity</p>
+                        <p class="recent-activity-sub">Your latest transactions will appear here.</p>
+                    </div>
+                    <button type="button" class="recent-activity-link" id="recent-activity-history-btn">View all</button>
+                </div>
+                <div class="recent-activity-empty" id="recent-activity-empty">Loading recent activity…</div>
+                <div class="recent-activity-list hidden" id="recent-activity-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="screen" id="screen-step1">
+        <div class="scroll">
+            <button class="ussd-back" id="step1-back-btn" type="button" style="padding-left:0;">&#8592; Back</button>
 
             <div class="step-indicator">
                 <div class="step-dot active" id="step1-dot"></div>
@@ -2505,18 +2636,6 @@
                     <span>&#9888;</span><span id="step1-error-text"></span>
                 </div>
 
-            </div>
-
-            <div class="recent-activity-card" id="recent-activity-card">
-                <div class="recent-activity-heading">
-                    <div>
-                        <p class="recent-activity-title">Recent Activity</p>
-                        <p class="recent-activity-sub">Your latest transactions will appear here.</p>
-                    </div>
-                    <button type="button" class="recent-activity-link" id="recent-activity-history-btn">View all</button>
-                </div>
-                <div class="recent-activity-empty" id="recent-activity-empty">Loading recent activity…</div>
-                <div class="recent-activity-list hidden" id="recent-activity-list"></div>
             </div>
         </div>
 
@@ -3625,6 +3744,7 @@
         // ==============================================================
         // ELEMENTS - STEP 2
         // ==============================================================
+        const screenHome = document.getElementById('screen-home');
         const screenStep1 = document.getElementById('screen-step1');
         const screenStep2 = document.getElementById('screen-step2');
         const screenStep3 = document.getElementById('screen-step3');
@@ -3661,7 +3781,7 @@
 
         function showPrimaryScreen(navName) {
             const screenMap = {
-                home: screenStep1,
+                home: screenHome,
                 payment: screenPayment,
                 support: screenSupport
             };
@@ -3675,11 +3795,12 @@
 
             target.classList.add('active');
             appBottomNav.classList.remove('hidden');
+            appBottomNav.classList.toggle('on-dark', navName === 'home');
             setPrimaryNavActive(navName);
 
-            // Returning to Home always starts at the existing first conversion step.
-            if (navName === 'home' && typeof window.updateStepIndicator === 'function') {
-                window.updateStepIndicator(1);
+            if (navName === 'home') {
+                if (typeof window.updateStepIndicator === 'function') window.updateStepIndicator(1);
+                if (typeof window.refreshHomeLimit === 'function') window.refreshHomeLimit();
             }
         }
 
@@ -4516,7 +4637,7 @@
 
         function returnToCustomerHome() {
             document.querySelectorAll('.screen').forEach((el) => el.classList.remove('active'));
-            screenStep1.classList.add('active');
+            screenHome.classList.add('active');
             appBottomNav.classList.remove('hidden');
             if (typeof window.setPrimaryNavActive === 'function') window.setPrimaryNavActive('home');
             if (typeof window.showPrimaryScreen === 'function') window.showPrimaryScreen('home');
@@ -4983,6 +5104,91 @@
                 ? 'This is above your daily limit (SLE ' + kycSle(b.remainingMinor) + ' left today).' + (verified ? '' : ' Verify your ID in the menu to raise it to SLE ' + kycSle(kycState.data.verifiedDailyLimitMinor) + ' per day.')
                 : 'Daily limit left today: SLE ' + kycSle(b.remainingMinor) + (verified ? '' : '. Verify your ID to raise it.');
         }
+        // ==============================================================
+        // HOME: service cards (swipe sideways) and the daily-limit strip
+        // ==============================================================
+        (function initHomeCards() {
+            const track = document.getElementById('home-cards');
+            const dots = document.getElementById('home-dots');
+            if (!track || !dots) return;
+            const cards = Array.from(track.querySelectorAll('.home-card'));
+            dots.innerHTML = cards.map(() => '<i></i>').join('');
+            const dotEls = Array.from(dots.children);
+
+            function syncDots() {
+                if (!cards.length) return;
+                const step = cards.length > 1 ? (cards[1].offsetLeft - cards[0].offsetLeft) : 1;
+                const max = track.scrollWidth - track.clientWidth;
+                let idx = step > 0 ? Math.round(track.scrollLeft / step) : 0;
+                if (max > 0 && track.scrollLeft >= max - 4) idx = cards.length - 1;
+                dotEls.forEach((d, i) => d.classList.toggle('on', i === idx));
+            }
+            track.addEventListener('scroll', syncDots, { passive: true });
+            window.addEventListener('resize', syncDots);
+            syncDots();
+
+            // Mouse: drag the cards sideways like a finger does on a phone.
+            let down = false, moved = false, startX = 0, startLeft = 0;
+            track.addEventListener('pointerdown', (e) => {
+                if (e.pointerType !== 'mouse') return;
+                down = true; moved = false; startX = e.clientX; startLeft = track.scrollLeft;
+            });
+            window.addEventListener('pointermove', (e) => {
+                if (!down) return;
+                const dx = e.clientX - startX;
+                if (!moved && Math.abs(dx) > 6) { moved = true; track.classList.add('dragging'); }
+                if (moved) track.scrollLeft = startLeft - dx;
+            });
+            window.addEventListener('pointerup', () => {
+                if (!down) return;
+                down = false;
+                if (moved) setTimeout(() => track.classList.remove('dragging'), 0);
+            });
+            track.addEventListener('click', (e) => {
+                const card = e.target.closest('[data-home-service]');
+                if (!card || moved) { moved = false; return; }
+                const kind = card.getAttribute('data-home-service');
+                if (kind === 'WAEC') openWaecService();
+                else openCustomerService(kind);
+            }, true);
+        })();
+
+        window.refreshHomeLimit = async function () {
+            const box = document.getElementById('home-limit');
+            if (!box) return;
+            try {
+                const d = await kycFetchStatus(false);
+                if (!d || !d.available) { box.classList.add('hidden'); return; }
+                const title = document.getElementById('home-limit-title');
+                const text = document.getElementById('home-limit-text');
+                const cta = document.getElementById('home-limit-cta');
+                const top = kycSle(d.verifiedDailyLimitMinor);
+                box.classList.remove('hidden');
+                box.classList.toggle('ok', d.level === 'VERIFIED');
+                if (d.level === 'VERIFIED') {
+                    title.textContent = 'Identity verified';
+                    text.textContent = 'You can convert up to SLE ' + top + ' per day.';
+                    cta.textContent = 'Details';
+                } else if (d.status === 'PENDING') {
+                    title.textContent = 'ID verification in review';
+                    text.textContent = 'Daily limit SLE ' + kycSle(d.mobileMoney ? d.mobileMoney.dailyLimitMinor : 0) + ' until it is approved.';
+                    cta.textContent = 'View';
+                } else {
+                    title.textContent = 'Daily limit SLE ' + kycSle(d.mobileMoney ? d.mobileMoney.dailyLimitMinor : 0);
+                    text.textContent = 'Verify your ID to unlock SLE ' + top + ' a day.';
+                    cta.textContent = 'Verify';
+                }
+            } catch (_) {
+                box.classList.add('hidden');
+            }
+        };
+        document.getElementById('home-limit').addEventListener('click', () => {
+            openCustomerSubScreen('screen-kyc');
+            loadKycScreen();
+        });
+        appBottomNav.classList.add('on-dark');
+        window.refreshHomeLimit();
+
         function kycBlocksCurrentAmount() {
             if (!currentFeePreview || !kycState.data || Date.now() - kycState.loadedAt > 60000) return false;
             const b = kycBucketFor(kycState.data);
@@ -5094,8 +5300,22 @@
                 step1ServiceSubtitle.textContent = 'Between Orange Money and Africell, instantly.';
             }
 
-            if (typeof window.showPrimaryScreen === 'function') window.showPrimaryScreen('home');
+            showServiceForm();
         }
+
+        // The amount form of Convert Money / Bank Transfer. Home is now the services screen, so this is its own screen.
+        function showServiceForm() {
+            document.querySelectorAll('.screen').forEach((el) => el.classList.remove('active'));
+            screenStep1.classList.add('active');
+            hidePrimaryNav();
+            if (typeof window.updateStepIndicator === 'function') window.updateStepIndicator(1);
+            const sc = screenStep1.querySelector('.scroll');
+            if (sc) sc.scrollTop = 0;
+        }
+
+        document.getElementById('step1-back-btn').addEventListener('click', () => {
+            if (typeof window.showPrimaryScreen === 'function') window.showPrimaryScreen('home');
+        });
 
         document.getElementById('services-convert-card').addEventListener('click', () => {
             openCustomerService('MOBILE_MONEY');
@@ -5501,9 +5721,7 @@
 
         profileBackBtn.addEventListener('click', () => {
             screenProfile.classList.remove('active');
-            screenStep1.classList.add('active');
-            appBottomNav.classList.remove('hidden');
-            setPrimaryNavActive('home');
+            if (typeof window.showPrimaryScreen === 'function') window.showPrimaryScreen('home');
             if (profilePinDisplay) profilePinDisplay.textContent = '••••';
         });
 
@@ -5900,8 +6118,7 @@
             resetTransactionRequestKey();
             screenStep2.classList.remove('active');
             screenStep1.classList.add('active');
-            appBottomNav.classList.remove('hidden');
-            setPrimaryNavActive('home');
+            hidePrimaryNav();
         });
 
         // The PIN is asked at the very last step, right before the payment window opens.
@@ -6627,8 +6844,7 @@
         bankRecipientListBackBtn.addEventListener('click', () => {
             screenBankStep2.classList.remove('active');
             screenStep1.classList.add('active');
-            appBottomNav.classList.remove('hidden');
-            setPrimaryNavActive('home');
+            hidePrimaryNav();
         });
 
         addBankRecipientBtn.addEventListener('click', openBankAddRecipient);
@@ -7732,6 +7948,10 @@
             }
             if (document.getElementById('screen-step2').classList.contains('active')) {
                 step2BackBtn.click();
+                return true;
+            }
+            if (screenStep1.classList.contains('active')) {
+                document.getElementById('step1-back-btn').click();   // amount form -> home
                 return true;
             }
 
