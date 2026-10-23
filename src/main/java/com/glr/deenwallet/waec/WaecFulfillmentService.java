@@ -98,7 +98,7 @@ public class WaecFulfillmentService {
             sb.append("PIN").append(n).append(": ").append(pins.get(i).pin()).append('\n');
             sb.append("Serial").append(n).append(": ").append(pins.get(i).serial()).append('\n');
         }
-        sb.append("Keep these codes private. Thank you for using Deen Wallet.");
+        sb.append("Keep these codes private. Thank you for using DeenWallet Transfer.");
         return sb.toString();
     }
 }

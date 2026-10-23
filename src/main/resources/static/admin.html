@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>DeenWallet — Admin</title>
+    <title>DeenWallet Transfer — Admin</title>
     <style>
         /* ===== ADMIN SPLASH ===== */
         #admin-splash { position:fixed; inset:0; z-index:10000; display:flex; align-items:center; justify-content:center; background:linear-gradient(145deg,#FFFFFF 0%,#F1F8FA 100%); transition:opacity .35s ease,visibility .35s ease; }
@@ -1930,15 +1930,41 @@
         .wp-reveal-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:9px 0; border-bottom:1px solid var(--border); font-size:13px; }
         .wp-reveal-row .v { font-family:monospace; font-weight:700; font-size:15px; word-break:break-all; }
         .wp-err { margin-top:8px; font-size:12px; color:var(--error); min-height:16px; }
+            /* ===== KYC (admin) ===== */
+        .kc-chips { display:flex; gap:6px; flex-wrap:wrap; margin:4px 0 10px; }
+        .kc-chip { border:1px solid var(--border); background:#fff; color:var(--muted); border-radius:999px; padding:6px 13px; font-size:12px; font-weight:700; cursor:pointer; }
+        .kc-chip.on { background:var(--primary); border-color:var(--primary); color:#fff; }
+        .kc-card { background:#fff; border:1px solid var(--border); border-left:4px solid var(--warning-text); border-radius:12px; padding:12px 14px; margin-bottom:10px; cursor:pointer; }
+        .kc-card:active { background:var(--card); }
+        .kc-card.APPROVED { border-left-color:#1E8449; }
+        .kc-card.REJECTED, .kc-card.REVOKED { border-left-color:var(--error); }
+        .kc-badge { font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; background:var(--warning-bg); color:var(--warning-text); white-space:nowrap; }
+        .kc-badge.APPROVED, .kc-badge.MATCH { background:#E7F7EC; color:#1E8449; }
+        .kc-badge.REJECTED, .kc-badge.REVOKED, .kc-badge.DIFFERENT { background:#FBEAEA; color:var(--error); }
+        .kc-badge.PARTIAL { background:var(--warning-bg); color:var(--warning-text); }
+        .kc-photos { display:grid; gap:10px; margin-top:6px; }
+        .kc-photo { border:1px solid var(--border); border-radius:12px; padding:10px; background:var(--card); }
+        .kc-photo .top { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:13px; font-weight:700; }
+        .kc-photo img { width:100%; border-radius:8px; margin-top:8px; display:block; cursor:zoom-in; background:#fff; }
+        .kc-photo img.zoom { position:fixed; inset:0; z-index:99999; width:100vw; height:100vh; object-fit:contain; background:#000; margin:0; border-radius:0; cursor:zoom-out; }
+        .kc-alert { border-radius:10px; padding:10px 12px; margin-top:12px; font-size:12px; line-height:1.45; background:#FBEAEA; color:var(--error); font-weight:600; }
+        .kc-alert.warn { background:var(--warning-bg); color:var(--warning-text); }
+        .kc-reasons { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+        .kc-reasons button { border:1px solid var(--border); background:#fff; border-radius:999px; padding:5px 10px; font-size:11px; cursor:pointer; color:var(--text); }
+        #kc-modal .fp-actions .btn-primary, #kc-modal .fp-actions .btn-danger { border:none; border-radius:10px; padding:12px 14px; font-size:14px; font-weight:700; color:#fff; cursor:pointer; }
+        #kc-modal .fp-actions .btn-primary { background:var(--primary); }
+        #kc-modal .fp-actions .btn-danger { background:var(--error); }
+        #kc-modal .fp-actions button:disabled { opacity:.5; }
+        .kc-note { width:100%; box-sizing:border-box; margin-top:8px; padding:10px; border:1px solid var(--border); border-radius:8px; font-size:13px; min-height:70px; font-family:inherit; resize:vertical; }
     </style>
 </head>
 
 <body>
 
-<div id="admin-splash" aria-label="DeenWallet loading">
+<div id="admin-splash" aria-label="DeenWallet Transfer loading">
     <div class="admin-splash-inner">
-        <img class="admin-splash-logo" src="deenwallet-logo.png" alt="DeenWallet" />
-        <div class="admin-splash-name">DeenWallet</div>
+        <img class="admin-splash-logo" src="deenwallet-logo.png" alt="DeenWallet Transfer" />
+        <div class="admin-splash-name">DeenWallet Transfer</div>
         <div class="admin-splash-sub">Secure Administration</div>
     </div>
 </div>
@@ -1948,8 +1974,8 @@
     <!-- ===== LOGIN SCREEN ===== -->
     <div class="screen active" id="screen-login">
         <div class="login-screen">
-            <img class="admin-login-logo" src="deenwallet-logo.png" alt="DeenWallet" />
-            <div class="brand">DeenWallet <span class="admin-badge">Admin</span></div>
+            <img class="admin-login-logo" src="deenwallet-logo.png" alt="DeenWallet Transfer" />
+            <div class="brand">DeenWallet Transfer <span class="admin-badge">Admin</span></div>
             <p class="subtitle">Sign in to manage users, transactions, and support.</p>
             <label for="admin-email">Email</label>
             <input class="text-input" id="admin-email" type="email" placeholder="admin@deenwallet.com"
@@ -1982,7 +2008,7 @@
     <!-- ===== MAIN SCREEN ===== -->
     <div class="screen" id="screen-main">
         <div class="top-bar">
-            <div style="display:flex;align-items:center;gap:9px;"><img class="top-brand-logo" src="deenwallet-logo.png" alt="DeenWallet" /><div><span class="brand">DeenWallet</span><span class="admin-badge">Admin</span></div></div>
+            <div style="display:flex;align-items:center;gap:9px;"><img class="top-brand-logo" src="deenwallet-logo.png" alt="DeenWallet Transfer" /><div><span class="brand">DeenWallet Transfer</span><span class="admin-badge">Admin</span></div></div>
             <button class="menu-btn" id="menu-btn" aria-label="Open admin menu" aria-expanded="false"><span></span><span></span><span></span></button>
         </div>
 
@@ -2003,6 +2029,7 @@
                 <button type="button" class="admin-drawer-item" data-drawer-action="errors"><span class="admin-drawer-icon">▤</span><span class="admin-drawer-label">Error Logs</span><span class="admin-drawer-chevron">›</span></button>
                 <button type="button" class="admin-drawer-item" data-drawer-action="support"><span class="admin-drawer-icon">◉</span><span class="admin-drawer-label">Support</span><span class="admin-drawer-chevron">›</span></button>
                 <button type="button" class="admin-drawer-item" data-drawer-action="failed-payouts"><span class="admin-drawer-icon">⚠</span><span class="admin-drawer-label">Failed Payouts</span><span class="admin-drawer-chevron">›</span></button>
+                <button type="button" class="admin-drawer-item" data-drawer-action="kyc"><span class="admin-drawer-icon">✔</span><span class="admin-drawer-label">KYC Verification</span><span class="admin-drawer-chevron">›</span></button>
                 <button type="button" class="admin-drawer-item" data-drawer-action="waec-pins"><span class="admin-drawer-icon">▦</span><span class="admin-drawer-label">WAEC Pins</span><span class="admin-drawer-chevron">›</span></button>
                 <div class="admin-drawer-divider"></div>
                 <button type="button" class="admin-drawer-item" data-drawer-action="profile"><span class="admin-drawer-icon">♙</span><span class="admin-drawer-label">Admin Profile</span><span class="admin-drawer-chevron">›</span></button>
@@ -2218,6 +2245,32 @@
             </div>
         </div>
 
+        <!-- ===== KYC ===== -->
+        <div class="scroll hidden" id="tab-kyc">
+            <div class="stats-grid">
+                <div class="stat-card warning"><div class="number" id="kc-stat-pending">—</div><div class="label">Waiting for review</div></div>
+                <div class="stat-card success"><div class="number" id="kc-stat-approved">—</div><div class="label">Verified</div></div>
+                <div class="stat-card primary"><div class="number" id="kc-stat-rejected">—</div><div class="label">Rejected / removed</div></div>
+            </div>
+            <div class="admin-card">
+                <p class="admin-card-title">KYC Verification</p>
+                <p class="admin-card-sub">Open a request, compare the ID photos with the details the customer typed, then approve or reject. Approved customers can convert up to the verified daily limit.</p>
+                <div class="kc-chips" id="kc-chips">
+                    <button type="button" class="kc-chip on" data-kc-filter="PENDING">Pending</button>
+                    <button type="button" class="kc-chip" data-kc-filter="APPROVED">Verified</button>
+                    <button type="button" class="kc-chip" data-kc-filter="REJECTED">Rejected</button>
+                    <button type="button" class="kc-chip" data-kc-filter="ALL">All</button>
+                </div>
+                <div class="fp-toolbar">
+                    <div class="search-bar"><input id="kc-search" placeholder="Name, email, phone or account number" autocomplete="off" /></div>
+                    <button class="btn-sm refresh" id="kc-refresh">Refresh</button>
+                </div>
+                <div id="kc-loading" class="loading-state hidden"><div class="spinner"></div>Loading requests…</div>
+                <div id="kc-error" class="error-state hidden"></div>
+                <div id="kc-list"></div>
+            </div>
+        </div>
+
         <!-- ===== WAEC PINS ===== -->
         <div class="scroll hidden" id="tab-waec-pins">
             <div class="stats-grid">
@@ -2383,16 +2436,16 @@
             <div class="subscreen-heading">
                 <div class="subscreen-icon">ⓘ</div>
                 <div>
-                    <h1 class="greeting-title" style="margin-top:0;">About DeenWallet</h1>
+                    <h1 class="greeting-title" style="margin-top:0;">About DeenWallet Transfer</h1>
                     <p class="admin-card-sub" style="margin:0;">Administration and system information.</p>
                 </div>
             </div>
             <div class="admin-card about-card">
-                <div class="about-logo-wrap"><img src="deenwallet-logo.png" alt="DeenWallet" /></div>
-                <h2>DeenWallet Admin</h2>
+                <div class="about-logo-wrap"><img src="deenwallet-logo.png" alt="DeenWallet Transfer" /></div>
+                <h2>DeenWallet Transfer Admin</h2>
                 <p class="about-version">Secure Administration</p>
                 <div class="about-info-list">
-                    <div><span>Application</span><strong>DeenWallet</strong></div>
+                    <div><span>Application</span><strong>DeenWallet Transfer</strong></div>
                     <div><span>Portal</span><strong>Admin</strong></div>
                     <div><span>Notifications</span><strong>In-App &amp; Push</strong></div>
                     <div><span>Email Messaging</span><strong>Coming Soon</strong></div>
@@ -2465,6 +2518,10 @@
     <!-- Failed payout detail -->
     <div class="modal-overlay" id="fp-modal-overlay">
         <div class="fp-modal" id="fp-modal"></div>
+    </div>
+
+    <div class="modal-overlay" id="kc-modal-overlay">
+        <div class="fp-modal" id="kc-modal"></div>
     </div>
 
     <div class="modal-overlay" id="wp-modal-overlay">
@@ -2627,7 +2684,7 @@
                     var el = document.getElementById(id);
                     if (el) { el.classList.remove('open'); el.setAttribute('aria-hidden', 'true'); }
                 });
-                ['user-modal-overlay', 'pin-modal-overlay', 'modal-overlay', 'fp-modal-overlay'].forEach(function (id) {
+                ['user-modal-overlay', 'pin-modal-overlay', 'modal-overlay', 'fp-modal-overlay', 'kc-modal-overlay'].forEach(function (id) {
                     var el = document.getElementById(id);
                     if (el) el.classList.remove('active');
                 });
@@ -3369,6 +3426,7 @@
                 wallet: document.getElementById('tab-wallet'),
                 messaging: document.getElementById('tab-admin-messaging'),
                 'failed-payouts': document.getElementById('tab-failed-payouts'),
+                'kyc': document.getElementById('tab-kyc'),
                 'waec-pins': document.getElementById('tab-waec-pins')
             };
 
@@ -3385,6 +3443,7 @@
                 else { stopErrorAutoRefresh(); }
                 if (section === 'messaging') updateMessagingRecipientCount();
                 if (section === 'failed-payouts') loadFailedPayouts();
+                if (section === 'kyc') loadKyc();
                 if (section === 'waec-pins') loadWaecPins();
             }
 
@@ -3658,6 +3717,234 @@
                 fpSearchTimer = setTimeout(loadFailedPayouts, 350);
             });
             document.getElementById('fp-modal-overlay').addEventListener('click', function (e) { if (e.target === this) closeFailedPayout(); });
+
+            // ==============================================================
+            // KYC VERIFICATION (review identity documents, approve / reject)
+            // ==============================================================
+            var kcFilter = 'PENDING';
+            var kcCurrent = null;
+            var kcLoadSeq = 0;
+
+            function kcTime(v) { return v ? new Date(v).toLocaleString() : '—'; }
+            function kcDay(v) { return v ? new Date(v + 'T00:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '—'; }
+            function kcStatusLabel(s) {
+                return { PENDING: 'Needs review', APPROVED: 'Verified', REJECTED: 'Rejected', REVOKED: 'Removed' }[s] || s;
+            }
+            function kcMatchLabel(m) {
+                return { MATCH: 'Name matches account', PARTIAL: 'Name partly matches', DIFFERENT: 'Name is different' }[m] || m;
+            }
+
+            function loadKycSummary() {
+                adminApiRequest('/api/admin/kyc/summary').then(function (s) {
+                    document.getElementById('kc-stat-pending').textContent = s.pending;
+                    document.getElementById('kc-stat-approved').textContent = s.approved;
+                    document.getElementById('kc-stat-rejected').textContent = s.rejected;
+                }).catch(function () { /* the list shows the error */ });
+            }
+
+            function loadKyc() {
+                var seq = ++kcLoadSeq;
+                var loading = document.getElementById('kc-loading');
+                var error = document.getElementById('kc-error');
+                var list = document.getElementById('kc-list');
+                var q = (document.getElementById('kc-search').value || '').trim();
+                show(loading); hide(error); list.innerHTML = '';
+                loadKycSummary();
+                adminApiRequest('/api/admin/kyc', { params: { status: kcFilter, q: q || undefined } })
+                    .then(function (cards) {
+                        if (seq !== kcLoadSeq) return;
+                        hide(loading);
+                        if (!cards || cards.length === 0) {
+                            list.innerHTML = '<div class="empty-state">' + (q ? 'No request matches your search.' : (kcFilter === 'PENDING' ? 'No requests waiting. 🎉' : 'Nothing here yet.')) + '</div>';
+                            return;
+                        }
+                        cards.forEach(function (c) {
+                            var card = document.createElement('div');
+                            card.className = 'kc-card ' + c.status;
+                            card.innerHTML =
+                                '<div class="fp-card-top"><strong style="font-size:14px;">' + escapeHtml(c.customerName || 'Unknown customer') + '</strong>' +
+                                '<span class="kc-badge ' + escapeHtml(c.status) + '">' + escapeHtml(kcStatusLabel(c.status)) + '</span></div>' +
+                                '<div class="fp-sub">' + escapeHtml(c.email || '—') + ' · ' + escapeHtml(c.phone || '—') + '</div>' +
+                                '<div class="fp-card-top" style="margin-top:6px;"><span class="fp-sub" style="margin:0;">' + escapeHtml(c.documentTypeLabel || '—') + ' · ' + escapeHtml(kcTime(c.status === 'PENDING' ? c.submittedAt : (c.reviewedAt || c.submittedAt))) + '</span>' +
+                                '<span class="kc-badge ' + escapeHtml(c.nameMatch) + '">' + escapeHtml(kcMatchLabel(c.nameMatch)) + '</span></div>';
+                            card.addEventListener('click', function () { openKyc(c.id); });
+                            list.appendChild(card);
+                        });
+                    })
+                    .catch(function (e) {
+                        if (seq !== kcLoadSeq) return;
+                        hide(loading);
+                        error.textContent = e.message || 'Failed to load KYC requests.';
+                        show(error);
+                    });
+            }
+
+            function openKyc(id) {
+                var box = document.getElementById('kc-modal');
+                box.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading…</div>';
+                document.getElementById('kc-modal-overlay').classList.add('active');
+                adminApiRequest('/api/admin/kyc/' + encodeURIComponent(id))
+                    .then(renderKyc)
+                    .catch(function (e) {
+                        box.innerHTML = '<div class="error-state">' + escapeHtml(e.message || 'Could not load.') + '</div><div class="fp-actions"><button class="btn-outline" id="kc-close">Close</button></div>';
+                        document.getElementById('kc-close').addEventListener('click', closeKyc);
+                    });
+            }
+
+            function closeKyc() {
+                document.getElementById('kc-modal-overlay').classList.remove('active');
+                document.getElementById('kc-modal').innerHTML = '';   // drops any ID photos from memory
+                kcCurrent = null;
+            }
+
+            var KC_PHOTO_LABEL = { FRONT: 'Front / photo page', BACK: 'Back', SELFIE: 'Selfie with ID' };
+
+            function renderKyc(d) {
+                kcCurrent = d;
+                var c = d.customer || {}, doc = d.document || {};
+                var html = '<div class="fp-card-top"><h3 style="margin:0;font-size:17px;">KYC request</h3><span class="kc-badge ' + escapeHtml(d.status) + '">' + escapeHtml(kcStatusLabel(d.status)) + '</span></div>';
+
+                if (d.sameDocumentOnOtherAccounts > 0) {
+                    html += '<div class="kc-alert">This ID number is also used on ' + d.sameDocumentOnOtherAccounts + ' other account' + (d.sameDocumentOnOtherAccounts > 1 ? 's' : '') + '. Check carefully before approving.</div>';
+                }
+                if (d.nameMatch === 'DIFFERENT') {
+                    html += '<div class="kc-alert warn">The name on the ID does not match the account name. Check the photo and decide.</div>';
+                } else if (d.nameMatch === 'PARTIAL') {
+                    html += '<div class="kc-alert warn">The name on the ID only partly matches the account name.</div>';
+                }
+
+                html += '<div class="fp-section-title">Account</div>' +
+                    fpRow('Name', c.fullName) + fpRow('Email', c.email + (c.emailVerified ? ' (verified)' : ' (NOT verified)')) + fpRow('Phone', c.phone) +
+                    fpRow('Username', c.username) + fpRow('Account number', c.accountNumber) + fpRow('Joined', kcTime(c.joinedAt)) +
+                    fpRow('Account status', c.locked ? 'Locked' : (c.active ? 'Active' : 'Inactive'));
+
+                html += '<div class="fp-section-title">Identity document</div>' +
+                    fpRow('Type', doc.typeLabel) + fpRow('Name on ID', doc.fullNameOnDocument) + fpRow('ID number', doc.documentNumber) +
+                    fpRow('Date of birth', kcDay(doc.dateOfBirth)) + (doc.expiryDate ? fpRow('Expiry', kcDay(doc.expiryDate)) : '') +
+                    fpRow('Submitted', kcTime(d.submittedAt));
+                if (d.reviewedAt) html += fpRow('Reviewed', kcTime(d.reviewedAt) + (d.reviewedBy ? ' by ' + d.reviewedBy : ''));
+                if (d.rejectionReason) html += fpRow('Reason', d.rejectionReason);
+
+                if (d.photos && d.photos.length) {
+                    html += '<div class="fp-section-title">Photos</div><div class="kc-photos">';
+                    d.photos.forEach(function (k) {
+                        html += '<div class="kc-photo" data-kind="' + escapeHtml(k) + '"><div class="top"><span>' + escapeHtml(KC_PHOTO_LABEL[k] || k) +
+                            '</span><button class="btn-sm refresh" data-kc-photo="' + escapeHtml(k) + '" type="button">View</button></div></div>';
+                    });
+                    html += '</div><div class="fp-sub">Photos are decrypted only when you tap View. Each view is recorded.</div>';
+                } else if (d.status !== 'PENDING') {
+                    html += '<div class="fp-sub" style="margin-top:10px;">Photos are removed after a decision.</div>';
+                }
+
+                if (d.canApprove || d.canReject || d.canRevoke) {
+                    html += '<div class="fp-section-title">Decision</div>';
+                    if (d.canApprove) html += '<div class="fp-sub">Approving raises this customer to SLE ' + escapeHtml((Number(d.verifiedDailyLimitMinor) / 100).toLocaleString()) + ' per day.</div>';
+                    html += '<textarea class="kc-note" id="kc-reason" maxlength="300" placeholder="' + (d.canRevoke ? 'Reason for removing verification (required)' : 'Reason shown to the customer if you reject (required)') + '"></textarea>';
+                    if (d.canReject) {
+                        html += '<div class="kc-reasons">' +
+                            ['The photo is blurry. Please retake it in good light.', 'The ID is expired.', 'The name on the ID does not match your account.', 'The selfie does not show you holding the ID.', 'Some details do not match the photo.'].map(function (r) {
+                                return '<button type="button" data-kc-reason="' + escapeHtml(r) + '">' + escapeHtml(r.split('.')[0]) + '</button>';
+                            }).join('') + '</div>';
+                    }
+                    html += '<div class="fp-actions">' +
+                        (d.canApprove ? '<button class="btn-primary" id="kc-approve" type="button">Approve</button>' : '') +
+                        (d.canReject ? '<button class="btn-danger" id="kc-reject" type="button">Reject</button>' : '') +
+                        (d.canRevoke ? '<button class="btn-danger" id="kc-revoke" type="button">Remove verification</button>' : '') + '</div>';
+                }
+
+                if (d.history && d.history.length > 1) {
+                    html += '<div class="fp-section-title">Earlier requests</div><div class="fp-history">' +
+                        d.history.filter(function (h) { return h.id !== d.id; }).map(function (h) {
+                            return '<div>' + escapeHtml(kcStatusLabel(h.status)) + ' · ' + escapeHtml(kcTime(h.submittedAt)) + (h.reason ? ' · ' + escapeHtml(h.reason) : '') + '</div>';
+                        }).join('') + '</div>';
+                }
+                if (d.audit && d.audit.length) {
+                    html += '<div class="fp-section-title">Activity</div><div class="fp-history">' +
+                        d.audit.map(function (a) {
+                            return '<div>' + escapeHtml(a.action.replace(/_/g, ' ').toLowerCase()) + (a.detail ? ' (' + escapeHtml(a.detail) + ')' : '') + ' · ' + escapeHtml(a.actor || 'customer') + ' · ' + escapeHtml(kcTime(a.at)) + '</div>';
+                        }).join('') + '</div>';
+                }
+                html += '<div class="fp-actions"><button class="btn-outline" id="kc-close" type="button">Close</button></div>';
+                document.getElementById('kc-modal').innerHTML = html;
+                bindKycModal(d);
+            }
+
+            function bindKycModal(d) {
+                var box = document.getElementById('kc-modal');
+                document.getElementById('kc-close').addEventListener('click', closeKyc);
+                box.querySelectorAll('[data-kc-photo]').forEach(function (btn) {
+                    btn.addEventListener('click', function () { kcShowPhoto(d.id, btn); });
+                });
+                box.querySelectorAll('[data-kc-reason]').forEach(function (btn) {
+                    btn.addEventListener('click', function () { document.getElementById('kc-reason').value = btn.getAttribute('data-kc-reason'); });
+                });
+                var ap = document.getElementById('kc-approve');
+                if (ap) ap.addEventListener('click', function () {
+                    showModal('Approve identity', 'Approve ' + (d.customer.fullName || 'this customer') + '? Their ' + d.document.typeLabel + ' (' + d.document.documentNumber + ') will be recorded as verified.', function () { kcDecide('approve', null); });
+                });
+                var rj = document.getElementById('kc-reject');
+                if (rj) rj.addEventListener('click', function () {
+                    var r = (document.getElementById('kc-reason').value || '').trim();
+                    if (r.length < 5) { showToast('Write the reason for the customer (at least 5 characters).'); return; }
+                    showModal('Reject request', 'Reject this request? The ID photos will be deleted and the customer sees your reason.', function () { kcDecide('reject', r); });
+                });
+                var rv = document.getElementById('kc-revoke');
+                if (rv) rv.addEventListener('click', function () {
+                    var r = (document.getElementById('kc-reason').value || '').trim();
+                    if (r.length < 5) { showToast('Write the reason (at least 5 characters).'); return; }
+                    showModal('Remove verification', 'Remove verification? The customer returns to the basic daily limits immediately.', function () { kcDecide('revoke', r); });
+                });
+            }
+
+            function kcShowPhoto(id, btn) {
+                var wrap = btn.closest('.kc-photo');
+                var existing = wrap.querySelector('img');
+                if (existing) { existing.remove(); btn.textContent = 'View'; return; }
+                btn.disabled = true; btn.textContent = 'Loading…';
+                adminApiRequest('/api/admin/kyc/' + encodeURIComponent(id) + '/documents/' + encodeURIComponent(btn.getAttribute('data-kc-photo')))
+                    .then(function (p) {
+                        var img = document.createElement('img');
+                        img.alt = 'ID photo';
+                        img.src = 'data:' + p.contentType + ';base64,' + p.data;
+                        img.addEventListener('click', function () { img.classList.toggle('zoom'); });
+                        wrap.appendChild(img);
+                        btn.textContent = 'Hide';
+                    })
+                    .catch(function (e) { btn.textContent = 'View'; showToast(e.message || 'Could not load the photo.'); })
+                    .then(function () { btn.disabled = false; });
+            }
+
+            function kcDecide(kind, reason) {
+                var d = kcCurrent;
+                if (!d) return;
+                var btns = document.querySelectorAll('#kc-modal .fp-actions button');
+                btns.forEach(function (b) { b.disabled = true; });
+                adminApiRequest('/api/admin/kyc/' + encodeURIComponent(d.id) + '/' + kind, { method: 'POST', body: { reason: reason } })
+                    .then(function (updated) {
+                        showToast(kind === 'approve' ? 'Customer verified.' : (kind === 'reject' ? 'Request rejected.' : 'Verification removed.'));
+                        renderKyc(updated);
+                        loadKyc();
+                    })
+                    .catch(function (e) {
+                        showToast(e.message || 'Action failed.');
+                        btns.forEach(function (b) { b.disabled = false; });
+                    });
+            }
+
+            document.getElementById('kc-refresh').addEventListener('click', loadKyc);
+            document.getElementById('kc-chips').addEventListener('click', function (e) {
+                var b = e.target.closest('[data-kc-filter]');
+                if (!b) return;
+                kcFilter = b.getAttribute('data-kc-filter');
+                document.querySelectorAll('#kc-chips .kc-chip').forEach(function (x) { x.classList.toggle('on', x === b); });
+                loadKyc();
+            });
+            var kcSearchTimer = null;
+            document.getElementById('kc-search').addEventListener('input', function () {
+                clearTimeout(kcSearchTimer);
+                kcSearchTimer = setTimeout(loadKyc, 350);
+            });
+            document.getElementById('kc-modal-overlay').addEventListener('click', function (e) { if (e.target === this) closeKyc(); });
 
             // ==============================================================
             // WAEC PINS (stock, purchased-pin trace, reveal / resend)

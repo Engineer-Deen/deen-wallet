@@ -28,7 +28,7 @@ async function loadFirebaseWebConfig() {
 
 /**
  * deenwallet-client.js
- * Shared frontend client for DeenWallet
+ * Shared frontend client for DeenWallet Transfer
  * Enhanced token refresh with user‑friendly error handling
  */
 
@@ -321,7 +321,7 @@ function prefetchBiometricRegistrationChallenge() {
 
 async function registerBiometricLogin(deviceName) {
   const plugin = getBiometricPlugin();
-  if (!plugin) throw new Error('Biometric login is only available in the DeenWallet Android app.');
+  if (!plugin) throw new Error('Biometric login is only available in the DeenWallet Transfer Android app.');
   if (!getAccessToken()) throw new Error('Please log in first.');
 
   // Use the challenge fetched ahead of time when there is one. It is used only once.
@@ -371,7 +371,7 @@ async function registerBiometricLogin(deviceName) {
 // account = an entry from listBiometricAccounts().
 async function biometricLogin(account) {
   const plugin = getBiometricPlugin();
-  if (!plugin) throw new Error('Biometric login is only available in the DeenWallet Android app.');
+  if (!plugin) throw new Error('Biometric login is only available in the DeenWallet Transfer Android app.');
   if (!account || !account.credentialId) {
     throw new Error('Choose which account to sign in to.');
   }
@@ -554,7 +554,7 @@ function showInAppNotification(notification) {
     body.className = 'dw-popup-body';
     const title = document.createElement('p');
     title.className = 'dw-popup-title';
-    title.textContent = notification.title || 'DeenWallet';
+    title.textContent = notification.title || 'DeenWallet Transfer';
     const text = document.createElement('p');
     text.className = 'dw-popup-text';
     text.textContent = notification.body || '';
@@ -592,7 +592,7 @@ function showInAppNotification(notification) {
     playDeenWalletNotificationSound();
     vibrateDeenWalletDevice();
   } catch (error) {
-    console.warn('[DeenWallet] Could not show the in-app notification:', error);
+    console.warn('[DeenWallet Transfer] Could not show the in-app notification:', error);
   }
 }
 
@@ -624,7 +624,7 @@ function isDeenWalletAndroidApp() {
       window.Capacitor.getPlatform &&
       window.Capacitor.getPlatform() === 'android'
   );
-  console.log('[DeenWallet FCM] Android app detected:', result, {
+  console.log('[DeenWallet Transfer FCM] Android app detected:', result, {
     capacitorPresent: !!window.Capacitor,
     nativePlatform: !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()),
     platform: window.Capacitor && window.Capacitor.getPlatform ? window.Capacitor.getPlatform() : null
@@ -659,14 +659,14 @@ async function unregisterFcmToken(token) {
 }
 
 async function registerFcmTokenWithBackend(token) {
-  console.log('[DeenWallet FCM] registerFcmTokenWithBackend called:', {
+  console.log('[DeenWallet Transfer FCM] registerFcmTokenWithBackend called:', {
     hasToken: !!token,
     tokenLength: token ? token.length : 0,
     hasAccessToken: !!getAccessToken(),
     apiBaseUrl: DEENWALLET_CONFIG.API_BASE_URL
   });
   if (!token || !getAccessToken()) {
-    console.warn('[DeenWallet FCM] Backend registration skipped: missing FCM token or access token.');
+    console.warn('[DeenWallet Transfer FCM] Backend registration skipped: missing FCM token or access token.');
     return;
   }
 
@@ -686,7 +686,7 @@ async function registerFcmTokenWithBackend(token) {
       })
     });
 
-    console.log('[DeenWallet FCM] Backend registration response:', response.status);
+    console.log('[DeenWallet Transfer FCM] Backend registration response:', response.status);
 
     if (!response.ok) {
       if (response.status === 401 || response.status === 403) return;
@@ -700,22 +700,22 @@ async function registerFcmTokenWithBackend(token) {
 }
 
 async function initializeDeenWalletPushNotifications() {
-  console.log('[DeenWallet FCM] initializeDeenWalletPushNotifications called:', {
+  console.log('[DeenWallet Transfer FCM] initializeDeenWalletPushNotifications called:', {
     hasAccessToken: !!getAccessToken(),
     apiBaseUrl: DEENWALLET_CONFIG.API_BASE_URL
   });
 
   if (!isDeenWalletAndroidApp()) {
-    console.warn('[DeenWallet FCM] Initialization skipped: not running as Android app.');
+    console.warn('[DeenWallet Transfer FCM] Initialization skipped: not running as Android app.');
     return;
   }
   if (!getAccessToken()) {
-    console.warn('[DeenWallet FCM] Initialization skipped: no access token.');
+    console.warn('[DeenWallet Transfer FCM] Initialization skipped: no access token.');
     return;
   }
 
   const PushNotifications = getPushNotificationsPlugin();
-  console.log('[DeenWallet FCM] PushNotifications plugin:', !!PushNotifications);
+  console.log('[DeenWallet Transfer FCM] PushNotifications plugin:', !!PushNotifications);
   if (!PushNotifications) {
     console.warn('Capacitor Push Notifications plugin is unavailable.');
     return;
@@ -726,13 +726,13 @@ async function initializeDeenWalletPushNotifications() {
     // plugin may emit the token immediately after registration.
     await PushNotifications.addListener('registration', async function (token) {
       if (token && token.value) {
-        console.log('[DeenWallet FCM] registration event received. Token length:', token.value.length);
+        console.log('[DeenWallet Transfer FCM] registration event received. Token length:', token.value.length);
         await registerFcmTokenWithBackend(token.value);
       }
     });
 
     await PushNotifications.addListener('registrationError', function (error) {
-      console.error('[DeenWallet FCM] registrationError event:', error);
+      console.error('[DeenWallet Transfer FCM] registrationError event:', error);
     });
 
     // A push that arrives while the app is open: show our own popup (with sound and vibration).
@@ -749,7 +749,7 @@ async function initializeDeenWalletPushNotifications() {
       if (typeof PushNotifications.createChannel === 'function') {
         await PushNotifications.createChannel({
           id: 'deenwallet_alerts',
-          name: 'DeenWallet alerts',
+          name: 'DeenWallet Transfer alerts',
           description: 'Transfers and account messages',
           importance: 5,
           visibility: 1,
@@ -758,17 +758,17 @@ async function initializeDeenWalletPushNotifications() {
         });
       }
     } catch (channelError) {
-      console.warn('[DeenWallet FCM] Could not create the alert channel:', channelError);
+      console.warn('[DeenWallet Transfer FCM] Could not create the alert channel:', channelError);
     }
 
     const permission = await PushNotifications.checkPermissions();
     let receive = permission.receive;
-    console.log('[DeenWallet FCM] permission status:', receive);
+    console.log('[DeenWallet Transfer FCM] permission status:', receive);
 
     if (receive === 'prompt') {
       const requested = await PushNotifications.requestPermissions();
       receive = requested.receive;
-      console.log('[DeenWallet FCM] permission after request:', receive);
+      console.log('[DeenWallet Transfer FCM] permission after request:', receive);
     }
 
     if (receive !== 'granted') {
@@ -776,22 +776,22 @@ async function initializeDeenWalletPushNotifications() {
       return;
     }
 
-    console.log('[DeenWallet FCM] calling PushNotifications.register()');
+    console.log('[DeenWallet Transfer FCM] calling PushNotifications.register()');
     await PushNotifications.register();
-    console.log('[DeenWallet FCM] PushNotifications.register() completed');
+    console.log('[DeenWallet Transfer FCM] PushNotifications.register() completed');
   } catch (error) {
-    console.error('[DeenWallet FCM] initialization failed:', error);
+    console.error('[DeenWallet Transfer FCM] initialization failed:', error);
   }
 }
 
 // The authenticated token is already stored by the login flow before the
 // user is redirected to the main application. This also handles app
 // restarts/page refreshes while the user remains signed in.
-console.log('[DeenWallet FCM] client loaded. Access token present:', !!getAccessToken());
+console.log('[DeenWallet Transfer FCM] client loaded. Access token present:', !!getAccessToken());
 if (getAccessToken()) {
   initializeDeenWalletPushNotifications();
 } else {
-  console.log('[DeenWallet FCM] initialization not started because no access token is present.');
+  console.log('[DeenWallet Transfer FCM] initialization not started because no access token is present.');
 }
 
 // ==============================================================
@@ -804,24 +804,24 @@ async function initializeDeenWalletWebPushNotifications() {
   }
 
   if (!getAccessToken()) {
-    console.log('[DeenWallet Web FCM] No access token. Skipping.');
+    console.log('[DeenWallet Transfer Web FCM] No access token. Skipping.');
     return;
   }
 
   if (!('Notification' in window) || !('serviceWorker' in navigator)) {
-    console.warn('[DeenWallet Web FCM] Browser does not support notifications.');
+    console.warn('[DeenWallet Transfer Web FCM] Browser does not support notifications.');
     return;
   }
 
   try {
     const firebaseConfig = await loadFirebaseWebConfig();
     if (!firebaseConfig) {
-      console.log('[DeenWallet Web FCM] Web Firebase config is not configured. Skipping.');
+      console.log('[DeenWallet Transfer Web FCM] Web Firebase config is not configured. Skipping.');
       return;
     }
 
     if (!window.firebase) {
-      console.error('[DeenWallet Web FCM] Firebase SDK is not loaded.');
+      console.error('[DeenWallet Transfer Web FCM] Firebase SDK is not loaded.');
       return;
     }
 
@@ -847,7 +847,7 @@ async function initializeDeenWalletWebPushNotifications() {
     );
     await navigator.serviceWorker.ready;
 
-    console.log('[DeenWallet Web FCM] Service worker registered.');
+    console.log('[DeenWallet Transfer Web FCM] Service worker registered.');
 
     let permission = Notification.permission;
 
@@ -856,7 +856,7 @@ async function initializeDeenWalletWebPushNotifications() {
     }
 
     if (permission !== 'granted') {
-      console.warn('[DeenWallet Web FCM] Notification permission not granted.');
+      console.warn('[DeenWallet Transfer Web FCM] Notification permission not granted.');
       return;
     }
 
@@ -866,23 +866,23 @@ async function initializeDeenWalletWebPushNotifications() {
     });
 
     if (!token) {
-      console.warn('[DeenWallet Web FCM] No FCM token returned.');
+      console.warn('[DeenWallet Transfer Web FCM] No FCM token returned.');
       return;
     }
 
-    console.log('[DeenWallet Web FCM] Browser FCM token obtained.');
+    console.log('[DeenWallet Transfer Web FCM] Browser FCM token obtained.');
 
     await registerWebFcmToken(token);
 
     // While the site is open and visible, Firebase hands the message to the
     // page instead of showing a popup, so the page shows its own popup.
     messaging.onMessage((payload) => {
-      console.log('[DeenWallet Web FCM] Foreground message:', payload);
+      console.log('[DeenWallet Transfer Web FCM] Foreground message:', payload);
       handleForegroundPush(payload);
     });
 
   } catch (error) {
-    console.error('[DeenWallet Web FCM] Initialization failed:', error);
+    console.error('[DeenWallet Transfer Web FCM] Initialization failed:', error);
   }
 }
 
@@ -925,12 +925,12 @@ async function registerWebFcmToken(token) {
     localStorage.setItem(storageKey, token);
 
     console.log(
-        '[DeenWallet Web FCM] Browser token registered successfully.'
+        '[DeenWallet Transfer Web FCM] Browser token registered successfully.'
     );
 
   } catch (error) {
     console.warn(
-        '[DeenWallet Web FCM] Token registration failed:',
+        '[DeenWallet Transfer Web FCM] Token registration failed:',
         error
     );
   }
@@ -1708,7 +1708,7 @@ async function detectProviderFromPrefix(phoneNumber) {
     if (typeof window.dwOnBackButton === 'function') {
       const result = window.dwOnBackButton();
       if (result === true) {
-        return; // the current DeenWallet screen handled the back action.
+        return; // the current DeenWallet Transfer screen handled the back action.
       }
       if (result === 'exit') {
         AppPlugin.exitApp();
@@ -1716,7 +1716,7 @@ async function detectProviderFromPrefix(phoneNumber) {
       }
     }
 
-    // Pages without a custom DeenWallet back handler keep normal browser
+    // Pages without a custom DeenWallet Transfer back handler keep normal browser
     // history behaviour, then exit only when there is nowhere else to go.
     if (data && data.canGoBack) {
       window.history.back();

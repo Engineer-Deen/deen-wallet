@@ -46,7 +46,7 @@ public class AdminAuthController {
 
         /*
          USER and ADMIN/SUPER_ADMIN accounts may share the same email.
-         Therefore admin authentication must explicitly search only
+         Therefore, admin authentication must explicitly search only
          administrator roles.
          SUPER_ADMIN is checked first so that an administrator email
          cannot accidentally resolve to a normal USER account.

@@ -15,7 +15,7 @@ final class EmailTemplates {
             <div style="text-align: center; padding: 10px 0;">
                 <h2 style="margin: 0 0 16px 0; color: %1$s; font-size: 22px; font-weight: 700; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">Verify your request</h2>
                 <p style="margin: 0 0 24px 0; color: %1$s; font-size: 16px; line-height: 1.6;">
-                    Enter the code below to continue. For your security, never share this code with anyone, including Deen Wallet staff.
+                    Enter the code below to continue. For your security, never share this code with anyone, including DeenWallet Transfer staff.
                 </p>
                 <div style="background-color: #F0FDFA; border: 2px dashed %2$s; border-radius: 12px; padding: 20px; margin: 24px auto; max-width: 280px;">
                     <span style="font-size: 36px; font-weight: 800; letter-spacing: 6px; color: %2$s; font-family: 'Courier New', Courier, monospace;">%3$s</span>
@@ -37,7 +37,7 @@ final class EmailTemplates {
     static String welcomeEmail(String firstName, String accountNumber, String feedbackEmail) {
         String body = """
             <div>
-                <h2 style="margin: 0 0 16px 0; color: %1$s; font-size: 22px; font-weight: 700;">Welcome to Deen Wallet, %2$s 👋</h2>
+                <h2 style="margin: 0 0 16px 0; color: %1$s; font-size: 22px; font-weight: 700;">Welcome to DeenWallet Transfer, %2$s 👋</h2>
                 <p style="margin: 0 0 16px 0; color: %3$s; font-size: 15px; line-height: 1.6;">
                     Your email is verified and your account is now active. You're all set to start sending and converting money between mobile money providers — fast, secure, and without the usual back-and-forth.
                 </p>
@@ -69,7 +69,7 @@ final class EmailTemplates {
             </div>
             """.formatted(TEXT_COLOR, escape(firstName), TEXT_COLOR, BORDER_COLOR, MUTED_COLOR, BRAND_COLOR, accountNumber, feedbackEmail);
 
-        return wrap("Welcome to Deen Wallet", body);
+        return wrap("Welcome to DeenWallet Transfer", body);
     }
 
     static String passwordResetEmail(String firstName, String resetLink) {
@@ -84,7 +84,7 @@ final class EmailTemplates {
                 </p>
 
                 <p style="margin: 0 0 16px 0; color: %2$s; font-size: 15px; line-height: 1.6;">
-                    We received a request to reset the password for your Deen Wallet account.
+                    We received a request to reset the password for your DeenWallet Transfer account.
                 </p>
 
                 <p style="margin: 0 0 24px 0; color: %2$s; font-size: 15px; line-height: 1.6;">
@@ -131,7 +131,7 @@ final class EmailTemplates {
                 </p>
 
                 <p style="margin: 0 0 16px 0; color: %2$s; font-size: 15px; line-height: 1.6;">
-                    Good news — your Deen Wallet account has been reactivated and is in good standing.
+                    Good news — your DeenWallet Transfer account has been reactivated and is in good standing.
                 </p>
 
                 <p style="margin: 0 0 24px 0; color: %2$s; font-size: 15px; line-height: 1.6;">
@@ -159,7 +159,7 @@ final class EmailTemplates {
                 </p>
 
                 <p style="margin: 0 0 16px 0; color: %2$s; font-size: 15px; line-height: 1.6;">
-                    A member of our team has temporarily paused your Deen Wallet account. While it's paused, you won't be able to sign in or send transfers.
+                    A member of our team has temporarily paused your DeenWallet Transfer account. While it's paused, you won't be able to sign in or send transfers.
                 </p>
 
                 <div style="background-color: #F9FAFB; border-left: 4px solid %4$s; padding: 16px; border-radius: 4px; margin: 20px 0 24px 0;">
@@ -233,7 +233,7 @@ final class EmailTemplates {
                 </div>
                 <p style="margin: 0 0 16px 0; color: %2$s; font-size: 15px; line-height: 1.6;">Hello %3$s,</p>
                 <p style="margin: 0 0 16px 0; color: %2$s; font-size: 15px; line-height: 1.6;">
-                    We received a request to reset the password of your Deen Wallet administrator account.
+                    We received a request to reset the password of your DeenWallet Transfer administrator account.
                 </p>
                 <p style="margin: 0 0 24px 0; color: %2$s; font-size: 15px; line-height: 1.6;">
                     Use the button below to choose a new password. This link expires in 30 minutes and can only be used once.
@@ -260,7 +260,7 @@ final class EmailTemplates {
                 </div>
                 <p style="margin: 0 0 16px 0; color: %2$s; font-size: 15px; line-height: 1.6;">Hello %4$s,</p>
                 <p style="margin: 0 0 16px 0; color: %2$s; font-size: 15px; line-height: 1.6;">
-                    The %3$s of your Deen Wallet administrator account was just changed using account recovery.
+                    The %3$s of your DeenWallet Transfer administrator account was just changed using account recovery.
                     For your security you have been signed out of all sessions and must sign in again.
                 </p>
                 <div style="background-color: #F9FAFB; border-left: 4px solid %1$s; padding: 16px; border-radius: 4px; margin: 20px 0 24px 0;">
@@ -287,7 +287,7 @@ final class EmailTemplates {
                 </p>
 
                 <p style="margin: 0 0 16px 0; color: %2$s; font-size: 15px; line-height: 1.6;">
-                    This is a security notice for your %4$s account on Deen Wallet.
+                    This is a security notice for your %4$s account on DeenWallet Transfer.
                 </p>
 
                 <p style="margin: 0 0 16px 0; color: %2$s; font-size: 15px; line-height: 1.6;">
@@ -335,7 +335,7 @@ final class EmailTemplates {
                 </div>
 
                 <p style="margin: 0; color: %2$s; font-size: 13px; line-height: 1.5; text-align: center;">
-                    Keep this reference handy in case you ever need to look up this transfer. Thank you for choosing Deen Wallet.
+                    Keep this reference handy in case you ever need to look up this transfer. Thank you for choosing DeenWallet Transfer.
                 </p>
             </div>
             """.formatted(
@@ -361,7 +361,7 @@ final class EmailTemplates {
         String reason = escape(failureReason == null || failureReason.isBlank()
                 ? "The operator was unable to process this transaction." : failureReason);
         String fundsNote = bankTransfer
-                ? "If your mobile-money payment was received but the bank payout failed, please contact Deen Wallet Support so the transaction can be reconciled."
+                ? "If your mobile-money payment was received but the bank payout failed, please contact DeenWallet Transfer Support so the transaction can be reconciled."
                 : "If any amount was deducted, it will be returned automatically through the payment process.";
 
         String body = """
@@ -418,11 +418,11 @@ final class EmailTemplates {
                 </p>
                 <div style="background-color: #F9FAFB; border-left: 4px solid %1$s; padding: 16px; border-radius: 4px; margin-bottom: 16px;">
                     <p style="margin: 0 0 8px; color: %1$s; font-size: 14px; line-height: 1.5;"><strong>Why it failed:</strong> %7$s</p>
-                    <p style="margin: 0 0 8px; color: %1$s; font-size: 14px; line-height: 1.5;"><strong>Your money is safe.</strong> It is being held by Deen Wallet and has not been lost.</p>
+                    <p style="margin: 0 0 8px; color: %1$s; font-size: 14px; line-height: 1.5;"><strong>Your money is safe.</strong> It is being held by DeenWallet Transfer and has not been lost.</p>
                     <p style="margin: 0; color: %1$s; font-size: 14px; line-height: 1.5;"><strong>What happens next:</strong> our support team will either retry the transfer or refund SLE %4$s to the number you paid from (%8$s).</p>
                 </div>
                 <p style="margin: 0; color: %2$s; font-size: 13px; line-height: 1.5; text-align: center;">
-                    To speed things up, contact Deen Wallet Support and quote reference <strong>%3$s</strong>.
+                    To speed things up, contact DeenWallet Transfer Support and quote reference <strong>%3$s</strong>.
                 </p>
             </div>
             """.formatted(TEXT_COLOR, MUTED_COLOR, escape(transactionCode), escape(totalCharged), escape(amount),
@@ -466,6 +466,46 @@ final class EmailTemplates {
         return wrap("Refund sent", body);
     }
 
+    static String kycDecisionEmail(String firstName, String outcome, String detail, String dailyLimit) {
+        String title;
+        String color;
+        String lead;
+        switch (outcome) {
+            case "APPROVED" -> {
+                title = "Identity verified";
+                color = BRAND_COLOR;
+                lead = "Good news: your identity has been verified. You can now convert up to <strong>SLE "
+                        + escape(dailyLimit) + "</strong> per day for mobile money and bank transfers.";
+            }
+            case "REVOKED" -> {
+                title = "Verification withdrawn";
+                color = "#B45309";
+                lead = "Your identity verification was withdrawn, so the standard daily limits apply again."
+                        + (detail == null || detail.isBlank() ? "" : "<br><br><strong>Reason:</strong> " + escape(detail));
+            }
+            default -> {
+                title = "Verification not approved";
+                color = "#B91C1C";
+                lead = "We could not verify your identity this time."
+                        + (detail == null || detail.isBlank() ? "" : "<br><br><strong>Reason:</strong> " + escape(detail))
+                        + "<br><br>Open the app, go to <strong>Verify your KYC</strong> and send new, clear photos of your ID.";
+            }
+        }
+        String body = """
+            <div>
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <h2 style="margin: 0; color: %1$s; font-size: 22px; font-weight: 700;">%2$s</h2>
+                </div>
+                <p style="margin: 0 0 12px 0; color: %3$s; font-size: 15px;">Hello %4$s,</p>
+                <p style="margin: 0; color: %3$s; font-size: 15px; line-height: 1.6;">%5$s</p>
+                <p style="margin: 16px 0 0 0; color: %6$s; font-size: 13px; line-height: 1.5;">
+                    WAEC result pins are available to every customer, verified or not.
+                </p>
+            </div>
+            """.formatted(color, escape(title), TEXT_COLOR, escape(firstName), lead, MUTED_COLOR);
+        return wrap(title, body);
+    }
+
     static String waecPinsEmail(String transactionCode, String totalCharged,
                                 java.util.List<String> pins, java.util.List<String> serials) {
         StringBuilder cards = new StringBuilder();
@@ -498,8 +538,8 @@ final class EmailTemplates {
                 </div>
                 %5$s
                 <p style="margin: 0; color: %2$s; font-size: 13px; line-height: 1.5; text-align: center;">
-                    Keep these codes private and do not share them. You can also find them in the Notifications section of the Deen Wallet app.
-                    Thank you for using Deen Wallet.
+                    Keep these codes private and do not share them. You can also find them in the Notifications section of the DeenWallet Transfer app.
+                    Thank you for using DeenWallet Transfer.
                 </p>
             </div>
             """.formatted(TEXT_COLOR, MUTED_COLOR, escape(transactionCode), escape(totalCharged), cards.toString());
@@ -557,7 +597,7 @@ final class EmailTemplates {
                                 <tr>
                                     <td style="background-color: %2$s; padding: 22px 24px; text-align: center;">
                                         <div style="font-size: 22px; line-height: 1.2; font-weight: 800; letter-spacing: 1px; color: #FFFFFF; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
-                                            DEEN WALLET
+                                            DEENWALLET TRANSFER
                                         </div>
                                     </td>
                                 </tr>

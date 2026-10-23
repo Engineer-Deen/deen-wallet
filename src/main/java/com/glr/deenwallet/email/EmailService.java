@@ -42,7 +42,7 @@ public class EmailService {
     }
 
     public void sendWelcomeEmail(User user) {
-        send(user.getEmail(), "Welcome to Deen Wallet",
+        send(user.getEmail(), "Welcome to DeenWallet Transfer",
                 EmailTemplates.welcomeEmail(
                         user.getFirstName(),
                         user.getAccountNumber(),
@@ -60,14 +60,14 @@ public class EmailService {
         }
         String baseUrl = frontendBaseUrl == null ? "" : frontendBaseUrl.trim().replaceAll("/+$", "");
         String resetLink = baseUrl + "/admin-reset-password.html?token=" + rawToken.trim();
-        sendRequired(admin.getEmail(), "Reset Your Deen Wallet Admin Password",
+        sendRequired(admin.getEmail(), "Reset Your DeenWallet Transfer Admin Password",
                 EmailTemplates.adminPasswordResetEmail(admin.getFirstName(), resetLink));
     }
 
     /** Security notice after an admin password or PIN was changed through recovery. */
     @Async("emailTaskExecutor")
     public void sendAdminSecurityChangeEmail(User admin, String what) {
-        send(admin.getEmail(), "Your Deen Wallet admin " + what + " was changed",
+        send(admin.getEmail(), "Your DeenWallet Transfer admin " + what + " was changed",
                 EmailTemplates.adminSecurityChangeEmail(admin.getFirstName(), what, supportEmail));
     }
 
@@ -88,21 +88,21 @@ public class EmailService {
 
         sendRequired(
                 user.getEmail(),
-                "Reset Your Deen Wallet Password",
+                "Reset Your DeenWallet Transfer Password",
                 EmailTemplates.passwordResetEmail(user.getFirstName(), resetLink)
         );
     }
 
     @Async("emailTaskExecutor")
     public void sendAccountActivatedEmail(User user) {
-        send(user.getEmail(), "Deen Wallet Account Profile Notice",
+        send(user.getEmail(), "DeenWallet Transfer Account Profile Notice",
                 EmailTemplates.accountActivatedEmail(user.getFirstName()));
         log.info("✅ Account activation email sent to: {}", user.getEmail());
     }
 
     @Async("emailTaskExecutor")
     public void sendAccountDeactivatedEmail(User user) {
-        send(user.getEmail(), "Deen Wallet Account Service Summary",
+        send(user.getEmail(), "DeenWallet Transfer Account Service Summary",
                 EmailTemplates.accountDeactivatedEmail(
                         user.getFirstName(),
                         supportEmail
@@ -125,7 +125,7 @@ public class EmailService {
 
         send(
                 user.getEmail(),
-                "Deen Wallet Service Activity Summary",
+                "DeenWallet Transfer Service Activity Summary",
                 EmailTemplates.accountLockedEmail(
                         user.getFirstName(),
                         lockReason,
@@ -138,7 +138,7 @@ public class EmailService {
     public void sendAdminLoginBlockedEmail(User user, boolean superAdmin) {
         send(
                 user.getEmail(),
-                "Deen Wallet Administrative Activity Notice",
+                "DeenWallet Transfer Administrative Activity Notice",
                 EmailTemplates.adminLoginBlockedEmail(
                         user.getFirstName(),
                         superAdmin,
@@ -158,7 +158,7 @@ public class EmailService {
 
         send(
                 toEmail,
-                "Transfer Receipt",
+                "Transfer Receipt " + transactionCode,
                 EmailTemplates.transactionCompletedEmail(
                         transactionCode,
                         toDisplayAmount(transaction.getAmountValue()),
@@ -183,7 +183,7 @@ public class EmailService {
 
         send(
                 toEmail,
-                "Transfer Status Update",
+                "Transfer Status Update " + transactionCode,
                 EmailTemplates.transactionFailedEmail(
                         transactionCode,
                         toDisplayAmount(transaction.getAmountValue()),
@@ -215,6 +215,17 @@ public class EmailService {
     }
 
     @Async("emailTaskExecutor")
+    public void sendKycDecisionEmail(User user, String outcome, String detail, String dailyLimit) {
+        String subject = switch (outcome) {
+            case "APPROVED" -> "Your identity is verified";
+            case "REVOKED" -> "Your verification was withdrawn";
+            default -> "Your verification was not approved";
+        };
+        send(user.getEmail(), subject,
+                EmailTemplates.kycDecisionEmail(user.getFirstName(), outcome, detail, dailyLimit));
+    }
+
+    @Async("emailTaskExecutor")
     public void sendRefundInitiatedEmail(String toEmail, String transactionCode, String totalCharged, String payerPhone) {
         send(toEmail, "Your refund is on its way " + transactionCode,
                 EmailTemplates.refundInitiatedEmail(transactionCode, totalCharged, payerPhone));
@@ -234,17 +245,21 @@ public class EmailService {
         for (int attempt = 1; attempt <= 2; attempt++) {
             try {
                 MimeMessage message = mailSender.createMimeMessage();
-                MimeMessageHelper helper = new MimeMessageHelper(message, false, StandardCharsets.UTF_8.name());
+                MimeMessageHelper helper = new MimeMessageHelper(message, true, StandardCharsets.UTF_8.name());
                 helper.setFrom(senderEmail, senderName);
-                helper.setReplyTo(supportEmail, "Deen Wallet Support");
+                helper.setReplyTo(supportEmail, "DeenWallet Transfer Support");
                 helper.setTo(toEmail);
                 helper.setSubject(subject);
-                helper.setText(htmlBody, true);
+                helper.setText(plainText(htmlBody), htmlBody);
                 mailSender.send(message);
                 log.info("Email '{}' sent to {}", subject, toEmail);
                 return true;
             } catch (Exception e) {
                 log.error("Failed to send email '{}' to {} (attempt {}/2): {}", subject, toEmail, attempt, e.getMessage());
+                if (isPermanentRejection(e)) {
+                    log.error("Mail server permanently refused '{}' to {}; not retrying the same message", subject, toEmail);
+                    return false;
+                }
                 if (attempt < 2) {
                     try {
                         Thread.sleep(2000L);
@@ -267,29 +282,78 @@ public class EmailService {
             throw new IllegalArgumentException("Recipient email is required");
         }
 
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(
-                    message,
-                    false,
-                    StandardCharsets.UTF_8.name()
-            );
+        // A 4xx reply (for example "451 Deferred") or a timeout means "try again in a moment".
+        // Retry those briefly. A 5xx reply is permanent, so it is never retried.
+        final int maxAttempts = 3;
+        Exception lastError = null;
 
-            helper.setFrom(senderEmail, senderName);
-            helper.setReplyTo(supportEmail, "Deen Wallet Support");
-            helper.setTo(toEmail);
-            helper.setSubject(subject);
-            helper.setText(htmlBody, true);
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(
+                        message,
+                        true,
+                        StandardCharsets.UTF_8.name()
+                );
 
-            mailSender.send(message);
+                helper.setFrom(senderEmail, senderName);
+                helper.setReplyTo(supportEmail, "DeenWallet Transfer Support");
+                helper.setTo(toEmail);
+                helper.setSubject(subject);
+                helper.setText(plainText(htmlBody), htmlBody);
 
-        } catch (Exception e) {
-            log.error("Failed to send required email to {}", toEmail, e);
-            throw new IllegalStateException(
-                    "Unable to send verification email. Please try again.",
-                    e
-            );
+                mailSender.send(message);
+                return;
+
+            } catch (Exception e) {
+                lastError = e;
+                boolean retry = attempt < maxAttempts && isTransientMailFailure(e);
+                log.warn("Required email '{}' to {} failed (attempt {}/{}, {}): {}",
+                        subject, toEmail, attempt, maxAttempts,
+                        retry ? "will retry" : "giving up", rootMessage(e));
+                if (!retry) {
+                    break;
+                }
+                try {
+                    Thread.sleep(attempt == 1 ? 1000L : 3000L);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
         }
+
+        log.error("Failed to send required email '{}' to {}", subject, toEmail, lastError);
+        throw new IllegalStateException(
+                "Unable to send verification email. Please try again.",
+                lastError
+        );
+    }
+
+    private static final java.util.regex.Pattern TRANSIENT_SMTP_REPLY =
+            java.util.regex.Pattern.compile("(^|\\s)4\\d\\d[ -]");
+
+    /** True for temporary problems worth one more try: a 4xx SMTP reply, a timeout, or a dropped connection. */
+    private static boolean isTransientMailFailure(Throwable error) {
+        for (Throwable t = error; t != null; t = t.getCause()) {
+            if (t instanceof java.net.SocketException || t instanceof java.net.SocketTimeoutException) {
+                return true;
+            }
+            String message = t.getMessage();
+            if (message != null && TRANSIENT_SMTP_REPLY.matcher(message).find()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static String rootMessage(Throwable error) {
+        Throwable t = error;
+        while (t.getCause() != null && t.getCause() != t) {
+            t = t.getCause();
+        }
+        String m = t.getMessage();
+        return m == null ? t.getClass().getSimpleName() : m.strip();
     }
 
     private void send(
@@ -322,15 +386,15 @@ public class EmailService {
                 MimeMessage message = mailSender.createMimeMessage();
                 MimeMessageHelper helper = new MimeMessageHelper(
                         message,
-                        false,
+                        true,
                         StandardCharsets.UTF_8.name()
                 );
 
                 helper.setFrom(senderEmail, senderName);
-                helper.setReplyTo(supportEmail, "Deen Wallet Support");
+                helper.setReplyTo(supportEmail, "DeenWallet Transfer Support");
                 helper.setTo(toEmail);
                 helper.setSubject(subject);
-                helper.setText(htmlBody, true);
+                helper.setText(plainText(htmlBody), htmlBody);
 
                 mailSender.send(message);
 
@@ -347,6 +411,11 @@ public class EmailService {
                         e.getMessage(),
                         e
                 );
+
+                if (isPermanentRejection(e)) {
+                    log.error("Mail server permanently refused '{}' to {}; not retrying the same message", subject, toEmail);
+                    return;
+                }
 
                 if (attempt < maxAttempts) {
                     try {
@@ -365,6 +434,36 @@ public class EmailService {
                 toEmail,
                 maxAttempts
         );
+    }
+
+    /** A 5xx answer from the mail server means "refused for good": sending the identical message again only hurts the sender's reputation. */
+    private static boolean isPermanentRejection(Throwable error) {
+        for (Throwable t = error; t != null; t = t.getCause()) {
+            if (t.getClass().getName().endsWith("SMTPSendFailedException")) {
+                try {
+                    // Read through reflection: the SMTP classes are only on the runtime classpath.
+                    Object code = t.getClass().getMethod("getReturnCode").invoke(t);
+                    return code instanceof Integer c && c >= 500 && c < 600;
+                } catch (ReflectiveOperationException | RuntimeException ignored) {
+                    return false;
+                }
+            }
+            if (t.getCause() == t) break;
+        }
+        return false;
+    }
+
+    /** Plain-text version of an HTML e-mail. Messages with both parts are filtered as spam far less often than HTML-only ones. */
+    private static String plainText(String html) {
+        if (html == null) return "";
+        String text = html
+                .replaceAll("(?is)<(style|script|head)[^>]*>.*?</\\1>", " ")
+                .replaceAll("(?i)<br\\s*/?>|</p>|</h[1-6]>|</tr>|</div>", "\n")
+                .replaceAll("(?i)</td>", "  ")
+                .replaceAll("(?s)<[^>]+>", " ")
+                .replace("&nbsp;", " ").replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+                .replace("&quot;", "\"").replace("&#39;", "'");
+        return text.replaceAll("[ \\t\\x0B\\f\\r]+", " ").replaceAll(" ?\n ?", "\n").replaceAll("\n{3,}", "\n\n").trim();
     }
 
     private String toDisplayAmount(Long minorUnits) {

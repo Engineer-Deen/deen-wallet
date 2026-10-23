@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
-  <title>DeenWallet — Sign in</title>
+  <title>DeenWallet Transfer — Sign in</title>
   <style>
     #login-success-popup { position:fixed; inset:0; z-index:10000; display:flex; align-items:center; justify-content:center; padding:20px; background:rgba(18,36,43,.38); opacity:0; visibility:hidden; transition:opacity .2s ease,visibility .2s ease; }
     #login-success-popup.visible { opacity:1; visibility:visible; }
@@ -784,9 +784,9 @@
 </head>
 
 <body>
-<div id="deenwallet-splash" aria-label="DeenWallet loading">
+<div id="deenwallet-splash" aria-label="DeenWallet Transfer loading">
   <div class="splash-brand">
-    <img class="splash-logo" src="deenwallet-logo.png" alt="DeenWallet" />
+    <img class="splash-logo" src="deenwallet-logo.png?v=2" alt="DeenWallet Transfer" />
     <div class="splash-tagline">Secure. Simple. Yours.</div>
     <div class="splash-loader" aria-hidden="true"></div>
   </div>
@@ -797,11 +797,11 @@
   <!-- ===================== WELCOME (phone onboarding) ===================== -->
   <div class="screen" id="screen-welcome">
     <div class="login-brand-row welcome-top">
-      <img class="login-brand-logo" src="deenwallet-logo.png" alt="" />
-      <div class="login-brand-name">Deen<span>Wallet</span></div>
+      <img class="login-brand-logo" src="deenwallet-logo.png?v=2" alt="" />
+      <div class="login-brand-name">Deen<span>Wallet</span> Transfer</div>
     </div>
 
-    <div class="welcome-carousel" role="region" aria-roledescription="carousel" aria-label="About DeenWallet">
+    <div class="welcome-carousel" role="region" aria-roledescription="carousel" aria-label="About DeenWallet Transfer">
       <div class="welcome-track" id="welcome-track">
 
         <section class="welcome-slide" role="group" aria-roledescription="slide" aria-label="1 of 3">
@@ -813,7 +813,7 @@
               <div class="wallet-card">
                 <div class="mini-label">Instant service</div>
                 <div class="mini-balance">Pay securely</div>
-                <div class="mini-row"><span>Payment → Service</span><span>DeenWallet</span></div>
+                <div class="mini-row"><span>Payment → Service</span><span>DeenWallet Transfer</span></div>
               </div>
             </div>
           </div>
@@ -839,7 +839,7 @@
             <div class="help-art" aria-hidden="true">
               <div class="bubble in">Did my transfer go through?</div>
               <div class="bubble out">Yes, it was delivered a moment ago.</div>
-              <div class="bubble-meta right">DeenWallet support</div>
+              <div class="bubble-meta right">DeenWallet Transfer support</div>
             </div>
           </div>
         </section>
@@ -862,7 +862,7 @@
   <!-- ===================== REGISTER ===================== -->
   <div class="screen" id="screen-register">
     <button type="button" class="screen-back" id="register-back-btn" aria-label="Back to welcome">&#8592; Back</button>
-    <div class="brand">DeenWallet</div>
+    <div class="brand">DeenWallet Transfer</div>
     <h1 class="title">Create your account</h1>
     <p class="subtitle">Register to start converting between Orange Money, Africell, and QMoney.</p>
 
@@ -911,13 +911,13 @@
     <div id="terms-section" style="margin:16px 0 4px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:#F7FAFB;">
       <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:12px;line-height:1.5;color:var(--muted);">
         <input id="terms-checkbox" type="checkbox" style="margin-top:3px;accent-color:var(--primary);" />
-        <span>I agree to DeenWallet's <button type="button" id="terms-link" style="border:0;background:none;padding:0;color:var(--primary);font-weight:700;cursor:pointer;">Terms &amp; Conditions</button>.</span>
+        <span>I agree to DeenWallet Transfer's <button type="button" id="terms-link" style="border:0;background:none;padding:0;color:var(--primary);font-weight:700;cursor:pointer;">Terms &amp; Conditions</button>.</span>
       </label>
     </div>
     <div id="terms-modal" class="hidden" style="position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.45);align-items:center;justify-content:center;padding:20px;">
       <div style="background:#fff;border-radius:16px;max-width:390px;width:100%;padding:22px;max-height:80vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);">
         <h3 style="margin:0 0 10px;color:var(--text);">Terms &amp; Conditions</h3>
-        <p style="font-size:13px;line-height:1.6;color:var(--muted);">By creating a DeenWallet account, you agree to provide accurate information, keep your password and PIN confidential, use the service lawfully, and accept responsibility for activity performed through your account. DeenWallet may suspend access where required for security, fraud prevention, or violation of these terms.</p>
+        <p style="font-size:13px;line-height:1.6;color:var(--muted);">By creating a DeenWallet Transfer account, you agree to provide accurate information, keep your password and PIN confidential, use the service lawfully, and accept responsibility for activity performed through your account. DeenWallet Transfer may suspend access where required for security, fraud prevention, or violation of these terms.</p>
         <button type="button" id="terms-close" class="btn-primary" style="width:100%;">Close</button>
       </div>
     </div>
@@ -948,7 +948,7 @@
 
   <!-- ===================== CONFIRM EMAIL ===================== -->
   <div class="screen" id="screen-confirm">
-    <div class="brand">DeenWallet</div>
+    <div class="brand">DeenWallet Transfer</div>
     <h1 class="title">Verify your email</h1>
     <p class="subtitle" id="confirm-subtitle">
       Enter the verification code we sent to <strong id="confirm-email-masked">your email</strong>.
@@ -992,10 +992,10 @@
   <!-- ===================== LOGIN ===================== -->
   <div class="screen active" id="screen-login">
     <div class="login-shell">
-      <section class="login-visual" aria-label="DeenWallet introduction">
+      <section class="login-visual" aria-label="DeenWallet Transfer introduction">
         <div class="login-brand-row">
-          <img class="login-brand-logo" src="deenwallet-logo.png" alt="DeenWallet" />
-          <div class="login-brand-name">Deen<span>Wallet</span></div>
+          <img class="login-brand-logo" src="deenwallet-logo.png?v=2" alt="DeenWallet Transfer" />
+          <div class="login-brand-name">Deen<span>Wallet</span> Transfer</div>
         </div>
 
         <div class="login-visual-copy">
@@ -1006,7 +1006,7 @@
             <div class="wallet-card">
               <div class="mini-label">Instant service</div>
               <div class="mini-balance">Pay securely</div>
-              <div class="mini-row"><span>Payment → Service</span><span>DeenWallet</span></div>
+              <div class="mini-row"><span>Payment → Service</span><span>DeenWallet Transfer</span></div>
             </div>
           </div>
         </div>
@@ -1022,7 +1022,7 @@
         <div class="login-form-wrap">
           <button type="button" class="screen-back" id="login-back-btn" aria-label="Back to welcome">&#8592; Back</button>
           <h1 class="login-form-title">Welcome Back</h1>
-          <p class="login-form-subtitle">Log in to make secure payments, manage your transactions, and access DeenWallet services.</p>
+          <p class="login-form-subtitle">Log in to make secure payments, manage your transactions, and access DeenWallet Transfer services.</p>
 
           <div class="login-tabs">
             <button class="login-tab active" id="login-tab-email" type="button">Email</button>
@@ -1096,7 +1096,7 @@
 <div id="account-lock-modal" class="modal-overlay" style="position:fixed;inset:0;background:rgba(18,36,43,.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:9999;">
   <div style="width:100%;max-width:380px;background:#fff;border-radius:16px;padding:24px;box-shadow:0 20px 50px rgba(0,0,0,.18);">
     <h2 style="margin:0 0 8px;font-size:20px;">Account blocked</h2>
-    <p style="margin:0 0 18px;color:#6E7C82;line-height:1.5;">Your account has been blocked because of multiple incorrect PIN attempts. Please contact Deen Wallet Support to have an administrator unlock your account.</p>
+    <p style="margin:0 0 18px;color:#6E7C82;line-height:1.5;">Your account has been blocked because of multiple incorrect PIN attempts. Please contact DeenWallet Transfer Support to have an administrator unlock your account.</p>
     <a id="account-lock-whatsapp" class="btn-primary" style="display:block;text-align:center;text-decoration:none;margin-bottom:8px;" target="_blank" rel="noopener">Contact support on WhatsApp</a>
     <button type="button" id="account-lock-close" class="btn-secondary" style="width:100%;">Close</button>
   </div>
@@ -1398,7 +1398,7 @@
       if (accountLockClose) accountLockClose.addEventListener('click', function () { accountLockModal.style.display = 'none'; });
       function showAccountLockModal() {
         const number = String(window.DEENWALLET_SUPPORT_WHATSAPP || '').replace(/\D/g, '');
-        if (accountLockWhatsApp) accountLockWhatsApp.href = number ? 'https://wa.me/' + number + '?text=' + encodeURIComponent('Hello Deen Wallet Support, my account was blocked after incorrect PIN attempts.') : '#';
+        if (accountLockWhatsApp) accountLockWhatsApp.href = number ? 'https://wa.me/' + number + '?text=' + encodeURIComponent('Hello DeenWallet Transfer Support, my account was blocked after incorrect PIN attempts.') : '#';
         if (accountLockModal) accountLockModal.style.display = 'flex';
       }
 
@@ -1503,7 +1503,7 @@
           if (loginVerifyEmail) loginVerifyEmail.style.display = unverified ? 'block' : 'none';
           if (loginSupportWhatsApp) {
             const number = String(window.DEENWALLET_SUPPORT_WHATSAPP || '').replace(/\D/g, '');
-            loginSupportWhatsApp.href = number ? 'https://wa.me/' + number + '?text=' + encodeURIComponent('Hello Deen Wallet Support, I need help with my account.') : '#';
+            loginSupportWhatsApp.href = number ? 'https://wa.me/' + number + '?text=' + encodeURIComponent('Hello DeenWallet Transfer Support, I need help with my account.') : '#';
           }
           console.error('Login error:', error);
         } finally {
@@ -1522,7 +1522,7 @@
         if (existing) existing.remove();
         const popup = document.createElement('div');
         popup.id = 'login-success-popup';
-        popup.innerHTML = '<div class="login-success-card"><div class="login-success-icon">✓</div><div class="login-success-title">Login successful</div><div class="login-success-message">Welcome back to DeenWallet.</div></div>';
+        popup.innerHTML = '<div class="login-success-card"><div class="login-success-icon">✓</div><div class="login-success-title">Login successful</div><div class="login-success-message">Welcome back to DeenWallet Transfer.</div></div>';
         document.body.appendChild(popup);
         requestAnimationFrame(function () { popup.classList.add('visible'); });
       }

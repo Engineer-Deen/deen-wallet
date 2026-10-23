@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <link rel="preload" as="image" href="deenwallet-logo-sm.png" />
-    <title>DeenWallet — Send money</title>
+    <link rel="preload" as="image" href="deenwallet-logo-sm.png?v=2" />
+    <title>DeenWallet Transfer — Send money</title>
     <style>
         :root {
             --bg: #FFFFFF;
@@ -2313,6 +2313,117 @@
         .support-contact-row strong { color:var(--text); }
         .support-note { margin-top:12px !important; font-size:12px !important; }
 
+        /* ===================== KYC ===================== */
+        #screen-kyc .scroll { padding-bottom: 28px; }
+        .kyc-head { padding: 2px 2px 14px; }
+        .kyc-head h1 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -.2px; }
+        .kyc-head p { margin: 5px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+
+        .kyc-hero { position: relative; overflow: hidden; border-radius: 20px; padding: 18px 18px 16px; color: #fff;
+            background: linear-gradient(135deg, #1C7A91 0%, #2E9FB0 100%); box-shadow: 0 10px 26px rgba(28,122,145,.22); }
+        .kyc-hero::after { content: ""; position: absolute; right: -34px; top: -34px; width: 130px; height: 130px; border-radius: 50%;
+            background: rgba(255,255,255,.10); }
+        .kyc-hero.basic { background: linear-gradient(135deg, #34505A 0%, #5B7783 100%); box-shadow: 0 10px 26px rgba(52,80,90,.20); }
+        .kyc-hero.review { background: linear-gradient(135deg, #B9770E 0%, #E0A33A 100%); box-shadow: 0 10px 26px rgba(185,119,14,.22); }
+        .kyc-hero.bad { background: linear-gradient(135deg, #A63A2E 0%, #D5645A 100%); box-shadow: 0 10px 26px rgba(166,58,46,.22); }
+        .kyc-hero-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 800; letter-spacing: .9px;
+            text-transform: uppercase; background: rgba(255,255,255,.18); padding: 5px 10px; border-radius: 999px; }
+        .kyc-hero-title { margin: 12px 0 4px; font-size: 21px; font-weight: 800; letter-spacing: -.2px; position: relative; z-index: 1; }
+        .kyc-hero-sub { margin: 0; font-size: 12.5px; line-height: 1.5; opacity: .92; position: relative; z-index: 1; }
+
+        .kyc-card { margin-top: 14px; padding: 16px; border: 1px solid var(--border); border-radius: 18px; background: #fff;
+            box-shadow: 0 6px 20px rgba(18,36,43,.05); }
+        .kyc-card h2 { margin: 0 0 12px; font-size: 14px; font-weight: 800; }
+        .kyc-meter + .kyc-meter { margin-top: 14px; }
+        .kyc-meter-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 12.5px; }
+        .kyc-meter-top strong { font-weight: 800; }
+        .kyc-meter-top span { color: var(--muted); font-size: 11.5px; }
+        .kyc-bar { margin-top: 7px; height: 8px; border-radius: 999px; background: #EAF1F3; overflow: hidden; }
+        .kyc-bar > i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #2E9FB0, #1C7A91);
+            transition: width .5s cubic-bezier(.2,.8,.2,1); }
+        .kyc-bar > i.full { background: linear-gradient(90deg, #E0A33A, #C0392B); }
+        .kyc-note { display: flex; gap: 9px; align-items: flex-start; margin-top: 14px; padding: 10px 12px; border-radius: 12px;
+            background: #EAF6F8; color: #17586A; font-size: 11.5px; line-height: 1.5; }
+        .kyc-note.warn { background: var(--warning-bg); color: var(--warning-text); }
+        .kyc-note.bad { background: #FCEDEB; color: var(--error); }
+
+        .kyc-cta { width: 100%; margin-top: 16px; }
+        .kyc-link { display: block; margin: 12px auto 0; background: none; border: none; color: var(--muted); font-size: 12.5px;
+            font-weight: 600; cursor: pointer; padding: 6px 10px; }
+
+        .kyc-steps { display: flex; align-items: center; gap: 6px; margin: 2px 0 14px; }
+        .kyc-steps b { flex: 1; height: 5px; border-radius: 999px; background: #E4ECEF; transition: background .3s; }
+        .kyc-steps b.on { background: var(--primary-light); }
+        .kyc-steps small { font-size: 11px; font-weight: 800; color: var(--muted); white-space: nowrap; margin-left: 4px; }
+
+        .kyc-label { display: block; margin: 14px 0 7px; font-size: 12px; font-weight: 800; color: var(--muted); }
+        .kyc-input { width: 100%; box-sizing: border-box; min-height: 50px; border: 1px solid #DCE7EA; border-radius: 14px; background: #F9FBFC;
+            color: var(--text); padding: 0 14px; font-size: 15px; outline: none; font-family: inherit; }
+        .kyc-input:focus { border-color: #8CCFD9; background: #fff; }
+        .kyc-input.upper { text-transform: uppercase; letter-spacing: 1px; }
+        .kyc-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .kyc-row2 > div { min-width: 0; }
+        .kyc-input[type=date] { min-width: 0; max-width: 100%; padding: 0 10px; font-size: 14px; }
+        .kyc-hint { margin: 6px 2px 0; font-size: 11px; color: var(--muted); line-height: 1.4; }
+
+        .kyc-docs { display: grid; gap: 9px; }
+        .kyc-doc { display: flex; align-items: center; gap: 12px; padding: 13px 14px; border: 1.5px solid #DCE7EA; border-radius: 14px;
+            background: #F9FBFC; cursor: pointer; text-align: left; font: inherit; color: var(--text); width: 100%; }
+        .kyc-doc.on { border-color: var(--primary-light); background: #EAF6F8; }
+        .kyc-doc .ico { width: 38px; height: 38px; flex: 0 0 38px; border-radius: 11px; background: #fff; display: grid; place-items: center;
+            font-size: 19px; border: 1px solid var(--border); }
+        .kyc-doc .t { font-size: 14px; font-weight: 800; }
+        .kyc-doc .s { font-size: 11px; color: var(--muted); margin-top: 2px; }
+        .kyc-doc .dot { margin-left: auto; width: 20px; height: 20px; border-radius: 50%; border: 2px solid #C9D8DC; flex: 0 0 20px; }
+        .kyc-doc.on .dot { border-color: var(--primary-light); background: var(--primary-light) radial-gradient(#fff 38%, transparent 40%); }
+
+        .kyc-slot { display: flex; gap: 12px; align-items: center; padding: 12px; border: 1.5px dashed #BCD3D8; border-radius: 16px;
+            background: #F9FBFC; margin-top: 10px; }
+        .kyc-slot.done { border-style: solid; border-color: #9AD3DC; background: #F1FAFB; }
+        .kyc-slot.err { border-color: #E3A39B; background: #FDF4F3; }
+        .kyc-thumb { width: 74px; height: 74px; flex: 0 0 74px; border-radius: 12px; background: #E7F0F2 center/cover no-repeat;
+            display: grid; place-items: center; font-size: 26px; color: #8AA7AF; overflow: hidden; }
+        .kyc-slot-body { min-width: 0; flex: 1; }
+        .kyc-slot-body .t { font-size: 13.5px; font-weight: 800; }
+        .kyc-slot-body .s { font-size: 11px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+        .kyc-slot-body .s.ok { color: #1C7A91; font-weight: 700; }
+        .kyc-slot-body .s.bad { color: var(--error); font-weight: 700; }
+        .kyc-slot-actions { display: flex; gap: 7px; margin-top: 9px; flex-wrap: wrap; }
+        .kyc-mini { border: 1px solid #CFE0E4; background: #fff; color: var(--primary); border-radius: 999px; padding: 7px 13px;
+            font-size: 12px; font-weight: 800; cursor: pointer; font-family: inherit; }
+        .kyc-mini:active { transform: scale(.97); }
+        .kyc-mini:disabled { opacity: .5; }
+        .kyc-spin { width: 22px; height: 22px; border-radius: 50%; border: 3px solid #CFE0E4; border-top-color: var(--primary-light);
+            animation: kycspin .8s linear infinite; }
+        @keyframes kycspin { to { transform: rotate(360deg); } }
+
+        .kyc-sum { display: grid; gap: 0; }
+        .kyc-sum div { display: flex; justify-content: space-between; gap: 14px; padding: 10px 0; border-bottom: 1px solid #EEF3F5; font-size: 13px; }
+        .kyc-sum div:last-child { border-bottom: none; }
+        .kyc-sum span { color: var(--muted); }
+        .kyc-sum strong { text-align: right; word-break: break-word; }
+        .kyc-consent { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; font-size: 12px; line-height: 1.5; color: var(--muted); }
+        .kyc-consent input { margin-top: 2px; width: 18px; height: 18px; flex: 0 0 18px; accent-color: #1C7A91; }
+        .kyc-err { margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: #FCEDEB; color: var(--error);
+            font-size: 12.5px; line-height: 1.45; font-weight: 600; }
+        .kyc-skel { height: 120px; border-radius: 20px; background: linear-gradient(90deg,#EEF3F5 25%,#F7FAFB 50%,#EEF3F5 75%);
+            background-size: 200% 100%; animation: kycsk 1.2s infinite; }
+        @keyframes kycsk { to { background-position: -200% 0; } }
+
+        .kyc-cam { position: fixed; inset: 0; z-index: 100000; background: #000; display: flex; flex-direction: column; }
+        .kyc-cam video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; }
+        .kyc-cam video.mirror { transform: scaleX(-1); }
+        .kyc-cam-top { position: relative; z-index: 1; margin: 0; padding: 18px 16px 30px; text-align: center; color: #fff; font-size: 14px; font-weight: 700;
+            background: linear-gradient(rgba(0,0,0,.6), transparent); }
+        .kyc-cam-bar { position: relative; z-index: 1; margin-top: auto; display: flex; align-items: center; justify-content: space-between;
+            padding: 22px 26px calc(26px + env(safe-area-inset-bottom, 0px)); background: linear-gradient(transparent, rgba(0,0,0,.65)); }
+        .kyc-cam-cancel { background: none; border: none; color: #fff; font-size: 15px; font-weight: 700; padding: 10px; width: 72px; text-align: left; cursor: pointer; }
+        .kyc-cam-spacer { width: 72px; }
+        .kyc-cam-shutter { width: 70px; height: 70px; border-radius: 50%; border: 5px solid #fff; background: rgba(255,255,255,.25); cursor: pointer; padding: 0; }
+        .kyc-cam-shutter:active { background: #fff; }
+        .kyc-limit-hint { margin: 10px 0 0; padding: 9px 12px; border-radius: 12px; background: #F1F7F9; color: #3C5660;
+            font-size: 11.5px; line-height: 1.45; }
+        .kyc-limit-hint.warn { background: var(--warning-bg); color: var(--warning-text); font-weight: 600; }
     </style>
 </head>
 
@@ -2326,7 +2437,7 @@
             <div class="top-bar">
                 <button class="menu-btn" id="menu-btn" type="button" aria-label="Open menu" aria-expanded="false"><span></span><span></span><span></span></button>
                 <div class="top-bar-brand">
-                    <img class="app-brand-logo" src="deenwallet-logo-sm.png" alt="DeenWallet" />
+                    <img class="app-brand-logo" src="deenwallet-logo-sm.png?v=2" alt="DeenWallet Transfer" />
                 </div>
                 <button class="notification-btn" id="notification-btn" type="button" aria-label="Notifications" title="Notifications">
                     <span aria-hidden="true">&#128276;</span>
@@ -2387,6 +2498,8 @@
                     <div class="fee-row total"><span class="label">Debited amount</span><span class="value"
                                                                                               id="fee-total"></span></div>
                 </div>
+
+                <div id="kyc-limit-hint" class="kyc-limit-hint hidden"></div>
 
                 <div id="step1-error" class="inline-error hidden">
                     <span>&#9888;</span><span id="step1-error-text"></span>
@@ -2816,10 +2929,10 @@
             <div class="completion-push">
                 <div class="completion-push-top">
                     <span class="completion-push-logo" aria-hidden="true">DW</span>
-                    <span>DeenWallet</span>
+                    <span>DeenWallet Transfer</span>
                     <em class="completion-push-time">now</em>
                 </div>
-                <p class="completion-push-message">Your DeenWallet transaction has been completed successfully.</p>
+                <p class="completion-push-message">Your DeenWallet Transfer transaction has been completed successfully.</p>
             </div>
 
             <div class="completion-sheet">
@@ -2848,7 +2961,7 @@
             <div class="account-hero-card">
                 <div class="account-avatar" id="profile-avatar">A</div>
                 <div class="account-hero-copy">
-                    <span class="account-eyebrow">DeenWallet account</span>
+                    <span class="account-eyebrow">DeenWallet Transfer account</span>
                     <h1 class="account-hero-name" id="profile-name">—</h1>
                     <p class="account-hero-account">Account <strong id="profile-account">—</strong></p>
                 </div>
@@ -2857,7 +2970,7 @@
 
             <div class="profile-section-heading">
                 <h2>Account information</h2>
-                <p>Your registered DeenWallet details.</p>
+                <p>Your registered DeenWallet Transfer details.</p>
             </div>
             <div class="profile-info-card">
                 <div class="profile-info-row"><div><span>Username</span><strong id="profile-username">—</strong></div><span class="profile-row-icon">@</span></div>
@@ -2906,7 +3019,7 @@
                 <div>
                     <span class="account-eyebrow">Session security</span>
                     <h1 class="security-hero-title">Change your PIN</h1>
-                    <p class="security-hero-sub">Update the 4-digit PIN used to protect your DeenWallet session.</p>
+                    <p class="security-hero-sub">Update the 4-digit PIN used to protect your DeenWallet Transfer session.</p>
                 </div>
                 <span class="security-status">Active</span>
             </div>
@@ -2942,7 +3055,7 @@
 
             <div class="pin-safety-note">
                 <span aria-hidden="true">&#128274;</span>
-                <p>Never share your PIN with anyone. DeenWallet support will never ask you for your PIN.</p>
+                <p>Never share your PIN with anyone. DeenWallet Transfer support will never ask you for your PIN.</p>
             </div>
         </div>
     </div>
@@ -2957,7 +3070,7 @@
                 <div>
                     <span class="account-eyebrow">Login security</span>
                     <h1 class="security-hero-title">Biometric Login</h1>
-                    <p class="security-hero-sub">Use your Android device biometric authentication to sign in to DeenWallet.</p>
+                    <p class="security-hero-sub">Use your Android device biometric authentication to sign in to DeenWallet Transfer.</p>
                 </div>
                 <span class="security-status" id="biometric-status-badge">Checking</span>
             </div>
@@ -2988,21 +3101,16 @@
 
             <div class="pin-safety-note">
                 <span aria-hidden="true">&#128274;</span>
-                <p>Your fingerprint or face data stays on your Android device. DeenWallet does not receive or store your biometric data.</p>
+                <p>Your fingerprint or face data stays on your Android device. DeenWallet Transfer does not receive or store your biometric data.</p>
             </div>
         </div>
     </div>
 
     <!-- ===================== KYC SCREEN ===================== -->
-    <div class="screen coming-soon-screen" id="screen-kyc">
+    <div class="screen" id="screen-kyc">
         <div class="scroll">
             <button class="ussd-back" id="kyc-back-btn" style="padding-left:0;">&#8592; Back</button>
-            <div class="coming-soon-content">
-                <div class="coming-soon-icon" aria-hidden="true">&#128221;</div>
-                <h2 class="coming-soon-title">Verify your KYC</h2>
-                <p class="coming-soon-text">KYC verification will be available in a future DeenWallet release.</p>
-                <p class="coming-soon-text" style="margin-top:10px;font-weight:600;">Coming Soon</p>
-            </div>
+            <div id="kyc-root"><div class="kyc-skel"></div></div>
         </div>
     </div>
 
@@ -3011,9 +3119,9 @@
         <div class="scroll">
             <button class="ussd-back" id="terms-back-btn" style="padding-left:0;">&#8592; Back</button>
             <div class="policy-card">
-                <h1>DeenWallet Terms and Conditions</h1>
+                <h1>DeenWallet Transfer Terms and Conditions</h1>
                 <small>Effective date: 9 September 2026</small>
-                <p>These Terms and Conditions govern your use of DeenWallet, a digital wallet service that helps registered customers manage supported mobile-money conversion and related account activities. By creating an account, you agree to these terms.</p>
+                <p>These Terms and Conditions govern your use of DeenWallet Transfer, a digital wallet service that helps registered customers manage supported mobile-money conversion and related account activities. By creating an account, you agree to these terms.</p>
 
                 <h2>1. Eligibility and Account Registration</h2>
                 <p>You must provide accurate, current information and keep your account details up to date. You are responsible for protecting your password, session PIN, phone and email access. One person must not create or operate accounts using another person's identity or credentials.</p>
@@ -3025,28 +3133,28 @@
                 <p>Transactions are processed according to the information you submit and the availability and rules of the relevant mobile-money provider. You are responsible for confirming recipient details before submitting a transaction. Provider delays, outages, reversals, fees, or service restrictions may affect a transaction.</p>
 
                 <h2>4. Prohibited Use</h2>
-                <p>You must not use DeenWallet for fraud, impersonation, money laundering, unauthorized access, abuse of another person's account, manipulation of transaction records, or any unlawful activity. We may suspend or restrict accounts where misuse is suspected or confirmed.</p>
+                <p>You must not use DeenWallet Transfer for fraud, impersonation, money laundering, unauthorized access, abuse of another person's account, manipulation of transaction records, or any unlawful activity. We may suspend or restrict accounts where misuse is suspected or confirmed.</p>
 
                 <h2>5. Fees and Charges</h2>
                 <p>Applicable service fees will be presented by the system before a transaction is confirmed where supported. Third-party mobile-money charges may also apply.</p>
 
                 <h2>6. Availability and Service Changes</h2>
-                <p>We aim to keep DeenWallet available and reliable, but uninterrupted service cannot be guaranteed. We may maintain, improve, suspend, or change features when reasonably necessary for security, operations, compliance, or product development.</p>
+                <p>We aim to keep DeenWallet Transfer available and reliable, but uninterrupted service cannot be guaranteed. We may maintain, improve, suspend, or change features when reasonably necessary for security, operations, compliance, or product development.</p>
 
                 <h2>7. Account Suspension and Closure</h2>
                 <p>An account may be restricted, locked, deactivated, or closed when required for security, violation of these terms, suspected fraud, or operational or legal reasons. Where appropriate, we may provide a recovery or support process.</p>
 
                 <h2>8. Limitation of Responsibility</h2>
-                <p>To the extent permitted by applicable law, DeenWallet is not responsible for losses caused by incorrect information supplied by you, compromised credentials, unsupported provider failures, network outages, or actions taken outside the DeenWallet service.</p>
+                <p>To the extent permitted by applicable law, DeenWallet Transfer is not responsible for losses caused by incorrect information supplied by you, compromised credentials, unsupported provider failures, network outages, or actions taken outside the DeenWallet Transfer service.</p>
 
                 <h2>9. Privacy</h2>
-                <p>Your use of DeenWallet is also governed by our Privacy Policy, which explains how account and transaction information is collected, used, protected, and retained.</p>
+                <p>Your use of DeenWallet Transfer is also governed by our Privacy Policy, which explains how account and transaction information is collected, used, protected, and retained.</p>
 
                 <h2>10. Updates</h2>
                 <p>We may update these terms as the service changes. The effective date shown on this page identifies the current version. Continued use after an update means you accept the revised terms where applicable.</p>
 
                 <h2>11. Contact</h2>
-                <p>For account, security, or transaction support, use the support options provided inside DeenWallet.</p>
+                <p>For account, security, or transaction support, use the support options provided inside DeenWallet Transfer.</p>
             </div>
         </div>
     </div>
@@ -3056,15 +3164,15 @@
         <div class="scroll">
             <button class="ussd-back" id="privacy-back-btn" style="padding-left:0;">&#8592; Back</button>
             <div class="policy-card">
-                <h1>DeenWallet Privacy Policy</h1>
+                <h1>DeenWallet Transfer Privacy Policy</h1>
                 <small>Effective date: 9 September 2026</small>
-                <p>This Privacy Policy explains how DeenWallet handles information provided when you register, authenticate, use wallet features, contact support, or complete transactions.</p>
+                <p>This Privacy Policy explains how DeenWallet Transfer handles information provided when you register, authenticate, use wallet features, contact support, or complete transactions.</p>
 
                 <h2>1. Information We Collect</h2>
                 <p>Depending on the features you use, we may collect your name, username, phone number, email address, account number, authentication and security information, transaction details, device or browser information, and technical records needed to operate and secure the service.</p>
 
                 <h2>2. Why We Use Information</h2>
-                <p>We use information to create and maintain accounts, verify identity and contact details, authenticate users, process transactions, calculate applicable charges, provide support, prevent fraud and unauthorized access, troubleshoot technical problems, maintain security logs, and improve the reliability of DeenWallet.</p>
+                <p>We use information to create and maintain accounts, verify identity and contact details, authenticate users, process transactions, calculate applicable charges, provide support, prevent fraud and unauthorized access, troubleshoot technical problems, maintain security logs, and improve the reliability of DeenWallet Transfer.</p>
 
                 <h2>3. Passwords, PINs and Security Data</h2>
                 <p>Passwords and PINs are stored using security controls designed to avoid storing them as readable credentials. Verification codes and security events may be retained for a limited operational period. Never share your password or PIN with support personnel.</p>
@@ -3073,10 +3181,10 @@
                 <p>Transaction records may include amounts, recipient details, provider information, transaction status, reference codes, timestamps, and related technical records. This information is used to complete transactions, investigate disputes, maintain accurate records, and protect the service.</p>
 
                 <h2>5. Service Providers</h2>
-                <p>DeenWallet may rely on infrastructure, email, database, payment or mobile-money service providers to deliver features. Information necessary for a requested service may be processed by those providers under their applicable terms and privacy practices.</p>
+                <p>DeenWallet Transfer may rely on infrastructure, email, database, payment or mobile-money service providers to deliver features. Information necessary for a requested service may be processed by those providers under their applicable terms and privacy practices.</p>
 
                 <h2>6. Sharing and Disclosure</h2>
-                <p>We do not treat your personal information as public information. We may disclose relevant information when necessary to provide requested services, protect DeenWallet and its users, investigate fraud or abuse, comply with legal obligations, or respond to lawful requests.</p>
+                <p>We do not treat your personal information as public information. We may disclose relevant information when necessary to provide requested services, protect DeenWallet Transfer and its users, investigate fraud or abuse, comply with legal obligations, or respond to lawful requests.</p>
 
                 <h2>7. Data Protection</h2>
                 <p>We use technical and organizational safeguards appropriate to the service, including authentication controls, access restrictions, encrypted credential storage, security logging, and controlled administrative access. No online service can guarantee absolute security.</p>
@@ -3088,13 +3196,13 @@
                 <p>You should keep your contact details accurate and promptly report unauthorized activity. Where the system provides profile or account controls, you may update permitted information or request support for information that requires administrative assistance.</p>
 
                 <h2>10. Children</h2>
-                <p>DeenWallet is intended for users who are legally permitted to use the service. We do not knowingly design the service to collect information from children who are not permitted to register.</p>
+                <p>DeenWallet Transfer is intended for users who are legally permitted to use the service. We do not knowingly design the service to collect information from children who are not permitted to register.</p>
 
                 <h2>11. Policy Changes</h2>
-                <p>We may revise this policy as DeenWallet develops or legal and security requirements change. The effective date will be updated when a new version is published.</p>
+                <p>We may revise this policy as DeenWallet Transfer develops or legal and security requirements change. The effective date will be updated when a new version is published.</p>
 
                 <h2>12. Contact</h2>
-                <p>For privacy, security, account, or transaction questions, contact DeenWallet support using the support options available in the application.</p>
+                <p>For privacy, security, account, or transaction questions, contact DeenWallet Transfer support using the support options available in the application.</p>
             </div>
         </div>
     </div>
@@ -3106,7 +3214,7 @@
                 <button class="ussd-back" id="notifications-back-btn" style="padding-left:0;" aria-label="Back">&#8592;</button>
                 <div>
                     <h1 class="notification-page-title">Notifications</h1>
-                    <p class="notification-page-subtitle">Your DeenWallet account updates and messages.</p>
+                    <p class="notification-page-subtitle">Your DeenWallet Transfer account updates and messages.</p>
                 </div>
             </div>
             <div class="notification-toolbar">
@@ -3124,7 +3232,7 @@
             <div class="top-bar">
                 <div>
                     <h1 class="greeting-title">Wallet</h1>
-                    <p class="greeting-sub">Manage your DeenWallet balance and wallet activity.</p>
+                    <p class="greeting-sub">Manage your DeenWallet Transfer balance and wallet activity.</p>
                 </div>
             </div>
             <div class="coming-soon-content">
@@ -3136,7 +3244,7 @@
                     </svg>
                 </div>
                 <h2 class="coming-soon-title">Coming Soon</h2>
-                <p class="coming-soon-text">Wallet features are being prepared for a future DeenWallet release.</p>
+                <p class="coming-soon-text">Wallet features are being prepared for a future DeenWallet Transfer release.</p>
             </div>
         </div>
     </div>
@@ -3148,7 +3256,7 @@
                 <div class="subscreen-heading-icon" aria-hidden="true">↔</div>
                 <div class="subscreen-heading-copy">
                     <h1 class="greeting-title">Services</h1>
-                    <p class="greeting-sub">Access DeenWallet services from one place.</p>
+                    <p class="greeting-sub">Access DeenWallet Transfer services from one place.</p>
                 </div>
             </div>
 
@@ -3199,7 +3307,7 @@
                 <div class="services-coming-icon" aria-hidden="true">✦</div>
                 <div>
                     <strong>More services are coming soon</strong>
-                    <p>New DeenWallet services will appear here when available.</p>
+                    <p>New DeenWallet Transfer services will appear here when available.</p>
                 </div>
             </div>
         </div>
@@ -3212,14 +3320,14 @@
                 <div class="subscreen-heading-icon" aria-hidden="true">?</div>
                 <div class="subscreen-heading-copy">
                     <h1 class="greeting-title">Support</h1>
-                    <p class="greeting-sub">Get help with your DeenWallet account.</p>
+                    <p class="greeting-sub">Get help with your DeenWallet Transfer account.</p>
                 </div>
             </div>
 
             <div class="support-card support-main-card">
                 <div class="support-card-icon">?</div>
                 <h2>Need help?</h2>
-                <p>If you have a transaction issue, account problem, or general query, contact DeenWallet administration.</p>
+                <p>If you have a transaction issue, account problem, or general query, contact DeenWallet Transfer administration.</p>
 
                 <a class="support-channel" href="https://wa.me/23280613600" target="_blank" rel="noopener noreferrer">
                     <span class="support-channel-icon">&#128222;</span>
@@ -3392,7 +3500,7 @@
           <div style="display:flex;flex:1;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center;">
             <div style="font-size:48px;margin-bottom:16px;">🔒</div>
             <h2>Session Expired</h2>
-            <p style="color:var(--muted);">Please log in to continue using DeenWallet.</p>
+            <p style="color:var(--muted);">Please log in to continue using DeenWallet Transfer.</p>
             <button onclick="logout()" class="btn-primary" style="margin-top:20px;">Log in</button>
           </div>
         `;
@@ -4171,7 +4279,7 @@
         let menuOpen = false;
 
         function customerDisplayName() {
-            return (currentUser && (currentUser.fullName || currentUser.firstName)) || 'DeenWallet Customer';
+            return (currentUser && (currentUser.fullName || currentUser.firstName)) || 'DeenWallet Transfer Customer';
         }
 
         function customerInitial() {
@@ -4208,7 +4316,7 @@
 
             if (action === 'profile') { openProfile(); return; }
             if (action === 'pin') { openCustomerSubScreen('screen-pin'); return; }
-            if (action === 'kyc') { openCustomerSubScreen('screen-kyc'); return; }
+            if (action === 'kyc') { openCustomerSubScreen('screen-kyc'); loadKycScreen(); return; }
             if (action === 'biometric') {
                 openCustomerSubScreen('screen-biometric');
                 refreshBiometricScreen();
@@ -4238,7 +4346,7 @@
                 badge.textContent = 'Android only';
                 title.textContent = 'Use the Android app';
                 deviceStatus.textContent = 'Unavailable';
-                message.textContent = 'Biometric login is available from the DeenWallet Android app.';
+                message.textContent = 'Biometric login is available from the DeenWallet Transfer Android app.';
                 button.disabled = true;
                 return;
             }
@@ -4274,7 +4382,7 @@
                     badge.textContent = 'Enabled';
                     title.textContent = 'Biometric login enabled';
                     deviceStatus.textContent = 'Active';
-                    message.textContent = 'This device is registered for biometric sign-in to your DeenWallet account.';
+                    message.textContent = 'This device is registered for biometric sign-in to your DeenWallet Transfer account.';
                     button.textContent = 'Disable biometric login';
                     button.disabled = false;
                     return;
@@ -4284,7 +4392,7 @@
                     badge.textContent = 'Needs setup';
                     title.textContent = 'Biometric registration needs repair';
                     deviceStatus.textContent = 'Not synced';
-                    message.textContent = 'This phone has a biometric credential, but it is not registered with your DeenWallet account. Register it again to restore biometric sign-in.';
+                    message.textContent = 'This phone has a biometric credential, but it is not registered with your DeenWallet Transfer account. Register it again to restore biometric sign-in.';
                     button.textContent = 'Register biometric login again';
                     button.disabled = false;
                     return;
@@ -4419,6 +4527,472 @@
             if (btn) btn.addEventListener('click', returnToCustomerHome);
         });
 
+        // ==============================================================
+        // KYC / IDENTITY VERIFICATION
+        // ==============================================================
+        const kycState = { data: null, loadedAt: 0, mode: 'status', step: 1, form: {}, photos: {}, busy: {}, slotErr: {}, error: '', saving: false };
+        const kycRoot = document.getElementById('kyc-root');
+
+        function kycEsc(v) {
+            return String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+        function kycSle(minor) {
+            return (Number(minor || 0) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 });
+        }
+        function kycDate(iso) {
+            if (!iso) return '';
+            const d = new Date(iso);
+            return isNaN(d) ? '' : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+        const KYC_DOC_ICON = { NATIONAL_ID: '🪪', DRIVERS_LICENSE: '🚗', PASSPORT: '📘' };
+        const KYC_DOC_SUB = {
+            NATIONAL_ID: 'Front and back photo',
+            DRIVERS_LICENSE: 'Front and back photo, expiry date',
+            PASSPORT: 'Photo page, expiry date'
+        };
+
+        async function kycFetchStatus(force) {
+            if (!force && kycState.data && Date.now() - kycState.loadedAt < 20000) return kycState.data;
+            const data = await apiRequest('/api/users/kyc/status');
+            kycState.data = data;
+            kycState.loadedAt = Date.now();
+            return data;
+        }
+
+        async function loadKycScreen() {
+            kycState.mode = 'status';
+            kycState.error = '';
+            if (!kycState.data) kycRoot.innerHTML = '<div class="kyc-skel"></div>';
+            else kycRender();
+            try {
+                await kycFetchStatus(true);
+                kycRender();
+            } catch (e) {
+                if (e && (e.status === 401 || e.status === 403)) { showAuthRequiredModal(e.message); return; }
+                if (!kycState.data) {
+                    kycRoot.innerHTML = '<div class="kyc-card"><div class="kyc-err">' + kycEsc(e.message || "Couldn't load your verification status.") +
+                        '</div><button class="btn-primary kyc-cta" data-kyc="reload" type="button">Try again</button></div>';
+                }
+            }
+        }
+
+        // "Check status" button: asks the server again and always tells the customer what it found.
+        async function kycCheckStatus() {
+            if (kycState.checking) return;
+            const before = kycState.data ? kycState.data.status : null;
+            kycState.checking = true; kycState.checkMsg = ''; kycRender();
+            try {
+                await kycFetchStatus(true);
+                const now = kycState.data.status;
+                kycState.checkMsg = now === before
+                    ? 'Still in review. We will notify you as soon as there is a decision.'
+                    : '';
+            } catch (e) {
+                if (e && (e.status === 401 || e.status === 403)) { kycState.checking = false; showAuthRequiredModal(e.message); return; }
+                kycState.checkMsg = e.message || "Couldn't check right now. Please try again.";
+            }
+            kycState.checking = false;
+            kycRender();
+        }
+
+        function kycMeter(label, v, verified) {
+            if (!v) return '';
+            const pct = v.dailyLimitMinor > 0 ? Math.min(100, Math.round(v.usedTodayMinor * 100 / v.dailyLimitMinor)) : 0;
+            return '<div class="kyc-meter"><div class="kyc-meter-top"><strong>' + kycEsc(label) + '</strong><span>SLE ' + kycSle(v.remainingMinor) +
+                ' left of ' + kycSle(v.dailyLimitMinor) + '</span></div><div class="kyc-bar"><i class="' + (pct >= 100 ? 'full' : '') +
+                '" style="width:' + pct + '%"></i></div></div>';
+        }
+
+        function kycLimitsCard(d) {
+            return '<div class="kyc-card"><h2>Your daily limits</h2>' +
+                kycMeter('Mobile money', d.mobileMoney) + kycMeter('Bank transfer', d.bank) + '</div>';
+        }
+
+        function kycRender() {
+            const d = kycState.data;
+            if (!d) return;
+            if (kycState.mode === 'wizard') { kycRenderWizard(d); return; }
+            let hero, action = '', extra = '';
+            const top = kycSle(d.verifiedDailyLimitMinor);
+            if (!d.available) {
+                hero = kycHero('basic', 'Basic account', 'Verification unavailable', 'ID verification is temporarily unavailable. Your current daily limits still apply.');
+            } else if (d.status === 'APPROVED') {
+                hero = kycHero('', '&#10003; Verified', 'Identity verified', 'Your ' + kycEsc(d.documentTypeLabel || 'ID') + (d.documentLast4 ? ' ending ' + kycEsc(d.documentLast4) : '') +
+                    ' was approved' + (d.reviewedAt ? ' on ' + kycEsc(kycDate(d.reviewedAt)) : '') + '. You can convert up to SLE ' + top + ' per day.');
+            } else if (d.status === 'PENDING') {
+                hero = kycHero('review', 'In review', 'We are checking your ID', 'Submitted ' + kycEsc(kycDate(d.submittedAt)) + '. We will notify you as soon as it is reviewed. Your basic limits apply until then.');
+                action = '<button class="btn-primary kyc-cta" data-kyc="refresh" type="button"' + (kycState.checking ? ' disabled' : '') + '>' +
+                    (kycState.checking ? 'Checking…' : 'Check status') + '</button>' +
+                    (kycState.checkMsg ? '<div class="kyc-note" style="justify-content:center;text-align:center;">' + kycEsc(kycState.checkMsg) + '</div>' : '');
+            } else if (d.status === 'REJECTED' || d.status === 'REVOKED') {
+                hero = kycHero('bad', d.status === 'REVOKED' ? 'Verification removed' : 'Not approved',
+                    d.status === 'REVOKED' ? 'Your verification was removed' : 'We could not verify your ID', 'You can submit a new request at any time.');
+                extra = d.rejectionReason ? '<div class="kyc-card"><h2>Reason</h2><div class="kyc-note bad" style="margin-top:0"><span>' + kycEsc(d.rejectionReason) + '</span></div></div>' : '';
+                if (d.canStart) action = '<button class="btn-primary kyc-cta" data-kyc="start" type="button">Try again</button>';
+            } else {
+                const resume = d.status === 'DRAFT';
+                hero = kycHero('basic', 'Basic account', resume ? 'Finish your verification' : 'Raise your daily limit to SLE ' + top,
+                    resume ? 'Your details are saved. Continue where you stopped.' : 'Verify with a National ID card, driver\'s licence or passport. It takes about two minutes.');
+                if (d.canStart) action = '<button class="btn-primary kyc-cta" data-kyc="start" type="button">' + (resume ? 'Continue verification' : 'Verify my identity') + '</button>' +
+                    (resume ? '<button class="kyc-link" data-kyc="discard" type="button">Start over</button>' : '');
+            }
+            kycRoot.innerHTML = '<div class="kyc-head"><h1>Verify your identity</h1><p>Confirm who you are to convert larger amounts. Your documents are encrypted and only reviewed by DeenWallet Transfer staff.</p></div>' +
+                hero + extra + kycLimitsCard(d) +
+                (d.status === 'APPROVED' || !d.available ? '' : '<div class="kyc-card"><h2>What you need</h2><div class="kyc-sum">' +
+                    '<div><span>Accepted ID</span><strong>National ID, driver\'s licence or passport</strong></div>' +
+                    '<div><span>Photos</span><strong>Clear photo of the ID and a selfie</strong></div>' +
+                    '<div><span>Must be</span><strong>Valid, not expired, 18+</strong></div></div></div>') +
+                action;
+        }
+
+        function kycHero(cls, tag, title, sub) {
+            return '<div class="kyc-hero ' + cls + '"><span class="kyc-hero-tag">' + tag + '</span><div class="kyc-hero-title">' + title +
+                '</div><p class="kyc-hero-sub">' + sub + '</p></div>';
+        }
+
+        // ---------------- wizard ----------------
+        function kycStartWizard() {
+            const d = kycState.data;
+            const dr = d && d.draft ? d.draft : {};
+            kycState.form = {
+                documentType: dr.documentType || '', fullNameOnDocument: dr.fullNameOnDocument || '', documentNumber: dr.documentNumber || '',
+                dateOfBirth: dr.dateOfBirth || '', documentExpiryDate: dr.documentExpiryDate || '', consent: false
+            };
+            kycState.photos = {}; kycState.busy = {}; kycState.slotErr = {}; kycState.error = '';
+            kycState.mode = 'wizard';
+            kycState.step = d && d.status === 'DRAFT' && dr.documentType && (d.uploaded || []).length ? 2 : 1;
+            kycRender();
+            document.querySelector('#screen-kyc .scroll').scrollTop = 0;
+        }
+
+        function kycDocMeta(code) {
+            const d = kycState.data;
+            return ((d && d.documentTypes) || []).find((o) => o.code === code) || null;
+        }
+
+        function kycStepsBar() {
+            const s = kycState.step;
+            return '<div class="kyc-steps"><b class="on"></b><b class="' + (s >= 2 ? 'on' : '') + '"></b><b class="' + (s >= 3 ? 'on' : '') + '"></b><small>Step ' + s + ' of 3</small></div>';
+        }
+
+        function kycRenderWizard(d) {
+            const f = kycState.form;
+            const err = kycState.error ? '<div class="kyc-err">' + kycEsc(kycState.error) + '</div>' : '';
+            const back = '<button class="kyc-link" data-kyc="wback" type="button">' + (kycState.step === 1 ? 'Cancel' : 'Back') + '</button>';
+            if (kycState.step === 1) {
+                const meta = kycDocMeta(f.documentType);
+                const docs = (d.documentTypes || []).map((o) =>
+                    '<button type="button" class="kyc-doc ' + (f.documentType === o.code ? 'on' : '') + '" data-kyc="doc" data-code="' + kycEsc(o.code) + '">' +
+                    '<span class="ico">' + (KYC_DOC_ICON[o.code] || '🪪') + '</span><span><div class="t">' + kycEsc(o.label) + '</div><div class="s">' +
+                    kycEsc(KYC_DOC_SUB[o.code] || '') + '</div></span><span class="dot"></span></button>').join('');
+                kycRoot.innerHTML = kycStepsBar() + '<div class="kyc-card" style="margin-top:0"><h2>Choose your ID</h2><div class="kyc-docs">' + docs + '</div>' +
+                    '<label class="kyc-label" for="kyc-name">Full name exactly as on the ID</label>' +
+                    '<input class="kyc-input" id="kyc-name" data-field="fullNameOnDocument" autocomplete="off" autocapitalize="words" value="' + kycEsc(f.fullNameOnDocument) + '">' +
+                    '<label class="kyc-label" for="kyc-number">ID number</label>' +
+                    '<input class="kyc-input upper" id="kyc-number" data-field="documentNumber" autocomplete="off" autocapitalize="characters" spellcheck="false" value="' + kycEsc(f.documentNumber) + '">' +
+                    '<div class="kyc-row2"><div><label class="kyc-label" for="kyc-dob">Date of birth</label>' +
+                    '<input class="kyc-input" type="date" id="kyc-dob" data-field="dateOfBirth" value="' + kycEsc(f.dateOfBirth) + '"></div>' +
+                    '<div style="' + (meta && meta.needsExpiryDate ? '' : 'display:none') + '"><label class="kyc-label" for="kyc-exp">Expiry date</label>' +
+                    '<input class="kyc-input" type="date" id="kyc-exp" data-field="documentExpiryDate" value="' + kycEsc(f.documentExpiryDate) + '"></div></div>' +
+                    err + '<button class="btn-primary kyc-cta" data-kyc="s1next" type="button"' + (kycState.saving ? ' disabled' : '') + '>' +
+                    (kycState.saving ? 'Saving…' : 'Continue') + '</button></div>' + back;
+                return;
+            }
+            if (kycState.step === 2) {
+                const meta = kycDocMeta(f.documentType) || {};
+                const up = d.uploaded || [];
+                const slots = [['FRONT', meta.needsBackPhoto ? 'Front of ID' : 'Photo page', 'Place the ID flat. All four corners and text must be sharp.', false]];
+                if (meta.needsBackPhoto) slots.push(['BACK', 'Back of ID', 'Show the whole back side clearly.', false]);
+                slots.push(['SELFIE', 'Selfie holding your ID', 'Face the camera in good light and hold the ID beside your face.', true]);
+                kycRoot.innerHTML = kycStepsBar() + '<div class="kyc-card" style="margin-top:0"><h2>Add your photos</h2>' +
+                    slots.map((s) => kycSlot(s[0], s[1], s[2], s[3], up.includes(s[0]))).join('') + err +
+                    '<button class="btn-primary kyc-cta" data-kyc="s2next" type="button"' + (d.canSubmit ? '' : ' disabled') + '>Continue</button></div>' + back;
+                return;
+            }
+            const meta = kycDocMeta(f.documentType) || {};
+            kycRoot.innerHTML = kycStepsBar() + '<div class="kyc-card" style="margin-top:0"><h2>Check and submit</h2><div class="kyc-sum">' +
+                '<div><span>ID type</span><strong>' + kycEsc(meta.label || f.documentType) + '</strong></div>' +
+                '<div><span>Name on ID</span><strong>' + kycEsc(f.fullNameOnDocument) + '</strong></div>' +
+                '<div><span>ID number</span><strong>' + kycEsc(f.documentNumber) + '</strong></div>' +
+                '<div><span>Date of birth</span><strong>' + kycEsc(kycDate(f.dateOfBirth + 'T00:00:00')) + '</strong></div>' +
+                (meta.needsExpiryDate ? '<div><span>Expiry</span><strong>' + kycEsc(kycDate(f.documentExpiryDate + 'T00:00:00')) + '</strong></div>' : '') +
+                '<div><span>Photos</span><strong>' + (d.uploaded || []).length + ' added</strong></div></div>' +
+                '<label class="kyc-consent"><input type="checkbox" id="kyc-consent"' + (f.consent ? ' checked' : '') + '><span>I confirm these details are mine and correct, and I allow DeenWallet Transfer to review my ID to verify my identity.</span></label>' +
+                err + '<button class="btn-primary kyc-cta" data-kyc="submit" type="button"' + (f.consent && !kycState.saving ? '' : ' disabled') + '>' +
+                (kycState.saving ? 'Submitting…' : 'Submit for review') + '</button></div>' + back;
+        }
+
+        function kycSlot(kind, title, hint, selfie, uploaded) {
+            const busy = !!kycState.busy[kind];
+            const e = kycState.slotErr[kind];
+            const thumb = kycState.photos[kind];
+            const cls = e ? 'err' : (uploaded ? 'done' : '');
+            const status = busy ? '<div class="s">Uploading…</div>' : e ? '<div class="s bad">' + kycEsc(e) + '</div>' :
+                uploaded ? '<div class="s ok">&#10003; Added securely</div>' : '<div class="s">' + kycEsc(hint) + '</div>';
+            return '<div class="kyc-slot ' + cls + '"><div class="kyc-thumb"' + (thumb ? ' style="background-image:url(\'' + thumb + '\')"' : '') + '>' +
+                (busy ? '<div class="kyc-spin"></div>' : (thumb ? '' : (selfie ? '🤳' : '📷'))) + '</div><div class="kyc-slot-body"><div class="t">' + kycEsc(title) + '</div>' + status +
+                '<div class="kyc-slot-actions"><button class="kyc-mini" type="button" data-kyc="pick" data-kind="' + kind + '" data-src="cam"' + (busy ? ' disabled' : '') + '>' +
+                (uploaded ? 'Retake' : 'Take photo') + '</button><button class="kyc-mini" type="button" data-kyc="pick" data-kind="' + kind + '" data-src="gal"' + (busy ? ' disabled' : '') + '>Gallery</button></div></div></div>';
+        }
+
+        // Shrinks a photo to a small JPEG in the phone before it is sent (keeps uploads fast and under the server limit).
+        async function kycCompress(file) {
+            let bmp;
+            if (window.createImageBitmap) {
+                try { bmp = await createImageBitmap(file, { imageOrientation: 'from-image' }); } catch (_) { bmp = null; }
+            }
+            if (!bmp) {
+                bmp = await new Promise((resolve, reject) => {
+                    const url = URL.createObjectURL(file);
+                    const img = new Image();
+                    img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+                    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('This file is not a readable photo.')); };
+                    img.src = url;
+                });
+            }
+            const w0 = bmp.width || bmp.naturalWidth, h0 = bmp.height || bmp.naturalHeight;
+            if (!w0 || !h0) throw new Error('This file is not a readable photo.');
+            const LIMIT = 450000;
+            let side = 1280, out = null;
+            for (let attempt = 0; attempt < 3 && !out; attempt++, side = Math.round(side * 0.8)) {
+                const scale = Math.min(1, side / Math.max(w0, h0));
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.max(1, Math.round(w0 * scale));
+                canvas.height = Math.max(1, Math.round(h0 * scale));
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+                for (const q of [0.85, 0.75, 0.65, 0.55]) {
+                    const url = canvas.toDataURL('image/jpeg', q);
+                    const b64 = url.slice(url.indexOf(',') + 1);
+                    if (b64.length * 0.75 <= LIMIT) { out = { url, b64 }; break; }
+                }
+            }
+            if (bmp.close) try { bmp.close(); } catch (_) { }
+            if (!out) throw new Error('This photo is too large. Please take it again.');
+            return out;
+        }
+
+        // Live camera: a full-screen viewfinder with a shutter button. Works on a PC webcam and on phones.
+        async function kycOpenCamera(kind) {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
+            let stream;
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: kind === 'SELFIE' ? 'user' : { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+                    audio: false
+                });
+            } catch (_) {
+                return false;
+            }
+            const selfie = kind === 'SELFIE';
+            const overlay = document.createElement('div');
+            overlay.className = 'kyc-cam';
+            overlay.innerHTML =
+                '<video playsinline muted autoplay' + (selfie ? ' class="mirror"' : '') + '></video>' +
+                '<div class="kyc-cam-top">' + (selfie ? 'Hold your ID next to your face' : 'Fit the whole ID inside the screen') + '</div>' +
+                '<div class="kyc-cam-bar"><button type="button" class="kyc-cam-cancel">Cancel</button>' +
+                '<button type="button" class="kyc-cam-shutter" aria-label="Take photo"></button><span class="kyc-cam-spacer"></span></div>';
+            document.body.appendChild(overlay);
+            const video = overlay.querySelector('video');
+            video.srcObject = stream;
+            const close = () => {
+                document.removeEventListener('keydown', onKey);
+                stream.getTracks().forEach((t) => t.stop());
+                overlay.remove();
+            };
+            const onKey = (e) => { if (e.key === 'Escape') close(); };
+            document.addEventListener('keydown', onKey);
+            overlay.querySelector('.kyc-cam-cancel').addEventListener('click', close);
+            overlay.querySelector('.kyc-cam-shutter').addEventListener('click', () => {
+                const w = video.videoWidth, h = video.videoHeight;
+                if (!w || !h) return;
+                const canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(video, 0, 0, w, h);   // the saved photo is never mirrored
+                canvas.toBlob((blob) => {
+                    close();
+                    if (blob) kycHandleFile(kind, new File([blob], 'capture.jpg', { type: 'image/jpeg' }));
+                }, 'image/jpeg', 0.92);
+            });
+            try { await video.play(); } catch (_) { /* autoplay already started it */ }
+            return true;
+        }
+
+        async function kycHandleFile(kind, file) {
+            if (!file) return;
+            kycState.slotErr[kind] = '';
+            kycState.busy[kind] = true;
+            kycState.error = '';
+            kycRender();
+            try {
+                const img = await kycCompress(file);
+                const res = await apiRequest('/api/users/kyc/documents/' + kind, { method: 'PUT', body: { contentType: 'image/jpeg', data: img.b64 }, timeoutMs: 60000 });
+                kycState.photos[kind] = img.url;
+                if (kycState.data) {
+                    kycState.data.uploaded = res.uploaded || [];
+                    kycState.data.required = res.required || kycState.data.required;
+                    kycState.data.canSubmit = !!res.canSubmit;
+                }
+            } catch (e) {
+                if (e && (e.status === 401 || e.status === 403)) { showAuthRequiredModal(e.message); return; }
+                kycState.slotErr[kind] = e.message || 'Upload failed. Please try again.';
+            } finally {
+                kycState.busy[kind] = false;
+                if (kycState.mode === 'wizard') kycRender();
+            }
+        }
+
+        async function kycSaveDraft() {
+            const f = kycState.form;
+            if (!f.documentType) { kycState.error = 'Please choose which ID you will use.'; kycRender(); return; }
+            kycState.saving = true; kycState.error = ''; kycRender();
+            try {
+                const meta = kycDocMeta(f.documentType);
+                const data = await apiRequest('/api/users/kyc/draft', {
+                    method: 'PUT',
+                    body: {
+                        documentType: f.documentType, fullNameOnDocument: f.fullNameOnDocument.trim(),
+                        documentNumber: f.documentNumber.trim(), dateOfBirth: f.dateOfBirth,
+                        documentExpiryDate: meta && meta.needsExpiryDate ? f.documentExpiryDate : ''
+                    }
+                });
+                kycState.data = data; kycState.loadedAt = Date.now();
+                kycState.step = 2;
+            } catch (e) {
+                if (e && (e.status === 401 || e.status === 403)) { showAuthRequiredModal(e.message); return; }
+                kycState.error = e.message || 'Could not save your details.';
+            } finally {
+                kycState.saving = false; kycRender();
+                document.querySelector('#screen-kyc .scroll').scrollTop = 0;
+            }
+        }
+
+        async function kycSubmit() {
+            kycState.saving = true; kycState.error = ''; kycRender();
+            try {
+                const data = await apiRequest('/api/users/kyc/submit', { method: 'POST', timeoutMs: 30000 });
+                kycState.data = data; kycState.loadedAt = Date.now(); kycState.mode = 'status'; kycState.photos = {};
+                if (typeof showModal === 'function') showModal('✅', 'Submitted', 'Your ID is being reviewed. We will notify you once it is approved.');
+            } catch (e) {
+                if (e && (e.status === 401 || e.status === 403)) { showAuthRequiredModal(e.message); return; }
+                kycState.error = e.message || 'Could not submit. Please try again.';
+            } finally {
+                kycState.saving = false; kycRender();
+                document.querySelector('#screen-kyc .scroll').scrollTop = 0;
+            }
+        }
+
+        async function kycDiscard() {
+            try {
+                kycState.data = await apiRequest('/api/users/kyc/draft', { method: 'DELETE' });
+                kycState.loadedAt = Date.now(); kycState.photos = {};
+            } catch (e) {
+                if (e && (e.status === 401 || e.status === 403)) { showAuthRequiredModal(e.message); return; }
+                kycState.error = e.message || 'Could not reset.';
+            }
+            kycRender();
+        }
+
+        kycRoot.addEventListener('click', (ev) => {
+            const el = ev.target.closest('[data-kyc]');
+            if (!el || !kycRoot.contains(el)) return;
+            const act = el.getAttribute('data-kyc');
+            if (act === 'reload') { loadKycScreen(); return; }
+            if (act === 'refresh') { kycCheckStatus(); return; }
+            if (act === 'start') { kycStartWizard(); return; }
+            if (act === 'discard') { kycDiscard(); return; }
+            if (act === 'doc') { kycState.form.documentType = el.getAttribute('data-code'); kycState.error = ''; kycRender(); return; }
+            if (act === 's1next') {
+                const f = kycState.form;
+                if (!f.documentType) { kycState.error = 'Please choose which ID you will use.'; kycRender(); return; }
+                if (f.fullNameOnDocument.trim().length < 3) { kycState.error = 'Enter your full name exactly as it appears on the ID.'; kycRender(); return; }
+                if (f.documentNumber.trim().length < 5) { kycState.error = 'Enter the ID number printed on the document.'; kycRender(); return; }
+                if (!f.dateOfBirth) { kycState.error = 'Enter your date of birth.'; kycRender(); return; }
+                const m = kycDocMeta(f.documentType);
+                if (m && m.needsExpiryDate && !f.documentExpiryDate) { kycState.error = 'Enter the expiry date of the document.'; kycRender(); return; }
+                kycSaveDraft(); return;
+            }
+            if (act === 's2next') { if (kycState.data && kycState.data.canSubmit) { kycState.step = 3; kycState.error = ''; kycRender(); document.querySelector('#screen-kyc .scroll').scrollTop = 0; } return; }
+            if (act === 'submit') { if (kycState.form.consent) kycSubmit(); return; }
+            if (act === 'wback') {
+                if (kycState.step === 1) { kycState.mode = 'status'; kycState.error = ''; kycRender(); }
+                else { kycState.step -= 1; kycState.error = ''; kycRender(); }
+                return;
+            }
+            if (act === 'pick') {
+                const kind = el.getAttribute('data-kind');
+                const openPicker = (withCapture) => {
+                    const input = document.createElement('input');
+                    input.type = 'file'; input.accept = 'image/*';
+                    if (withCapture) input.setAttribute('capture', kind === 'SELFIE' ? 'user' : 'environment');
+                    input.addEventListener('change', () => { const file = input.files && input.files[0]; kycHandleFile(kind, file); });
+                    input.click();
+                };
+                if (el.getAttribute('data-src') !== 'cam') { openPicker(false); return; }
+                // "Take photo": open the real camera (PC webcam or phone camera). If the camera cannot be opened
+                // (no camera, permission refused), fall back to the phone's camera app, or tell the customer.
+                kycOpenCamera(kind).then((ok) => {
+                    if (ok) return;
+                    if (/Android|iPhone|iPad/i.test(navigator.userAgent)) { openPicker(true); return; }
+                    kycState.slotErr[kind] = 'No camera found or camera access was blocked. Allow the camera for this site, or use Gallery.';
+                    kycRender();
+                });
+            }
+        });
+
+        kycRoot.addEventListener('input', (ev) => {
+            const t = ev.target;
+            if (t && t.getAttribute && t.getAttribute('data-field')) {
+                let v = t.value;
+                if (t.getAttribute('data-field') === 'documentNumber') v = v.toUpperCase().replace(/[^A-Z0-9/]/g, '');
+                if (v !== t.value) t.value = v;
+                kycState.form[t.getAttribute('data-field')] = v;
+            }
+        });
+        kycRoot.addEventListener('change', (ev) => {
+            if (ev.target && ev.target.id === 'kyc-consent') {
+                kycState.form.consent = ev.target.checked;
+                const b = kycRoot.querySelector('[data-kyc="submit"]');
+                if (b) b.disabled = !ev.target.checked;
+            }
+        });
+
+        // ---- daily-limit hint on the conversion screen (the server still enforces the limit) ----
+        function kycBucketFor(d) {
+            if (!d) return null;
+            if (activeService === 'MOBILE_MONEY') return d.mobileMoney;
+            if (activeService === 'BANK_TRANSFER') return d.bank;
+            return null;
+        }
+        function updateKycLimitHint(amountSle) {
+            const box = document.getElementById('kyc-limit-hint');
+            if (!box) return;
+            const fresh = kycState.data && Date.now() - kycState.loadedAt < 60000;
+            if (!fresh) {
+                kycFetchStatus(true).then(() => updateKycLimitHint(amountSle)).catch(() => { box.classList.add('hidden'); });
+                return;
+            }
+            const b = kycBucketFor(kycState.data);
+            if (!b) { box.classList.add('hidden'); return; }
+            const over = Math.round(Number(amountSle) * 100) > b.remainingMinor;
+            box.classList.remove('hidden');
+            box.classList.toggle('warn', over);
+            const verified = kycState.data.level === 'VERIFIED';
+            box.textContent = over
+                ? 'This is above your daily limit (SLE ' + kycSle(b.remainingMinor) + ' left today).' + (verified ? '' : ' Verify your ID in the menu to raise it to SLE ' + kycSle(kycState.data.verifiedDailyLimitMinor) + ' per day.')
+                : 'Daily limit left today: SLE ' + kycSle(b.remainingMinor) + (verified ? '' : '. Verify your ID to raise it.');
+        }
+        function kycBlocksCurrentAmount() {
+            if (!currentFeePreview || !kycState.data || Date.now() - kycState.loadedAt > 60000) return false;
+            const b = kycBucketFor(kycState.data);
+            if (!b || Math.round(Number(currentFeePreview.amount) * 100) <= b.remainingMinor) return false;
+            const verified = kycState.data.level === 'VERIFIED';
+            showModal('🛡️', 'Daily limit', 'You have SLE ' + kycSle(b.remainingMinor) + ' left of your SLE ' + kycSle(b.dailyLimitMinor) + ' daily limit.' +
+                (verified ? ' It resets at midnight.' : ' Verify your ID from the menu (Verify your KYC) to raise it to SLE ' + kycSle(kycState.data.verifiedDailyLimitMinor) + ' per day.'));
+            return true;
+        }
+
         const biometricEnableBtn = document.getElementById('biometric-enable-btn');
         if (biometricEnableBtn) {
             biometricEnableBtn.addEventListener('click', async () => {
@@ -4452,7 +5026,7 @@
                             successBox.classList.remove('hidden');
                         }
                     } else {
-                        await registerBiometricLogin('DeenWallet Android');
+                        await registerBiometricLogin('DeenWallet Transfer Android');
                         if (successBox) {
                             successBox.textContent = 'Biometric login has been enabled on this device.';
                             successBox.classList.remove('hidden');
@@ -5073,7 +5647,7 @@
         async function maybePreviewFee() {
             const amount = Number(amountInput.value);
             const validAmount = amountInput.value.trim().length > 0 && Number.isFinite(amount) && amount >= 1;
-            if (!validAmount) return;
+            if (!validAmount) { const kh = document.getElementById('kyc-limit-hint'); if (kh) kh.classList.add('hidden'); return; }
 
             const requestId = ++feeRequestId;
             show(feeLoading);
@@ -5087,6 +5661,7 @@
                 feeValueEl.textContent = formatMoney(result.fee) + ' SLE';
                 feeTotalEl.textContent = formatMoney(result.totalCharged) + ' SLE';
                 show(feeCard);
+                try { updateKycLimitHint(result.amount); } catch (_) { }
             } catch (error) {
                 if (requestId !== feeRequestId) return;
                 currentFeePreview = null;
@@ -5108,6 +5683,7 @@
 
         step1ContinueBtn.addEventListener('click', () => {
             if (!sourceProviderId || !currentFeePreview) return;
+            if (kycBlocksCurrentAmount()) return;
 
             if (activeService === 'BANK_TRANSFER') {
                 bankStep2AmountDisplay.textContent = 'Amount: SLE ' + formatMoney(currentFeePreview.totalCharged);
@@ -6719,7 +7295,7 @@
             const msg = document.querySelector('.completion-message');
             if (push) push.textContent = waec
                 ? 'Your WAEC Result Pin purchase was successful.'
-                : 'Your DeenWallet transaction has been completed successfully.';
+                : 'Your DeenWallet Transfer transaction has been completed successfully.';
             if (title) title.textContent = waec ? 'Purchase complete' : 'Transaction complete';
             if (msg) msg.textContent = waec
                 ? 'Your WAEC Result Pin is ready. It was also sent to your email.'
@@ -6991,7 +7567,7 @@
         } else if (getAccessToken()) {
             touchAppActive();
         }
-        console.log('DeenWallet initialized successfully');
+        console.log('DeenWallet Transfer initialized successfully');
         setTimeout(warmLogos, 800);
 
         // ==============================================================

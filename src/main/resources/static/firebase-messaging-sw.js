@@ -18,7 +18,7 @@ const messaging = firebase.messaging();
 // The server sends a "notification" payload, so Firebase shows the popup by
 // itself when no page of the site is visible. This handler is only for logs.
 messaging.onBackgroundMessage((payload) => {
-    console.log('[DeenWallet Web FCM] Background message:', payload);
+    console.log('[DeenWallet Transfer Web FCM] Background message:', payload);
 });
 
 self.addEventListener('notificationclick', (event) => {

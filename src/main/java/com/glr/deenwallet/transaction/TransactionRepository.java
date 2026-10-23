@@ -62,6 +62,17 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
             + "AND t.createdAt > :since AND t.status NOT IN (com.glr.deenwallet.transaction.TransactionStatus.CANCELED)")
     long sumAmountByUserIdSince(@Param("userId") UUID userId, @Param("since") Instant since);
 
+    /** KYC daily limits: what the customer already converted for one service since `since` (fees excluded). */
+    @Query("SELECT COALESCE(SUM(t.amountValue), 0) FROM Transaction t WHERE t.userId = :userId "
+            + "AND t.serviceType = :serviceType AND t.createdAt >= :since AND t.status NOT IN ("
+            + "com.glr.deenwallet.transaction.TransactionStatus.CANCELED, "
+            + "com.glr.deenwallet.transaction.TransactionStatus.FAILED, "
+            + "com.glr.deenwallet.transaction.TransactionStatus.REFUNDED, "
+            + "com.glr.deenwallet.transaction.TransactionStatus.REFUND_PENDING)")
+    long sumKycCountedAmountSince(@Param("userId") UUID userId,
+                                  @Param("serviceType") TransactionServiceType serviceType,
+                                  @Param("since") Instant since);
+
     /** Double-tap protection: the same still-unpaid request created moments ago. */
     @Query("SELECT t FROM Transaction t WHERE t.userId = :userId AND t.status = com.glr.deenwallet.transaction.TransactionStatus.AWAITING_PAYMENT "
             + "AND t.createdAt > :since AND t.amountValue = :amount AND t.sourcePhone = :sourcePhone "

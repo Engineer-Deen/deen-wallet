@@ -65,6 +65,7 @@ public class TransactionService {
     private final WaecPinService waecPinService;
     private final WaecFulfillmentService waecFulfillmentService;
     private final WaecPricing waecPricing;
+    private final com.glr.deenwallet.kyc.KycLimitService kycLimits;
 
     // ---- Abuse / velocity limits. SET THESE TO YOUR REAL COMPLIANCE LIMITS BEFORE LAUNCH. ----
     private static final int MAX_PENDING_PER_USER = 3;
@@ -118,6 +119,8 @@ public class TransactionService {
                     }
                     return existing; // idempotent replay: caller sees a payment code and returns it
                 }
+                // KYC daily limits (email-only customers: small caps; ID-verified: higher cap; WAEC exempt)
+                kycLimits.enforce(userId, type, minorUnits);
                 if (transactionRepository.countByUserIdAndStatus(userId, TransactionStatus.AWAITING_PAYMENT) >= MAX_PENDING_PER_USER) {
                     throw new TooManyRequestsException("You have too many unpaid transfers. Complete them or wait up to 15 minutes for them to expire.");
                 }
@@ -203,7 +206,7 @@ public class TransactionService {
         final PaymentCodeResult paymentCode;
         try {
             paymentCode = monimeClient.createPaymentCode(CreatePaymentCodeRequest.oneTime(
-                    "Deen Wallet conversion",
+                    "DeenWallet Transfer conversion",
                     collectAmount,
                     request.getSourcePhone(),
                     transactionId.toString()), "paycode-" + transactionId);
@@ -310,7 +313,7 @@ public class TransactionService {
             // phone number is specified"). The phone number alone already identifies the
             // payer, so use the same phone-only request as the mobile-money flow.
             paymentCode = monimeClient.createPaymentCode(CreatePaymentCodeRequest.oneTime(
-                    "Deen Wallet bank transfer",
+                    "DeenWallet Transfer bank transfer",
                     collectAmount,
                     request.getSourcePhone(),
                     transactionId.toString()), "paycode-" + transactionId);
@@ -395,7 +398,7 @@ public class TransactionService {
         final PaymentCodeResult paymentCode;
         try {
             paymentCode = monimeClient.createPaymentCode(CreatePaymentCodeRequest.oneTime(
-                    "Deen Wallet WAEC result pin",
+                    "DeenWallet Transfer WAEC result pin",
                     collectAmount,
                     request.getSourcePhone(),
                     transactionId.toString()), "paycode-" + transactionId);
@@ -872,7 +875,7 @@ public class TransactionService {
 
         if (!bankTransfer && transaction.getDestinationPhone() != null) {
             String smsMessage = "You have received " + transaction.getAmountCurrency() + " "
-                    + displayAmount + " via Deen Wallet.";
+                    + displayAmount + " via DeenWallet Transfer.";
             smsSender.send(transaction.getDestinationPhone(), smsMessage);
             transaction.setSmsSent(true);
             transactionRepository.save(transaction);
