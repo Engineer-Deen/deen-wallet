@@ -555,6 +555,59 @@
             color: var(--warning-text);
         }
 
+        .stat-card.danger .number {
+            color: var(--error);
+        }
+
+        .stat-card .sub {
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 3px;
+        }
+
+        .stat-card.clickable {
+            cursor: pointer;
+        }
+
+        .home-alerts {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .home-alerts:empty {
+            display: none;
+        }
+
+        .home-alert {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            width: 100%;
+            text-align: left;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--warning-bg);
+            color: var(--warning-text);
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .home-alert.danger {
+            background: #FDECEA;
+            border-color: #F3C6C1;
+            color: var(--error);
+        }
+
+        .home-alert .go {
+            font-size: 18px;
+            line-height: 1;
+        }
+
         /* ===== Search ===== */
         .search-bar {
             display: flex;
@@ -2052,6 +2105,7 @@
 
         <!-- ===== DASHBOARD ===== -->
         <div class="scroll" id="tab-dashboard">
+            <div class="home-alerts" id="home-alerts"></div>
             <div class="stats-grid">
                 <div class="stat-card primary">
                     <div class="number" id="stat-users">—</div>
@@ -2060,14 +2114,25 @@
                 <div class="stat-card success">
                     <div class="number" id="stat-verified">—</div>
                     <div class="label">Verified Users</div>
+                    <div class="sub" id="stat-verified-sub">&nbsp;</div>
+                </div>
+                <div class="stat-card clickable" id="card-failed-payouts">
+                    <div class="number" id="stat-failed">—</div>
+                    <div class="label">Failed payouts</div>
+                    <div class="sub" id="stat-failed-sub">waiting for you</div>
                 </div>
                 <div class="stat-card primary">
-                    <div class="number" id="stat-transactions">—</div>
-                    <div class="label">Transactions</div>
+                    <div class="number" id="stat-today-tx">—</div>
+                    <div class="label">Transactions today</div>
                 </div>
                 <div class="stat-card warning">
-                    <div class="number" id="stat-volume">—</div>
-                    <div class="label">Volume (SLE)</div>
+                    <div class="number" id="stat-today-volume">—</div>
+                    <div class="label">Volume today (SLE)</div>
+                </div>
+                <div class="stat-card success">
+                    <div class="number" id="stat-month-fees">—</div>
+                    <div class="label">Fees this month (SLE)</div>
+                    <div class="sub" id="stat-month-sub">&nbsp;</div>
                 </div>
             </div>
             <div id="dashboard-loading" class="loading-state">
@@ -4184,12 +4249,46 @@
                 show(loading);
                 hide(error);
 
-                adminApiRequest('/api/admin/stats')
-                    .then(function (stats) {
-                        document.getElementById('stat-users').textContent = stats.totalUsers || 0;
-                        document.getElementById('stat-verified').textContent = stats.verifiedUsers || 0;
-                        document.getElementById('stat-transactions').textContent = stats.totalTransactions || 0;
-                        document.getElementById('stat-volume').textContent = (stats.totalVolumeSle || 0).toFixed(2);
+                adminApiRequest('/api/admin/home')
+                    .then(function (h) {
+                        function money(v) { return Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+                        function num(v) { return Number(v || 0).toLocaleString(); }
+                        document.getElementById('stat-users').textContent = num(h.totalUsers);
+                        document.getElementById('stat-verified').textContent = num(h.emailVerifiedUsers);
+                        document.getElementById('stat-verified-sub').textContent = num(h.kycVerifiedUsers) + ' ID verified';
+                        document.getElementById('stat-today-tx').textContent = num(h.todayTransactions);
+                        document.getElementById('stat-today-volume').textContent = money(h.todayVolumeSle);
+                        document.getElementById('stat-month-fees').textContent = money(h.monthFeesSle);
+                        document.getElementById('stat-month-sub').textContent = num(h.monthTransactions) + ' transactions, ' + money(h.monthVolumeSle) + ' volume';
+
+                        var failedCard = document.getElementById('card-failed-payouts');
+                        var failedNum = document.getElementById('stat-failed');
+                        failedNum.textContent = num(h.failedPayouts);
+                        failedCard.classList.toggle('danger', (h.failedPayouts || 0) > 0);
+                        document.getElementById('stat-failed-sub').textContent = (h.failedPayouts || 0) > 0 ? 'tap to open' : 'none waiting';
+                        failedCard.onclick = function () { drawerNavigate('failed-payouts'); };
+
+                        var alerts = [];
+                        if ((h.failedPayouts || 0) > 0) alerts.push({ cls: 'danger', text: num(h.failedPayouts) + ' failed payout' + (h.failedPayouts === 1 ? '' : 's') + ' waiting for you', go: 'failed-payouts' });
+                        if ((h.kycPending || 0) > 0) alerts.push({ cls: '', text: num(h.kycPending) + ' KYC request' + (h.kycPending === 1 ? '' : 's') + ' waiting for review', go: 'kyc' });
+                        if (!h.waecOperational) alerts.push({ cls: 'danger', text: 'WAEC pins cannot be sold: encryption key is not set', go: 'waec-pins' });
+                        else if ((h.waecAvailable || 0) === 0) alerts.push({ cls: 'danger', text: 'Out of stock: no WAEC pins left to sell', go: 'waec-pins' });
+                        else if (h.waecAvailable <= 10) alerts.push({ cls: '', text: 'Low stock: only ' + num(h.waecAvailable) + ' WAEC pin' + (h.waecAvailable === 1 ? '' : 's') + ' left', go: 'waec-pins' });
+                        var box = document.getElementById('home-alerts');
+                        box.innerHTML = '';
+                        alerts.forEach(function (a) {
+                            var b = document.createElement('button');
+                            b.type = 'button';
+                            b.className = 'home-alert' + (a.cls ? ' ' + a.cls : '');
+                            var t = document.createElement('span');
+                            t.textContent = a.text;
+                            var g = document.createElement('span');
+                            g.className = 'go';
+                            g.textContent = '\u203A';
+                            b.appendChild(t); b.appendChild(g);
+                            b.onclick = function () { drawerNavigate(a.go); };
+                            box.appendChild(b);
+                        });
                         hide(loading);
                     })
                     .catch(function (e) {
