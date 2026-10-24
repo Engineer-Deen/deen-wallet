@@ -62,6 +62,12 @@ server:
     accept-count: 200
 
 app:
+  # Customer activity older than this many days is deleted every night (transactions, notifications,
+  # WAEC pin records, archive). KYC data is never deleted. Unfinished transactions are kept.
+  data-retention:
+    enabled: ${DATA_RETENTION_ENABLED:true}
+    days: ${DATA_RETENTION_DAYS:30}
+
   transaction-archive:
     after-days: ${TRANSACTION_ARCHIVE_AFTER_DAYS:180}
     enabled: ${TRANSACTION_ARCHIVE_ENABLED:true}
