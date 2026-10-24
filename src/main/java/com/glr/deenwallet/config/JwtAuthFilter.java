@@ -26,6 +26,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserRepository userRepository;
+    private final com.glr.deenwallet.auth.DeviceSessionService deviceSessions;
 
     @Override
     protected void doFilterInternal(
@@ -49,6 +50,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             try {
                 String uid = jwtService.extractUserId(token);
                 String role = jwtService.extractRole(token);
+
+                // A device the customer removed under "Trusted Devices" stops working right away,
+                // not when its 5-minute token expires.
+                String sid = jwtService.extractSessionId(token);
+                if (sid != null && deviceSessions.isEnded(sid)) {
+                    SecurityContextHolder.clearContext();
+                    sendErrorResponse(res, HttpServletResponse.SC_UNAUTHORIZED,
+                            "This device was signed out of the account. Please log in again.");
+                    return;
+                }
 
                 if (role != null && !role.isBlank()) {
                     // 2. Real-time DB check for EVERY role, so a locked/deactivated account (e.g. after

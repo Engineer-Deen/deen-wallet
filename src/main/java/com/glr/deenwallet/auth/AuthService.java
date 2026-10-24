@@ -8,6 +8,8 @@ import com.glr.deenwallet.user.User;
 import com.glr.deenwallet.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,6 +62,7 @@ public class AuthService {
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final PinResetChallengeRepository pinResetChallengeRepository;
     private final BiometricCredentialRepository biometricCredentialRepository;
+    private final DeviceSessionService deviceSessions;
 
     @Transactional
     public void register(RegisterRequest request) {
@@ -663,7 +666,7 @@ public class AuthService {
             refreshTokenRepository.save(stored);
         }
 
-        return issueLoginResponse(user);
+        return issueLoginResponse(user, stored);
     }
 
     @Transactional
@@ -865,19 +868,60 @@ public class AuthService {
     }
 
     AuthController.LoginResponse issueLoginResponse(User user) {
+        return issueLoginResponse(user, null);
+    }
+
+    /**
+     * Issues a new access + refresh token pair. A token refresh passes the token it replaces, so the
+     * session (the "trusted device" the customer sees) stays the same. A real login starts a new one.
+     */
+    AuthController.LoginResponse issueLoginResponse(User user, RefreshToken previous) {
         String role = user.getRole() == null
                 ? "USER"
                 : user.getRole();
 
+        UUID sessionId = previous != null && previous.getSessionId() != null
+                ? previous.getSessionId()
+                : UUID.randomUUID();
+
         String access = jwtService.generateAccessToken(
                 user.getId().toString(),
-                role
+                role,
+                sessionId.toString()
         );
 
         String refresh = jwtService.generateRefreshToken(
                 user.getId().toString(),
                 role
         );
+
+        // What the customer will recognise in "Trusted Devices".
+        String userAgent = null;
+        String ip = null;
+        String requestDeviceKey = null;
+        try {
+            if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attributes) {
+                userAgent = attributes.getRequest().getHeader("User-Agent");
+                ip = attributes.getRequest().getRemoteAddr();
+                requestDeviceKey = DeviceInfo.cleanDeviceKey(attributes.getRequest().getHeader("X-Device-Id"));
+            }
+        } catch (RuntimeException ignored) {
+            // Device details are a convenience: never block a login because of them.
+        }
+
+        Instant now = Instant.now();
+        DeviceInfo.Parsed parsed = DeviceInfo.parse(userAgent);
+        String deviceKey = previous != null && previous.getDeviceKey() != null ? previous.getDeviceKey() : requestDeviceKey;
+        String deviceName = previous != null && previous.getDeviceName() != null ? previous.getDeviceName() : parsed.name();
+        String devicePlatform = previous != null && previous.getDevicePlatform() != null ? previous.getDevicePlatform() : parsed.platform();
+        Instant firstLogin = previous == null
+                ? now
+                : (previous.getFirstLoginAt() != null ? previous.getFirstLoginAt() : previous.getCreatedAt());
+
+        if (previous == null && deviceKey != null) {
+            // Logging in again on the same device replaces its older login instead of listing it twice.
+            deviceSessions.endSessionsOfDevice(user.getId(), deviceKey);
+        }
 
         refreshTokenRepository.save(
                 RefreshToken.builder()
@@ -888,6 +932,13 @@ public class AuthService {
                                         .toInstant()
                         )
                         .revoked(false)
+                        .sessionId(sessionId)
+                        .deviceKey(deviceKey)
+                        .deviceName(deviceName)
+                        .devicePlatform(devicePlatform)
+                        .lastIp(ip)
+                        .lastUsedAt(now)
+                        .firstLoginAt(firstLogin)
                         .build()
         );
 

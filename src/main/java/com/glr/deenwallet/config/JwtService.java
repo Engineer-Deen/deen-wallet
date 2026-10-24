@@ -24,6 +24,8 @@ public class JwtService {
 
     public String generateAccessToken(String userId) { return generateAccessToken(userId, "USER"); }
     public String generateAccessToken(String userId, String role) { return create(userId, "access", role, accessMinutes * 60_000L); }
+    /** Access token that remembers which login session ("trusted device") it belongs to. */
+    public String generateAccessToken(String userId, String role, String sessionId) { return create(userId, "access", role, accessMinutes * 60_000L, sessionId); }
     public String generateRefreshToken(String userId) { return generateRefreshToken(userId, "USER"); }
     public String generateRefreshToken(String userId, String role) { return create(userId, "refresh", role, refreshDays * 86_400_000L); }
 
@@ -45,14 +47,21 @@ public class JwtService {
     }
 
     private String create(String userId, String type, String role, long ttl) {
+        return create(userId, type, role, ttl, null);
+    }
+
+    private String create(String userId, String type, String role, long ttl, String sessionId) {
         Date now = new Date();
-        return Jwts.builder().id(UUID.randomUUID().toString()).claim("type", type).claim("role", role)
-                .subject(userId).issuedAt(now).expiration(new Date(now.getTime() + ttl)).signWith(key()).compact();
+        JwtBuilder builder = Jwts.builder().id(UUID.randomUUID().toString()).claim("type", type).claim("role", role);
+        if (sessionId != null) builder.claim("sid", sessionId);
+        return builder.subject(userId).issuedAt(now).expiration(new Date(now.getTime() + ttl)).signWith(key()).compact();
     }
 
     public String extractUserId(String token) { return extractClaim(token, Claims::getSubject); }
     public String extractJti(String token) { return extractClaim(token, Claims::getId); }
     public String extractRole(String token) { return extractClaim(token, c -> c.get("role", String.class)); }
+    /** The login session this access token belongs to, or null for tokens issued before sessions existed. */
+    public String extractSessionId(String token) { return extractClaim(token, c -> c.get("sid", String.class)); }
     public Date extractExpiration(String token) { return extractClaim(token, Claims::getExpiration); }
     public <T> T extractClaim(String token, Function<Claims, T> resolver) { return resolver.apply(parse(token)); }
     private Claims parse(String token) { return Jwts.parser().verifyWith(key()).build().parseSignedClaims(token).getPayload(); }

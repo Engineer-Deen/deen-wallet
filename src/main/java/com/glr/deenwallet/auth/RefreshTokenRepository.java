@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -28,11 +29,47 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
     @Modifying
     @Query("""
         UPDATE RefreshToken t
-        SET t.revoked = true
+        SET t.revoked = true, t.revokedAt = null
         WHERE t.userId = :userId
-          AND t.revoked = false
+          AND (t.revoked = false OR t.revokedAt IS NOT NULL)
     """)
     int revokeAllForUser(@Param("userId") UUID userId);
+
+    /** Logins of this customer that can still be refreshed. */
+    @Query("""
+        SELECT t FROM RefreshToken t
+        WHERE t.userId = :userId
+          AND t.revoked = false
+          AND t.expiresAt > :now
+        ORDER BY t.createdAt DESC
+    """)
+    List<RefreshToken> findActiveForUser(@Param("userId") UUID userId, @Param("now") Instant now);
+
+    /**
+     * Ends one session completely. revokedAt is cleared too, so a token that was rotated a moment ago
+     * cannot be presented again during the short reuse grace window.
+     */
+    @Transactional
+    @Modifying
+    @Query("""
+        UPDATE RefreshToken t
+        SET t.revoked = true, t.revokedAt = null
+        WHERE t.userId = :userId
+          AND t.sessionId = :sessionId
+          AND (t.revoked = false OR t.revokedAt IS NOT NULL)
+    """)
+    int revokeSession(@Param("userId") UUID userId, @Param("sessionId") UUID sessionId);
+
+    @Query("""
+        SELECT DISTINCT t.sessionId FROM RefreshToken t
+        WHERE t.userId = :userId
+          AND t.deviceKey = :deviceKey
+          AND t.revoked = false
+          AND t.expiresAt > :now
+    """)
+    List<UUID> activeSessionIdsForDevice(@Param("userId") UUID userId,
+                                         @Param("deviceKey") String deviceKey,
+                                         @Param("now") Instant now);
 
     /**
      * Every token refresh revokes one row and inserts another, so this table grows

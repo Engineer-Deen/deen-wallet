@@ -23,7 +23,6 @@ public class InitiateTransactionRequest {
     // top of this (this class only enforces a single-transaction cap).
     @NotNull(message = "Amount is required")
     @DecimalMin(value = "1.00", message = "Amount must be at least 1.00")
-    @DecimalMax(value = "50000.00", message = "Amount exceeds the maximum allowed per transaction")
     @Digits(integer = 12, fraction = 2, message = "Amount must have at most 2 decimal places")
     private BigDecimal amount;
 

@@ -1047,7 +1047,7 @@ async function refreshAccessToken() {
       try {
         response = await fetch(DEENWALLET_CONFIG.API_BASE_URL + '/api/auth/refresh', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: Object.assign({ 'Content-Type': 'application/json' }, getDeviceId() ? { 'X-Device-Id': getDeviceId() } : {}),
           body: JSON.stringify({ refreshToken }),
           signal: controller.signal
         });
@@ -1089,6 +1089,23 @@ async function refreshAccessToken() {
 // ENHANCED API CLIENT – NO FORCED REDIRECT
 // ==============================================================
 
+// A random id this app creates once for itself. The server uses it to tell "this device" apart in Trusted Devices
+// and to replace an older login of the same device. It is not a secret and identifies nothing about the person.
+function getDeviceId() {
+  try {
+    let id = localStorage.getItem('deenwallet_device_id');
+    if (!id || !/^[A-Za-z0-9-]{16,64}$/.test(id)) {
+      id = (window.crypto && typeof window.crypto.randomUUID === 'function')
+          ? window.crypto.randomUUID()
+          : 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+      localStorage.setItem('deenwallet_device_id', id);
+    }
+    return id;
+  } catch (_) {
+    return '';
+  }
+}
+
 async function apiRequest(path, { method = 'GET', params, body, headers: extraHeaders = {}, timeoutMs = 15000 } = {}) {
   // Wraps the ENTIRE function, including building the URL/headers below - so a bug
   // there (like a past release that referenced an undefined `headers` variable and
@@ -1124,6 +1141,8 @@ async function apiRequest(path, { method = 'GET', params, body, headers: extraHe
       }
     }
     const headers = { 'Content-Type': 'application/json', ...extraHeaders };
+    const deviceId = getDeviceId();
+    if (deviceId) headers['X-Device-Id'] = deviceId;
     if (token) headers['Authorization'] = 'Bearer ' + token;
 
     const doRequest = async (tokenToUse) => {

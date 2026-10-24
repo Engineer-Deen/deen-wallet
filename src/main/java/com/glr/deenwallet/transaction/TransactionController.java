@@ -54,9 +54,8 @@ public class TransactionController {
     public ResponseEntity<FeePreviewResponse> previewFee(@RequestParam BigDecimal amount) {
         if (amount == null
                 || amount.compareTo(BigDecimal.ONE) < 0
-                || amount.compareTo(new BigDecimal("50000.00")) > 0
                 || amount.scale() > 2) {
-            throw new IllegalArgumentException("Amount must be between 1.00 and 50000.00 SLE and have at most 2 decimal places");
+            throw new IllegalArgumentException("Amount must be at least 1.00 SLE and have at most 2 decimal places");
         }
         long minorUnits = amount.movePointRight(2).longValueExact();
         ConversionFee fee = ConversionFee.calculate(minorUnits);
