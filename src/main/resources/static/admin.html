@@ -608,6 +608,342 @@
             line-height: 1;
         }
 
+        /* ===== Wallet ===== */
+        .wallet-hero {
+            margin-top: 14px;
+            padding: 18px 16px 16px;
+            border-radius: 20px;
+            color: #fff;
+            background: linear-gradient(135deg, #1C7A91 0%, #115062 100%);
+            box-shadow: 0 10px 24px rgba(17, 80, 98, .22);
+        }
+
+        .wallet-hero-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 13px;
+            font-weight: 700;
+            opacity: .92;
+        }
+
+        .wallet-live {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 4px 9px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .16);
+        }
+
+        .wallet-live i {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #5CF2A5;
+            display: inline-block;
+        }
+
+        .wallet-hero-amount {
+            font-size: 32px;
+            font-weight: 800;
+            margin: 10px 0 4px;
+            letter-spacing: .2px;
+            word-break: break-word;
+        }
+
+        .wallet-hero-sub {
+            font-size: 12px;
+            opacity: .85;
+            line-height: 1.5;
+        }
+
+        .wallet-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .wallet-action {
+            flex: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 10px;
+            border: none;
+            border-radius: 14px;
+            background: #fff;
+            color: #115062;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .wallet-action:active {
+            transform: scale(.98);
+        }
+
+        .wallet-action svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .wallet-tabs {
+            display: flex;
+            gap: 6px;
+            margin: 14px 0 4px;
+            padding: 4px;
+            border-radius: 14px;
+            background: var(--card);
+            border: 1px solid var(--border);
+        }
+
+        .wallet-tab {
+            flex: 1;
+            padding: 9px 4px;
+            border: none;
+            border-radius: 10px;
+            background: transparent;
+            color: var(--muted);
+            font-family: inherit;
+            font-size: 12.5px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .wallet-tab.active {
+            background: #fff;
+            color: var(--primary);
+            box-shadow: 0 1px 4px rgba(18, 36, 43, .12);
+        }
+
+        .wallet-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 4px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .wallet-row-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            background: #E6F6EE;
+            color: #1B8A55;
+        }
+
+        .wallet-row-icon.out {
+            background: #FDECEA;
+            color: var(--error);
+        }
+
+        .wallet-row-icon.neutral {
+            background: #EEF4F6;
+            color: var(--muted);
+        }
+
+        .wallet-row-icon svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2.2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .wallet-row-main {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .wallet-row-title {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--text);
+        }
+
+        .wallet-row-sub {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 2px;
+            line-height: 1.35;
+            word-break: break-word;
+        }
+
+        .wallet-row-side {
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .wallet-amount {
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .wallet-amount.in {
+            color: #1B8A55;
+        }
+
+        .wallet-amount.out {
+            color: var(--error);
+        }
+
+        .wallet-amount-sub {
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        .wallet-pill {
+            display: inline-block;
+            margin-top: 3px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 10.5px;
+            font-weight: 800;
+            background: #FFF1D6;
+            color: var(--warning-text);
+        }
+
+        .wallet-pill.ok {
+            background: #E6F6EE;
+            color: #1B8A55;
+        }
+
+        .wallet-pill.bad {
+            background: #FDECEA;
+            color: var(--error);
+        }
+
+        .wallet-sheet-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 160;
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+            background: rgba(5, 16, 22, .58);
+        }
+
+        .wallet-sheet-overlay.open {
+            display: flex;
+        }
+
+        .wallet-sheet {
+            width: min(100%, 520px);
+            max-height: 92dvh;
+            overflow-y: auto;
+            background: var(--bg);
+            border-radius: 22px 22px 0 0;
+            padding: 16px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+            box-shadow: 0 -16px 44px rgba(0, 0, 0, .24);
+        }
+
+        .wallet-sheet-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .wallet-sheet-head strong {
+            font-size: 17px;
+        }
+
+        .wallet-sheet-close {
+            width: 34px;
+            height: 34px;
+            border-radius: 11px;
+            border: 1px solid var(--border);
+            background: #fff;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .wallet-field {
+            margin-top: 12px;
+        }
+
+        .wallet-field label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--muted);
+        }
+
+        .wallet-input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 12px 13px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: #fff;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 15px;
+        }
+
+        .wallet-seg {
+            display: flex;
+            gap: 6px;
+            padding: 4px;
+            border-radius: 12px;
+            background: var(--card);
+            border: 1px solid var(--border);
+        }
+
+        .wallet-seg button {
+            flex: 1;
+            padding: 9px 4px;
+            border: none;
+            border-radius: 9px;
+            background: transparent;
+            color: var(--muted);
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .wallet-seg button.active {
+            background: #fff;
+            color: var(--primary);
+            box-shadow: 0 1px 4px rgba(18, 36, 43, .12);
+        }
+
+        .wallet-note {
+            margin-top: 8px;
+            font-size: 12.5px;
+            color: var(--muted);
+            line-height: 1.45;
+        }
+
+        .wallet-note.ok {
+            color: #1B8A55;
+            font-weight: 800;
+        }
+
+        .wallet-note.bad {
+            color: var(--error);
+            font-weight: 700;
+        }
+
         /* ===== Search ===== */
         .search-bar {
             display: flex;
@@ -1198,6 +1534,114 @@
 
         .bottom-nav-btn.coming-soon .bottom-nav-icon {
             opacity: .8;
+        }
+
+        .bottom-nav-btn .bottom-nav-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+        }
+
+        .bottom-nav-icon svg,
+        .channel-icon svg {
+            width: 24px;
+            height: 24px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 1.8;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .bottom-nav-btn.active .bottom-nav-icon svg {
+            stroke-width: 2.1;
+        }
+
+        .channel-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .channel-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            width: 100%;
+            text-align: left;
+            padding: 14px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            background: #fff;
+            color: var(--text);
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+        .channel-card:active {
+            transform: scale(.99);
+        }
+
+        .channel-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 15px;
+            background: var(--primary-soft);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .channel-copy {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .channel-title {
+            font-size: 15px;
+            font-weight: 800;
+        }
+
+        .channel-sub {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 3px;
+            line-height: 1.35;
+        }
+
+        .channel-go {
+            color: var(--muted);
+            font-size: 24px;
+            line-height: 1;
+        }
+
+        .channel-card.soon {
+            background: var(--card);
+        }
+
+        .channel-card.soon .channel-icon {
+            background: #EEF4F6;
+            color: var(--muted);
+        }
+
+        .messaging-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin: 2px 0 0;
+            padding: 8px 4px;
+            border: none;
+            background: none;
+            color: var(--primary);
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
         }
 
         .bottom-nav-btn:active {
@@ -2143,10 +2587,44 @@
 
         <!-- ===== ADMIN MESSAGING ===== -->
         <div class="scroll hidden" id="tab-admin-messaging">
-            <div class="admin-card messaging-card">
-                <p class="admin-card-title">Admin Messaging</p>
-                <p class="admin-card-sub">Choose a messaging channel and send updates to customer users.</p>
-                <div class="messaging-channel-badge"><span>●</span> In-App Notification</div>
+            <div id="messaging-hub">
+                <div class="admin-card messaging-card">
+                    <p class="admin-card-title">Admin Messaging</p>
+                    <p class="admin-card-sub">Choose how you want to reach your customers.</p>
+                    <div class="channel-list">
+                        <button type="button" class="channel-card" id="messaging-ch-inapp">
+                            <span class="channel-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span>
+                            <span class="channel-copy">
+                                <span class="channel-title">In-App Notification</span>
+                                <span class="channel-sub" style="display:block;">Appears inside the customer's app. Ready to use.</span>
+                            </span>
+                            <span class="channel-go">&#8250;</span>
+                        </button>
+                        <button type="button" class="channel-card soon" id="messaging-ch-email">
+                            <span class="channel-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></span>
+                            <span class="channel-copy">
+                                <span class="channel-title">Email Notification</span>
+                                <span class="channel-sub" style="display:block;">Will be connected to the email service later.</span>
+                            </span>
+                            <span class="coming-soon-pill">Coming Soon</span>
+                        </button>
+                        <button type="button" class="channel-card soon" id="messaging-ch-sms">
+                            <span class="channel-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/></svg></span>
+                            <span class="channel-copy">
+                                <span class="channel-title">SMS Notification</span>
+                                <span class="channel-sub" style="display:block;">Will be connected to an SMS provider later.</span>
+                            </span>
+                            <span class="coming-soon-pill">Coming Soon</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="messaging-inapp-view" class="hidden">
+                <button type="button" class="messaging-back" id="messaging-back-btn">&#8592; All channels</button>
+            <div class="admin-card messaging-card" style="margin-top:4px;">
+                <p class="admin-card-title">In-App Notification</p>
+                <p class="admin-card-sub">Send a notification that appears inside the customer's app.</p>
 
                 <div class="admin-card messaging-recipient-card" style="margin-top:12px;">
                     <div class="messaging-recipient-summary">
@@ -2175,22 +2653,67 @@
                 <div id="messaging-result" class="messaging-result hidden"></div>
                 <button type="button" class="btn-primary" id="messaging-send-btn" style="margin-top:12px;">Send In-App Notification</button>
             </div>
-            <div class="admin-card messaging-coming-card">
-                <div class="messaging-coming-icon">✉</div>
-                <div class="messaging-coming-content">
-                    <p class="admin-card-title">Email Notification</p>
-                    <p class="admin-card-sub">Email messaging is planned and will be connected to the email service later.</p>
-                    <span class="coming-soon-pill">Coming Soon</span>
-                </div>
             </div>
         </div>
 
         <!-- ===== WALLET ===== -->
         <div class="scroll hidden" id="tab-wallet">
-            <div class="admin-card" style="text-align:center;padding:42px 20px;">
-                <div style="font-size:42px;margin-bottom:12px;">💳</div>
-                <p class="admin-card-title" style="font-size:20px;">Wallet</p>
-                <p class="admin-card-sub" style="margin-bottom:0;">Coming soon. Wallet management will be added here later.</p>
+            <div id="wallet-error" class="error-state hidden"></div>
+            <div class="wallet-hero">
+                <div class="wallet-hero-top"><span id="wallet-hero-label">Wallet</span><span class="wallet-live"><i></i> Live</span></div>
+                <div class="wallet-hero-amount" id="wallet-balance">&mdash;</div>
+                <div class="wallet-hero-sub" id="wallet-sub"></div>
+                <div class="wallet-actions">
+                    <button type="button" class="wallet-action" id="wallet-withdraw-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg><span>Withdraw</span></button>
+                    <button type="button" class="wallet-action hidden" id="wallet-transfer-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg><span>Send to admin</span></button>
+                </div>
+            </div>
+            <div class="wallet-tabs hidden" id="wallet-tabs">
+                <button type="button" class="wallet-tab active" data-wtab="payments">Payments</button>
+                <button type="button" class="wallet-tab" data-wtab="payouts">Payouts</button>
+                <button type="button" class="wallet-tab" data-wtab="activity">Activity</button>
+                <button type="button" class="wallet-tab" data-wtab="admins">Admins</button>
+            </div>
+            <div class="admin-card" style="margin-top:10px;padding:6px 12px 10px;">
+                <p class="admin-card-title" id="wallet-list-title" style="margin:10px 0 0;">Activity</p>
+                <p class="admin-card-sub" id="wallet-list-sub" style="margin:2px 0 4px;"></p>
+                <div id="wallet-loading" class="loading-state hidden"><div class="spinner"></div>Loading&hellip;</div>
+                <div id="wallet-list"></div>
+                <button type="button" class="btn-sm refresh hidden" id="wallet-more" style="margin:10px 0 4px;width:100%;">Load more</button>
+            </div>
+
+            <div class="wallet-sheet-overlay" id="wallet-withdraw-overlay" aria-hidden="true">
+                <div class="wallet-sheet">
+                    <div class="wallet-sheet-head"><strong>Withdraw money</strong><button type="button" class="wallet-sheet-close" data-wallet-close="withdraw" aria-label="Close">&times;</button></div>
+                    <div class="wallet-note" id="wd-available"></div>
+                    <div class="wallet-field">
+                        <div class="wallet-seg" id="wd-method">
+                            <button type="button" class="active" data-method="momo">Mobile money</button>
+                            <button type="button" data-method="bank">Bank</button>
+                        </div>
+                    </div>
+                    <div class="wallet-field"><label for="wd-provider" id="wd-provider-label">Network</label><select id="wd-provider" class="wallet-input"></select></div>
+                    <div class="wallet-field"><label for="wd-destination" id="wd-destination-label">Phone number</label><input id="wd-destination" class="wallet-input" autocomplete="off" inputmode="tel" placeholder="+23277123456" /></div>
+                    <button type="button" class="btn-sm refresh" id="wd-check" style="margin-top:8px;">Check account name</button>
+                    <div class="wallet-note" id="wd-holder"></div>
+                    <div class="wallet-field"><label for="wd-amount">Amount (SLE)</label><input id="wd-amount" class="wallet-input" autocomplete="off" inputmode="decimal" placeholder="0.00" /></div>
+                    <div class="wallet-field"><label for="wd-pin">Your admin PIN</label><input id="wd-pin" class="wallet-input" type="password" autocomplete="off" inputmode="numeric" maxlength="4" placeholder="4 digits" /></div>
+                    <div class="wallet-note bad hidden" id="wd-error"></div>
+                    <button type="button" class="btn-primary" id="wd-submit" style="margin-top:14px;">Withdraw</button>
+                </div>
+            </div>
+
+            <div class="wallet-sheet-overlay" id="wallet-transfer-overlay" aria-hidden="true">
+                <div class="wallet-sheet">
+                    <div class="wallet-sheet-head"><strong>Send money to an admin</strong><button type="button" class="wallet-sheet-close" data-wallet-close="transfer" aria-label="Close">&times;</button></div>
+                    <div class="wallet-note" id="tr-available"></div>
+                    <div class="wallet-field"><label for="tr-admin">Admin</label><select id="tr-admin" class="wallet-input"></select></div>
+                    <div class="wallet-field"><label for="tr-amount">Amount (SLE)</label><input id="tr-amount" class="wallet-input" autocomplete="off" inputmode="decimal" placeholder="0.00" /></div>
+                    <div class="wallet-field"><label for="tr-note">Note (optional)</label><input id="tr-note" class="wallet-input" maxlength="300" placeholder="For example: October salary" /></div>
+                    <div class="wallet-field"><label for="tr-pin">Your admin PIN</label><input id="tr-pin" class="wallet-input" type="password" autocomplete="off" inputmode="numeric" maxlength="4" placeholder="4 digits" /></div>
+                    <div class="wallet-note bad hidden" id="tr-error"></div>
+                    <button type="button" class="btn-primary" id="tr-submit" style="margin-top:14px;">Send money</button>
+                </div>
             </div>
         </div>
 
@@ -2421,16 +2944,15 @@
         <!-- ===== FIXED BOTTOM NAVIGATION ===== -->
         <nav class="bottom-nav" id="bottom-nav" aria-label="Admin navigation">
             <button type="button" class="bottom-nav-btn active" data-bottom-tab="home" aria-label="Home">
-                <span class="bottom-nav-icon">⌂</span>
+                <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h3.5v-6h5v6H18a1 1 0 0 0 1-1V9.5"/></svg></span>
                 <span>Home</span>
             </button>
             <button type="button" class="bottom-nav-btn" data-bottom-tab="wallet" aria-label="Wallet">
-                <span class="bottom-nav-icon">▭</span>
+                <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg></span>
                 <span>Wallet</span>
-                <small>Coming Soon</small>
             </button>
             <button type="button" class="bottom-nav-btn" data-bottom-tab="messaging" aria-label="Admin Messaging">
-                <span class="bottom-nav-icon">💬</span>
+                <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 8.5h8M8 12h5"/></svg></span>
                 <span>Admin Messaging</span>
             </button>
         </nav>
@@ -3503,10 +4025,11 @@
                 });
 
                 if (section === 'dashboard') loadDashboard();
+                if (section === 'wallet') loadWallet();
                 if (section === 'users') loadUsers();
                 if (section === 'errors') { loadErrors(); startErrorAutoRefresh(); }
                 else { stopErrorAutoRefresh(); }
-                if (section === 'messaging') updateMessagingRecipientCount();
+                if (section === 'messaging') { showMessagingView('hub'); updateMessagingRecipientCount(); }
                 if (section === 'failed-payouts') loadFailedPayouts();
                 if (section === 'kyc') loadKyc();
                 if (section === 'waec-pins') loadWaecPins();
@@ -4299,6 +4822,388 @@
             }
 
             // ==============================================================
+            // WALLET
+            // ==============================================================
+            var walletState = { summary: null, tab: 'activity', rows: [], next: null, pages: 0, timer: null, loading: false, options: null, admins: [] };
+
+            function wFmt(minor) {
+                var v = Number(minor || 0) / 100;
+                return v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+            function wMoney(minor) { return 'SLE ' + wFmt(minor); }
+            function wTime(ts) {
+                if (!ts) return '';
+                var d = new Date(ts);
+                return isNaN(d.getTime()) ? '' : d.toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+            }
+            function wParseAmount(text) {
+                var s = String(text || '').trim().replace(/,/g, '');
+                if (!/^\d+(\.\d{1,2})?$/.test(s)) return null;
+                var n = Number(s);
+                return n >= 1 ? s : null;
+            }
+            var W_ICON_IN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg>';
+            var W_ICON_OUT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg>';
+            var W_ICON_DOT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg>';
+
+            function walletIsSuper() { return !!(walletState.summary && walletState.summary.superAdmin); }
+
+            function walletShowError(msg) {
+                var el = document.getElementById('wallet-error');
+                if (!msg) { hide(el); return; }
+                el.textContent = msg;
+                show(el);
+            }
+
+            function renderWalletHero() {
+                var s = walletState.summary;
+                if (!s) return;
+                var label = document.getElementById('wallet-hero-label');
+                var amount = document.getElementById('wallet-balance');
+                var sub = document.getElementById('wallet-sub');
+                if (s.superAdmin) {
+                    label.textContent = 'Monime account balance';
+                    amount.textContent = s.monimeAvailable == null ? 'Unavailable' : wMoney(s.monimeAvailable);
+                    sub.textContent = s.monimeAvailable == null
+                        ? (s.error || 'Could not read the Monime balance.')
+                        : 'Free to withdraw: ' + wMoney(s.withdrawable) + '  |  Held for admin wallets: ' + wMoney(s.heldForAdmins)
+                            + (s.pendingOut > 0 ? '  |  On its way out: ' + wMoney(s.pendingOut) : '');
+                } else {
+                    label.textContent = 'My wallet';
+                    amount.textContent = wMoney(s.myBalance);
+                    sub.textContent = s.myPending > 0 ? 'Withdrawals in progress: ' + wMoney(s.myPending) : 'Your pay from the super admin appears here. You can withdraw it.';
+                }
+                document.getElementById('wallet-transfer-btn').classList.toggle('hidden', !s.superAdmin);
+                document.getElementById('wallet-tabs').classList.toggle('hidden', !s.superAdmin);
+                walletShowError(s.superAdmin && s.error && s.monimeAvailable == null ? s.error : null);
+            }
+
+            function walletRowHtml(r) {
+                var credit = r.type === 'credit';
+                var title = r.label || (credit ? 'Payment received' : 'Money sent out');
+                var subParts = [];
+                if (r.customer) subParts.push(escapeHtml(r.customer));
+                if (r.dwCode) subParts.push(escapeHtml(r.dwCode));
+                if (!r.customer && r.detail) subParts.push(escapeHtml(r.detail));
+                if (r.status && r.dwCode) subParts.push(escapeHtml(String(r.status).replace(/_/g, ' ').toLowerCase()));
+                var time = wTime(r.timestamp);
+                if (time) subParts.push(time);
+                return '<div class="wallet-row">'
+                    + '<div class="wallet-row-icon ' + (credit ? '' : 'out') + '">' + (credit ? W_ICON_IN : W_ICON_OUT) + '</div>'
+                    + '<div class="wallet-row-main"><div class="wallet-row-title">' + escapeHtml(title) + '</div>'
+                    + '<div class="wallet-row-sub">' + subParts.join(' &middot; ') + '</div></div>'
+                    + '<div class="wallet-row-side"><div class="wallet-amount ' + (credit ? 'in' : 'out') + '">' + (credit ? '+' : '-') + ' ' + wFmt(r.amount) + '</div>'
+                    + (r.balanceAfter != null ? '<div class="wallet-amount-sub">Balance ' + wFmt(r.balanceAfter) + '</div>' : '') + '</div>'
+                    + '</div>';
+            }
+
+            function walletActivityHtml(a) {
+                var isWithdrawal = a.kind === 'withdrawal';
+                var pill = '';
+                if (isWithdrawal) {
+                    var st = a.status;
+                    var cls = st === 'COMPLETED' ? 'ok' : (st === 'FAILED' ? 'bad' : '');
+                    var txt = st === 'COMPLETED' ? 'Completed' : (st === 'FAILED' ? 'Failed' : (st === 'REVIEW' ? 'Needs review' : 'Processing'));
+                    pill = '<span class="wallet-pill ' + cls + '">' + txt + '</span>';
+                }
+                var title = isWithdrawal ? 'Withdrawal' + (walletIsSuper() && a.ownerName ? ' - ' + escapeHtml(a.ownerName) : '') : 'Money received';
+                if (!isWithdrawal && walletIsSuper()) title = 'Sent to admin';
+                var sub = escapeHtml(a.detail || '');
+                if (a.reason && a.status === 'FAILED') sub += '<br>' + escapeHtml(a.reason);
+                if (a.reason && a.status === 'REVIEW') sub += '<br>' + escapeHtml(a.reason);
+                var t = wTime(a.at);
+                if (t) sub += (sub ? '<br>' : '') + t;
+                var out = isWithdrawal;
+                return '<div class="wallet-row">'
+                    + '<div class="wallet-row-icon ' + (out ? 'out' : '') + '">' + (out ? W_ICON_OUT : W_ICON_IN) + '</div>'
+                    + '<div class="wallet-row-main"><div class="wallet-row-title">' + title + '</div><div class="wallet-row-sub">' + sub + '</div></div>'
+                    + '<div class="wallet-row-side"><div class="wallet-amount ' + (out ? 'out' : 'in') + '">' + (out ? '-' : '+') + ' ' + wFmt(a.amount) + '</div>' + pill + '</div>'
+                    + '</div>';
+            }
+
+            function walletAdminHtml(a) {
+                return '<div class="wallet-row">'
+                    + '<div class="wallet-row-icon neutral">' + W_ICON_DOT + '</div>'
+                    + '<div class="wallet-row-main"><div class="wallet-row-title">' + escapeHtml(a.name || 'Admin') + '</div>'
+                    + '<div class="wallet-row-sub">' + escapeHtml(a.email || '') + '</div></div>'
+                    + '<div class="wallet-row-side"><div class="wallet-amount">' + wMoney(a.balance) + '</div>'
+                    + '<button type="button" class="btn-sm refresh" data-send-admin="' + escapeHtml(a.id) + '" style="margin-top:4px;padding:4px 10px;">Send money</button></div>'
+                    + '</div>';
+            }
+
+            function renderWalletList() {
+                var list = document.getElementById('wallet-list');
+                var tab = walletState.tab;
+                var title = document.getElementById('wallet-list-title');
+                var sub = document.getElementById('wallet-list-sub');
+                title.textContent = tab === 'payments' ? 'Payments received' : tab === 'payouts' ? 'Payouts sent' : tab === 'admins' ? 'Admin wallets' : 'Wallet activity';
+                sub.textContent = tab === 'payments' ? 'Every payment into the Monime account, live.'
+                    : tab === 'payouts' ? 'Every payout out of the Monime account, live.'
+                    : tab === 'admins' ? 'Balances owed to admins. Tap Send money to pay an admin.'
+                    : (walletIsSuper() ? 'Withdrawals and transfers made from the wallet.' : 'Pay you received and your withdrawals.');
+                if (!walletState.rows.length) {
+                    list.innerHTML = '<div class="empty-state">' + (tab === 'admins' ? 'No admin accounts yet.' : 'Nothing here yet.') + '</div>';
+                } else {
+                    var html = '';
+                    walletState.rows.forEach(function (r) {
+                        html += tab === 'activity' ? walletActivityHtml(r) : (tab === 'admins' ? walletAdminHtml(r) : walletRowHtml(r));
+                    });
+                    list.innerHTML = html;
+                }
+                document.getElementById('wallet-more').classList.toggle('hidden', !walletState.next);
+                list.querySelectorAll('[data-send-admin]').forEach(function (b) {
+                    b.addEventListener('click', function () { walletOpenTransfer(b.getAttribute('data-send-admin')); });
+                });
+            }
+
+            function walletLoadList(append) {
+                var tab = walletState.tab;
+                var loading = document.getElementById('wallet-loading');
+                if (walletState.loading) return Promise.resolve();
+                walletState.loading = true;
+                if (!append && !walletState.rows.length) show(loading);
+                var req;
+                if (tab === 'payments' || tab === 'payouts') {
+                    var params = { type: tab === 'payments' ? 'credit' : 'debit' };
+                    if (append && walletState.next) params.after = walletState.next;
+                    req = adminApiRequest('/api/admin/wallet/transactions', { params: params }).then(function (page) {
+                        if (page.error) throw new Error(page.error);
+                        walletState.rows = append ? walletState.rows.concat(page.rows || []) : (page.rows || []);
+                        walletState.next = page.next || null;
+                        walletState.pages = append ? walletState.pages + 1 : 1;
+                    });
+                } else if (tab === 'admins') {
+                    req = adminApiRequest('/api/admin/wallet/admins').then(function (rows) {
+                        walletState.admins = rows || [];
+                        walletState.rows = walletState.admins; walletState.next = null; walletState.pages = 1;
+                    });
+                } else {
+                    req = adminApiRequest('/api/admin/wallet/activity').then(function (rows) {
+                        walletState.rows = rows || []; walletState.next = null; walletState.pages = 1;
+                    });
+                }
+                return req.then(function () { walletShowError(null); renderWalletList(); })
+                    .catch(function (e) { walletShowError(e.message || 'Could not load the wallet.'); })
+                    .finally(function () { walletState.loading = false; hide(loading); });
+            }
+
+            function walletRefreshSummary() {
+                return adminApiRequest('/api/admin/wallet').then(function (s) {
+                    walletState.summary = s;
+                    renderWalletHero();
+                    return s;
+                });
+            }
+
+            function walletSetTab(tab) {
+                walletState.tab = tab;
+                walletState.rows = []; walletState.next = null; walletState.pages = 0;
+                document.querySelectorAll('.wallet-tab').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-wtab') === tab); });
+                renderWalletList();
+                return walletLoadList(false);
+            }
+
+            function loadWallet() {
+                walletRefreshSummary().then(function (s) {
+                    var wanted = s.superAdmin ? (walletState.tab === 'activity' && !walletState.started ? 'payments' : walletState.tab) : 'activity';
+                    walletState.started = true;
+                    return walletSetTab(wanted);
+                }).catch(function (e) { walletShowError(e.message || 'Could not load the wallet.'); });
+                if (walletState.timer) clearInterval(walletState.timer);
+                walletState.timer = setInterval(function () {
+                    var tabEl = document.getElementById('tab-wallet');
+                    if (!tabEl || tabEl.classList.contains('hidden')) { clearInterval(walletState.timer); walletState.timer = null; return; }
+                    if (document.querySelector('.wallet-sheet-overlay.open')) return;
+                    walletRefreshSummary().catch(function () { });
+                    if (walletState.pages <= 1) walletLoadList(false);
+                }, 10000);
+            }
+
+            document.querySelectorAll('.wallet-tab').forEach(function (b) {
+                b.addEventListener('click', function () { walletSetTab(b.getAttribute('data-wtab')); });
+            });
+            document.getElementById('wallet-more').addEventListener('click', function () { walletLoadList(true); });
+
+            function walletOpenSheet(name) {
+                var el = document.getElementById('wallet-' + name + '-overlay');
+                if (el) { el.classList.add('open'); el.setAttribute('aria-hidden', 'false'); }
+            }
+            function walletCloseSheet(name) {
+                var el = document.getElementById('wallet-' + name + '-overlay');
+                if (el) { el.classList.remove('open'); el.setAttribute('aria-hidden', 'true'); }
+            }
+            document.querySelectorAll('[data-wallet-close]').forEach(function (b) {
+                b.addEventListener('click', function () { walletCloseSheet(b.getAttribute('data-wallet-close')); });
+            });
+            ['withdraw', 'transfer'].forEach(function (n) {
+                var ov = document.getElementById('wallet-' + n + '-overlay');
+                if (ov) ov.addEventListener('click', function (e) { if (e.target === ov) walletCloseSheet(n); });
+            });
+
+            function walletSheetError(id, msg) {
+                var el = document.getElementById(id);
+                if (!msg) { hide(el); return; }
+                el.textContent = msg; show(el);
+            }
+
+            // ---------- withdraw
+            var wdMethod = 'momo';
+            function wdFillProviders() {
+                var sel = document.getElementById('wd-provider');
+                var opts = walletState.options || { momo: [], banks: [] };
+                var list = wdMethod === 'momo' ? opts.momo : opts.banks;
+                sel.innerHTML = '';
+                (list || []).forEach(function (o) {
+                    var op = document.createElement('option');
+                    op.value = o.id; op.textContent = o.name;
+                    sel.appendChild(op);
+                });
+                if (!(list || []).length) {
+                    var none = document.createElement('option');
+                    none.value = ''; none.textContent = wdMethod === 'momo' ? 'No networks available' : 'No banks available';
+                    sel.appendChild(none);
+                }
+                document.getElementById('wd-provider-label').textContent = wdMethod === 'momo' ? 'Network' : 'Bank';
+                document.getElementById('wd-destination-label').textContent = wdMethod === 'momo' ? 'Phone number' : 'Account number';
+                var dest = document.getElementById('wd-destination');
+                dest.placeholder = wdMethod === 'momo' ? '+23277123456' : 'Bank account number';
+                dest.setAttribute('inputmode', wdMethod === 'momo' ? 'tel' : 'numeric');
+                document.getElementById('wd-holder').textContent = '';
+                document.getElementById('wd-holder').className = 'wallet-note';
+            }
+            function wdAvailableText() {
+                var s = walletState.summary;
+                if (!s) return '';
+                if (s.superAdmin) return s.withdrawable == null ? 'Monime balance is not available right now.' : 'You can withdraw up to ' + wMoney(s.withdrawable) + '.';
+                return 'Your wallet balance: ' + wMoney(s.myBalance) + '.';
+            }
+            function walletOpenWithdraw() {
+                walletSheetError('wd-error', null);
+                document.getElementById('wd-amount').value = '';
+                document.getElementById('wd-pin').value = '';
+                document.getElementById('wd-destination').value = '';
+                document.getElementById('wd-available').textContent = wdAvailableText();
+                var go = function () {
+                    wdMethod = 'momo';
+                    document.querySelectorAll('#wd-method button').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-method') === 'momo'); });
+                    wdFillProviders();
+                    walletOpenSheet('withdraw');
+                };
+                if (walletState.options) { go(); return; }
+                adminApiRequest('/api/admin/wallet/options').then(function (o) { walletState.options = o; go(); })
+                    .catch(function (e) { showToast(e.message || 'Could not load the payout options.'); });
+            }
+            document.getElementById('wallet-withdraw-btn').addEventListener('click', walletOpenWithdraw);
+            document.querySelectorAll('#wd-method button').forEach(function (b) {
+                b.addEventListener('click', function () {
+                    wdMethod = b.getAttribute('data-method');
+                    document.querySelectorAll('#wd-method button').forEach(function (x) { x.classList.toggle('active', x === b); });
+                    wdFillProviders();
+                });
+            });
+            document.getElementById('wd-check').addEventListener('click', function () {
+                var holder = document.getElementById('wd-holder');
+                var dest = document.getElementById('wd-destination').value.trim();
+                var provider = document.getElementById('wd-provider').value;
+                if (!provider || !dest) { holder.textContent = 'Choose the network or bank and enter the number first.'; holder.className = 'wallet-note bad'; return; }
+                holder.textContent = 'Checking...'; holder.className = 'wallet-note';
+                adminApiRequest('/api/admin/wallet/lookup', { params: { method: wdMethod, providerId: provider, destination: dest } })
+                    .then(function (r) {
+                        if (r.ok) {
+                            holder.textContent = r.holderName ? 'Account name: ' + r.holderName : 'Number accepted (the provider did not return a name).';
+                            holder.className = 'wallet-note ok';
+                        } else {
+                            holder.textContent = r.message || 'Could not check this account.';
+                            holder.className = 'wallet-note bad';
+                        }
+                    })
+                    .catch(function (e) { holder.textContent = e.message || 'Could not check this account.'; holder.className = 'wallet-note bad'; });
+            });
+            document.getElementById('wd-submit').addEventListener('click', function () {
+                var btn = this;
+                var amount = wParseAmount(document.getElementById('wd-amount').value);
+                var dest = document.getElementById('wd-destination').value.trim();
+                var provider = document.getElementById('wd-provider').value;
+                var pin = document.getElementById('wd-pin').value.trim();
+                walletSheetError('wd-error', null);
+                if (!provider) { walletSheetError('wd-error', wdMethod === 'momo' ? 'Choose the network.' : 'Choose the bank.'); return; }
+                if (!dest) { walletSheetError('wd-error', wdMethod === 'momo' ? 'Enter the phone number.' : 'Enter the account number.'); return; }
+                if (!amount) { walletSheetError('wd-error', 'Enter an amount of at least 1.00 (up to 2 decimals).'); return; }
+                if (!/^\d{4}$/.test(pin)) { walletSheetError('wd-error', 'Enter your 4-digit PIN.'); return; }
+                btn.disabled = true; btn.textContent = 'Sending...';
+                adminApiRequest('/api/admin/wallet/withdraw', {
+                    method: 'POST',
+                    body: { method: wdMethod, providerId: provider, destination: dest, amount: amount, pin: pin }
+                }).then(function (s) {
+                    walletState.summary = s; renderWalletHero();
+                    walletCloseSheet('withdraw');
+                    showToast('Withdrawal started.');
+                    walletSetTab(walletIsSuper() ? 'activity' : 'activity');
+                }).catch(function (e) {
+                    walletSheetError('wd-error', e.message || 'The withdrawal could not be started.');
+                }).finally(function () {
+                    btn.disabled = false; btn.textContent = 'Withdraw';
+                    document.getElementById('wd-pin').value = '';
+                });
+            });
+
+            // ---------- transfer to an admin (super admin)
+            function walletOpenTransfer(adminId) {
+                walletSheetError('tr-error', null);
+                document.getElementById('tr-amount').value = '';
+                document.getElementById('tr-note').value = '';
+                document.getElementById('tr-pin').value = '';
+                var s = walletState.summary;
+                document.getElementById('tr-available').textContent = s && s.withdrawable != null
+                    ? 'You can send up to ' + wMoney(s.withdrawable) + ' (money not already held for admins).'
+                    : 'Monime balance is not available right now.';
+                adminApiRequest('/api/admin/wallet/admins').then(function (rows) {
+                    var sel = document.getElementById('tr-admin');
+                    sel.innerHTML = '';
+                    (rows || []).forEach(function (a) {
+                        var op = document.createElement('option');
+                        op.value = a.id; op.textContent = (a.name || 'Admin') + ' (' + wMoney(a.balance) + ')';
+                        sel.appendChild(op);
+                    });
+                    if (!(rows || []).length) {
+                        var none = document.createElement('option');
+                        none.value = ''; none.textContent = 'No active admin accounts';
+                        sel.appendChild(none);
+                    } else if (adminId) {
+                        sel.value = adminId;
+                    }
+                    walletOpenSheet('transfer');
+                }).catch(function (e) { showToast(e.message || 'Could not load the admins.'); });
+            }
+            document.getElementById('wallet-transfer-btn').addEventListener('click', function () { walletOpenTransfer(null); });
+            document.getElementById('tr-submit').addEventListener('click', function () {
+                var btn = this;
+                var adminId = document.getElementById('tr-admin').value;
+                var amount = wParseAmount(document.getElementById('tr-amount').value);
+                var note = document.getElementById('tr-note').value.trim();
+                var pin = document.getElementById('tr-pin').value.trim();
+                walletSheetError('tr-error', null);
+                if (!adminId) { walletSheetError('tr-error', 'Choose an admin.'); return; }
+                if (!amount) { walletSheetError('tr-error', 'Enter an amount of at least 1.00 (up to 2 decimals).'); return; }
+                if (!/^\d{4}$/.test(pin)) { walletSheetError('tr-error', 'Enter your 4-digit PIN.'); return; }
+                btn.disabled = true; btn.textContent = 'Sending...';
+                adminApiRequest('/api/admin/wallet/transfer', {
+                    method: 'POST',
+                    body: { adminId: adminId, amount: amount, note: note || null, pin: pin }
+                }).then(function (s) {
+                    walletState.summary = s; renderWalletHero();
+                    walletCloseSheet('transfer');
+                    showToast('Money sent to the admin wallet.');
+                    walletSetTab('admins');
+                }).catch(function (e) {
+                    walletSheetError('tr-error', e.message || 'The transfer could not be made.');
+                }).finally(function () {
+                    btn.disabled = false; btn.textContent = 'Send money';
+                    document.getElementById('tr-pin').value = '';
+                });
+            });
+
+            // ==============================================================
             // USERS (list)
             // ==============================================================
             var allUsers = [];
@@ -4647,6 +5552,26 @@
             var messagingUsers = [];
             var messagingSelectedUserIds = new Set();
             var messagingPickerSnapshot = new Set();
+
+            function showMessagingView(view) {
+                var hub = document.getElementById('messaging-hub');
+                var inapp = document.getElementById('messaging-inapp-view');
+                if (hub) hub.classList.toggle('hidden', view !== 'hub');
+                if (inapp) inapp.classList.toggle('hidden', view !== 'inapp');
+                var scroller = document.getElementById('tab-admin-messaging');
+                if (scroller) scroller.scrollTop = 0;
+            }
+
+            (function () {
+                var inappCard = document.getElementById('messaging-ch-inapp');
+                var emailCard = document.getElementById('messaging-ch-email');
+                var smsCard = document.getElementById('messaging-ch-sms');
+                var backBtn = document.getElementById('messaging-back-btn');
+                if (inappCard) inappCard.addEventListener('click', function () { showMessagingView('inapp'); });
+                if (emailCard) emailCard.addEventListener('click', function () { showToast('Email notifications are coming soon.'); });
+                if (smsCard) smsCard.addEventListener('click', function () { showToast('SMS notifications are coming soon.'); });
+                if (backBtn) backBtn.addEventListener('click', function () { showMessagingView('hub'); });
+            })();
 
             function updateMessagingRecipientCount() {
                 var count = messagingSelectedUserIds.size;
@@ -5629,6 +6554,13 @@
                     if (activeSubscreen) {
                         var backButton = activeSubscreen.querySelector('.ussd-back');
                         if (backButton) { backButton.click(); return; }
+                    }
+                    var walletSheetOpen = document.querySelector('.wallet-sheet-overlay.open');
+                    if (walletSheetOpen) { walletSheetOpen.classList.remove('open'); walletSheetOpen.setAttribute('aria-hidden', 'true'); return; }
+                    var messagingInapp = document.getElementById('messaging-inapp-view');
+                    if (messagingInapp && !messagingInapp.classList.contains('hidden') && messagingInapp.offsetParent !== null) {
+                        showMessagingView('hub');
+                        return;
                     }
                     var bottomActive = document.querySelector('.bottom-nav-btn.active');
                     if (bottomActive && bottomActive.dataset.bottomTab !== 'home') {
