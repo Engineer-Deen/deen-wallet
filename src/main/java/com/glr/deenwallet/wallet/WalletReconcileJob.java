@@ -25,6 +25,11 @@ public class WalletReconcileJob {
     @Scheduled(fixedDelay = 30_000, initialDelay = 60_000)
     public void run() {
         try {
+            wallet.syncPayoutRefs();
+        } catch (Exception e) {
+            log.warn("Wallet reference sync failed: {}", e.toString());
+        }
+        try {
             for (UUID id : wallet.openWithdrawalIds()) {
                 try {
                     wallet.reconcile(id);

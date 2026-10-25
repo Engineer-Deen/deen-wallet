@@ -5281,14 +5281,14 @@
                 var el = document.getElementById('wd-fee');
                 var amt = wParseAmount(document.getElementById('wd-amount').value);
                 var pct = (walletState.options && walletState.options.feePercent) || '1%';
-                if (!amt) { el.textContent = 'The service fee (' + pct + ') is worked out for you as soon as you enter an amount.'; el.className = 'wallet-note'; return; }
+                if (!amt) { el.textContent = walletIsSuper() ? 'The service fee (' + pct + ') is worked out for you as soon as you enter an amount.' : 'Withdrawals from your wallet are free.'; el.className = 'wallet-note'; return; }
                 var parts = amt.split('.');
                 var minor = Number(parts[0]) * 100 + Number(((parts[1] || '') + '00').substring(0, 2));
                 var fee = Math.floor((minor + 50) / 100);
                 el.className = 'wallet-note ok';
                 el.textContent = walletIsSuper()
                     ? 'Service fee (' + pct + '): ' + wMoney(fee) + '. Total taken from the DeenWallet balance: ' + wMoney(minor + fee) + '.'
-                    : 'Service fee (' + pct + '): ' + wMoney(fee) + ', paid by the business. The receiver gets the full ' + wMoney(minor) + '.';
+                    : 'Free: no service fee on your withdrawal. The receiver gets the full ' + wMoney(minor) + '.';
             }
             function wdAvailableText() {
                 var s = walletState.summary;

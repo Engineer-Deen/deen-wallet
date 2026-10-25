@@ -1,16 +1,15 @@
-﻿# DeenWallet Transfer - Admin Wallet update 3
+﻿# DeenWallet Transfer - Admin Wallet update 5
 #
 # Run from the project root (the folder that contains pom.xml):
-#     powershell -ExecutionPolicy Bypass -File .\wallet3.ps1
+#     powershell -ExecutionPolicy Bypass -File .\wallet5.ps1
 #
 # What it does:
-#   - Admin menu: "Admin management" and your email in the menu no longer disappear after closing and reopening the app.
-#   - Wallet screen and emails no longer say "Monime" (except the "Monime reference" line you asked to keep).
-#   - Payments and Payouts show the DeenWallet reference; "Monime ID" is removed. Search by DeenWallet reference,
-#     payment reference, name, phone or email.
-#   - Eye button hides / shows every amount on the wallet screen (super admin and admin), remembered on the device.
-# Replaces 4 wallet Java files and patches admin.html in small parts. Everything is checked first; nothing is written
-# unless all of it fits. No backup files are created.
+#   - Payouts: each payout is now tied to its DeenWallet record using the reference the payment service gives for it,
+#     so a withdrawal (WD-...) or a customer code can be searched and shows its details. This runs in the background
+#     and fills in within a minute or two of starting the server.
+#   - Admin withdrawals are free (no service fee). The super admin's own withdrawals keep the 1% service fee.
+# Adds migration V37, replaces 3 wallet Java files and patches admin.html in small parts. Everything is checked first;
+# nothing is written unless all of it fits. No backup files are created.
 $ErrorActionPreference = 'Stop'
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 $root = (Get-Location).Path
@@ -18,16 +17,21 @@ if (-not (Test-Path (Join-Path $root 'pom.xml'))) { throw 'Run this from the fol
 $dir = 'src\main\java\com\glr\deenwallet\wallet\'
 $htmlRel = 'src\main\resources\static\admin.html'
 $svcPath = Join-Path $root ($dir + 'WalletService.java')
-if (-not (Test-Path $svcPath) -or -not (Test-Path (Join-Path $root $htmlRel))) { throw 'Install wallet.ps1 and wallet2.ps1 first (the wallet files were not found).' }
+if (-not (Test-Path $svcPath) -or -not (Test-Path (Join-Path $root $htmlRel))) { throw 'Install the earlier wallet patches first (the wallet files were not found).' }
 $svcOld = [System.IO.File]::ReadAllText($svcPath, $utf8)
-if ($svcOld.Contains('rowMatches(')) {
-  Write-Host 'Wallet update 3 is already installed - nothing to do.' -ForegroundColor Yellow
+if ($svcOld.Contains('syncPayoutRefs')) {
+  Write-Host 'Wallet update 5 is already installed - nothing to do.' -ForegroundColor Yellow
   exit 0
 }
-if (-not $svcOld.Contains('feeOf(')) { throw 'Run wallet2.ps1 first. Nothing changed.' }
-foreach ($n in @('WalletMailer', 'WalletMonimeApi', 'WalletController')) {
+if (-not $svcOld.Contains('pendingNow')) { throw 'Run wallet4.ps1 first. Nothing changed.' }
+foreach ($n in @('WalletMonimeApi', 'WalletReconcileJob')) {
   if (-not (Test-Path (Join-Path $root ($dir + $n + '.java')))) { throw "$n.java was not found. Nothing changed." }
 }
+
+$migRel = 'src\main\resources\db\migration\V37__wallet_payout_refs.sql'
+if (Test-Path (Join-Path $root $migRel)) { throw 'V37__wallet_payout_refs.sql already exists. Nothing changed.' }
+$other = Get-ChildItem (Join-Path $root 'src\main\resources\db\migration') -Filter 'V37__*' -ErrorAction SilentlyContinue
+if ($other) { throw ('Another migration already uses version 37: ' + $other[0].Name + '. Nothing changed.') }
 
 function Decode([string]$s) {
   return [regex]::Replace($s, '\{\{U([0-9A-F]{4})\}\}', { param($m) [string][char][Convert]::ToInt32($m.Groups[1].Value, 16) })
@@ -47,6 +51,18 @@ function Edit([string]$old, [string]$new, [string]$what) {
   if ($script:t.IndexOf($old, $i + 1, [StringComparison]::Ordinal) -ge 0) { throw "admin.html: the '$what' part was found twice. Nothing changed." }
   $script:t = $script:t.Substring(0, $i) + $new + $script:t.Substring($i + $old.Length)
 }
+
+$mg = @'
+-- Which payment-service reference belongs to which payout, so the payouts list can show the DeenWallet reference.
+CREATE TABLE IF NOT EXISTS wallet_payout_refs (
+    payout_id     TEXT PRIMARY KEY,
+    txn_reference TEXT,
+    attempts      INT NOT NULL DEFAULT 0,
+    last_try      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_wallet_payout_refs_ref ON wallet_payout_refs (txn_reference) WHERE txn_reference IS NOT NULL;
+'@
+Replace-File $migRel $mg
 
 $f0 = @'
 package com.glr.deenwallet.wallet;
@@ -285,6 +301,13 @@ public class WalletService {
                 collectUuids(n, ids);
             }
         }
+        Set<String> refs = new HashSet<>();
+        for (JsonNode n : items) {
+            String r = text(n.path("reference"));
+            if (r != null) refs.add(r);
+        }
+        Map<String, String> payoutByRef = payoutIdsByReference(refs);
+        ids.addAll(payoutByRef.values());
         Map<String, Match> matches = match(ids);
         List<Draft> drafts = new ArrayList<>();
         for (JsonNode n : items) {
@@ -303,6 +326,7 @@ public class WalletService {
             Set<String> owners = new HashSet<>();
             collectOwnerIds(n.path("ownershipGraph").path("owner"), owners, 0);
             collectUuids(n, owners);
+            if (d.ref != null && payoutByRef.containsKey(d.ref)) owners.add(payoutByRef.get(d.ref));
             String ownerType = firstOwnerType(n.path("ownershipGraph").path("owner"));
             Match m = null;
             for (String o : owners) {
@@ -324,6 +348,7 @@ public class WalletService {
                 d.customer = m.withdrawalOwner;
                 d.status = m.withdrawalStatus;
                 d.fee = m.withdrawalFee;
+                d.freeWd = m.freeWd;
                 d.details.addAll(m.base);
             } else if (m != null) {
                 // A customer conversion: the payment in, or the payout out to the receiver.
@@ -356,9 +381,11 @@ public class WalletService {
         List<TxRow> rows = new ArrayList<>();
         for (Draft d : drafts) {
             if (d.folded) continue;
-            Long fee = d.foldedFee > 0 ? Long.valueOf(d.foldedFee) : d.fee;
+            Long fee = d.freeWd ? Long.valueOf(0) : (d.foldedFee > 0 ? Long.valueOf(d.foldedFee) : d.fee);
             List<Detail> details = new ArrayList<>(d.details);
-            if (fee != null && !d.isFee) {
+            if (d.freeWd) {
+                details.add(new Detail("Service fee", "Free"));
+            } else if (fee != null && !d.isFee) {
                 details.add(new Detail("Service fee", money(fee)));
                 if ("debit".equals(d.kind)) details.add(new Detail("Total taken from the balance", money(d.amount + fee)));
             }
@@ -372,19 +399,75 @@ public class WalletService {
         return new TxPage(rows, next, null);
     }
 
+    /** payout ids (as known to the payment service) for the given financial-transaction references. */
+    @SuppressWarnings("unchecked")
+    private Map<String, String> payoutIdsByReference(Set<String> refs) {
+        Map<String, String> out = new LinkedHashMap<>();
+        if (refs.isEmpty()) return out;
+        try {
+            List<Object[]> rows = em.createNativeQuery(
+                            "SELECT txn_reference, payout_id FROM wallet_payout_refs WHERE txn_reference IN (:refs)")
+                    .setParameter("refs", refs).getResultList();
+            for (Object[] r : rows) out.put((String) r[0], (String) r[1]);
+        } catch (RuntimeException e) {
+            log.warn("Wallet: reference lookup failed: {}", e.toString());
+        }
+        return out;
+    }
+
+    /**
+     * Learns which payment-service reference belongs to which payout (customer payouts and wallet withdrawals), a few
+     * per run, newest first. This is what lets a line in the Payouts list show its DeenWallet reference.
+     * Called by WalletReconcileJob.
+     */
+    @SuppressWarnings("unchecked")
+    void syncPayoutRefs() {
+        if (!monimeApi.configured()) return;
+        List<Object> pending = em.createNativeQuery(
+                "SELECT p.pid FROM ("
+                        + "SELECT monime_payout_id AS pid, created_at FROM wallet_withdrawals WHERE monime_payout_id IS NOT NULL "
+                        + "UNION ALL SELECT monime_payout_id, created_at FROM transactions WHERE monime_payout_id IS NOT NULL AND created_at > now() - interval '45 days' "
+                        + "UNION ALL SELECT refund_payout_id, created_at FROM transactions WHERE refund_payout_id IS NOT NULL AND created_at > now() - interval '45 days'"
+                        + ") p LEFT JOIN wallet_payout_refs r ON r.payout_id = p.pid "
+                        + "WHERE r.payout_id IS NULL OR (r.txn_reference IS NULL AND r.attempts < 10 AND r.last_try < now() - interval '2 minutes') "
+                        + "ORDER BY p.created_at DESC LIMIT 20").getResultList();
+        for (Object o : pending) {
+            String payoutId = String.valueOf(o);
+            String ref;
+            try {
+                ref = monimeApi.payoutReference(payoutId);
+            } catch (RuntimeException e) {
+                log.debug("Wallet: could not read the reference of payout {}: {}", payoutId, e.toString());
+                continue;
+            }
+            final String finalRef = ref;
+            tx.executeWithoutResult(st -> {
+                if (finalRef != null) {
+                    em.createNativeQuery("INSERT INTO wallet_payout_refs (payout_id, txn_reference, attempts, last_try) VALUES (:p, :r, 1, now()) "
+                                    + "ON CONFLICT (payout_id) DO UPDATE SET txn_reference = EXCLUDED.txn_reference, attempts = wallet_payout_refs.attempts + 1, last_try = now()")
+                            .setParameter("p", payoutId).setParameter("r", finalRef).executeUpdate();
+                } else {
+                    em.createNativeQuery("INSERT INTO wallet_payout_refs (payout_id, attempts, last_try) VALUES (:p, 1, now()) "
+                                    + "ON CONFLICT (payout_id) DO UPDATE SET attempts = wallet_payout_refs.attempts + 1, last_try = now()")
+                            .setParameter("p", payoutId).executeUpdate();
+                }
+            });
+        }
+    }
+
     private static final class Draft {
         String id, kind, ts, ref, label, detail, dwCode, customer, status, topOwner;
         long amount;
         Long balanceAfter;
         Long fee;
         long foldedFee;
-        boolean isFee, folded;
+        boolean isFee, folded, freeWd;
         List<Detail> details;
     }
 
     private record Match(String code, String customer, String service, String status, boolean refund,
                          String withdrawalOwner, String withdrawalStatus, List<Detail> base,
-                         Long depositFee, Long payoutFee, Long withdrawalFee) { }
+                         Long depositFee, Long payoutFee, Long withdrawalFee, boolean freeWd) { }
 
     private static void add(List<Detail> list, String label, Object value) {
         if (value == null) return;
@@ -464,8 +547,8 @@ public class WalletService {
             add(base, "Created", when(r[22]));
             add(base, "Payment received", when(r[23]));
             add(base, "Failure reason", r[24]);
-            Match m = new Match(code, name, service, status, false, null, null, base, minor(r[14]), minor(r[15]), null);
-            Match mRefund = new Match(code, name, service, status, true, null, null, base, minor(r[14]), minor(r[15]), null);
+            Match m = new Match(code, name, service, status, false, null, null, base, minor(r[14]), minor(r[15]), null, false);
+            Match mRefund = new Match(code, name, service, status, true, null, null, base, minor(r[14]), minor(r[15]), null, false);
             if (pay != null) out.putIfAbsent(pay, m);
             if (payout != null) out.putIfAbsent(payout, m);
             if (refund != null) out.putIfAbsent(refund, mRefund);
@@ -473,7 +556,7 @@ public class WalletService {
         }
         List<Object[]> w = em.createNativeQuery(
                         "SELECT w.monime_payout_id, u.full_name, w.status, w.method, w.provider_id, w.destination, w.holder_name, "
-                                + "w.amount_value, w.fee_value, w.created_at, w.failure_reason, u.email, w.id FROM wallet_withdrawals w "
+                                + "w.amount_value, w.fee_value, w.created_at, w.failure_reason, u.email, w.id, w.scope FROM wallet_withdrawals w "
                                 + "LEFT JOIN users u ON u.id = w.owner_user_id WHERE w.monime_payout_id IN (:ids)")
                 .setParameter("ids", ids).getResultList();
         for (Object[] r : w) {
@@ -490,7 +573,8 @@ public class WalletService {
             add(base, "Requested", when(r[9]));
             add(base, "Failure reason", r[10]);
             out.put((String) r[0], new Match(wref, null, null, null, false, owner, (String) r[2], base, null, null,
-                    minor(r[8])));
+                    "ADMIN".equals(r[13]) ? Long.valueOf(0) : (minor(r[8]) != null && minor(r[8]) > 0 ? minor(r[8]) : null),
+                    "ADMIN".equals(r[13])));
         }
         return out;
     }
@@ -643,7 +727,8 @@ public class WalletService {
         long monime = monimeApi.availableBalance(true);
         boolean isSuper = isSuper(me);
         UUID id = UUID.randomUUID();
-        final long fee = feeOf(minor);
+        // Admin withdrawals are free; only the super admin pays the service fee.
+        final long fee = isSuper ? feeOf(minor) : 0L;
 
         tx.executeWithoutResult(st -> {
             if (isSuper) {
@@ -657,13 +742,17 @@ public class WalletService {
                             + " (the rest is held for admin wallets or already on its way out).");
                 }
             } else {
+                // Same platform lock as the super admin path and transfers (always taken BEFORE a wallet row lock),
+                // so several admins withdrawing at once cannot together promise more than the account really holds.
+                lockPlatform();
                 ensureWallet(me.getId());
                 long balance = lockedBalance(me.getId());
                 if (minor > balance) {
                     throw new IllegalArgumentException("Your wallet balance is " + money(balance) + ".");
                 }
-                if (minor + fee > monime) {
-                    throw new IllegalStateException("The payment account is short right now. Please contact the super admin.");
+                long pendingNow = scalarTx("SELECT COALESCE(SUM(amount_value + fee_value), 0) FROM wallet_withdrawals WHERE status IN ('PENDING', 'REVIEW')");
+                if (minor + fee > monime - pendingNow) {
+                    throw new IllegalStateException("The payment account is busy or short right now. Please try again in a minute, or contact the super admin.");
                 }
                 long after = balance - minor;
                 em.createNativeQuery("UPDATE admin_wallets SET balance_value = :b, updated_at = now() WHERE user_id = :u")
@@ -835,7 +924,7 @@ public class WalletService {
             String dest = ("momo".equals(r[3]) ? MOMO_PROVIDERS.getOrDefault((String) r[4], "Mobile money") : "Bank")
                     + " " + r[5] + (r[6] == null ? "" : " (" + r[6] + ")");
             emails.sendWalletWithdrawalEmail(owner, stage, money(((Number) r[1]).longValue()),
-                    money(((Number) r[2]).longValue()), dest, (String) r[7], refOf(id));
+                    ((Number) r[2]).longValue() == 0 ? "Free" : money(((Number) r[2]).longValue()), dest, (String) r[7], refOf(id));
         } catch (RuntimeException e) {
             log.warn("Wallet: could not queue the withdrawal email for {}: {}", id, e.toString());
         }
@@ -1024,148 +1113,6 @@ Replace-File ($dir + 'WalletService.java') $f0
 $f1 = @'
 package com.glr.deenwallet.wallet;
 
-import com.glr.deenwallet.user.User;
-import jakarta.mail.internet.MimeMessage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Component;
-
-import java.nio.charset.StandardCharsets;
-
-/**
- * Emails for the admin wallet: withdrawal notices and transfer notices.
- * Self-contained (own look and sending) so it does not depend on the shared email classes.
- * Mail problems are logged and never break a withdrawal or a transfer.
- */
-@Component
-public class WalletMailer {
-
-    private static final Logger log = LoggerFactory.getLogger(WalletMailer.class);
-    private static final String BRAND = "#0F766E";
-    private static final String TEXT = "#1F2937";
-    private static final String MUTED = "#6B7280";
-    private static final String BORDER = "#E5E7EB";
-
-    @Value("${app.mail.from-email}")
-    private String senderEmail;
-
-    @Value("${app.mail.from-name}")
-    private String senderName;
-
-    @Value("${app.mail.support-email:support@deenwallapp.com}")
-    private String supportEmail;
-
-    private final JavaMailSender mailSender;
-
-    public WalletMailer(JavaMailSender mailSender) {
-        this.mailSender = mailSender;
-    }
-
-    /** Withdrawal notice (stage: started, completed or failed) to the owner's registered email. */
-    @Async("emailTaskExecutor")
-    public void sendWalletWithdrawalEmail(User admin, String stage, String amount, String fee,
-                                          String destination, String failureReason, String reference) {
-        boolean done = "completed".equals(stage);
-        boolean failed = "failed".equals(stage);
-        String title = done ? "Withdrawal completed" : (failed ? "Withdrawal failed" : "Withdrawal requested");
-        String intro = done
-                ? "Your withdrawal has been paid out."
-                : (failed ? "Your withdrawal could not be completed. If it was taken from your admin wallet, the money has been returned to it."
-                          : "We received your withdrawal request and it is being processed.");
-        StringBuilder rows = new StringBuilder();
-        rows.append(row("Reference", reference));
-        rows.append(row("Amount", amount));
-        rows.append(row("Service fee", fee));
-        rows.append(row("Sent to", destination));
-        if (failed && failureReason != null && !failureReason.isBlank()) rows.append(row("Reason", failureReason));
-        String body = "<h2 style=\"margin:0 0 14px 0;color:" + BRAND + ";font-size:22px;text-align:center;\">" + esc(title) + "</h2>"
-                + "<p style=\"margin:0 0 16px 0;color:" + MUTED + ";font-size:15px;line-height:1.6;\">Hello " + esc(admin.getFirstName()) + ", " + esc(intro) + "</p>"
-                + table(rows)
-                + "<p style=\"margin:0;color:" + MUTED + ";font-size:13px;text-align:center;\">If you did not make this withdrawal, contact support immediately.</p>";
-        send(admin.getEmail(), title + " " + reference, wrap(title, body));
-    }
-
-    /** Transfer notice: to the receiving admin (received = true) and a receipt to the super admin. */
-    @Async("emailTaskExecutor")
-    public void sendWalletTransferEmail(User to, boolean received, String otherName, String amount,
-                                        String note, String newBalance) {
-        String title = received ? "Money added to your wallet" : "Transfer sent";
-        String intro = received
-                ? otherName + " sent money to your admin wallet. Internal transfers are free."
-                : "You sent money to " + otherName + "'s admin wallet. Internal transfers are free.";
-        StringBuilder rows = new StringBuilder();
-        rows.append(row("Amount", amount));
-        rows.append(row(received ? "From" : "To", otherName));
-        if (note != null && !note.isBlank()) rows.append(row("Note", note));
-        if (received && newBalance != null) rows.append(row("Your wallet balance", newBalance));
-        String body = "<h2 style=\"margin:0 0 14px 0;color:" + BRAND + ";font-size:22px;text-align:center;\">" + esc(title) + "</h2>"
-                + "<p style=\"margin:0 0 16px 0;color:" + MUTED + ";font-size:15px;line-height:1.6;\">Hello " + esc(to.getFirstName()) + ", " + esc(intro) + "</p>"
-                + table(rows)
-                + "<p style=\"margin:0;color:" + MUTED + ";font-size:13px;text-align:center;\">If you do not recognise this transfer, contact support immediately.</p>";
-        send(to.getEmail(), received ? "You received " + amount + " in your wallet" : "Transfer sent " + amount, wrap(title, body));
-    }
-
-    private static String table(StringBuilder rows) {
-        return "<div style=\"border:1px solid " + BORDER + ";border-radius:12px;overflow:hidden;margin-bottom:24px;\">"
-                + "<table cellpadding=\"0\" cellspacing=\"0\" style=\"width:100%;border-collapse:collapse;\">" + rows + "</table></div>";
-    }
-
-    private static String row(String label, String value) {
-        return "<tr style=\"border-bottom:1px solid " + BORDER + ";\">"
-                + "<td style=\"padding:14px 16px;font-size:14px;color:" + MUTED + ";\">" + esc(label) + "</td>"
-                + "<td style=\"padding:14px 16px;font-size:14px;font-weight:600;color:" + TEXT + ";text-align:right;\">" + esc(value) + "</td></tr>";
-    }
-
-    private static String esc(String v) {
-        return v == null ? "" : v.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
-    }
-
-    private static String wrap(String title, String body) {
-        return "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>" + esc(title) + "</title></head>"
-                + "<body style=\"margin:0;padding:0;background:#F3F4F6;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;\">"
-                + "<table cellpadding=\"0\" cellspacing=\"0\" style=\"width:100%;background:#F3F4F6;padding:32px 16px;\"><tr><td align=\"center\">"
-                + "<table cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:540px;width:100%;background:#FFFFFF;border-radius:16px;overflow:hidden;border:1px solid " + BORDER + ";\">"
-                + "<tr><td style=\"background:" + BRAND + ";padding:22px 24px;text-align:center;font-size:22px;font-weight:800;letter-spacing:1px;color:#FFFFFF;\">DEENWALLET TRANSFER</td></tr>"
-                + "<tr><td style=\"padding:32px 24px;background:#FFFFFF;\">" + body + "</td></tr>"
-                + "<tr><td style=\"padding:20px 24px;background:#F9FAFB;border-top:1px solid " + BORDER + ";text-align:center;color:" + MUTED + ";font-size:11px;\">"
-                + "DEEN WALLET LTD &middot; Need help? support@deenwallapp.com<br>This is an automated message, please do not reply.</td></tr>"
-                + "</table></td></tr></table></body></html>";
-    }
-
-    private void send(String toEmail, String subject, String html) {
-        if (toEmail == null || toEmail.isBlank()) {
-            log.warn("Wallet email '{}' skipped: no recipient address", subject);
-            return;
-        }
-        for (int attempt = 1; attempt <= 3; attempt++) {
-            try {
-                MimeMessage message = mailSender.createMimeMessage();
-                MimeMessageHelper helper = new MimeMessageHelper(message, true, StandardCharsets.UTF_8.name());
-                helper.setFrom(senderEmail, senderName);
-                helper.setReplyTo(supportEmail, "DeenWallet Transfer Support");
-                helper.setTo(toEmail);
-                helper.setSubject(subject);
-                helper.setText(html.replaceAll("<[^>]+>", " ").replaceAll("\\s+", " ").trim(), html);
-                mailSender.send(message);
-                log.info("Wallet email sent to {} - {}", toEmail, subject);
-                return;
-            } catch (Exception e) {
-                log.warn("Wallet email to {} failed (attempt {}/3): {}", toEmail, attempt, e.toString());
-                try { Thread.sleep(1500L * attempt); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); return; }
-            }
-        }
-    }
-}
-'@
-Replace-File ($dir + 'WalletMailer.java') $f1
-
-$f2 = @'
-package com.glr.deenwallet.wallet;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.glr.deenwallet.monime.MonimeProperties;
@@ -1254,6 +1201,28 @@ public class WalletMonimeApi {
         }
     }
 
+    /**
+     * The financial-transaction reference of a payout (payout.source.transactionReference). It is empty until the
+     * payout has been processed. Used to tie a line in the payments / payouts list back to the DeenWallet record.
+     */
+    public String payoutReference(String payoutId) {
+        requireConfigured();
+        String body;
+        try {
+            body = monime.get().uri("/v1/payouts/{id}", payoutId).retrieve().body(String.class);
+        } catch (ResourceAccessException e) {
+            throw new IllegalStateException("The payment service could not be reached right now.");
+        } catch (RestClientResponseException e) {
+            throw new IllegalStateException("The payment service refused the request (HTTP " + e.getStatusCode().value() + ").");
+        }
+        try {
+            JsonNode ref = mapper.readTree(body).path("result").path("source").path("transactionReference");
+            return ref.isTextual() && !ref.asText().isBlank() ? ref.asText() : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     private void requireConfigured() {
         if (!configured()) {
             throw new IllegalStateException("The payment account is not set up on the server.");
@@ -1277,497 +1246,71 @@ public class WalletMonimeApi {
     }
 }
 '@
-Replace-File ($dir + 'WalletMonimeApi.java') $f2
+Replace-File ($dir + 'WalletMonimeApi.java') $f1
 
-$f3 = @'
+$f2 = @'
 package com.glr.deenwallet.wallet;
 
-import com.glr.deenwallet.user.User;
-import com.glr.deenwallet.user.UserRepository;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
-import java.util.List;
 import java.util.UUID;
 
 /**
- * Admin Wallet screen. /api/admin/** is already limited to ADMIN / SUPER_ADMIN by SecurityConfig;
- * the super-admin-only parts are checked again here.
- * Every rule violation answers 400 (never 401/403, which the admin app treats as "session expired").
+ * Finishes withdrawals from the Wallet screen: asks Monime what happened to each open payout, and re-sends
+ * (with the same idempotency key, so never twice) a withdrawal whose first request got no clear answer.
  */
-@RestController
-@RequestMapping("/api/admin/wallet")
-public class WalletController {
+@Component
+public class WalletReconcileJob {
 
-    public record TransferRequest(UUID adminId, BigDecimal amount, String note, String pin) { }
-
-    public record WithdrawRequest(String method, String providerId, String destination, BigDecimal amount, String pin) { }
+    private static final Logger log = LoggerFactory.getLogger(WalletReconcileJob.class);
 
     private final WalletService wallet;
-    private final UserRepository users;
 
-    public WalletController(WalletService wallet, UserRepository users) {
+    public WalletReconcileJob(WalletService wallet) {
         this.wallet = wallet;
-        this.users = users;
     }
 
-    @GetMapping
-    public ResponseEntity<WalletService.Summary> summary() {
-        return ResponseEntity.ok(wallet.summary(admin()));
-    }
-
-    /** Live payments in / payouts out of the DeenWallet account. type = credit (payments in) or debit (payouts out). Super admin only. */
-    @GetMapping("/transactions")
-    public ResponseEntity<WalletService.TxPage> transactions(@RequestParam(required = false) String type,
-                                                             @RequestParam(required = false) String after,
-                                                             @RequestParam(required = false) String q) {
-        requireSuper(admin());
-        if (q != null && !q.isBlank()) return ResponseEntity.ok(wallet.search(type, q));
-        return ResponseEntity.ok(wallet.transactions(type, after));
-    }
-
-    @GetMapping("/activity")
-    public ResponseEntity<List<WalletService.Activity>> activity() {
-        return ResponseEntity.ok(wallet.activity(admin()));
-    }
-
-    @GetMapping("/admins")
-    public ResponseEntity<List<WalletService.AdminRow>> admins() {
-        requireSuper(admin());
-        return ResponseEntity.ok(wallet.admins());
-    }
-
-    @GetMapping("/options")
-    public ResponseEntity<WalletService.Options> options() {
-        admin();
-        return ResponseEntity.ok(wallet.options());
-    }
-
-    @GetMapping("/lookup")
-    public ResponseEntity<WalletService.Lookup> lookup(@RequestParam String method,
-                                                       @RequestParam String providerId,
-                                                       @RequestParam String destination) {
-        return ResponseEntity.ok(wallet.lookup(admin(), method, providerId, destination));
-    }
-
-    @PostMapping("/transfer")
-    public ResponseEntity<WalletService.Summary> transfer(@RequestBody TransferRequest r) {
-        User me = admin();
-        requireSuper(me);
-        return ResponseEntity.ok(wallet.transfer(me, r.adminId(), r.amount(), r.note(), r.pin()));
-    }
-
-    @PostMapping("/withdraw")
-    public ResponseEntity<WalletService.Summary> withdraw(@RequestBody WithdrawRequest r) {
-        return ResponseEntity.ok(wallet.withdraw(admin(), r.method(), r.providerId(), r.destination(), r.amount(), r.pin()));
-    }
-
-    private void requireSuper(User u) {
-        if (!WalletService.isSuper(u)) throw new IllegalArgumentException("Only a super admin can do this.");
-    }
-
-    private User admin() {
-        Authentication a = SecurityContextHolder.getContext().getAuthentication();
-        if (a == null || !a.isAuthenticated()) throw new SecurityException("Not authenticated");
-        User u = users.findById(UUID.fromString((String) a.getPrincipal()))
-                .orElseThrow(() -> new SecurityException("User not found"));
-        if (!"ADMIN".equals(u.getRole()) && !"SUPER_ADMIN".equals(u.getRole()))
-            throw new SecurityException("Access denied: admin only");
-        if (!u.isActive()) throw new SecurityException("Admin account is inactive.");
-        return u;
+    @Scheduled(fixedDelay = 30_000, initialDelay = 60_000)
+    public void run() {
+        try {
+            wallet.syncPayoutRefs();
+        } catch (Exception e) {
+            log.warn("Wallet reference sync failed: {}", e.toString());
+        }
+        try {
+            for (UUID id : wallet.openWithdrawalIds()) {
+                try {
+                    wallet.reconcile(id);
+                } catch (Exception e) {
+                    log.warn("Wallet reconcile failed for withdrawal {}: {}", id, e.toString());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Wallet reconcile run failed: {}", e.toString());
+        }
     }
 }
 '@
-Replace-File ($dir + 'WalletController.java') $f3
+Replace-File ($dir + 'WalletReconcileJob.java') $f2
 
 $o0 = @'
-        .wallet-detail-row strong {
-            text-align: right;
-            word-break: break-word;
-        }
+if (!amt) { el.textContent = 'The service fee (' + pct + ') is worked out for you as soon as you enter an amount.'; el.className = 'wallet-note'; return; }
 '@
 $n0 = @'
-        .wallet-detail-row strong {
-            text-align: right;
-            word-break: break-word;
-        }
-
-        .wallet-eye {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 28px;
-            height: 28px;
-            margin-left: 6px;
-            padding: 0;
-            border: none;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, .16);
-            color: #fff;
-            cursor: pointer;
-        }
-
-        .wallet-eye svg {
-            width: 16px;
-            height: 16px;
-            stroke: currentColor;
-            fill: none;
-            stroke-width: 2;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-        }
-
-        .wallet-search-wrap {
-            margin: 8px 0 4px;
-        }
+if (!amt) { el.textContent = walletIsSuper() ? 'The service fee (' + pct + ') is worked out for you as soon as you enter an amount.' : 'Withdrawals from your wallet are free.'; el.className = 'wallet-note'; return; }
 '@
-Edit $o0 $n0 'css'
+Edit $o0 $n0 'hint'
 
 $o1 = @'
-<div class="wallet-hero-top"><span id="wallet-hero-label">Wallet</span><span class="wallet-live"><i></i> Live</span></div>
-'@
-$n1 = @'
-<div class="wallet-hero-top"><span style="display:inline-flex;align-items:center;"><span id="wallet-hero-label">Wallet</span><button type="button" class="wallet-eye" id="wallet-eye" aria-label="Hide or show amounts"></button></span><span class="wallet-live"><i></i> Live</span></div>
-'@
-Edit $o1 $n1 'hero top'
-
-$o2 = @'
-<p class="admin-card-sub" id="wallet-list-sub" style="margin:2px 0 4px;"></p>
-'@
-$n2 = @'
-<p class="admin-card-sub" id="wallet-list-sub" style="margin:2px 0 4px;"></p>
-                <div class="wallet-search-wrap hidden" id="wallet-search-wrap"><input id="wallet-search" class="wallet-input" type="search" autocomplete="off" placeholder="Search DeenWallet or payment reference" /></div>
-'@
-Edit $o2 $n2 'search box'
-
-$o3 = @'
-has no Monime fee.
-'@
-$n3 = @'
-has no service fee.
-'@
-Edit $o3 $n3 'free text'
-
-$o4 = @'
-var walletState = { summary: null, tab: 'activity', rows: [], next: null, pages: 0, timer: null, loading: false, options: null, admins: [] };
-'@
-$n4 = @'
-var walletState = { summary: null, tab: 'activity', rows: [], next: null, pages: 0, timer: null, loading: false, options: null, admins: [], seq: 0, query: '' };
-'@
-Edit $o4 $n4 'state'
-
-$o5 = @'
-            function wMoney(minor) { return 'SLE ' + wFmt(minor); }
-'@
-$n5 = @'
-            function wMoney(minor) { return 'SLE ' + wFmt(minor); }
-            // The eye button hides every amount on the wallet screen (remembered on this device).
-            var walletHidden = false;
-            try { walletHidden = localStorage.getItem('deenwallet_wallet_hidden') === '1'; } catch (e) { walletHidden = false; }
-            var W_MASK = '\u2022\u2022\u2022\u2022';
-            var W_EYE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
-            var W_EYE_OFF = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 6.1A9.9 9.9 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.7C3.9 8.4 2 12 2 12s3.6 7 10 7c1.7 0 3.2-.4 4.5-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
-            function wAmt(minor) { return walletHidden ? W_MASK : wFmt(minor); }
-            function wMoneyH(minor) { return walletHidden ? 'SLE ' + W_MASK : wMoney(minor); }
-            function walletPaintEye() {
-                var b = document.getElementById('wallet-eye');
-                if (!b) return;
-                b.innerHTML = walletHidden ? W_EYE_OFF : W_EYE;
-                b.setAttribute('aria-label', walletHidden ? 'Show amounts' : 'Hide amounts');
-            }
-'@
-Edit $o5 $n5 'mask helpers'
-
-$o6 = @'
-                    label.textContent = 'Monime account balance';
-                    amount.textContent = s.monimeAvailable == null ? 'Unavailable' : wMoney(s.monimeAvailable);
-                    sub.textContent = s.monimeAvailable == null
-                        ? (s.error || 'Could not read the Monime balance.')
-                        : 'Free to withdraw: ' + wMoney(s.withdrawable) + '  |  Held for admin wallets: ' + wMoney(s.heldForAdmins)
-                            + (s.pendingOut > 0 ? '  |  On its way out: ' + wMoney(s.pendingOut) : '');
-                } else {
-                    label.textContent = 'My wallet';
-                    amount.textContent = wMoney(s.myBalance);
-                    sub.textContent = s.myPending > 0 ? 'Withdrawals in progress: ' + wMoney(s.myPending) : 'Your pay from the super admin appears here. You can withdraw it.';
-'@
-$n6 = @'
-                    label.textContent = 'DeenWallet balance';
-                    amount.textContent = s.monimeAvailable == null ? 'Unavailable' : wMoneyH(s.monimeAvailable);
-                    sub.textContent = s.monimeAvailable == null
-                        ? (s.error || 'Could not read the balance.')
-                        : 'Free to withdraw: ' + wMoneyH(s.withdrawable) + '  |  Held for admin wallets: ' + wMoneyH(s.heldForAdmins)
-                            + (s.pendingOut > 0 ? '  |  On its way out: ' + wMoneyH(s.pendingOut) : '');
-                } else {
-                    label.textContent = 'My wallet';
-                    amount.textContent = wMoneyH(s.myBalance);
-                    sub.textContent = s.myPending > 0 ? 'Withdrawals in progress: ' + wMoneyH(s.myPending) : 'Your pay from the super admin appears here. You can withdraw it.';
-'@
-Edit $o6 $n6 'hero amounts'
-
-$o7 = @'
-(credit ? '+' : '-') + ' ' + wFmt(r.amount) + '</div>'
-'@
-$n7 = @'
-(credit ? '+' : '-') + ' ' + wAmt(r.amount) + '</div>'
-'@
-Edit $o7 $n7 'amt a'
-
-$o8 = @'
-Fee ' + wFmt(r.fee)
-'@
-$n8 = @'
-Fee ' + wAmt(r.fee)
-'@
-Edit $o8 $n8 'amt b'
-
-$o9 = @'
-Balance ' + wFmt(r.balanceAfter)
-'@
-$n9 = @'
-Balance ' + wAmt(r.balanceAfter)
-'@
-Edit $o9 $n9 'amt c'
-
-$o10 = @'
-(out ? '-' : '+') + ' ' + wFmt(a.amount)
-'@
-$n10 = @'
-(out ? '-' : '+') + ' ' + wAmt(a.amount)
-'@
-Edit $o10 $n10 'amt d'
-
-$o11 = @'
-wallet-amount">' + wMoney(a.balance)
-'@
-$n11 = @'
-wallet-amount">' + wMoneyH(a.balance)
-'@
-Edit $o11 $n11 'amt e'
-
-$o12 = @'
-' &middot; Monime fee ' + escapeHtml(wMoney(r.fee)) + ' included below'
-'@
-$n12 = @'
-' &middot; Service fee ' + escapeHtml(wMoney(r.fee)) + ' included below'
-'@
-Edit $o12 $n12 'detail fee text'
-
-$o13 = @'
-                sub.textContent = tab === 'payments' ? 'Every payment into the Monime account, live.'
-                    : tab === 'payouts' ? 'Every payout out of the Monime account, live.'
-                    : tab === 'admins' ?
-'@
-$n13 = @'
-                var searching = (tab === 'payments' || tab === 'payouts') && walletState.query;
-                document.getElementById('wallet-search-wrap').classList.toggle('hidden', !(tab === 'payments' || tab === 'payouts'));
-                sub.textContent = searching ? 'Results for "' + walletState.query + '" in the latest 600 entries.'
-                    : tab === 'payments' ? 'Every payment received by DeenWallet, live.'
-                    : tab === 'payouts' ? 'Every payout sent by DeenWallet, live.'
-                    : tab === 'admins' ?
-'@
-Edit $o13 $n13 'list texts'
-
-$o14 = @'
-list.innerHTML = '<div class="empty-state">' + (tab === 'admins' ? 'No admin accounts yet.' : 'Nothing here yet.') + '</div>';
-'@
-$n14 = @'
-list.innerHTML = walletState.loading ? '' : '<div class="empty-state">' + (tab === 'admins' ? 'No admin accounts yet.' : (searching ? 'No match found.' : 'Nothing here yet.')) + '</div>';
-'@
-Edit $o14 $n14 'empty text'
-
-$o15 = @'
-            function walletLoadList(append) {
-                var tab = walletState.tab;
-                var loading = document.getElementById('wallet-loading');
-                if (walletState.loading) return Promise.resolve();
-                walletState.loading = true;
-                if (!append && !walletState.rows.length) show(loading);
-                var req;
-                if (tab === 'payments' || tab === 'payouts') {
-                    var params = { type: tab === 'payments' ? 'credit' : 'debit' };
-                    if (append && walletState.next) params.after = walletState.next;
-                    req = adminApiRequest('/api/admin/wallet/transactions', { params: params }).then(function (page) {
-                        if (page.error) throw new Error(page.error);
-                        walletState.rows = append ? walletState.rows.concat(page.rows || []) : (page.rows || []);
-                        walletState.next = page.next || null;
-                        walletState.pages = append ? walletState.pages + 1 : 1;
-                    });
-                } else if (tab === 'admins') {
-                    req = adminApiRequest('/api/admin/wallet/admins').then(function (rows) {
-                        walletState.admins = rows || [];
-                        walletState.rows = walletState.admins; walletState.next = null; walletState.pages = 1;
-                    });
-                } else {
-                    req = adminApiRequest('/api/admin/wallet/activity').then(function (rows) {
-                        walletState.rows = rows || []; walletState.next = null; walletState.pages = 1;
-                    });
-                }
-                return req.then(function () { walletShowError(null); renderWalletList(); })
-                    .catch(function (e) { walletShowError(e.message || 'Could not load the wallet.'); })
-                    .finally(function () { walletState.loading = false; hide(loading); });
-            }
-'@
-$n15 = @'
-            function walletLoadList(append) {
-                var tab = walletState.tab;
-                var loading = document.getElementById('wallet-loading');
-                var seq = ++walletState.seq;   // a newer request (tab change, search) makes older answers ignored
-                walletState.loading = true;
-                if (!append && !walletState.rows.length) show(loading);
-                var req;
-                if (tab === 'payments' || tab === 'payouts') {
-                    var params = { type: tab === 'payments' ? 'credit' : 'debit' };
-                    if (walletState.query) params.q = walletState.query;
-                    else if (append && walletState.next) params.after = walletState.next;
-                    req = adminApiRequest('/api/admin/wallet/transactions', { params: params }).then(function (page) {
-                        if (seq !== walletState.seq) return;
-                        if (page.error) throw new Error(page.error);
-                        walletState.rows = append ? walletState.rows.concat(page.rows || []) : (page.rows || []);
-                        walletState.next = page.next || null;
-                        walletState.pages = append ? walletState.pages + 1 : 1;
-                    });
-                } else if (tab === 'admins') {
-                    req = adminApiRequest('/api/admin/wallet/admins').then(function (rows) {
-                        if (seq !== walletState.seq) return;
-                        walletState.admins = rows || [];
-                        walletState.rows = walletState.admins; walletState.next = null; walletState.pages = 1;
-                    });
-                } else {
-                    req = adminApiRequest('/api/admin/wallet/activity').then(function (rows) {
-                        if (seq !== walletState.seq) return;
-                        walletState.rows = rows || []; walletState.next = null; walletState.pages = 1;
-                    });
-                }
-                return req.then(function () {
-                        if (seq !== walletState.seq) return;
-                        walletState.loading = false; hide(loading);
-                        walletShowError(null); renderWalletList();
-                    })
-                    .catch(function (e) {
-                        if (seq !== walletState.seq) return;
-                        walletState.loading = false; hide(loading);
-                        walletShowError(e.message || 'Could not load the wallet.');
-                        renderWalletList();
-                    });
-            }
-'@
-Edit $o15 $n15 'load list'
-
-$o16 = @'
-                walletState.rows = []; walletState.next = null; walletState.pages = 0;
-                document.querySelectorAll('.wallet-tab')
-'@
-$n16 = @'
-                walletState.rows = []; walletState.next = null; walletState.pages = 0;
-                walletState.query = '';
-                var si = document.getElementById('wallet-search');
-                if (si) si.value = '';
-                document.querySelectorAll('.wallet-tab')
-'@
-Edit $o16 $n16 'set tab'
-
-$o17 = @'
-if (walletState.pages <= 1) walletLoadList(false);
-'@
-$n17 = @'
-if (walletState.pages <= 1 && !walletState.query) walletLoadList(false);
-'@
-Edit $o17 $n17 'poll'
-
-$o18 = @'
-            document.getElementById('wallet-more').addEventListener('click', function () { walletLoadList(true); });
-'@
-$n18 = @'
-            document.getElementById('wallet-more').addEventListener('click', function () { walletLoadList(true); });
-            var walletSearchTimer = null;
-            document.getElementById('wallet-search').addEventListener('input', function () {
-                var value = this.value.trim();
-                clearTimeout(walletSearchTimer);
-                walletSearchTimer = setTimeout(function () {
-                    if (value === walletState.query) return;
-                    walletState.query = value;
-                    walletState.rows = []; walletState.next = null; walletState.pages = 0;
-                    renderWalletList();
-                    walletLoadList(false);
-                }, 600);
-            });
-            document.getElementById('wallet-eye').addEventListener('click', function () {
-                walletHidden = !walletHidden;
-                try { localStorage.setItem('deenwallet_wallet_hidden', walletHidden ? '1' : '0'); } catch (e) { }
-                walletPaintEye();
-                renderWalletHero();
-                renderWalletList();
-            });
-            walletPaintEye();
-'@
-Edit $o18 $n18 'handlers'
-
-$o19 = @'
-'The Monime fee (' + pct + ') is worked out for you as soon as you enter an amount.'
-'@
-$n19 = @'
-'The service fee (' + pct + ') is worked out for you as soon as you enter an amount.'
-'@
-Edit $o19 $n19 'fee preview 1'
-
-$o20 = @'
-? 'Monime fee (' + pct + '): ' + wMoney(fee) + '. Total taken from the Monime account: ' + wMoney(minor + fee) + '.'
-'@
-$n20 = @'
-? 'Service fee (' + pct + '): ' + wMoney(fee) + '. Total taken from the DeenWallet balance: ' + wMoney(minor + fee) + '.'
-'@
-Edit $o20 $n20 'fee preview 2'
-
-$o21 = @'
-: 'Monime fee (' + pct + '): ' + wMoney(fee) + ', paid by the business. The receiver gets the full ' + wMoney(minor) + '.';
-'@
-$n21 = @'
 : 'Service fee (' + pct + '): ' + wMoney(fee) + ', paid by the business. The receiver gets the full ' + wMoney(minor) + '.';
 '@
-Edit $o21 $n21 'fee preview 3'
-
-$o22 = @'
-'Monime balance is not available right now.' : 'You can withdraw up to '
+$n1 = @'
+: 'Free: no service fee on your withdrawal. The receiver gets the full ' + wMoney(minor) + '.';
 '@
-$n22 = @'
-'The balance is not available right now.' : 'You can withdraw up to '
-'@
-Edit $o22 $n22 'avail 1'
-
-$o23 = @'
-                    : 'Monime balance is not available right now.';
-'@
-$n23 = @'
-                    : 'The balance is not available right now.';
-'@
-Edit $o23 $n23 'avail 2'
-
-$o24 = @'
-                if (currentAdminUser) currentUserRole = currentAdminUser.role || 'ADMIN';
-                loginScreen.classList.remove('active');
-'@
-$n24 = @'
-                if (currentAdminUser) currentUserRole = currentAdminUser.role || 'ADMIN';
-                // The saved profile only lives for one browser session. After the app was closed it is gone,
-                // so fetch it again (this brings back the Admin management menu and the email in the menu).
-                adminApiRequest('/api/admin/me').then(function (user) {
-                    if (!user) return;
-                    currentAdminUser = user;
-                    currentUserRole = user.role || 'ADMIN';
-                    try { sessionStorage.setItem('deenwallet_admin_profile', JSON.stringify(user)); } catch (e) { }
-                    updateAdminDrawerProfile();
-                }).catch(function () { });
-                loginScreen.classList.remove('active');
-'@
-Edit $o24 $n24 'profile'
+Edit $o1 $n1 'free'
 
 foreach ($f in $newFiles) {
   [System.IO.File]::WriteAllText((Join-Path $root $f[0]), $f[1], $utf8)

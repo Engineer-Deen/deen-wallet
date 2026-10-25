@@ -234,6 +234,13 @@ public class WalletService {
                 collectUuids(n, ids);
             }
         }
+        Set<String> refs = new HashSet<>();
+        for (JsonNode n : items) {
+            String r = text(n.path("reference"));
+            if (r != null) refs.add(r);
+        }
+        Map<String, String> payoutByRef = payoutIdsByReference(refs);
+        ids.addAll(payoutByRef.values());
         Map<String, Match> matches = match(ids);
         List<Draft> drafts = new ArrayList<>();
         for (JsonNode n : items) {
@@ -252,6 +259,7 @@ public class WalletService {
             Set<String> owners = new HashSet<>();
             collectOwnerIds(n.path("ownershipGraph").path("owner"), owners, 0);
             collectUuids(n, owners);
+            if (d.ref != null && payoutByRef.containsKey(d.ref)) owners.add(payoutByRef.get(d.ref));
             String ownerType = firstOwnerType(n.path("ownershipGraph").path("owner"));
             Match m = null;
             for (String o : owners) {
@@ -273,6 +281,7 @@ public class WalletService {
                 d.customer = m.withdrawalOwner;
                 d.status = m.withdrawalStatus;
                 d.fee = m.withdrawalFee;
+                d.freeWd = m.freeWd;
                 d.details.addAll(m.base);
             } else if (m != null) {
                 // A customer conversion: the payment in, or the payout out to the receiver.
@@ -305,9 +314,11 @@ public class WalletService {
         List<TxRow> rows = new ArrayList<>();
         for (Draft d : drafts) {
             if (d.folded) continue;
-            Long fee = d.foldedFee > 0 ? Long.valueOf(d.foldedFee) : d.fee;
+            Long fee = d.freeWd ? Long.valueOf(0) : (d.foldedFee > 0 ? Long.valueOf(d.foldedFee) : d.fee);
             List<Detail> details = new ArrayList<>(d.details);
-            if (fee != null && !d.isFee) {
+            if (d.freeWd) {
+                details.add(new Detail("Service fee", "Free"));
+            } else if (fee != null && !d.isFee) {
                 details.add(new Detail("Service fee", money(fee)));
                 if ("debit".equals(d.kind)) details.add(new Detail("Total taken from the balance", money(d.amount + fee)));
             }
@@ -321,19 +332,75 @@ public class WalletService {
         return new TxPage(rows, next, null);
     }
 
+    /** payout ids (as known to the payment service) for the given financial-transaction references. */
+    @SuppressWarnings("unchecked")
+    private Map<String, String> payoutIdsByReference(Set<String> refs) {
+        Map<String, String> out = new LinkedHashMap<>();
+        if (refs.isEmpty()) return out;
+        try {
+            List<Object[]> rows = em.createNativeQuery(
+                            "SELECT txn_reference, payout_id FROM wallet_payout_refs WHERE txn_reference IN (:refs)")
+                    .setParameter("refs", refs).getResultList();
+            for (Object[] r : rows) out.put((String) r[0], (String) r[1]);
+        } catch (RuntimeException e) {
+            log.warn("Wallet: reference lookup failed: {}", e.toString());
+        }
+        return out;
+    }
+
+    /**
+     * Learns which payment-service reference belongs to which payout (customer payouts and wallet withdrawals), a few
+     * per run, newest first. This is what lets a line in the Payouts list show its DeenWallet reference.
+     * Called by WalletReconcileJob.
+     */
+    @SuppressWarnings("unchecked")
+    void syncPayoutRefs() {
+        if (!monimeApi.configured()) return;
+        List<Object> pending = em.createNativeQuery(
+                "SELECT p.pid FROM ("
+                        + "SELECT monime_payout_id AS pid, created_at FROM wallet_withdrawals WHERE monime_payout_id IS NOT NULL "
+                        + "UNION ALL SELECT monime_payout_id, created_at FROM transactions WHERE monime_payout_id IS NOT NULL AND created_at > now() - interval '45 days' "
+                        + "UNION ALL SELECT refund_payout_id, created_at FROM transactions WHERE refund_payout_id IS NOT NULL AND created_at > now() - interval '45 days'"
+                        + ") p LEFT JOIN wallet_payout_refs r ON r.payout_id = p.pid "
+                        + "WHERE r.payout_id IS NULL OR (r.txn_reference IS NULL AND r.attempts < 10 AND r.last_try < now() - interval '2 minutes') "
+                        + "ORDER BY p.created_at DESC LIMIT 20").getResultList();
+        for (Object o : pending) {
+            String payoutId = String.valueOf(o);
+            String ref;
+            try {
+                ref = monimeApi.payoutReference(payoutId);
+            } catch (RuntimeException e) {
+                log.debug("Wallet: could not read the reference of payout {}: {}", payoutId, e.toString());
+                continue;
+            }
+            final String finalRef = ref;
+            tx.executeWithoutResult(st -> {
+                if (finalRef != null) {
+                    em.createNativeQuery("INSERT INTO wallet_payout_refs (payout_id, txn_reference, attempts, last_try) VALUES (:p, :r, 1, now()) "
+                                    + "ON CONFLICT (payout_id) DO UPDATE SET txn_reference = EXCLUDED.txn_reference, attempts = wallet_payout_refs.attempts + 1, last_try = now()")
+                            .setParameter("p", payoutId).setParameter("r", finalRef).executeUpdate();
+                } else {
+                    em.createNativeQuery("INSERT INTO wallet_payout_refs (payout_id, attempts, last_try) VALUES (:p, 1, now()) "
+                                    + "ON CONFLICT (payout_id) DO UPDATE SET attempts = wallet_payout_refs.attempts + 1, last_try = now()")
+                            .setParameter("p", payoutId).executeUpdate();
+                }
+            });
+        }
+    }
+
     private static final class Draft {
         String id, kind, ts, ref, label, detail, dwCode, customer, status, topOwner;
         long amount;
         Long balanceAfter;
         Long fee;
         long foldedFee;
-        boolean isFee, folded;
+        boolean isFee, folded, freeWd;
         List<Detail> details;
     }
 
     private record Match(String code, String customer, String service, String status, boolean refund,
                          String withdrawalOwner, String withdrawalStatus, List<Detail> base,
-                         Long depositFee, Long payoutFee, Long withdrawalFee) { }
+                         Long depositFee, Long payoutFee, Long withdrawalFee, boolean freeWd) { }
 
     private static void add(List<Detail> list, String label, Object value) {
         if (value == null) return;
@@ -413,8 +480,8 @@ public class WalletService {
             add(base, "Created", when(r[22]));
             add(base, "Payment received", when(r[23]));
             add(base, "Failure reason", r[24]);
-            Match m = new Match(code, name, service, status, false, null, null, base, minor(r[14]), minor(r[15]), null);
-            Match mRefund = new Match(code, name, service, status, true, null, null, base, minor(r[14]), minor(r[15]), null);
+            Match m = new Match(code, name, service, status, false, null, null, base, minor(r[14]), minor(r[15]), null, false);
+            Match mRefund = new Match(code, name, service, status, true, null, null, base, minor(r[14]), minor(r[15]), null, false);
             if (pay != null) out.putIfAbsent(pay, m);
             if (payout != null) out.putIfAbsent(payout, m);
             if (refund != null) out.putIfAbsent(refund, mRefund);
@@ -422,7 +489,7 @@ public class WalletService {
         }
         List<Object[]> w = em.createNativeQuery(
                         "SELECT w.monime_payout_id, u.full_name, w.status, w.method, w.provider_id, w.destination, w.holder_name, "
-                                + "w.amount_value, w.fee_value, w.created_at, w.failure_reason, u.email, w.id FROM wallet_withdrawals w "
+                                + "w.amount_value, w.fee_value, w.created_at, w.failure_reason, u.email, w.id, w.scope FROM wallet_withdrawals w "
                                 + "LEFT JOIN users u ON u.id = w.owner_user_id WHERE w.monime_payout_id IN (:ids)")
                 .setParameter("ids", ids).getResultList();
         for (Object[] r : w) {
@@ -439,7 +506,8 @@ public class WalletService {
             add(base, "Requested", when(r[9]));
             add(base, "Failure reason", r[10]);
             out.put((String) r[0], new Match(wref, null, null, null, false, owner, (String) r[2], base, null, null,
-                    minor(r[8])));
+                    "ADMIN".equals(r[13]) ? Long.valueOf(0) : (minor(r[8]) != null && minor(r[8]) > 0 ? minor(r[8]) : null),
+                    "ADMIN".equals(r[13])));
         }
         return out;
     }
@@ -592,7 +660,8 @@ public class WalletService {
         long monime = monimeApi.availableBalance(true);
         boolean isSuper = isSuper(me);
         UUID id = UUID.randomUUID();
-        final long fee = feeOf(minor);
+        // Admin withdrawals are free; only the super admin pays the service fee.
+        final long fee = isSuper ? feeOf(minor) : 0L;
 
         tx.executeWithoutResult(st -> {
             if (isSuper) {
@@ -606,13 +675,17 @@ public class WalletService {
                             + " (the rest is held for admin wallets or already on its way out).");
                 }
             } else {
+                // Same platform lock as the super admin path and transfers (always taken BEFORE a wallet row lock),
+                // so several admins withdrawing at once cannot together promise more than the account really holds.
+                lockPlatform();
                 ensureWallet(me.getId());
                 long balance = lockedBalance(me.getId());
                 if (minor > balance) {
                     throw new IllegalArgumentException("Your wallet balance is " + money(balance) + ".");
                 }
-                if (minor + fee > monime) {
-                    throw new IllegalStateException("The payment account is short right now. Please contact the super admin.");
+                long pendingNow = scalarTx("SELECT COALESCE(SUM(amount_value + fee_value), 0) FROM wallet_withdrawals WHERE status IN ('PENDING', 'REVIEW')");
+                if (minor + fee > monime - pendingNow) {
+                    throw new IllegalStateException("The payment account is busy or short right now. Please try again in a minute, or contact the super admin.");
                 }
                 long after = balance - minor;
                 em.createNativeQuery("UPDATE admin_wallets SET balance_value = :b, updated_at = now() WHERE user_id = :u")
@@ -784,7 +857,7 @@ public class WalletService {
             String dest = ("momo".equals(r[3]) ? MOMO_PROVIDERS.getOrDefault((String) r[4], "Mobile money") : "Bank")
                     + " " + r[5] + (r[6] == null ? "" : " (" + r[6] + ")");
             emails.sendWalletWithdrawalEmail(owner, stage, money(((Number) r[1]).longValue()),
-                    money(((Number) r[2]).longValue()), dest, (String) r[7], refOf(id));
+                    ((Number) r[2]).longValue() == 0 ? "Free" : money(((Number) r[2]).longValue()), dest, (String) r[7], refOf(id));
         } catch (RuntimeException e) {
             log.warn("Wallet: could not queue the withdrawal email for {}: {}", id, e.toString());
         }

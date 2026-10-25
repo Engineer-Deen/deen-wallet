@@ -88,6 +88,28 @@ public class WalletMonimeApi {
         }
     }
 
+    /**
+     * The financial-transaction reference of a payout (payout.source.transactionReference). It is empty until the
+     * payout has been processed. Used to tie a line in the payments / payouts list back to the DeenWallet record.
+     */
+    public String payoutReference(String payoutId) {
+        requireConfigured();
+        String body;
+        try {
+            body = monime.get().uri("/v1/payouts/{id}", payoutId).retrieve().body(String.class);
+        } catch (ResourceAccessException e) {
+            throw new IllegalStateException("The payment service could not be reached right now.");
+        } catch (RestClientResponseException e) {
+            throw new IllegalStateException("The payment service refused the request (HTTP " + e.getStatusCode().value() + ").");
+        }
+        try {
+            JsonNode ref = mapper.readTree(body).path("result").path("source").path("transactionReference");
+            return ref.isTextual() && !ref.asText().isBlank() ? ref.asText() : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     private void requireConfigured() {
         if (!configured()) {
             throw new IllegalStateException("The payment account is not set up on the server.");
