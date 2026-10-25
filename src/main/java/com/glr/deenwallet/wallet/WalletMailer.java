@@ -55,7 +55,7 @@ public class WalletMailer {
         StringBuilder rows = new StringBuilder();
         rows.append(row("Reference", reference));
         rows.append(row("Amount", amount));
-        rows.append(row("Monime fee", fee));
+        rows.append(row("Service fee", fee));
         rows.append(row("Sent to", destination));
         if (failed && failureReason != null && !failureReason.isBlank()) rows.append(row("Reason", failureReason));
         String body = "<h2 style=\"margin:0 0 14px 0;color:" + BRAND + ";font-size:22px;text-align:center;\">" + esc(title) + "</h2>"

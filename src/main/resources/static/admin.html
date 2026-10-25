@@ -1026,6 +1026,35 @@
             word-break: break-word;
         }
 
+        .wallet-eye {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            margin-left: 6px;
+            padding: 0;
+            border: none;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, .16);
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .wallet-eye svg {
+            width: 16px;
+            height: 16px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .wallet-search-wrap {
+            margin: 8px 0 4px;
+        }
+
         /* ===== Search ===== */
         .search-bar {
             display: flex;
@@ -2742,7 +2771,7 @@
         <div class="scroll hidden" id="tab-wallet">
             <div id="wallet-error" class="error-state hidden"></div>
             <div class="wallet-hero">
-                <div class="wallet-hero-top"><span id="wallet-hero-label">Wallet</span><span class="wallet-live"><i></i> Live</span></div>
+                <div class="wallet-hero-top"><span style="display:inline-flex;align-items:center;"><span id="wallet-hero-label">Wallet</span><button type="button" class="wallet-eye" id="wallet-eye" aria-label="Hide or show amounts"></button></span><span class="wallet-live"><i></i> Live</span></div>
                 <div class="wallet-hero-amount" id="wallet-balance">&mdash;</div>
                 <div class="wallet-hero-sub" id="wallet-sub"></div>
                 <div class="wallet-actions">
@@ -2759,6 +2788,7 @@
             <div class="admin-card" style="margin-top:10px;padding:6px 12px 10px;">
                 <p class="admin-card-title" id="wallet-list-title" style="margin:10px 0 0;">Activity</p>
                 <p class="admin-card-sub" id="wallet-list-sub" style="margin:2px 0 4px;"></p>
+                <div class="wallet-search-wrap hidden" id="wallet-search-wrap"><input id="wallet-search" class="wallet-input" type="search" autocomplete="off" placeholder="Search DeenWallet or payment reference" /></div>
                 <div id="wallet-loading" class="loading-state hidden"><div class="spinner"></div>Loading&hellip;</div>
                 <div id="wallet-list"></div>
                 <button type="button" class="btn-sm refresh hidden" id="wallet-more" style="margin:10px 0 4px;width:100%;">Load more</button>
@@ -2797,7 +2827,7 @@
                 <div class="wallet-sheet">
                     <div class="wallet-sheet-head"><strong>Send money to an admin</strong><button type="button" class="wallet-sheet-close" data-wallet-close="transfer" aria-label="Close">&times;</button></div>
                     <div class="wallet-note" id="tr-available"></div>
-                    <div class="wallet-note ok">Free: an internal transfer has no Monime fee. The admin is told by email.</div>
+                    <div class="wallet-note ok">Free: an internal transfer has no service fee. The admin is told by email.</div>
                     <div class="wallet-field"><label for="tr-admin">Admin</label><select id="tr-admin" class="wallet-input"></select></div>
                     <div class="wallet-field"><label for="tr-amount">Amount (SLE)</label><input id="tr-amount" class="wallet-input" autocomplete="off" inputmode="decimal" placeholder="0.00" /></div>
                     <div class="wallet-field"><label for="tr-note">Note (optional)</label><input id="tr-note" class="wallet-input" maxlength="300" placeholder="For example: October salary" /></div>
@@ -4915,13 +4945,27 @@
             // ==============================================================
             // WALLET
             // ==============================================================
-            var walletState = { summary: null, tab: 'activity', rows: [], next: null, pages: 0, timer: null, loading: false, options: null, admins: [] };
+            var walletState = { summary: null, tab: 'activity', rows: [], next: null, pages: 0, timer: null, loading: false, options: null, admins: [], seq: 0, query: '' };
 
             function wFmt(minor) {
                 var v = Number(minor || 0) / 100;
                 return v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             }
             function wMoney(minor) { return 'SLE ' + wFmt(minor); }
+            // The eye button hides every amount on the wallet screen (remembered on this device).
+            var walletHidden = false;
+            try { walletHidden = localStorage.getItem('deenwallet_wallet_hidden') === '1'; } catch (e) { walletHidden = false; }
+            var W_MASK = '\u2022\u2022\u2022\u2022';
+            var W_EYE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+            var W_EYE_OFF = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 6.1A9.9 9.9 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.7C3.9 8.4 2 12 2 12s3.6 7 10 7c1.7 0 3.2-.4 4.5-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
+            function wAmt(minor) { return walletHidden ? W_MASK : wFmt(minor); }
+            function wMoneyH(minor) { return walletHidden ? 'SLE ' + W_MASK : wMoney(minor); }
+            function walletPaintEye() {
+                var b = document.getElementById('wallet-eye');
+                if (!b) return;
+                b.innerHTML = walletHidden ? W_EYE_OFF : W_EYE;
+                b.setAttribute('aria-label', walletHidden ? 'Show amounts' : 'Hide amounts');
+            }
             function wTime(ts) {
                 if (!ts) return '';
                 var d = new Date(ts);
@@ -4953,16 +4997,16 @@
                 var amount = document.getElementById('wallet-balance');
                 var sub = document.getElementById('wallet-sub');
                 if (s.superAdmin) {
-                    label.textContent = 'Monime account balance';
-                    amount.textContent = s.monimeAvailable == null ? 'Unavailable' : wMoney(s.monimeAvailable);
+                    label.textContent = 'DeenWallet balance';
+                    amount.textContent = s.monimeAvailable == null ? 'Unavailable' : wMoneyH(s.monimeAvailable);
                     sub.textContent = s.monimeAvailable == null
-                        ? (s.error || 'Could not read the Monime balance.')
-                        : 'Free to withdraw: ' + wMoney(s.withdrawable) + '  |  Held for admin wallets: ' + wMoney(s.heldForAdmins)
-                            + (s.pendingOut > 0 ? '  |  On its way out: ' + wMoney(s.pendingOut) : '');
+                        ? (s.error || 'Could not read the balance.')
+                        : 'Free to withdraw: ' + wMoneyH(s.withdrawable) + '  |  Held for admin wallets: ' + wMoneyH(s.heldForAdmins)
+                            + (s.pendingOut > 0 ? '  |  On its way out: ' + wMoneyH(s.pendingOut) : '');
                 } else {
                     label.textContent = 'My wallet';
-                    amount.textContent = wMoney(s.myBalance);
-                    sub.textContent = s.myPending > 0 ? 'Withdrawals in progress: ' + wMoney(s.myPending) : 'Your pay from the super admin appears here. You can withdraw it.';
+                    amount.textContent = wMoneyH(s.myBalance);
+                    sub.textContent = s.myPending > 0 ? 'Withdrawals in progress: ' + wMoneyH(s.myPending) : 'Your pay from the super admin appears here. You can withdraw it.';
                 }
                 document.getElementById('wallet-transfer-btn').classList.toggle('hidden', !s.superAdmin);
                 document.getElementById('wallet-tabs').classList.toggle('hidden', !s.superAdmin);
@@ -4984,9 +5028,9 @@
                     + '<div class="wallet-row-icon ' + (credit ? '' : 'out') + '">' + (credit ? W_ICON_IN : W_ICON_OUT) + '</div>'
                     + '<div class="wallet-row-main"><div class="wallet-row-title">' + escapeHtml(title) + (tag ? '<span class="wallet-tag">' + tag + '</span>' : '') + '</div>'
                     + '<div class="wallet-row-sub">' + subParts.join(' &middot; ') + '</div></div>'
-                    + '<div class="wallet-row-side"><div class="wallet-amount ' + (credit ? 'in' : 'out') + '">' + (credit ? '+' : '-') + ' ' + wFmt(r.amount) + '</div>'
-                    + (r.fee > 0 ? '<div class="wallet-amount-sub">Fee ' + wFmt(r.fee) + '</div>'
-                        : (r.balanceAfter != null ? '<div class="wallet-amount-sub">Balance ' + wFmt(r.balanceAfter) + '</div>' : '')) + '</div>'
+                    + '<div class="wallet-row-side"><div class="wallet-amount ' + (credit ? 'in' : 'out') + '">' + (credit ? '+' : '-') + ' ' + wAmt(r.amount) + '</div>'
+                    + (r.fee > 0 ? '<div class="wallet-amount-sub">Fee ' + wAmt(r.fee) + '</div>'
+                        : (r.balanceAfter != null ? '<div class="wallet-amount-sub">Balance ' + wAmt(r.balanceAfter) + '</div>' : '')) + '</div>'
                     + '</div>';
             }
 
@@ -4997,7 +5041,7 @@
                 var html = '<div class="wallet-detail-amount ' + (credit ? 'in' : 'out') + '">' + (credit ? '+' : '-') + ' ' + wMoney(r.amount) + '</div>';
                 var when = r.timestamp ? new Date(r.timestamp) : null;
                 html += '<div class="wallet-detail-sub">' + (when && !isNaN(when.getTime()) ? escapeHtml(when.toLocaleString()) : '')
-                    + (r.fee > 0 ? ' &middot; Monime fee ' + escapeHtml(wMoney(r.fee)) + ' included below' : '') + '</div>';
+                    + (r.fee > 0 ? ' &middot; Service fee ' + escapeHtml(wMoney(r.fee)) + ' included below' : '') + '</div>';
                 (r.details || []).forEach(function (d) {
                     html += '<div class="wallet-detail-row"><span>' + escapeHtml(d.label) + '</span><strong>' + escapeHtml(d.value) + '</strong></div>';
                 });
@@ -5026,7 +5070,7 @@
                 return '<div class="wallet-row">'
                     + '<div class="wallet-row-icon ' + (out ? 'out' : '') + '">' + (out ? W_ICON_OUT : W_ICON_IN) + '</div>'
                     + '<div class="wallet-row-main"><div class="wallet-row-title">' + title + '</div><div class="wallet-row-sub">' + sub + '</div></div>'
-                    + '<div class="wallet-row-side"><div class="wallet-amount ' + (out ? 'out' : 'in') + '">' + (out ? '-' : '+') + ' ' + wFmt(a.amount) + '</div>' + pill + '</div>'
+                    + '<div class="wallet-row-side"><div class="wallet-amount ' + (out ? 'out' : 'in') + '">' + (out ? '-' : '+') + ' ' + wAmt(a.amount) + '</div>' + pill + '</div>'
                     + '</div>';
             }
 
@@ -5035,7 +5079,7 @@
                     + '<div class="wallet-row-icon neutral">' + W_ICON_DOT + '</div>'
                     + '<div class="wallet-row-main"><div class="wallet-row-title">' + escapeHtml(a.name || 'Admin') + '</div>'
                     + '<div class="wallet-row-sub">' + escapeHtml(a.email || '') + '</div></div>'
-                    + '<div class="wallet-row-side"><div class="wallet-amount">' + wMoney(a.balance) + '</div>'
+                    + '<div class="wallet-row-side"><div class="wallet-amount">' + wMoneyH(a.balance) + '</div>'
                     + '<button type="button" class="btn-sm refresh" data-send-admin="' + escapeHtml(a.id) + '" style="margin-top:4px;padding:4px 10px;">Send money</button></div>'
                     + '</div>';
             }
@@ -5046,12 +5090,15 @@
                 var title = document.getElementById('wallet-list-title');
                 var sub = document.getElementById('wallet-list-sub');
                 title.textContent = tab === 'payments' ? 'Payments received' : tab === 'payouts' ? 'Payouts sent' : tab === 'admins' ? 'Admin wallets' : 'Wallet activity';
-                sub.textContent = tab === 'payments' ? 'Every payment into the Monime account, live.'
-                    : tab === 'payouts' ? 'Every payout out of the Monime account, live.'
+                var searching = (tab === 'payments' || tab === 'payouts') && walletState.query;
+                document.getElementById('wallet-search-wrap').classList.toggle('hidden', !(tab === 'payments' || tab === 'payouts'));
+                sub.textContent = searching ? 'Results for "' + walletState.query + '" in the latest 600 entries.'
+                    : tab === 'payments' ? 'Every payment received by DeenWallet, live.'
+                    : tab === 'payouts' ? 'Every payout sent by DeenWallet, live.'
                     : tab === 'admins' ? 'Balances owed to admins. Tap Send money to pay an admin.'
                     : (walletIsSuper() ? 'Withdrawals and transfers made from the wallet.' : 'Pay you received and your withdrawals.');
                 if (!walletState.rows.length) {
-                    list.innerHTML = '<div class="empty-state">' + (tab === 'admins' ? 'No admin accounts yet.' : 'Nothing here yet.') + '</div>';
+                    list.innerHTML = walletState.loading ? '' : '<div class="empty-state">' + (tab === 'admins' ? 'No admin accounts yet.' : (searching ? 'No match found.' : 'Nothing here yet.')) + '</div>';
                 } else {
                     var html = '';
                     walletState.rows.forEach(function (r, i) {
@@ -5071,14 +5118,16 @@
             function walletLoadList(append) {
                 var tab = walletState.tab;
                 var loading = document.getElementById('wallet-loading');
-                if (walletState.loading) return Promise.resolve();
+                var seq = ++walletState.seq;   // a newer request (tab change, search) makes older answers ignored
                 walletState.loading = true;
                 if (!append && !walletState.rows.length) show(loading);
                 var req;
                 if (tab === 'payments' || tab === 'payouts') {
                     var params = { type: tab === 'payments' ? 'credit' : 'debit' };
-                    if (append && walletState.next) params.after = walletState.next;
+                    if (walletState.query) params.q = walletState.query;
+                    else if (append && walletState.next) params.after = walletState.next;
                     req = adminApiRequest('/api/admin/wallet/transactions', { params: params }).then(function (page) {
+                        if (seq !== walletState.seq) return;
                         if (page.error) throw new Error(page.error);
                         walletState.rows = append ? walletState.rows.concat(page.rows || []) : (page.rows || []);
                         walletState.next = page.next || null;
@@ -5086,17 +5135,27 @@
                     });
                 } else if (tab === 'admins') {
                     req = adminApiRequest('/api/admin/wallet/admins').then(function (rows) {
+                        if (seq !== walletState.seq) return;
                         walletState.admins = rows || [];
                         walletState.rows = walletState.admins; walletState.next = null; walletState.pages = 1;
                     });
                 } else {
                     req = adminApiRequest('/api/admin/wallet/activity').then(function (rows) {
+                        if (seq !== walletState.seq) return;
                         walletState.rows = rows || []; walletState.next = null; walletState.pages = 1;
                     });
                 }
-                return req.then(function () { walletShowError(null); renderWalletList(); })
-                    .catch(function (e) { walletShowError(e.message || 'Could not load the wallet.'); })
-                    .finally(function () { walletState.loading = false; hide(loading); });
+                return req.then(function () {
+                        if (seq !== walletState.seq) return;
+                        walletState.loading = false; hide(loading);
+                        walletShowError(null); renderWalletList();
+                    })
+                    .catch(function (e) {
+                        if (seq !== walletState.seq) return;
+                        walletState.loading = false; hide(loading);
+                        walletShowError(e.message || 'Could not load the wallet.');
+                        renderWalletList();
+                    });
             }
 
             function walletRefreshSummary() {
@@ -5110,6 +5169,9 @@
             function walletSetTab(tab) {
                 walletState.tab = tab;
                 walletState.rows = []; walletState.next = null; walletState.pages = 0;
+                walletState.query = '';
+                var si = document.getElementById('wallet-search');
+                if (si) si.value = '';
                 document.querySelectorAll('.wallet-tab').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-wtab') === tab); });
                 renderWalletList();
                 return walletLoadList(false);
@@ -5127,7 +5189,7 @@
                     if (!tabEl || tabEl.classList.contains('hidden')) { clearInterval(walletState.timer); walletState.timer = null; return; }
                     if (document.querySelector('.wallet-sheet-overlay.open')) return;
                     walletRefreshSummary().catch(function () { });
-                    if (walletState.pages <= 1) walletLoadList(false);
+                    if (walletState.pages <= 1 && !walletState.query) walletLoadList(false);
                 }, 10000);
             }
 
@@ -5135,6 +5197,26 @@
                 b.addEventListener('click', function () { walletSetTab(b.getAttribute('data-wtab')); });
             });
             document.getElementById('wallet-more').addEventListener('click', function () { walletLoadList(true); });
+            var walletSearchTimer = null;
+            document.getElementById('wallet-search').addEventListener('input', function () {
+                var value = this.value.trim();
+                clearTimeout(walletSearchTimer);
+                walletSearchTimer = setTimeout(function () {
+                    if (value === walletState.query) return;
+                    walletState.query = value;
+                    walletState.rows = []; walletState.next = null; walletState.pages = 0;
+                    renderWalletList();
+                    walletLoadList(false);
+                }, 600);
+            });
+            document.getElementById('wallet-eye').addEventListener('click', function () {
+                walletHidden = !walletHidden;
+                try { localStorage.setItem('deenwallet_wallet_hidden', walletHidden ? '1' : '0'); } catch (e) { }
+                walletPaintEye();
+                renderWalletHero();
+                renderWalletList();
+            });
+            walletPaintEye();
 
             function walletOpenSheet(name) {
                 var el = document.getElementById('wallet-' + name + '-overlay');
@@ -5199,19 +5281,19 @@
                 var el = document.getElementById('wd-fee');
                 var amt = wParseAmount(document.getElementById('wd-amount').value);
                 var pct = (walletState.options && walletState.options.feePercent) || '1%';
-                if (!amt) { el.textContent = 'The Monime fee (' + pct + ') is worked out for you as soon as you enter an amount.'; el.className = 'wallet-note'; return; }
+                if (!amt) { el.textContent = 'The service fee (' + pct + ') is worked out for you as soon as you enter an amount.'; el.className = 'wallet-note'; return; }
                 var parts = amt.split('.');
                 var minor = Number(parts[0]) * 100 + Number(((parts[1] || '') + '00').substring(0, 2));
                 var fee = Math.floor((minor + 50) / 100);
                 el.className = 'wallet-note ok';
                 el.textContent = walletIsSuper()
-                    ? 'Monime fee (' + pct + '): ' + wMoney(fee) + '. Total taken from the Monime account: ' + wMoney(minor + fee) + '.'
-                    : 'Monime fee (' + pct + '): ' + wMoney(fee) + ', paid by the business. The receiver gets the full ' + wMoney(minor) + '.';
+                    ? 'Service fee (' + pct + '): ' + wMoney(fee) + '. Total taken from the DeenWallet balance: ' + wMoney(minor + fee) + '.'
+                    : 'Service fee (' + pct + '): ' + wMoney(fee) + ', paid by the business. The receiver gets the full ' + wMoney(minor) + '.';
             }
             function wdAvailableText() {
                 var s = walletState.summary;
                 if (!s) return '';
-                if (s.superAdmin) return s.withdrawable == null ? 'Monime balance is not available right now.' : 'You can withdraw up to ' + wMoney(s.withdrawable) + '.';
+                if (s.superAdmin) return s.withdrawable == null ? 'The balance is not available right now.' : 'You can withdraw up to ' + wMoney(s.withdrawable) + '.';
                 return 'Your wallet balance: ' + wMoney(s.myBalance) + '.';
             }
             function walletOpenWithdraw() {
@@ -5296,7 +5378,7 @@
                 var s = walletState.summary;
                 document.getElementById('tr-available').textContent = s && s.withdrawable != null
                     ? 'You can send up to ' + wMoney(s.withdrawable) + ' (money not already held for admins).'
-                    : 'Monime balance is not available right now.';
+                    : 'The balance is not available right now.';
                 adminApiRequest('/api/admin/wallet/admins').then(function (rows) {
                     var sel = document.getElementById('tr-admin');
                     sel.innerHTML = '';
@@ -6605,6 +6687,15 @@
             if (getToken()) {
                 try { currentAdminUser = JSON.parse(sessionStorage.getItem('deenwallet_admin_profile') || 'null'); } catch (e) { currentAdminUser = null; }
                 if (currentAdminUser) currentUserRole = currentAdminUser.role || 'ADMIN';
+                // The saved profile only lives for one browser session. After the app was closed it is gone,
+                // so fetch it again (this brings back the Admin management menu and the email in the menu).
+                adminApiRequest('/api/admin/me').then(function (user) {
+                    if (!user) return;
+                    currentAdminUser = user;
+                    currentUserRole = user.role || 'ADMIN';
+                    try { sessionStorage.setItem('deenwallet_admin_profile', JSON.stringify(user)); } catch (e) { }
+                    updateAdminDrawerProfile();
+                }).catch(function () { });
                 loginScreen.classList.remove('active');
                 mainScreen.classList.add('active');
                 updateAdminDrawerProfile();

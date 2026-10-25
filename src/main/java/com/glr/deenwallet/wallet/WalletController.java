@@ -42,11 +42,13 @@ public class WalletController {
         return ResponseEntity.ok(wallet.summary(admin()));
     }
 
-    /** Live Monime money movements. type = credit (payments in) or debit (payouts out). Super admin only. */
+    /** Live payments in / payouts out of the DeenWallet account. type = credit (payments in) or debit (payouts out). Super admin only. */
     @GetMapping("/transactions")
     public ResponseEntity<WalletService.TxPage> transactions(@RequestParam(required = false) String type,
-                                                             @RequestParam(required = false) String after) {
+                                                             @RequestParam(required = false) String after,
+                                                             @RequestParam(required = false) String q) {
         requireSuper(admin());
+        if (q != null && !q.isBlank()) return ResponseEntity.ok(wallet.search(type, q));
         return ResponseEntity.ok(wallet.transactions(type, after));
     }
 

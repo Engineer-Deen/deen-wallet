@@ -56,12 +56,12 @@ public class WalletMonimeApi {
                 .retrieve().body(String.class));
         try {
             JsonNode value = mapper.readTree(body).path("result").path("balance").path("available").path("value");
-            if (!value.isNumber()) throw new IllegalStateException("Monime did not return a balance for the account.");
+            if (!value.isNumber()) throw new IllegalStateException("The balance could not be read.");
             return value.asLong();
         } catch (IllegalStateException e) {
             throw e;
         } catch (Exception e) {
-            throw new IllegalStateException("Monime returned an unreadable balance.");
+            throw new IllegalStateException("The balance could not be read.");
         }
     }
 
@@ -84,13 +84,13 @@ public class WalletMonimeApi {
         try {
             return mapper.readTree(body);
         } catch (Exception e) {
-            throw new IllegalStateException("Monime returned an unreadable transaction list.");
+            throw new IllegalStateException("The transaction list could not be read.");
         }
     }
 
     private void requireConfigured() {
         if (!configured()) {
-            throw new IllegalStateException("The Monime financial account is not set up on the server (MONIME_DEFAULT_FINANCIAL_ACCOUNT_ID).");
+            throw new IllegalStateException("The payment account is not set up on the server.");
         }
     }
 
@@ -99,14 +99,14 @@ public class WalletMonimeApi {
         if (!fresh && c != null && c.at().plus(TTL).isAfter(Instant.now())) return c.body();
         try {
             String body = call.get();
-            if (body == null || body.isBlank()) throw new IllegalStateException("Monime returned an empty answer.");
+            if (body == null || body.isBlank()) throw new IllegalStateException("The payment service returned an empty answer.");
             if (cache.size() > MAX_CACHE) cache.clear();
             cache.put(key, new Cached(Instant.now(), body));
             return body;
         } catch (ResourceAccessException e) {
-            throw new IllegalStateException("Monime could not be reached right now. Try again in a moment.");
+            throw new IllegalStateException("The payment service could not be reached right now. Try again in a moment.");
         } catch (RestClientResponseException e) {
-            throw new IllegalStateException("Monime refused the request (HTTP " + e.getStatusCode().value() + ").");
+            throw new IllegalStateException("The payment service refused the request (HTTP " + e.getStatusCode().value() + ").");
         }
     }
 }

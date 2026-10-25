@@ -136,7 +136,7 @@ public class WalletService {
         Long monime = null;
         if (isSuper) {
             if (!configured) {
-                error = "The Monime financial account is not set up on the server.";
+                error = "The payment account is not set up on the server.";
             } else {
                 try {
                     monime = monimeApi.availableBalance(false);
@@ -162,9 +162,65 @@ public class WalletService {
     // ------------------------------------------------------------------ live Monime lists (super admin)
 
     public TxPage transactions(String type, String after) {
+        return transactions(type, after, 20);
+    }
+
+    /**
+     * Searches the latest payments or payouts (up to 600) for a DeenWallet reference, a payment-service reference,
+     * a customer name, phone or email.
+     */
+    public TxPage search(String type, String q) {
+        String needle = q == null ? "" : q.trim().toLowerCase();
+        if (needle.isEmpty()) return transactions(type, null, 20);
+        List<TxRow> found = new ArrayList<>();
+        String cursor = null;
+        String error = null;
+        for (int page = 0; page < 12; page++) {
+            TxPage p = transactions(type, cursor, 50);
+            if (p.error() != null) { error = p.error(); break; }
+            for (TxRow r : p.rows()) {
+                if (rowMatches(r, needle)) found.add(r);
+            }
+            cursor = p.next();
+            if (cursor == null) break;
+        }
+        return new TxPage(found, null, found.isEmpty() ? error : null);
+    }
+
+    private static boolean rowMatches(TxRow r, String needle) {
+        if (contains(r.id(), needle) || contains(r.reference(), needle) || contains(r.dwCode(), needle)
+                || contains(r.customer(), needle)) return true;
+        if (r.details() != null) {
+            for (Detail d : r.details()) {
+                if (contains(d.value(), needle)) return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean contains(String s, String needle) {
+        return s != null && s.toLowerCase().contains(needle);
+    }
+
+    /** Short reference shown to admins for a wallet withdrawal (also used in the email). */
+    static String refOf(UUID id) {
+        return "WD-" + id.toString().substring(0, 8).toUpperCase();
+    }
+
+    private static final java.util.regex.Pattern UUID_RE =
+            java.util.regex.Pattern.compile("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
+
+    /** Any DeenWallet transaction id the payment service echoed back inside the ownership graph or metadata. */
+    private static void collectUuids(JsonNode n, Set<String> out) {
+        String text = n.path("ownershipGraph").toString() + " " + n.path("metadata").toString();
+        var m = UUID_RE.matcher(text);
+        while (m.find()) out.add(m.group().toLowerCase());
+    }
+
+    private TxPage transactions(String type, String after, int limit) {
         JsonNode root;
         try {
-            root = monimeApi.transactions(type, after, 20);
+            root = monimeApi.transactions(type, after, limit);
         } catch (IllegalStateException e) {
             return new TxPage(List.of(), null, e.getMessage());
         }
@@ -175,6 +231,7 @@ public class WalletService {
             for (JsonNode n : result) {
                 items.add(n);
                 collectOwnerIds(n.path("ownershipGraph").path("owner"), ids, 0);
+                collectUuids(n, ids);
             }
         }
         Map<String, Match> matches = match(ids);
@@ -194,6 +251,7 @@ public class WalletService {
             if (reversal == null) reversal = text(n.path("originatingReversal").path("originTxnRef"));
             Set<String> owners = new HashSet<>();
             collectOwnerIds(n.path("ownershipGraph").path("owner"), owners, 0);
+            collectUuids(n, owners);
             String ownerType = firstOwnerType(n.path("ownershipGraph").path("owner"));
             Match m = null;
             for (String o : owners) {
@@ -203,13 +261,14 @@ public class WalletService {
             d.details = new ArrayList<>();
             if (feeCode != null) {
                 d.isFee = true;
-                d.label = "Monime fee";
+                d.label = "Service fee";
                 d.detail = feeCode;
             } else if (reversal != null) {
                 d.label = "Reversal";
             } else if (m != null && m.withdrawalOwner != null) {
                 // An admin / super admin withdrawal made from the wallet screen.
                 d.label = "Withdrawal";
+                d.dwCode = m.code;
                 d.detail = m.withdrawalOwner;
                 d.customer = m.withdrawalOwner;
                 d.status = m.withdrawalStatus;
@@ -249,13 +308,12 @@ public class WalletService {
             Long fee = d.foldedFee > 0 ? Long.valueOf(d.foldedFee) : d.fee;
             List<Detail> details = new ArrayList<>(d.details);
             if (fee != null && !d.isFee) {
-                details.add(new Detail("Monime fee", money(fee)));
-                if ("debit".equals(d.kind)) details.add(new Detail("Total taken from the Monime account", money(d.amount + fee)));
+                details.add(new Detail("Service fee", money(fee)));
+                if ("debit".equals(d.kind)) details.add(new Detail("Total taken from the balance", money(d.amount + fee)));
             }
             if (d.isFee && d.detail != null) details.add(new Detail("Fee type", d.detail));
             if (d.balanceAfter != null) details.add(new Detail("Account balance after", money(d.balanceAfter)));
             if (d.ref != null) details.add(new Detail("Monime reference", d.ref));
-            if (!d.id.isBlank()) details.add(new Detail("Monime ID", d.id));
             rows.add(new TxRow(d.id, d.kind, d.amount, d.ts, d.ref, d.balanceAfter, d.label, d.detail, d.dwCode,
                     d.customer, d.status, fee, details));
         }
@@ -303,16 +361,25 @@ public class WalletService {
     private Map<String, Match> match(Set<String> ids) {
         Map<String, Match> out = new LinkedHashMap<>();
         if (ids.isEmpty()) return out;
-        List<Object[]> t = em.createNativeQuery(
+        List<UUID> uuids = new ArrayList<>();
+        for (String s : ids) {
+            if (UUID_RE.matcher(s).matches()) {
+                try { uuids.add(UUID.fromString(s)); } catch (IllegalArgumentException ignored) { }
+            }
+        }
+        var tq = em.createNativeQuery(
                         "SELECT t.monime_payment_code_id, t.monime_payout_id, t.refund_payout_id, t.transaction_code, "
                                 + "u.full_name, t.service_type, t.status, u.email, u.phone, t.source_provider_id, t.source_phone, "
                                 + "t.amount_value, t.fee_value, t.total_charged_value, t.monime_deposit_fee_value, "
                                 + "t.monime_withdrawal_fee_value, t.destination_provider_id, t.destination_phone, "
                                 + "t.destination_holder_name, t.destination_bank_name, t.destination_bank_account_number, "
-                                + "t.destination_bank_holder_name, t.created_at, t.paid_in_at, t.failure_reason "
+                                + "t.destination_bank_holder_name, t.created_at, t.paid_in_at, t.failure_reason, t.id "
                                 + "FROM transactions t LEFT JOIN users u ON u.id = t.user_id "
-                                + "WHERE t.monime_payment_code_id IN (:ids) OR t.monime_payout_id IN (:ids) OR t.refund_payout_id IN (:ids)")
-                .setParameter("ids", ids).getResultList();
+                                + "WHERE t.monime_payment_code_id IN (:ids) OR t.monime_payout_id IN (:ids) OR t.refund_payout_id IN (:ids)"
+                                + (uuids.isEmpty() ? "" : " OR t.id IN (:uuids)"))
+                .setParameter("ids", ids);
+        if (!uuids.isEmpty()) tq.setParameter("uuids", uuids);
+        List<Object[]> t = tq.getResultList();
         for (Object[] r : t) {
             String pay = (String) r[0];
             String payout = (String) r[1];
@@ -325,7 +392,7 @@ public class WalletService {
             add(base, "Customer", name);
             add(base, "Customer email", r[7]);
             add(base, "Customer phone", r[8]);
-            add(base, "DeenWallet code", code);
+            add(base, "DeenWallet reference", code);
             add(base, "Service", pretty(r[5]));
             add(base, "Status", pretty(r[6]));
             String from = r[9] == null && r[10] == null ? null
@@ -351,15 +418,18 @@ public class WalletService {
             if (pay != null) out.putIfAbsent(pay, m);
             if (payout != null) out.putIfAbsent(payout, m);
             if (refund != null) out.putIfAbsent(refund, mRefund);
+            if (r[25] != null) out.putIfAbsent(String.valueOf(r[25]).toLowerCase(), m);
         }
         List<Object[]> w = em.createNativeQuery(
                         "SELECT w.monime_payout_id, u.full_name, w.status, w.method, w.provider_id, w.destination, w.holder_name, "
-                                + "w.amount_value, w.fee_value, w.created_at, w.failure_reason, u.email FROM wallet_withdrawals w "
+                                + "w.amount_value, w.fee_value, w.created_at, w.failure_reason, u.email, w.id FROM wallet_withdrawals w "
                                 + "LEFT JOIN users u ON u.id = w.owner_user_id WHERE w.monime_payout_id IN (:ids)")
                 .setParameter("ids", ids).getResultList();
         for (Object[] r : w) {
             String owner = r[1] == null ? "Admin" : (String) r[1];
             List<Detail> base = new ArrayList<>();
+            String wref = r[12] == null ? null : refOf((UUID) r[12]);
+            add(base, "DeenWallet reference", wref);
             add(base, "Withdrawn by", owner);
             add(base, "Admin email", r[11]);
             add(base, "Status", pretty(r[2]));
@@ -368,7 +438,7 @@ public class WalletService {
             add(base, "Amount", money(((Number) r[7]).longValue()));
             add(base, "Requested", when(r[9]));
             add(base, "Failure reason", r[10]);
-            out.put((String) r[0], new Match(null, null, null, null, false, owner, (String) r[2], base, null, null,
+            out.put((String) r[0], new Match(wref, null, null, null, false, owner, (String) r[2], base, null, null,
                     minor(r[8])));
         }
         return out;
@@ -494,7 +564,7 @@ public class WalletService {
             long pending = scalarTx("SELECT COALESCE(SUM(amount_value + fee_value), 0) FROM wallet_withdrawals WHERE status IN ('PENDING', 'REVIEW')");
             long free = monime - held - pending;
             if (minor > free) {
-                throw new IllegalArgumentException("Not enough free money in the Monime account. Available to send: "
+                throw new IllegalArgumentException("Not enough free money in the DeenWallet balance. Available to send: "
                         + money(Math.max(0, free)) + ".");
             }
             long after = credit(target.getId(), minor);
@@ -518,7 +588,7 @@ public class WalletService {
         verifyPin(me, pin);
         long minor = toMinor(amount);
         Dest d = resolveDestination(me, method, providerId, destination);
-        if (!monimeApi.configured()) throw new IllegalStateException("The Monime financial account is not set up on the server.");
+        if (!monimeApi.configured()) throw new IllegalStateException("The payment account is not set up on the server.");
         long monime = monimeApi.availableBalance(true);
         boolean isSuper = isSuper(me);
         UUID id = UUID.randomUUID();
@@ -531,7 +601,7 @@ public class WalletService {
                 long pending = scalarTx("SELECT COALESCE(SUM(amount_value + fee_value), 0) FROM wallet_withdrawals WHERE status IN ('PENDING', 'REVIEW')");
                 long free = monime - held - pending;
                 if (minor + fee > free) {
-                    throw new IllegalArgumentException("Not enough free money to withdraw " + money(minor) + " plus the Monime fee of "
+                    throw new IllegalArgumentException("Not enough free money to withdraw " + money(minor) + " plus the service fee of "
                             + money(fee) + ". Available: " + money(Math.max(0, free))
                             + " (the rest is held for admin wallets or already on its way out).");
                 }
@@ -628,7 +698,7 @@ public class WalletService {
                 tx.executeWithoutResult(st -> em.createNativeQuery(
                         "UPDATE wallet_withdrawals SET status = 'REVIEW', failure_reason = :r, updated_at = now() "
                                 + "WHERE id = :id AND status = 'PENDING'")
-                        .setParameter("r", "Monime did not confirm this withdrawal after several tries. Check the Monime dashboard before trying again.")
+                        .setParameter("r", "The payment service did not confirm this withdrawal after several tries. Please contact support before trying again.")
                         .setParameter("id", id).executeUpdate());
                 return;
             }
@@ -714,7 +784,7 @@ public class WalletService {
             String dest = ("momo".equals(r[3]) ? MOMO_PROVIDERS.getOrDefault((String) r[4], "Mobile money") : "Bank")
                     + " " + r[5] + (r[6] == null ? "" : " (" + r[6] + ")");
             emails.sendWalletWithdrawalEmail(owner, stage, money(((Number) r[1]).longValue()),
-                    money(((Number) r[2]).longValue()), dest, (String) r[7], id.toString().substring(0, 8).toUpperCase());
+                    money(((Number) r[2]).longValue()), dest, (String) r[7], refOf(id));
         } catch (RuntimeException e) {
             log.warn("Wallet: could not queue the withdrawal email for {}: {}", id, e.toString());
         }
