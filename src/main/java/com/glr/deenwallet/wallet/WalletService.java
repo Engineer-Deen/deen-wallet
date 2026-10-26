@@ -1,6 +1,7 @@
 package com.glr.deenwallet.wallet;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.glr.deenwallet.config.ProviderConfig;
 import com.glr.deenwallet.monime.CreatePayoutRequest;
 import com.glr.deenwallet.monime.MonimeClient;
 import com.glr.deenwallet.monime.Money;
@@ -90,10 +91,15 @@ public class WalletService {
     private final UserRepository users;
     private final PasswordEncoder passwordEncoder;
     private final WalletMailer emails;
+    private final com.glr.deenwallet.audit.AuditService audit;
+    private final ProviderConfig providerConfig;
 
     public WalletService(TransactionTemplate tx, WalletMonimeApi monimeApi, MonimeClient monimeClient,
                          com.glr.deenwallet.monime.MonimeProperties monimeProps, BankTransferService banks,
-                         UserRepository users, PasswordEncoder passwordEncoder, WalletMailer emails) {
+                         UserRepository users, PasswordEncoder passwordEncoder, WalletMailer emails,
+                         com.glr.deenwallet.audit.AuditService audit, ProviderConfig providerConfig) {
+        this.audit = audit;
+        this.providerConfig = providerConfig;
         this.tx = tx;
         this.monimeApi = monimeApi;
         this.monimeClient = monimeClient;
@@ -608,6 +614,105 @@ public class WalletService {
         }
     }
 
+    // ------------------------------------------------------------------ number detection and saved accounts
+
+    public record Detect(boolean ok, String providerId, String providerName, String holderName, String message) { }
+
+    public record Saved(String id, String method, String providerId, String providerName, String destination, String holderName) { }
+
+    private static final int MAX_SAVED = 30;
+
+    /** Mobile money: from the 8 digits after +232 work out the network and the name on the number (same lookup the customer app uses). */
+    public Detect detect(User me, String phone) {
+        String digits = phone == null ? "" : phone.replaceAll("\\D", "");
+        if (digits.startsWith("232") && digits.length() > 8) digits = digits.substring(3);
+        if (digits.startsWith("0") && digits.length() > 8) digits = digits.substring(1);
+        if (!digits.matches("^\\d{8}$")) return new Detect(false, null, null, null, "Enter the 8 digits after +232, for example 77123456.");
+        String provider = providerFor(digits);
+        if (provider == null) return new Detect(false, null, null, null, "This number is not an Orange Money or Africell number.");
+        if (!MOMO_PROVIDERS.containsKey(provider)) {
+            return new Detect(false, provider, null, null, "This network is not available for withdrawals yet.");
+        }
+        String name = MOMO_PROVIDERS.get(provider);
+        try {
+            Dest d = resolveDestination(me, "momo", provider, "+232" + digits);
+            if (d.holder() == null || d.holder().isBlank()) {
+                return new Detect(true, provider, name, null, "The network did not return a name for this number.");
+            }
+            return new Detect(true, provider, name, d.holder(), null);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return new Detect(false, provider, name, null, e.getMessage());
+        } catch (RuntimeException e) {
+            return new Detect(false, provider, name, null, "The account name could not be checked right now.");
+        }
+    }
+
+    private String providerFor(String local8) {
+        Map<String, List<String>> prefixes = providerConfig.getPrefixes();
+        if (prefixes == null) return null;
+        for (int len = 2; len >= 1; len--) {
+            String prefix = local8.substring(0, len);
+            for (Map.Entry<String, List<String>> e : prefixes.entrySet()) {
+                if (e.getValue() != null && e.getValue().contains(prefix)) return e.getKey();
+            }
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<Saved> saved(User me) {
+        List<Object[]> rows = em.createNativeQuery(
+                        "SELECT CAST(id AS text), method, provider_id, provider_name, destination, holder_name "
+                                + "FROM admin_saved_accounts WHERE owner_user_id = :u ORDER BY created_at DESC LIMIT 100")
+                .setParameter("u", me.getId()).getResultList();
+        List<Saved> out = new ArrayList<>();
+        for (Object[] r : rows) {
+            String holder = (String) r[5];
+            out.add(new Saved((String) r[0], (String) r[1], (String) r[2], (String) r[3], (String) r[4],
+                    holder == null || holder.isBlank() ? null : holder));
+        }
+        return out;
+    }
+
+    /** Checks the account with the provider, then remembers it for this admin only. */
+    public Saved addSaved(User me, String method, String providerId, String destination) {
+        if (!isSuper(me) && !"ADMIN".equals(me.getRole())) throw new IllegalArgumentException("Only admins can use the wallet.");
+        Dest d = resolveDestination(me, method, providerId, destination);
+        storeSaved(me, d);
+        audit.record(me, "WALLET", "SAVED_ACCOUNT_ADD", "Saved a withdrawal account", null,
+                d.holder() == null || d.holder().isBlank() ? null : d.holder(), d.label(), null);
+        return saved(me).stream()
+                .filter(s -> s.method().equals(d.method()) && s.providerId().equals(d.providerId()) && s.destination().equals(d.destination()))
+                .findFirst().orElse(null);
+    }
+
+    public void deleteSaved(User me, UUID id) {
+        if (id == null) throw new IllegalArgumentException("Choose an account to remove.");
+        int n = tx.execute(st -> em.createNativeQuery("DELETE FROM admin_saved_accounts WHERE id = :i AND owner_user_id = :u")
+                .setParameter("i", id).setParameter("u", me.getId()).executeUpdate());
+        if (n == 0) throw new IllegalArgumentException("That saved account was not found.");
+        audit.record(me, "WALLET", "SAVED_ACCOUNT_REMOVE", "Removed a saved withdrawal account", null, null, null, null);
+    }
+
+    private void storeSaved(User me, Dest d) {
+        tx.executeWithoutResult(st -> {
+            long count = ((Number) em.createNativeQuery("SELECT COUNT(*) FROM admin_saved_accounts WHERE owner_user_id = :u")
+                    .setParameter("u", me.getId()).getSingleResult()).longValue();
+            em.createNativeQuery("INSERT INTO admin_saved_accounts (id, owner_user_id, method, provider_id, provider_name, destination, holder_name) "
+                            + "VALUES (:id, :o, :m, :p, :pn, :d, :h) "
+                            + "ON CONFLICT (owner_user_id, method, provider_id, destination) DO UPDATE SET holder_name = EXCLUDED.holder_name, provider_name = EXCLUDED.provider_name")
+                    .setParameter("id", UUID.randomUUID()).setParameter("o", me.getId()).setParameter("m", d.method())
+                    .setParameter("p", d.providerId()).setParameter("pn", d.providerName() == null ? "" : d.providerName())
+                    .setParameter("d", d.destination()).setParameter("h", d.holder() == null ? "" : d.holder())
+                    .executeUpdate();
+            if (count >= MAX_SAVED) {
+                em.createNativeQuery("DELETE FROM admin_saved_accounts WHERE owner_user_id = :o AND id IN ("
+                                + "SELECT id FROM admin_saved_accounts WHERE owner_user_id = :o ORDER BY created_at DESC OFFSET :keep)")
+                        .setParameter("o", me.getId()).setParameter("keep", MAX_SAVED).executeUpdate();
+            }
+        });
+    }
+
     // ------------------------------------------------------------------ transfer (super admin -> admin wallet)
 
     public Summary transfer(User me, UUID adminId, BigDecimal amount, String note, String pin) {
@@ -640,6 +745,8 @@ public class WalletService {
             insertEntry(target.getId(), "TRANSFER_IN", minor, after, finalNote, me.getId(), me.getFullName(), null, me.getId());
         });
         log.info("Wallet: {} transferred {} to admin {}", me.getEmail(), money(minor), target.getEmail());
+        audit.record(me, "WALLET", "WALLET_TRANSFER", "Sent " + money(minor) + " to an admin wallet", target.getId(),
+                target.getFullName(), finalNote, null);
         try {
             emails.sendWalletTransferEmail(target, true, me.getFullName(), money(minor), finalNote, money(newBalance.get()));
             emails.sendWalletTransferEmail(me, false, target.getFullName(), money(minor), finalNote, null);
@@ -651,7 +758,8 @@ public class WalletService {
 
     // ------------------------------------------------------------------ withdraw (both roles)
 
-    public Summary withdraw(User me, String method, String providerId, String destination, BigDecimal amount, String pin) {
+    public Summary withdraw(User me, String method, String providerId, String destination, BigDecimal amount, String pin,
+                            boolean saveAccount) {
         if (!isSuper(me) && !"ADMIN".equals(me.getRole())) throw new IllegalArgumentException("Only admins can use the wallet.");
         verifyPin(me, pin);
         long minor = toMinor(amount);
@@ -705,7 +813,17 @@ public class WalletService {
             insertRow("wallet_withdrawals", w);
         });
         log.info("Wallet: withdrawal {} of {} started by {}", id, money(minor), me.getEmail());
+        audit.record(me, "WALLET", "WALLET_WITHDRAW", "Withdrew " + money(minor) + " (" + d.label() + ")", null,
+                d.holder == null || d.holder.isBlank() ? null : d.holder, "Ref " + refOf(id)
+                + (fee > 0 ? ", service fee " + money(fee) : ", no fee"), null);
         notifyWithdrawal(id, "started");
+        if (saveAccount) {
+            try {
+                storeSaved(me, d);
+            } catch (RuntimeException e) {
+                log.warn("Wallet: could not save the withdrawal account: {}", e.toString());
+            }
+        }
         submit(id);
         return summary(me);
     }
@@ -874,7 +992,7 @@ public class WalletService {
 
     // ------------------------------------------------------------------ destination checks
 
-    private record Dest(String method, String providerId, String destination, String holder) {
+    private record Dest(String method, String providerId, String destination, String holder, String providerName) {
         String label() {
             return ("momo".equals(method) ? MOMO_PROVIDERS.getOrDefault(providerId, "Mobile money") : "Bank") + " " + destination;
         }
@@ -896,7 +1014,7 @@ public class WalletService {
             } catch (RuntimeException e) {
                 log.warn("Wallet: name lookup failed for {} {}: {}", p, d, e.toString());
             }
-            return new Dest("momo", p, d, holder);
+            return new Dest("momo", p, d, holder, MOMO_PROVIDERS.get(p));
         }
         if ("bank".equals(m)) {
             if (p.isEmpty()) throw new IllegalArgumentException("Choose a bank.");
@@ -906,7 +1024,7 @@ public class WalletService {
             if (v == null || !v.verified()) {
                 throw new IllegalArgumentException(v != null && v.message() != null ? v.message() : "The bank account could not be verified.");
             }
-            return new Dest("bank", p, account, v.holderName());
+            return new Dest("bank", p, account, v.holderName(), v.bankName());
         }
         throw new IllegalArgumentException("Choose mobile money or bank.");
     }
@@ -924,6 +1042,7 @@ public class WalletService {
             return;
         }
         users.recordFailedPinAttempt(me.getId(), Instant.now());
+        audit.record(me, "SECURITY", "WRONG_PIN", "Entered a wrong PIN in Wallet", null, null, null, null);
         User state = users.findById(me.getId()).orElse(fresh);
         if (state.getPinAttempts() >= 2) {
             throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "PIN is disabled. Please log in again.");

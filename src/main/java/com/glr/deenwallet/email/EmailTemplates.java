@@ -498,9 +498,6 @@ final class EmailTemplates {
                 </div>
                 <p style="margin: 0 0 12px 0; color: %3$s; font-size: 15px;">Hello %4$s,</p>
                 <p style="margin: 0; color: %3$s; font-size: 15px; line-height: 1.6;">%5$s</p>
-                <p style="margin: 16px 0 0 0; color: %6$s; font-size: 13px; line-height: 1.5;">
-                    WAEC result pins are available to every customer, verified or not.
-                </p>
             </div>
             """.formatted(color, escape(title), TEXT_COLOR, escape(firstName), lead, MUTED_COLOR);
         return wrap(title, body);

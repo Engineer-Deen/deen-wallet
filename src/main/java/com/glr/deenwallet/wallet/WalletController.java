@@ -5,7 +5,9 @@ import com.glr.deenwallet.user.UserRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,7 +29,9 @@ public class WalletController {
 
     public record TransferRequest(UUID adminId, BigDecimal amount, String note, String pin) { }
 
-    public record WithdrawRequest(String method, String providerId, String destination, BigDecimal amount, String pin) { }
+    public record WithdrawRequest(String method, String providerId, String destination, BigDecimal amount, String pin, Boolean save) { }
+
+    public record SavedRequest(String method, String providerId, String destination) { }
 
     private final WalletService wallet;
     private final UserRepository users;
@@ -85,7 +89,30 @@ public class WalletController {
 
     @PostMapping("/withdraw")
     public ResponseEntity<WalletService.Summary> withdraw(@RequestBody WithdrawRequest r) {
-        return ResponseEntity.ok(wallet.withdraw(admin(), r.method(), r.providerId(), r.destination(), r.amount(), r.pin()));
+        return ResponseEntity.ok(wallet.withdraw(admin(), r.method(), r.providerId(), r.destination(), r.amount(), r.pin(),
+                Boolean.TRUE.equals(r.save())));
+    }
+
+    /** Mobile money number (8 digits after +232) -> network and name on the number. */
+    @GetMapping("/detect")
+    public ResponseEntity<WalletService.Detect> detect(@RequestParam String phone) {
+        return ResponseEntity.ok(wallet.detect(admin(), phone));
+    }
+
+    @GetMapping("/saved")
+    public ResponseEntity<List<WalletService.Saved>> saved() {
+        return ResponseEntity.ok(wallet.saved(admin()));
+    }
+
+    @PostMapping("/saved")
+    public ResponseEntity<WalletService.Saved> addSaved(@RequestBody SavedRequest r) {
+        return ResponseEntity.ok(wallet.addSaved(admin(), r.method(), r.providerId(), r.destination()));
+    }
+
+    @DeleteMapping("/saved/{id}")
+    public ResponseEntity<Void> deleteSaved(@PathVariable UUID id) {
+        wallet.deleteSaved(admin(), id);
+        return ResponseEntity.noContent().build();
     }
 
     private void requireSuper(User u) {

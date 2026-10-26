@@ -987,6 +987,15 @@
             min-width: 0;
         }
 
+        .wd-saved-item { display: flex; align-items: center; gap: 10px; padding: 11px 12px; margin-top: 8px; border: 1.5px solid var(--border); border-radius: 12px; background: #fff; cursor: pointer; }
+        .wd-saved-item.selected { border-color: var(--primary); background: #F1F8FA; }
+        .wd-saved-main { min-width: 0; flex: 1; }
+        .wd-saved-main strong { display: block; font-size: 14px; font-weight: 800; color: var(--text); word-break: break-word; }
+        .wd-saved-main span { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+        .wd-saved-del { flex-shrink: 0; width: 30px; height: 30px; border: none; border-radius: 50%; background: #FDECEA; color: var(--error); font-size: 18px; font-weight: 800; line-height: 1; cursor: pointer; }
+        .wd-save { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 13px; font-weight: 700; color: var(--text); cursor: pointer; }
+        .wd-save input { width: 18px; height: 18px; }
+
         .wallet-detail-amount {
             margin: 8px 0 2px;
             font-size: 28px;
@@ -1584,6 +1593,27 @@
             flex: 1;
         }
 
+        /* ===== AUDIT ===== */
+        .audit-chips { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 8px; margin: 0 -2px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+        .audit-chips::-webkit-scrollbar { display: none; }
+        .audit-chip { flex: 0 0 auto; padding: 7px 13px; border-radius: 999px; border: 1px solid var(--border); background: #fff; color: var(--muted); font-family: inherit; font-size: 12.5px; font-weight: 800; cursor: pointer; }
+        .audit-chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+        .audit-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 4px; border-bottom: 1px solid var(--border); cursor: pointer; }
+        .audit-row:active { background: rgba(18, 36, 43, .04); }
+        .audit-dot { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 11px; font-weight: 900; letter-spacing: .3px; background: #EEF4F6; color: var(--muted); }
+        .audit-dot.c-USERS { background: #E8F0FE; color: #2F5FD0; }
+        .audit-dot.c-KYC { background: #E6F6EE; color: #1B8A55; }
+        .audit-dot.c-WAEC { background: #FFF4DD; color: #A86A00; }
+        .audit-dot.c-ADMINS { background: #F1E8FD; color: #7A3FD0; }
+        .audit-dot.c-WALLET { background: #E0F5F3; color: #0E7F76; }
+        .audit-dot.c-MESSAGING { background: #FDE8F1; color: #C02467; }
+        .audit-dot.c-PAYOUTS { background: #FDECEA; color: var(--error); }
+        .audit-dot.c-SECURITY { background: #EDEDED; color: #444; }
+        .audit-main { min-width: 0; flex: 1; }
+        .audit-title { font-size: 14px; font-weight: 800; color: var(--text); line-height: 1.3; }
+        .audit-sub { font-size: 12px; color: var(--muted); margin-top: 2px; line-height: 1.4; word-break: break-word; }
+        .audit-time { flex-shrink: 0; font-size: 11px; color: var(--muted); text-align: right; max-width: 72px; line-height: 1.3; }
+
         /* ===== BOTTOM APP NAVIGATION ===== */
         .bottom-nav {
             position: fixed;
@@ -1594,7 +1624,7 @@
             height: calc(68px + env(safe-area-inset-bottom, 0px));
             padding: 6px 10px env(safe-area-inset-bottom, 0px);
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 6px;
             align-items: stretch;
             background: rgba(255, 255, 255, 0.98);
@@ -2696,6 +2726,26 @@
             <div id="dashboard-error" class="error-state hidden"></div>
         </div>
 
+        <!-- ===== AUDIT ===== -->
+        <div class="scroll hidden" id="tab-audit">
+            <div id="audit-error" class="error-state hidden"></div>
+            <div class="admin-card" style="margin-top:4px;padding:6px 12px 10px;">
+                <p class="admin-card-title" style="margin:10px 0 0;">Audit</p>
+                <p class="admin-card-sub" id="audit-sub" style="margin:2px 0 8px;"></p>
+                <div class="wallet-search-wrap"><input id="audit-search" class="wallet-input" type="search" autocomplete="off" placeholder="Search admin, user or action" /></div>
+                <div class="audit-chips" id="audit-chips" style="margin-top:10px;"></div>
+                <div id="audit-loading" class="loading-state hidden"><div class="spinner"></div>Loading&hellip;</div>
+                <div id="audit-list"></div>
+                <button type="button" class="btn-sm refresh hidden" id="audit-more" style="margin:10px 0 4px;width:100%;">Load more</button>
+            </div>
+            <div class="wallet-sheet-overlay" id="audit-detail-overlay" aria-hidden="true">
+                <div class="wallet-sheet">
+                    <div class="wallet-sheet-head"><strong id="audit-detail-title">Details</strong><button type="button" class="wallet-sheet-close" id="audit-detail-close" aria-label="Close">&times;</button></div>
+                    <div id="audit-detail-body"></div>
+                </div>
+            </div>
+        </div>
+
         <!-- ===== ADMIN MESSAGING ===== -->
         <div class="scroll hidden" id="tab-admin-messaging">
             <div id="messaging-hub">
@@ -2799,15 +2849,26 @@
                     <div class="wallet-sheet-head"><strong>Withdraw money</strong><button type="button" class="wallet-sheet-close" data-wallet-close="withdraw" aria-label="Close">&times;</button></div>
                     <div class="wallet-note" id="wd-available"></div>
                     <div class="wallet-field">
-                        <div class="wallet-seg" id="wd-method">
-                            <button type="button" class="active" data-method="momo">Mobile money</button>
-                            <button type="button" data-method="bank">Bank</button>
+                        <div class="wallet-seg" id="wd-source">
+                            <button type="button" class="active" data-source="saved">Saved account</button>
+                            <button type="button" data-source="new">New account</button>
                         </div>
                     </div>
-                    <div class="wallet-field"><label for="wd-provider" id="wd-provider-label">Network</label><select id="wd-provider" class="wallet-input"></select></div>
-                    <div class="wallet-field"><label for="wd-destination" id="wd-destination-label">Phone number</label><div class="wallet-phone"><span class="wallet-prefix" id="wd-prefix">+232</span><input id="wd-destination" class="wallet-input" autocomplete="off" inputmode="tel" maxlength="14" placeholder="77123456" /></div></div>
-                    <button type="button" class="btn-sm refresh" id="wd-check" style="margin-top:8px;">Check account name</button>
-                    <div class="wallet-note" id="wd-holder"></div>
+                    <div id="wd-saved-view">
+                        <div id="wd-saved-list"></div>
+                    </div>
+                    <div id="wd-new-view" class="hidden">
+                        <div class="wallet-field">
+                            <div class="wallet-seg" id="wd-method">
+                                <button type="button" class="active" data-method="momo">Mobile money</button>
+                                <button type="button" data-method="bank">Bank</button>
+                            </div>
+                        </div>
+                        <div class="wallet-field hidden" id="wd-provider-field"><label for="wd-provider">Bank</label><select id="wd-provider" class="wallet-input"></select></div>
+                        <div class="wallet-field"><label for="wd-destination" id="wd-destination-label">Phone number</label><div class="wallet-phone"><span class="wallet-prefix" id="wd-prefix">+232</span><input id="wd-destination" class="wallet-input" autocomplete="off" inputmode="tel" maxlength="9" placeholder="77123456" /></div></div>
+                        <div class="wallet-note" id="wd-holder"></div>
+                        <label class="wd-save"><input type="checkbox" id="wd-save" checked /> <span>Save this account for next time</span></label>
+                    </div>
                     <div class="wallet-field"><label for="wd-amount">Amount (SLE)</label><input id="wd-amount" class="wallet-input" autocomplete="off" inputmode="decimal" placeholder="0.00" /></div>
                     <div class="wallet-note" id="wd-fee"></div>
                     <div class="wallet-field"><label for="wd-pin">Your admin PIN</label><input id="wd-pin" class="wallet-input" type="password" autocomplete="off" inputmode="numeric" maxlength="4" placeholder="4 digits" /></div>
@@ -3072,9 +3133,13 @@
                 <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg></span>
                 <span>Wallet</span>
             </button>
+            <button type="button" class="bottom-nav-btn" data-bottom-tab="audit" aria-label="Audit">
+                <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 14 2 2 4-4"/></svg></span>
+                <span>Audit</span>
+            </button>
             <button type="button" class="bottom-nav-btn" data-bottom-tab="messaging" aria-label="Admin Messaging">
                 <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 8.5h8M8 12h5"/></svg></span>
-                <span>Admin Messaging</span>
+                <span>Messaging</span>
             </button>
         </nav>
     </div>
@@ -4132,6 +4197,7 @@
                 errors: document.getElementById('tab-errors'),
                 support: document.getElementById('tab-support'),
                 wallet: document.getElementById('tab-wallet'),
+                audit: document.getElementById('tab-audit'),
                 messaging: document.getElementById('tab-admin-messaging'),
                 'failed-payouts': document.getElementById('tab-failed-payouts'),
                 'kyc': document.getElementById('tab-kyc'),
@@ -4147,6 +4213,7 @@
 
                 if (section === 'dashboard') loadDashboard();
                 if (section === 'wallet') loadWallet();
+                if (section === 'audit') loadAudit();
                 if (section === 'users') loadUsers();
                 if (section === 'errors') { loadErrors(); startErrorAutoRefresh(); }
                 else { stopErrorAutoRefresh(); }
@@ -4176,6 +4243,11 @@
                     if (section === 'wallet') {
                         setBottomNavActive('wallet');
                         showMainSection('wallet');
+                        return;
+                    }
+                    if (section === 'audit') {
+                        setBottomNavActive('audit');
+                        showMainSection('audit');
                         return;
                     }
                     if (section === 'messaging') {
@@ -4565,12 +4637,6 @@
                     html += '<div class="fp-section-title">Earlier requests</div><div class="fp-history">' +
                         d.history.filter(function (h) { return h.id !== d.id; }).map(function (h) {
                             return '<div>' + escapeHtml(kcStatusLabel(h.status)) + ' · ' + escapeHtml(kcTime(h.submittedAt)) + (h.reason ? ' · ' + escapeHtml(h.reason) : '') + '</div>';
-                        }).join('') + '</div>';
-                }
-                if (d.audit && d.audit.length) {
-                    html += '<div class="fp-section-title">Activity</div><div class="fp-history">' +
-                        d.audit.map(function (a) {
-                            return '<div>' + escapeHtml(a.action.replace(/_/g, ' ').toLowerCase()) + (a.detail ? ' (' + escapeHtml(a.detail) + ')' : '') + ' · ' + escapeHtml(a.actor || 'customer') + ' · ' + escapeHtml(kcTime(a.at)) + '</div>';
                         }).join('') + '</div>';
                 }
                 html += '<div class="fp-actions"><button class="btn-outline" id="kc-close" type="button">Close</button></div>';
@@ -5234,6 +5300,120 @@
                 if (ov) ov.addEventListener('click', function (e) { if (e.target === ov) walletCloseSheet(n); });
             });
 
+            // ==============================================================
+            // AUDIT (what every admin did; an admin only sees their own lines)
+            // ==============================================================
+            var AUDIT_CATS = [['', 'All'], ['USERS', 'Users'], ['KYC', 'KYC'], ['WAEC', 'WAEC'], ['ADMINS', 'Admins'], ['WALLET', 'Wallet'],
+                ['MESSAGING', 'Messaging'], ['PAYOUTS', 'Payouts'], ['SECURITY', 'Security'], ['SYSTEM', 'System']];
+            var auditState = { cat: '', q: '', rows: [], more: false, seq: 0, loading: false, timer: null, built: false };
+
+            function auditIsSuper() { return currentUserRole === 'SUPER_ADMIN'; }
+            function auditCatLabel(c) {
+                for (var i = 0; i < AUDIT_CATS.length; i++) if (AUDIT_CATS[i][0] === c) return AUDIT_CATS[i][1];
+                return c || '';
+            }
+            function auditShowError(msg) {
+                var el = document.getElementById('audit-error');
+                if (!el) return;
+                if (!msg) { hide(el); return; }
+                el.textContent = msg; show(el);
+            }
+            function auditBuildChips() {
+                var box = document.getElementById('audit-chips');
+                if (!box) return;
+                box.innerHTML = AUDIT_CATS.map(function (c) {
+                    return '<button type="button" class="audit-chip' + (auditState.cat === c[0] ? ' active' : '') + '" data-audit-cat="' + c[0] + '">' + escapeHtml(c[1]) + '</button>';
+                }).join('');
+                box.querySelectorAll('[data-audit-cat]').forEach(function (b) {
+                    b.addEventListener('click', function () {
+                        auditState.cat = b.getAttribute('data-audit-cat');
+                        auditBuildChips();
+                        auditLoad(false);
+                    });
+                });
+            }
+            function auditRowHtml(r, i) {
+                var who = auditIsSuper() && r.actorName ? escapeHtml(r.actorName) : '';
+                var sub = who;
+                if (r.targetName) sub += (sub ? ' &middot; ' : '') + escapeHtml(r.targetName);
+                if (r.detail) sub += (sub ? '<br>' : '') + escapeHtml(r.detail);
+                var d = r.at ? new Date(r.at) : null;
+                var t = d && !isNaN(d.getTime()) ? d.toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+                return '<div class="audit-row" data-aidx="' + i + '">'
+                    + '<div class="audit-dot c-' + escapeHtml(r.category || '') + '">' + escapeHtml((auditCatLabel(r.category) || '?').substring(0, 3).toUpperCase()) + '</div>'
+                    + '<div class="audit-main"><div class="audit-title">' + escapeHtml(r.summary || '') + '</div><div class="audit-sub">' + sub + '</div></div>'
+                    + '<div class="audit-time">' + escapeHtml(t) + '</div></div>';
+            }
+            function auditRender() {
+                var list = document.getElementById('audit-list');
+                if (!auditState.rows.length) {
+                    list.innerHTML = auditState.loading ? '' : '<div class="empty-state">' + (auditState.q || auditState.cat ? 'No matching activity.' : 'Nothing recorded yet.') + '</div>';
+                } else {
+                    list.innerHTML = auditState.rows.map(auditRowHtml).join('');
+                }
+                document.getElementById('audit-more').classList.toggle('hidden', !auditState.more);
+                list.querySelectorAll('[data-aidx]').forEach(function (el) {
+                    el.addEventListener('click', function () { auditOpenDetail(Number(el.getAttribute('data-aidx'))); });
+                });
+            }
+            function auditLoad(append) {
+                var loading = document.getElementById('audit-loading');
+                var seq = ++auditState.seq;
+                auditState.loading = true;
+                if (!append) { auditState.rows = []; auditState.more = false; }
+                if (!auditState.rows.length) show(loading);
+                var params = { limit: 30 };
+                if (auditState.cat) params.category = auditState.cat;
+                if (auditState.q) params.q = auditState.q;
+                if (append && auditState.rows.length) params.before = auditState.rows[auditState.rows.length - 1].at;
+                return adminApiRequest('/api/admin/audit', { params: params }).then(function (rows) {
+                    if (seq !== auditState.seq) return;
+                    rows = rows || [];
+                    auditState.rows = append ? auditState.rows.concat(rows) : rows;
+                    auditState.more = rows.length >= 30;
+                    auditState.loading = false; hide(loading);
+                    auditShowError(null); auditRender();
+                }).catch(function (e) {
+                    if (seq !== auditState.seq) return;
+                    auditState.loading = false; hide(loading);
+                    auditShowError(e.message || 'Could not load the audit log.');
+                    auditRender();
+                });
+            }
+            function auditOpenDetail(i) {
+                var r = auditState.rows[i];
+                if (!r) return;
+                var d = r.at ? new Date(r.at) : null;
+                var rows = [['What', r.summary], ['Section', auditCatLabel(r.category)], ['Done by', r.actorName], ['Email', r.actorEmail],
+                    ['On', r.targetName], ['Details', r.detail], ['When', d && !isNaN(d.getTime()) ? d.toLocaleString() : ''], ['From IP', r.ip]];
+                var html = '';
+                rows.forEach(function (x) {
+                    if (x[1]) html += '<div class="wallet-detail-row"><span>' + escapeHtml(x[0]) + '</span><strong>' + escapeHtml(x[1]) + '</strong></div>';
+                });
+                document.getElementById('audit-detail-title').textContent = r.summary || 'Details';
+                document.getElementById('audit-detail-body').innerHTML = html;
+                var ov = document.getElementById('audit-detail-overlay');
+                ov.classList.add('open'); ov.setAttribute('aria-hidden', 'false');
+            }
+            function auditCloseDetail() {
+                var ov = document.getElementById('audit-detail-overlay');
+                ov.classList.remove('open'); ov.setAttribute('aria-hidden', 'true');
+            }
+            function loadAudit() {
+                document.getElementById('audit-sub').textContent = auditIsSuper()
+                    ? 'Everything every admin does, newest first.' : 'Your own activity, newest first.';
+                if (!auditState.built) { auditState.built = true; auditBuildChips(); }
+                return auditLoad(false);
+            }
+            document.getElementById('audit-more').addEventListener('click', function () { auditLoad(true); });
+            document.getElementById('audit-detail-close').addEventListener('click', auditCloseDetail);
+            document.getElementById('audit-detail-overlay').addEventListener('click', function (e) { if (e.target === this) auditCloseDetail(); });
+            document.getElementById('audit-search').addEventListener('input', function () {
+                var v = this.value.trim();
+                if (auditState.timer) clearTimeout(auditState.timer);
+                auditState.timer = setTimeout(function () { if (v !== auditState.q) { auditState.q = v; auditLoad(false); } }, 350);
+            });
+
             function walletSheetError(id, msg) {
                 var el = document.getElementById(id);
                 if (!msg) { hide(el); return; }
@@ -5241,42 +5421,105 @@
             }
 
             // ---------- withdraw
+            var wdSource = 'saved';      // 'saved' or 'new'
             var wdMethod = 'momo';
-            function wdFillProviders() {
-                var sel = document.getElementById('wd-provider');
+            var wdSavedList = [];
+            var wdSavedPick = null;      // the saved account chosen
+            var wdDetected = null;       // momo: { providerId, providerName, holderName } once the number is recognised
+            var wdBankOk = null;         // bank: { key, holderName } once the account is verified
+            var wdSeq = 0;               // newer check makes an older answer ignored
+            var wdTimer = null;
+
+            function wdHolderNote(text, cls) {
+                var h = document.getElementById('wd-holder');
+                h.textContent = text || '';
+                h.className = 'wallet-note' + (cls ? ' ' + cls : '');
+            }
+            function wdResetNew() {
+                wdSeq++;
+                if (wdTimer) { clearTimeout(wdTimer); wdTimer = null; }
+                wdDetected = null; wdBankOk = null;
+                document.getElementById('wd-destination').value = '';
+                wdHolderNote('', '');
+            }
+            // Switching mobile money <-> bank always starts with an empty number and no old result.
+            function wdApplyMethod() {
+                var momo = wdMethod === 'momo';
                 var opts = walletState.options || { momo: [], banks: [] };
-                var list = wdMethod === 'momo' ? opts.momo : opts.banks;
+                var sel = document.getElementById('wd-provider');
                 sel.innerHTML = '';
-                (list || []).forEach(function (o) {
+                var first = document.createElement('option');
+                first.value = ''; first.textContent = (opts.banks || []).length ? 'Choose a bank' : 'No banks available';
+                sel.appendChild(first);
+                (opts.banks || []).forEach(function (o) {
                     var op = document.createElement('option');
                     op.value = o.id; op.textContent = o.name;
                     sel.appendChild(op);
                 });
-                if (!(list || []).length) {
-                    var none = document.createElement('option');
-                    none.value = ''; none.textContent = wdMethod === 'momo' ? 'No networks available' : 'No banks available';
-                    sel.appendChild(none);
-                }
-                document.getElementById('wd-provider-label').textContent = wdMethod === 'momo' ? 'Network' : 'Bank';
-                document.getElementById('wd-destination-label').textContent = wdMethod === 'momo' ? 'Phone number' : 'Account number';
+                sel.value = '';
+                document.getElementById('wd-provider-field').classList.toggle('hidden', momo);
+                document.getElementById('wd-destination-label').textContent = momo ? 'Phone number' : 'Account number';
                 var dest = document.getElementById('wd-destination');
-                dest.placeholder = wdMethod === 'momo' ? '77123456' : 'Bank account number';
-                dest.setAttribute('inputmode', wdMethod === 'momo' ? 'tel' : 'numeric');
-                dest.maxLength = wdMethod === 'momo' ? 14 : 40;
-                document.getElementById('wd-prefix').classList.toggle('hidden', wdMethod !== 'momo');
-                dest.style.borderRadius = wdMethod === 'momo' ? '' : '12px';
-                document.getElementById('wd-holder').textContent = '';
-                document.getElementById('wd-holder').className = 'wallet-note';
+                dest.placeholder = momo ? '77123456' : 'Account number (10 to 18 digits)';
+                dest.setAttribute('inputmode', momo ? 'tel' : 'numeric');
+                dest.maxLength = momo ? 9 : 18;
+                document.getElementById('wd-prefix').classList.toggle('hidden', !momo);
+                dest.style.borderRadius = momo ? '' : '12px';
+                wdResetNew();
             }
-            // The +232 is fixed in front of the box; the admin types only the 8 digits.
-            function wdDestination() {
-                var raw = document.getElementById('wd-destination').value.trim();
-                if (wdMethod !== 'momo') return raw;
-                var d = raw.replace(/\D/g, '');
-                if (d.indexOf('232') === 0 && d.length > 8) d = d.substring(3);
+            // Mobile money: only the 8 digits after +232; the network and the name come from the number itself.
+            function wdLocalPhone() {
+                var d = document.getElementById('wd-destination').value.replace(/\D/g, '');
                 if (d.charAt(0) === '0' && d.length > 8) d = d.substring(1);
-                return /^\d{8}$/.test(d) ? '+232' + d : '';
+                return d;
             }
+            function wdDestination() {
+                if (wdMethod === 'momo') { var d = wdLocalPhone(); return /^\d{8}$/.test(d) ? '+232' + d : ''; }
+                return document.getElementById('wd-destination').value.replace(/\D/g, '');
+            }
+            function wdCheckNow() {
+                var seq = ++wdSeq;
+                wdDetected = null; wdBankOk = null;
+                if (wdMethod === 'momo') {
+                    var d = wdLocalPhone();
+                    if (d.length === 0) { wdHolderNote('', ''); return; }
+                    if (d.length < 8) { wdHolderNote('Enter the 8 digits after +232.', ''); return; }
+                    if (d.length > 8) { wdHolderNote('Enter only the 8 digits after +232, for example 77123456.', 'bad'); return; }
+                    wdHolderNote('Checking number...', '');
+                    adminApiRequest('/api/admin/wallet/detect', { params: { phone: d } }).then(function (r) {
+                        if (seq !== wdSeq) return;
+                        if (r.ok) {
+                            wdDetected = { providerId: r.providerId, providerName: r.providerName, holderName: r.holderName || '' };
+                            wdHolderNote((r.providerName || 'Mobile money') + (r.holderName ? ' - ' + r.holderName : (r.message ? ' - ' + r.message : '')), 'ok');
+                        } else {
+                            wdHolderNote(r.message || 'This number could not be checked.', 'bad');
+                        }
+                    }).catch(function (e) { if (seq === wdSeq) wdHolderNote(e.message || 'This number could not be checked.', 'bad'); });
+                    return;
+                }
+                var bank = document.getElementById('wd-provider').value;
+                var acct = wdDestination();
+                if (!acct) { wdHolderNote('', ''); return; }
+                if (!/^\d+$/.test(acct) || acct.length < 10 || acct.length > 18) { wdHolderNote('Account numbers have 10 to 18 digits (numbers only).', acct.length > 18 ? 'bad' : ''); return; }
+                if (!bank) { wdHolderNote('Choose the bank first.', ''); return; }
+                wdHolderNote('Checking account...', '');
+                adminApiRequest('/api/admin/wallet/lookup', { params: { method: 'bank', providerId: bank, destination: acct } }).then(function (r) {
+                    if (seq !== wdSeq) return;
+                    if (r.ok) {
+                        wdBankOk = { key: bank + ':' + acct, holderName: r.holderName || '' };
+                        wdHolderNote(r.holderName ? 'Account name: ' + r.holderName : 'Account accepted (the bank did not return a name).', 'ok');
+                    } else {
+                        wdHolderNote(r.message || 'The bank account could not be verified.', 'bad');
+                    }
+                }).catch(function (e) { if (seq === wdSeq) wdHolderNote(e.message || 'The bank account could not be verified.', 'bad'); });
+            }
+            function wdCheckSoon() {
+                wdSeq++;
+                wdDetected = null; wdBankOk = null;
+                if (wdTimer) clearTimeout(wdTimer);
+                wdTimer = setTimeout(wdCheckNow, 450);
+            }
+
             function wdUpdateFee() {
                 var el = document.getElementById('wd-fee');
                 var amt = wParseAmount(document.getElementById('wd-amount').value);
@@ -5296,16 +5539,74 @@
                 if (s.superAdmin) return s.withdrawable == null ? 'The balance is not available right now.' : 'You can withdraw up to ' + wMoney(s.withdrawable) + '.';
                 return 'Your wallet balance: ' + wMoney(s.myBalance) + '.';
             }
+
+            // ----- saved accounts
+            function wdSavedName(a) { return a.holderName || (a.method === 'momo' ? 'Mobile money account' : 'Bank account'); }
+            function wdRenderSaved(msg) {
+                var box = document.getElementById('wd-saved-list');
+                if (msg) { box.innerHTML = '<div class="wallet-note">' + escapeHtml(msg) + '</div>'; return; }
+                if (!wdSavedList.length) {
+                    box.innerHTML = '<div class="wallet-note">No saved accounts yet. Choose New account, and tick "Save this account for next time".</div>';
+                    return;
+                }
+                box.innerHTML = wdSavedList.map(function (a, i) {
+                    return '<div class="wd-saved-item' + (wdSavedPick && wdSavedPick.id === a.id ? ' selected' : '') + '" data-sidx="' + i + '">'
+                        + '<div class="wd-saved-main"><strong>' + escapeHtml(wdSavedName(a)) + '</strong><span>' + escapeHtml((a.providerName ? a.providerName + ' - ' : '') + a.destination) + '</span></div>'
+                        + '<button type="button" class="wd-saved-del" data-sdel="' + i + '" aria-label="Remove this saved account">&times;</button></div>';
+                }).join('');
+                box.querySelectorAll('[data-sidx]').forEach(function (el) {
+                    el.addEventListener('click', function () {
+                        wdSavedPick = wdSavedList[Number(el.getAttribute('data-sidx'))] || null;
+                        wdRenderSaved();
+                    });
+                });
+                box.querySelectorAll('[data-sdel]').forEach(function (b) {
+                    b.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        var a = wdSavedList[Number(b.getAttribute('data-sdel'))];
+                        if (!a || !window.confirm('Remove ' + wdSavedName(a) + ' (' + a.destination + ') from your saved accounts?')) return;
+                        adminApiRequest('/api/admin/wallet/saved/' + encodeURIComponent(a.id), { method: 'DELETE' }).then(function () {
+                            wdSavedList = wdSavedList.filter(function (x) { return x.id !== a.id; });
+                            if (wdSavedPick && wdSavedPick.id === a.id) wdSavedPick = null;
+                            wdRenderSaved();
+                        }).catch(function (err) { walletSheetError('wd-error', err.message || 'Could not remove it.'); });
+                    });
+                });
+            }
+            function wdLoadSaved(thenSetSource) {
+                wdRenderSaved('Loading...');
+                return adminApiRequest('/api/admin/wallet/saved').then(function (rows) {
+                    wdSavedList = rows || [];
+                    wdSavedPick = wdSavedList.length === 1 ? wdSavedList[0] : null;
+                    wdRenderSaved();
+                    if (thenSetSource) wdSetSource(wdSavedList.length ? 'saved' : 'new');
+                }).catch(function () {
+                    wdSavedList = [];
+                    wdRenderSaved('Your saved accounts could not be loaded. You can still use New account.');
+                    if (thenSetSource) wdSetSource('new');
+                });
+            }
+            function wdSetSource(src) {
+                wdSource = src;
+                document.querySelectorAll('#wd-source button').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-source') === src); });
+                document.getElementById('wd-saved-view').classList.toggle('hidden', src !== 'saved');
+                document.getElementById('wd-new-view').classList.toggle('hidden', src !== 'new');
+                walletSheetError('wd-error', null);
+            }
+
             function walletOpenWithdraw() {
                 walletSheetError('wd-error', null);
                 document.getElementById('wd-amount').value = '';
                 document.getElementById('wd-pin').value = '';
-                document.getElementById('wd-destination').value = '';
+                document.getElementById('wd-save').checked = true;
                 document.getElementById('wd-available').textContent = wdAvailableText();
                 var go = function () {
                     wdMethod = 'momo';
                     document.querySelectorAll('#wd-method button').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-method') === 'momo'); });
-                    wdFillProviders();
+                    wdApplyMethod();
+                    wdSavedPick = null;
+                    wdSetSource('saved');
+                    wdLoadSaved(true);
                     wdUpdateFee();
                     walletOpenSheet('withdraw');
                 };
@@ -5315,52 +5616,62 @@
             }
             document.getElementById('wallet-withdraw-btn').addEventListener('click', walletOpenWithdraw);
             document.getElementById('wd-amount').addEventListener('input', wdUpdateFee);
+            document.querySelectorAll('#wd-source button').forEach(function (b) {
+                b.addEventListener('click', function () { wdSetSource(b.getAttribute('data-source')); });
+            });
             document.querySelectorAll('#wd-method button').forEach(function (b) {
                 b.addEventListener('click', function () {
                     wdMethod = b.getAttribute('data-method');
                     document.querySelectorAll('#wd-method button').forEach(function (x) { x.classList.toggle('active', x === b); });
-                    wdFillProviders();
+                    walletSheetError('wd-error', null);
+                    wdApplyMethod();
                 });
             });
-            document.getElementById('wd-check').addEventListener('click', function () {
-                var holder = document.getElementById('wd-holder');
-                var dest = wdDestination();
-                var provider = document.getElementById('wd-provider').value;
-                if (wdMethod === 'momo' && !dest && document.getElementById('wd-destination').value.trim()) { holder.textContent = 'Enter the 8 digits after +232, for example 77123456.'; holder.className = 'wallet-note bad'; return; }
-                if (!provider || !dest) { holder.textContent = 'Choose the network or bank and enter the number first.'; holder.className = 'wallet-note bad'; return; }
-                holder.textContent = 'Checking...'; holder.className = 'wallet-note';
-                adminApiRequest('/api/admin/wallet/lookup', { params: { method: wdMethod, providerId: provider, destination: dest } })
-                    .then(function (r) {
-                        if (r.ok) {
-                            holder.textContent = r.holderName ? 'Account name: ' + r.holderName : 'Number accepted (the provider did not return a name).';
-                            holder.className = 'wallet-note ok';
-                        } else {
-                            holder.textContent = r.message || 'Could not check this account.';
-                            holder.className = 'wallet-note bad';
-                        }
-                    })
-                    .catch(function (e) { holder.textContent = e.message || 'Could not check this account.'; holder.className = 'wallet-note bad'; });
+            document.getElementById('wd-destination').addEventListener('input', function () {
+                // digits only; the +232 is fixed in front of the box for mobile money
+                var v = this.value.replace(/\D/g, '');
+                var max = wdMethod === 'momo' ? 9 : 18;
+                if (v.length > max) v = v.substring(0, max);
+                if (this.value !== v) this.value = v;
+                wdCheckSoon();
+            });
+            document.getElementById('wd-provider').addEventListener('change', function () {
+                if (wdTimer) clearTimeout(wdTimer);
+                wdCheckNow();
             });
             document.getElementById('wd-submit').addEventListener('click', function () {
                 var btn = this;
                 var amount = wParseAmount(document.getElementById('wd-amount').value);
-                var dest = wdDestination();
-                var provider = document.getElementById('wd-provider').value;
                 var pin = document.getElementById('wd-pin').value.trim();
+                var method, provider, dest, save = false;
                 walletSheetError('wd-error', null);
-                if (!provider) { walletSheetError('wd-error', wdMethod === 'momo' ? 'Choose the network.' : 'Choose the bank.'); return; }
-                if (!dest) { walletSheetError('wd-error', wdMethod === 'momo' ? 'Enter the 8 digits after +232, for example 77123456.' : 'Enter the account number.'); return; }
+                if (wdSource === 'saved') {
+                    if (!wdSavedPick) { walletSheetError('wd-error', wdSavedList.length ? 'Choose the saved account to send to.' : 'You have no saved account yet. Choose New account.'); return; }
+                    method = wdSavedPick.method; provider = wdSavedPick.providerId; dest = wdSavedPick.destination;
+                } else if (wdMethod === 'momo') {
+                    method = 'momo'; dest = wdDestination();
+                    if (!dest) { walletSheetError('wd-error', 'Enter the 8 digits after +232, for example 77123456.'); return; }
+                    if (!wdDetected) { walletSheetError('wd-error', 'Wait for the number to be recognised first.'); return; }
+                    provider = wdDetected.providerId;
+                    save = document.getElementById('wd-save').checked;
+                } else {
+                    method = 'bank'; provider = document.getElementById('wd-provider').value; dest = wdDestination();
+                    if (!provider) { walletSheetError('wd-error', 'Choose the bank.'); return; }
+                    if (!/^\d{10,18}$/.test(dest)) { walletSheetError('wd-error', 'Account numbers have 10 to 18 digits (numbers only).'); return; }
+                    if (!wdBankOk || wdBankOk.key !== provider + ':' + dest) { walletSheetError('wd-error', 'Wait for the account to be verified first.'); return; }
+                    save = document.getElementById('wd-save').checked;
+                }
                 if (!amount) { walletSheetError('wd-error', 'Enter an amount of at least 1.00 (up to 2 decimals).'); return; }
                 if (!/^\d{4}$/.test(pin)) { walletSheetError('wd-error', 'Enter your 4-digit PIN.'); return; }
                 btn.disabled = true; btn.textContent = 'Sending...';
                 adminApiRequest('/api/admin/wallet/withdraw', {
                     method: 'POST',
-                    body: { method: wdMethod, providerId: provider, destination: dest, amount: amount, pin: pin }
+                    body: { method: method, providerId: provider, destination: dest, amount: amount, pin: pin, save: save }
                 }).then(function (s) {
                     walletState.summary = s; renderWalletHero();
                     walletCloseSheet('withdraw');
                     showToast('Withdrawal started. A receipt was sent to your email.');
-                    walletSetTab(walletIsSuper() ? 'activity' : 'activity');
+                    walletSetTab('activity');
                 }).catch(function (e) {
                     walletSheetError('wd-error', e.message || 'The withdrawal could not be started.');
                 }).finally(function () {
@@ -6817,6 +7128,7 @@
                 if (visible === 'dashboard') loadDashboard();
                 else if (visible === 'users') loadUsers();
                 else if (visible === 'errors') loadErrors();
+                else if (visible === 'audit') loadAudit();
                 else if (visible === 'messaging') updateMessagingRecipientCount();
             };
             (function () {
