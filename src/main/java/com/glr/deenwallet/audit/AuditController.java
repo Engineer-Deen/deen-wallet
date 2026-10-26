@@ -35,6 +35,7 @@ public class AuditController {
                                                          @RequestParam(required = false) String before,
                                                          @RequestParam(required = false, defaultValue = "30") int limit) {
         User me = admin();
+        if (!"SUPER_ADMIN".equals(me.getRole())) throw new IllegalArgumentException("Only the super admin can view the audit log.");
         Instant cursor = null;
         if (before != null && !before.isBlank()) {
             try {

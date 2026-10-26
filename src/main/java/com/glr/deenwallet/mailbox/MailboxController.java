@@ -26,9 +26,12 @@ import java.util.UUID;
 @RequestMapping("/api/admin/mail")
 public class MailboxController {
 
-    public record ReplyRequest(String body) { }
+    public record ReplyRequest(String body, String requestId) { }
 
-    public record SendRequest(String to, String subject, String body) { }
+    public record SendRequest(String to, String subject, String body, String requestId) { }
+
+    /** busy = a check was already running; error = why the check failed (null when it worked). */
+    public record Refresh(int newEmails, boolean busy, boolean connected, String error, MailboxService.Summary summary) { }
 
     private final MailboxService mail;
     private final MailboxImap imap;
@@ -48,10 +51,11 @@ public class MailboxController {
 
     /** Checks the inbox right now (the Refresh button). */
     @PostMapping("/refresh")
-    public ResponseEntity<MailboxService.Summary> refresh() {
+    public ResponseEntity<Refresh> refresh() {
         admin();
-        imap.poll();
-        return ResponseEntity.ok(mail.summary());
+        int n = imap.poll();
+        String error = n == MailboxImap.FAILED ? imap.lastFailure() : null;
+        return ResponseEntity.ok(new Refresh(Math.max(0, n), n == MailboxImap.BUSY, n != MailboxImap.NOT_CONFIGURED, error, mail.summary()));
     }
 
     @GetMapping("/inbox")
@@ -85,12 +89,12 @@ public class MailboxController {
 
     @PostMapping("/threads/{id}/reply")
     public ResponseEntity<MailboxService.Msg> reply(@PathVariable UUID id, @RequestBody ReplyRequest r) {
-        return ResponseEntity.ok(mail.reply(admin(), id, r.body()));
+        return ResponseEntity.ok(mail.reply(admin(), id, r.body(), r.requestId()));
     }
 
     @PostMapping("/send")
     public ResponseEntity<MailboxService.Msg> send(@RequestBody SendRequest r) {
-        return ResponseEntity.ok(mail.compose(admin(), r.to(), r.subject(), r.body()));
+        return ResponseEntity.ok(mail.compose(admin(), r.to(), r.subject(), r.body(), r.requestId()));
     }
 
     private static Instant cursor(String before) {

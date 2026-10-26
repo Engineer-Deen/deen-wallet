@@ -32,6 +32,17 @@ public class MailboxJob {
         }
     }
 
+    /** Moves "Sending" to "Sent" (or "Failed") without anybody having to open the message. */
+    @Scheduled(fixedDelay = 30_000, initialDelay = 20_000)
+    public void settle() {
+        try {
+            service.settleStale();
+            service.refreshQueued(20);
+        } catch (RuntimeException e) {
+            log.warn("Mailbox status refresh failed: {}", e.toString());
+        }
+    }
+
     @Scheduled(cron = "0 30 3 * * *")
     public void purge() {
         try {

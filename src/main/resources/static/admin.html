@@ -1598,13 +1598,27 @@
         .mail-tab { flex: 1; padding: 9px 4px; border: none; border-radius: 10px; background: transparent; color: var(--muted); font-family: inherit; font-size: 12.5px; font-weight: 800; cursor: pointer; }
         .mail-tab.active { background: #fff; color: var(--primary); box-shadow: 0 1px 4px rgba(18, 36, 43, .12); }
         .mail-count { font-size: 11px; font-weight: 800; color: var(--muted); }
-        .mail-thread { max-height: 46dvh; overflow-y: auto; margin: 6px 0 8px; }
-        .mail-msg { padding: 10px 12px; margin-top: 8px; border-radius: 12px; background: #F3F6F8; }
-        .mail-msg.out { background: #E3F3F6; }
-        .mail-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--muted); }
-        .mail-meta strong { color: var(--text); font-size: 13px; }
-        .mail-body { margin-top: 6px; font-size: 14px; line-height: 1.5; color: var(--text); white-space: pre-wrap; word-break: break-word; }
-        .mail-att { margin-top: 6px; font-size: 12px; color: var(--muted); font-style: italic; }
+        .mail-thread { max-height: 50dvh; overflow-y: auto; margin: 4px 0 8px; padding: 0 2px 4px; scrollbar-width: thin; scrollbar-color: #C5D0D6 transparent; }
+        .mail-thread::-webkit-scrollbar { width: 6px; }
+        .mail-thread::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+        .mail-thread::-webkit-scrollbar-thumb { background: #C5D0D6; border-radius: 6px; }
+        .mail-who { font-size: 12.5px; color: var(--muted); margin: -2px 0 6px; word-break: break-all; }
+        .mail-msg { width: 92%; padding: 12px 14px; margin-top: 10px; border-radius: 14px; background: #F3F6F8; }
+        .mail-msg.in { margin-right: auto; border-top-left-radius: 4px; }
+        .mail-msg.out { margin-left: auto; background: #E3F3F6; border-top-right-radius: 4px; }
+        .mail-head { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+        .mail-av { flex: 0 0 auto; width: 24px; height: 24px; border-radius: 50%; background: var(--primary); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
+        .mail-name { flex: 1; min-width: 0; color: var(--text); font-size: 13px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .mail-when { flex: 0 0 auto; }
+        .mail-body { margin-top: 8px; font-size: 14px; line-height: 1.55; color: var(--text); white-space: pre-wrap; word-break: break-word; }
+        .mail-quote-btn { margin-top: 8px; padding: 3px 10px; border: 1px solid var(--border); border-radius: 999px; background: #fff; color: var(--muted); font-family: inherit; font-size: 11.5px; font-weight: 700; cursor: pointer; }
+        .mail-quoted { margin-top: 8px; padding: 8px 10px; border-left: 3px solid #C5D0D6; font-size: 12.5px; line-height: 1.45; color: var(--muted); white-space: pre-wrap; word-break: break-word; }
+        .mail-att { margin-top: 8px; font-size: 12px; color: var(--muted); font-style: italic; }
+        .mail-foot { margin-top: 8px; }
+        .mail-pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; background: #EEF2F4; color: var(--muted); }
+        .mail-pill.ok { background: #E3F6EA; color: #1B7F46; }
+        .mail-pill.bad { background: #FDE8E8; color: #B42318; }
+        .mail-pill.wait { background: #FFF4DC; color: #8A5A00; }
 
         /* ===== AUDIT ===== */
         .audit-chips { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 8px; margin: 0 -2px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
@@ -1646,6 +1660,8 @@
             z-index: 35;
             backdrop-filter: blur(10px);
         }
+
+        .bottom-nav.three { grid-template-columns: repeat(3, 1fr); }
 
         .bottom-nav-btn {
             border: none;
@@ -2852,6 +2868,7 @@
                 <div class="wallet-sheet-overlay" id="mail-thread-overlay" aria-hidden="true">
                     <div class="wallet-sheet">
                         <div class="wallet-sheet-head"><strong id="mail-thread-title">Conversation</strong><button type="button" class="wallet-sheet-close" id="mail-thread-close" aria-label="Close">&times;</button></div>
+                        <div id="mail-thread-who" class="mail-who"></div>
                         <div id="mail-thread-body" class="mail-thread"></div>
                         <div class="wallet-field"><label for="mail-reply-text">Your reply</label><textarea id="mail-reply-text" class="messaging-textarea" maxlength="10000" placeholder="Write your reply..."></textarea></div>
                         <div class="wallet-note bad hidden" id="mail-reply-error"></div>
@@ -3646,7 +3663,7 @@
                     // that indefinite wait is what "the app just freezes" was.
                     async function doFetch() {
                         var controller = new AbortController();
-                        var timeoutId = setTimeout(function () { controller.abort(); }, 15000);
+                        var timeoutId = setTimeout(function () { controller.abort(); }, (options && options.timeoutMs) || 15000);
                         try {
                             return await fetch(url.toString(), {
                                 method: options.method || 'GET',
@@ -4261,6 +4278,8 @@
             };
 
             function showMainSection(section) {
+                if (section === 'audit' && !isSuperAdmin()) section = 'dashboard';
+                applyRoleNav();
                 Object.keys(tabContents).forEach(function (key) {
                     if (!tabContents[key]) return;
                     if (key === section) tabContents[key].classList.remove('hidden');
@@ -4341,6 +4360,21 @@
                 document.getElementById('admin-drawer-avatar').textContent = String(name).trim().charAt(0).toUpperCase() || 'A';
                 var managementItem = document.getElementById('admin-management-drawer-item');
                 if (managementItem) managementItem.style.display = role === 'SUPER_ADMIN' ? 'flex' : 'none';
+                applyRoleNav();
+            }
+
+            // The Audit tab belongs to the super admin only.
+            function isSuperAdmin() {
+                var r = currentUserRole || (currentAdminUser && currentAdminUser.role) || '';
+                if (!r) { try { var p = JSON.parse(sessionStorage.getItem('deenwallet_admin_profile') || 'null'); r = (p && p.role) || ''; } catch (e) { } }
+                return r === 'SUPER_ADMIN';
+            }
+            function applyRoleNav() {
+                var nav = document.getElementById('bottom-nav');
+                var btn = nav ? nav.querySelector('[data-bottom-tab="audit"]') : null;
+                var sup = isSuperAdmin();
+                if (btn) btn.style.display = sup ? '' : 'none';
+                if (nav) nav.classList.toggle('three', !sup);
             }
 
             function openAdminDrawer() {
@@ -6167,8 +6201,16 @@
             // ==============================================================
             // EMAIL (shared support inbox: customer emails in, replies out)
             // ==============================================================
-            var mailState = { tab: 'inbox', q: '', rows: [], more: false, seq: 0, loading: false, timer: null, summary: null, openId: null };
+            var mailState = { tab: 'inbox', q: '', rows: [], more: false, seq: 0, loading: false, timer: null, summary: null, openId: null,
+                replyRid: null, composeRid: null, pollTries: 0, pollTimer: null, lastSig: '' };
 
+            function mailNewRid() {
+                try { if (window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID(); } catch (e) { }
+                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                    var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 3 | 8);
+                    return v.toString(16);
+                });
+            }
             function mailTime(ts) {
                 var d = ts ? new Date(ts) : null;
                 if (!d || isNaN(d.getTime())) return '';
@@ -6176,6 +6218,11 @@
                 var sameDay = d.toDateString() === now.toDateString();
                 return sameDay ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                     : d.toLocaleDateString([], { day: 'numeric', month: 'short' });
+            }
+            function mailFullTime(ts) {
+                var d = ts ? new Date(ts) : null;
+                if (!d || isNaN(d.getTime())) return '';
+                return d.toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
             }
             function mailSheet(id, open) {
                 var ov = document.getElementById(id);
@@ -6189,40 +6236,53 @@
                 if (!msg) { hide(el); return; }
                 el.textContent = msg; show(el);
             }
+            function mailSendError(e) {
+                if (e && e.isNetworkError) {
+                    return 'The connection was interrupted. Check the Sent tab to see whether it went out. Pressing Send again is safe: the same email is never sent twice.';
+                }
+                return (e && e.message) || 'The email could not be sent.';
+            }
+            function mailStatusPill(status, error) {
+                if (status === 'SENT') return '<span class="mail-pill ok">Sent</span>';
+                if (status === 'FAILED') return '<span class="mail-pill bad">Failed' + (error ? ': ' + escapeHtml(error) : '') + '</span>';
+                if (status === 'UNSURE') return '<span class="mail-pill bad">Not confirmed</span>';
+                if (status === 'QUEUED' || status === 'SENDING') return '<span class="mail-pill wait">Sending</span>';
+                return '';
+            }
             function mailApplySummary(s) {
+                if (!s) return;
                 mailState.summary = s;
                 var badge = document.getElementById('mail-card-badge');
                 if (badge) {
-                    badge.textContent = s && s.unread > 0 ? String(s.unread) : '';
-                    badge.classList.toggle('hidden', !(s && s.unread > 0));
+                    badge.textContent = s.unread > 0 ? String(s.unread) : '';
+                    badge.classList.toggle('hidden', !(s.unread > 0));
                 }
                 var inboxTab = document.getElementById('mail-tab-unread');
                 if (inboxTab) {
-                    inboxTab.textContent = s && s.unread > 0 ? String(s.unread) : '';
-                    inboxTab.classList.toggle('hidden', !(s && s.unread > 0));
+                    inboxTab.textContent = s.unread > 0 ? String(s.unread) : '';
+                    inboxTab.classList.toggle('hidden', !(s.unread > 0));
                 }
                 var lines = [];
-                if (s && !s.canReceive) lines.push('Receiving is not connected yet. Add INBOX_IMAP_USER and INBOX_IMAP_PASSWORD to the server settings.');
-                else if (s && s.lastError) lines.push('Inbox problem: ' + s.lastError);
-                if (s && !s.canSend) lines.push('Sending is not connected yet. Add QUEENSMTP_API_KEY to the server settings.');
+                if (!s.canReceive) lines.push('Receiving is not connected yet. Add INBOX_IMAP_USER and INBOX_IMAP_PASSWORD to the server settings.');
+                else if (s.lastError) lines.push('Inbox problem: ' + s.lastError);
+                if (!s.canSend) lines.push('Sending is not connected yet. Add QUEENSMTP_API_KEY to the server settings.');
                 var banner = document.getElementById('mail-banner');
                 if (banner) {
                     banner.textContent = lines.join(' ');
                     banner.classList.toggle('hidden', !lines.length);
                 }
                 var sub = document.getElementById('mail-sub');
-                if (sub && s) sub.textContent = 'Shared inbox for ' + (s.supportEmail || 'support') + (s.lastPoll ? ' - checked ' + mailTime(s.lastPoll) : '');
+                if (sub) sub.textContent = 'Shared inbox for ' + (s.supportEmail || 'support') + (s.lastPoll ? ' - checked ' + mailTime(s.lastPoll) : '');
             }
             function loadMailSummary() {
-                return adminApiRequest('/api/admin/mail/summary').then(mailApplySummary).catch(function () { });
+                return adminApiRequest('/api/admin/mail/summary').then(function (s) { mailApplySummary(s); return s; }).catch(function () { return null; });
             }
             function mailRowHtml(r, i) {
                 if (mailState.tab === 'sent') {
-                    var pill = r.status === 'FAILED' ? '<span class="wallet-pill bad">Failed</span>' : (r.status === 'QUEUED' ? '<span class="wallet-pill">Sending</span>' : '');
                     return '<div class="audit-row" data-midx="' + i + '"><div class="audit-dot">OUT</div>'
                         + '<div class="audit-main"><div class="audit-title">To: ' + escapeHtml(r.toName || r.to) + '</div>'
                         + '<div class="audit-sub"><strong>' + escapeHtml(r.subject || '') + '</strong><br>' + escapeHtml(r.preview || '') + (r.sentBy ? '<br>by ' + escapeHtml(r.sentBy) : '') + '</div></div>'
-                        + '<div class="audit-time">' + escapeHtml(mailTime(r.at)) + '<br>' + pill + '</div></div>';
+                        + '<div class="audit-time">' + escapeHtml(mailTime(r.at)) + '<br>' + mailStatusPill(r.status, '') + '</div></div>';
                 }
                 var unread = r.unread > 0;
                 return '<div class="audit-row' + (unread ? ' mail-unread' : '') + '" data-midx="' + i + '">'
@@ -6246,91 +6306,160 @@
                     });
                 });
             }
-            function mailLoad(append) {
+            // silent = refresh in the background: keep what is on screen until the new answer arrives
+            function mailLoad(append, silent) {
                 var loading = document.getElementById('mail-loading');
                 var seq = ++mailState.seq;
                 mailState.loading = true;
-                if (!append) { mailState.rows = []; mailState.more = false; }
-                if (!mailState.rows.length) show(loading);
+                if (!append && !silent) { mailState.rows = []; mailState.more = false; }
+                if (!mailState.rows.length && !silent) show(loading);
                 var params = { limit: 30 };
                 if (mailState.q) params.q = mailState.q;
                 if (append && mailState.rows.length) params.before = mailState.rows[mailState.rows.length - 1].at;
-                return adminApiRequest(mailState.tab === 'sent' ? '/api/admin/mail/sent' : '/api/admin/mail/inbox', { params: params }).then(function (rows) {
+                return adminApiRequest(mailState.tab === 'sent' ? '/api/admin/mail/sent' : '/api/admin/mail/inbox', { params: params, timeoutMs: 30000 }).then(function (rows) {
                     if (seq !== mailState.seq) return;
                     rows = rows || [];
                     mailState.rows = append ? mailState.rows.concat(rows) : rows;
                     mailState.more = rows.length >= 30;
                     mailState.loading = false; hide(loading);
                     mailError('mail-error', null); mailRender();
+                    mailWatchPending();
                 }).catch(function (e) {
                     if (seq !== mailState.seq) return;
                     mailState.loading = false; hide(loading);
-                    mailError('mail-error', e.message || 'Could not load the emails.');
+                    if (!silent) mailError('mail-error', e.message || 'Could not load the emails.');
                     mailRender();
                 });
             }
+            // while something is still "Sending", look again every few seconds so it turns into "Sent" by itself
+            function mailWatchPending() {
+                if (mailState.pollTimer) { clearTimeout(mailState.pollTimer); mailState.pollTimer = null; }
+                var pending = mailState.tab === 'sent' && mailState.rows.some(function (r) { return r.status === 'QUEUED' || r.status === 'SENDING'; });
+                if (!pending || !mailViewVisible() || mailState.pollTries >= 12) { if (!pending) mailState.pollTries = 0; return; }
+                mailState.pollTries++;
+                mailState.pollTimer = setTimeout(function () { if (mailViewVisible()) mailLoad(false, true); }, 4000);
+            }
+            function mailViewVisible() {
+                var v = document.getElementById('messaging-email-view');
+                return !!(v && !v.classList.contains('hidden') && v.offsetParent !== null);
+            }
             function mailOpen() {
+                mailState.pollTries = 0;
                 loadMailSummary();
                 mailLoad(false);
             }
             function mailSetTab(tab) {
                 mailState.tab = tab;
+                mailState.pollTries = 0;
                 document.querySelectorAll('#mail-tabs [data-mtab]').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-mtab') === tab); });
                 mailLoad(false);
             }
+            // Splits a reply into what the person just wrote and the older text their mail app quoted underneath.
+            function mailSplitQuoted(text) {
+                var t = String(text || '').replace(/\r\n/g, '\n');
+                var cuts = [];
+                var m;
+                var patterns = [
+                    /(^|\n)On\s[\s\S]{0,260}?\swrote:[ \t]*(\n|$)/,
+                    /(^|\n)-{2,}\s*(Original Message|Forwarded message)\s*-{2,}/i,
+                    /(^|\n)From:\s[^\n]+\n(Sent|Date):\s/,
+                    /(^|\n)>/
+                ];
+                patterns.forEach(function (re) { m = re.exec(t); if (m) cuts.push(m.index + (m[1] ? m[1].length : 0)); });
+                if (!cuts.length) return { fresh: t.trim(), quoted: '' };
+                var at = Math.min.apply(null, cuts);
+                var fresh = t.substring(0, at).trim();
+                if (!fresh) return { fresh: t.trim(), quoted: '' };
+                return { fresh: fresh, quoted: t.substring(at).trim() };
+            }
+            function mailTidy(s) { return String(s || '').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim(); }
             function mailRenderThread(t) {
                 document.getElementById('mail-thread-title').textContent = t.subject || 'Conversation';
-                var html = '<div class="wallet-note">' + escapeHtml((t.name ? t.name + ' - ' : '') + t.email) + '</div>';
-                (t.messages || []).forEach(function (m) {
+                var who = (t.name ? t.name + ' - ' : '') + t.email;
+                document.getElementById('mail-thread-who').textContent = who;
+                var html = '';
+                (t.messages || []).forEach(function (m, i) {
                     var out = m.direction === 'OUT';
-                    var who = out ? 'Support' + (m.sentBy ? ' (' + m.sentBy + ')' : '') : (m.name || m.email);
-                    var st = '';
-                    if (out && m.status === 'FAILED') st = ' <span class="wallet-pill bad">Failed' + (m.error ? ': ' + escapeHtml(m.error) : '') + '</span>';
-                    else if (out && m.status === 'QUEUED') st = ' <span class="wallet-pill">Sending</span>';
-                    html += '<div class="mail-msg ' + (out ? 'out' : 'in') + '"><div class="mail-meta"><strong>' + escapeHtml(who) + '</strong>' + st
-                        + '<span>' + escapeHtml(m.at ? new Date(m.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '') + '</span></div>'
-                        + '<div class="mail-body">' + escapeHtml(m.body || '') + '</div>'
+                    var name = out ? 'Support' + (m.sentBy ? ' - ' + m.sentBy : '') : (m.name || m.email);
+                    var parts = out ? { fresh: m.body || '', quoted: '' } : mailSplitQuoted(m.body);
+                    html += '<div class="mail-msg ' + (out ? 'out' : 'in') + '">'
+                        + '<div class="mail-head"><span class="mail-av">' + escapeHtml(((out ? 'S' : (name || '?')).charAt(0) || '?').toUpperCase()) + '</span>'
+                        + '<span class="mail-name">' + escapeHtml(name) + '</span>'
+                        + '<span class="mail-when">' + escapeHtml(mailFullTime(m.at)) + '</span></div>'
+                        + '<div class="mail-body">' + escapeHtml(mailTidy(parts.fresh)) + '</div>'
+                        + (parts.quoted ? '<button type="button" class="mail-quote-btn" data-qi="' + i + '">Show earlier text</button><div class="mail-quoted hidden" id="mail-q-' + i + '">' + escapeHtml(mailTidy(parts.quoted)) + '</div>' : '')
                         + (m.attachments > 0 ? '<div class="mail-att">' + m.attachments + ' attachment' + (m.attachments === 1 ? '' : 's') + ' not shown here. Open the support mailbox to view.</div>' : '')
+                        + (out ? '<div class="mail-foot">' + mailStatusPill(m.status, m.error) + '</div>' : '')
                         + '</div>';
                 });
                 var box = document.getElementById('mail-thread-body');
                 box.innerHTML = html;
+                box.querySelectorAll('.mail-quote-btn').forEach(function (b) {
+                    b.addEventListener('click', function () {
+                        var q = document.getElementById('mail-q-' + b.getAttribute('data-qi'));
+                        if (!q) return;
+                        var open = q.classList.toggle('hidden') === false;
+                        b.textContent = open ? 'Hide earlier text' : 'Show earlier text';
+                    });
+                });
                 box.scrollTop = box.scrollHeight;
             }
             function mailOpenThread(id) {
                 mailState.openId = id;
+                mailState.replyRid = mailNewRid();
                 mailError('mail-reply-error', null);
                 document.getElementById('mail-reply-text').value = '';
                 document.getElementById('mail-thread-title').textContent = 'Loading...';
+                document.getElementById('mail-thread-who').textContent = '';
                 document.getElementById('mail-thread-body').innerHTML = '';
                 mailSheet('mail-thread-overlay', true);
-                adminApiRequest('/api/admin/mail/threads/' + encodeURIComponent(id)).then(function (t) {
+                adminApiRequest('/api/admin/mail/threads/' + encodeURIComponent(id), { timeoutMs: 30000 }).then(function (t) {
                     if (mailState.openId !== id) return;
                     mailRenderThread(t);
                     adminApiRequest('/api/admin/mail/threads/' + encodeURIComponent(id) + '/read', { method: 'POST' }).then(mailApplySummary).catch(function () { });
                     mailState.rows.forEach(function (r) { if (r.id === id) r.unread = 0; });
                     if (mailState.tab === 'inbox') mailRender();
+                    var waiting = (t.messages || []).some(function (m) { return m.status === 'QUEUED' || m.status === 'SENDING'; });
+                    if (waiting) setTimeout(function () { if (mailState.openId === id && document.getElementById('mail-thread-overlay').classList.contains('open')) mailReloadThread(id, 0); }, 4000);
                 }).catch(function (e) {
                     mailError('mail-reply-error', e.message || 'Could not open this conversation.');
                 });
+            }
+            function mailReloadThread(id, n) {
+                adminApiRequest('/api/admin/mail/threads/' + encodeURIComponent(id), { timeoutMs: 30000 }).then(function (t) {
+                    if (mailState.openId !== id) return;
+                    mailRenderThread(t);
+                    var waiting = (t.messages || []).some(function (m) { return m.status === 'QUEUED' || m.status === 'SENDING'; });
+                    if (waiting && n < 10) setTimeout(function () { if (mailState.openId === id && document.getElementById('mail-thread-overlay').classList.contains('open')) mailReloadThread(id, n + 1); }, 4000);
+                }).catch(function () { });
             }
             function mailSendReply() {
                 var btn = document.getElementById('mail-reply-send');
                 var body = document.getElementById('mail-reply-text').value.trim();
                 mailError('mail-reply-error', null);
                 if (!body) { mailError('mail-reply-error', 'Write your reply first.'); return; }
+                if (btn.disabled) return;
                 var id = mailState.openId;
+                var rid = mailState.replyRid || (mailState.replyRid = mailNewRid());
                 btn.disabled = true; btn.textContent = 'Sending...';
-                adminApiRequest('/api/admin/mail/threads/' + encodeURIComponent(id) + '/reply', { method: 'POST', body: { body: body } }).then(function () {
+                adminApiRequest('/api/admin/mail/threads/' + encodeURIComponent(id) + '/reply', { method: 'POST', body: { body: body, requestId: rid }, timeoutMs: 60000 }).then(function () {
+                    mailState.replyRid = mailNewRid();      // the next reply is a new attempt
                     document.getElementById('mail-reply-text').value = '';
                     showToast('Reply sent.');
-                    return adminApiRequest('/api/admin/mail/threads/' + encodeURIComponent(id)).then(function (t) { if (mailState.openId === id) mailRenderThread(t); });
-                }).then(function () { mailLoad(false); loadMailSummary(); })
-                  .catch(function (e) { mailError('mail-reply-error', e.message || 'The reply could not be sent.'); })
+                    return adminApiRequest('/api/admin/mail/threads/' + encodeURIComponent(id), { timeoutMs: 30000 }).then(function (t) {
+                        if (mailState.openId === id) {
+                            mailRenderThread(t);
+                            if ((t.messages || []).some(function (m) { return m.status === 'QUEUED' || m.status === 'SENDING'; })) mailReloadThreadSoon(id);
+                        }
+                    });
+                }).then(function () { mailLoad(false, true); loadMailSummary(); })
+                  .catch(function (e) { mailError('mail-reply-error', mailSendError(e)); })
                   .finally(function () { btn.disabled = false; btn.textContent = 'Send reply'; });
             }
+            function mailReloadThreadSoon(id) { setTimeout(function () { if (mailState.openId === id && document.getElementById('mail-thread-overlay').classList.contains('open')) mailReloadThread(id, 0); }, 4000); }
             function mailOpenCompose() {
                 ['mail-to', 'mail-subject', 'mail-body'].forEach(function (i) { document.getElementById(i).value = ''; });
+                mailState.composeRid = mailNewRid();
                 mailError('mail-compose-error', null);
                 mailSheet('mail-compose-overlay', true);
             }
@@ -6340,17 +6469,33 @@
                 var subject = document.getElementById('mail-subject').value.trim();
                 var body = document.getElementById('mail-body').value.trim();
                 mailError('mail-compose-error', null);
+                if (btn.disabled) return;
                 if (!to) { mailError('mail-compose-error', 'Enter the customer\'s email address.'); return; }
                 if (!subject) { mailError('mail-compose-error', 'Enter a subject.'); return; }
                 if (!body) { mailError('mail-compose-error', 'Write your message first.'); return; }
+                var rid = mailState.composeRid || (mailState.composeRid = mailNewRid());
                 btn.disabled = true; btn.textContent = 'Sending...';
-                adminApiRequest('/api/admin/mail/send', { method: 'POST', body: { to: to, subject: subject, body: body } }).then(function () {
+                adminApiRequest('/api/admin/mail/send', { method: 'POST', body: { to: to, subject: subject, body: body, requestId: rid }, timeoutMs: 60000 }).then(function () {
+                    mailState.composeRid = null;
                     mailSheet('mail-compose-overlay', false);
                     showToast('Email sent.');
                     mailSetTab('sent');
                     loadMailSummary();
-                }).catch(function (e) { mailError('mail-compose-error', e.message || 'The email could not be sent.'); })
+                }).catch(function (e) { mailError('mail-compose-error', mailSendError(e)); })
                   .finally(function () { btn.disabled = false; btn.textContent = 'Send email'; });
+            }
+            function mailRefreshNow(btn) {
+                if (btn.disabled) return;
+                btn.disabled = true; btn.textContent = 'Checking...';
+                adminApiRequest('/api/admin/mail/refresh', { method: 'POST', timeoutMs: 60000 }).then(function (r) {
+                    mailApplySummary(r.summary);
+                    if (!r.connected) showToast('Receiving is not connected yet.');
+                    else if (r.busy) showToast('The inbox is being checked right now. Try again in a few seconds.');
+                    else if (r.error) showToast(r.error);
+                    else showToast(r.newEmails > 0 ? r.newEmails + ' new email' + (r.newEmails === 1 ? '' : 's') + '.' : 'No new emails.');
+                    return mailLoad(false, true);
+                }).catch(function (e) { showToast(e.message || 'Could not check the inbox.'); })
+                  .finally(function () { btn.disabled = false; btn.textContent = 'Refresh'; });
             }
             (function () {
                 var el = function (i) { return document.getElementById(i); };
@@ -6360,11 +6505,7 @@
                 el('mail-compose-btn').addEventListener('click', mailOpenCompose);
                 el('mail-reply-send').addEventListener('click', mailSendReply);
                 el('mail-compose-send').addEventListener('click', mailSendCompose);
-                el('mail-refresh').addEventListener('click', function () {
-                    var b = this; b.disabled = true;
-                    adminApiRequest('/api/admin/mail/refresh', { method: 'POST' }).then(mailApplySummary).catch(function (e) { showToast(e.message || 'Could not check the inbox.'); })
-                        .then(function () { return mailLoad(false); }).finally(function () { b.disabled = false; });
-                });
+                el('mail-refresh').addEventListener('click', function () { mailRefreshNow(this); });
                 document.querySelectorAll('#mail-tabs [data-mtab]').forEach(function (b) {
                     b.addEventListener('click', function () { mailSetTab(b.getAttribute('data-mtab')); });
                 });
@@ -6377,6 +6518,16 @@
                     el(p[1]).addEventListener('click', function () { mailSheet(p[0], false); });
                     el(p[0]).addEventListener('click', function (e) { if (e.target === this) mailSheet(p[0], false); });
                 });
+                // new customer emails appear by themselves while the Email screen is open
+                setInterval(function () {
+                    if (!mailViewVisible() || document.visibilityState === 'hidden') return;
+                    loadMailSummary().then(function (s) {
+                        if (!s) return;
+                        var sig = s.unread + '|' + s.lastPoll;
+                        if (mailState.lastSig && sig !== mailState.lastSig && !el('mail-thread-overlay').classList.contains('open') && !el('mail-compose-overlay').classList.contains('open')) mailLoad(false, true);
+                        mailState.lastSig = sig;
+                    });
+                }, 30000);
             })();
 
             function updateMessagingRecipientCount() {
@@ -7407,7 +7558,10 @@
                 else if (visible === 'users') loadUsers();
                 else if (visible === 'errors') loadErrors();
                 else if (visible === 'audit') loadAudit();
-                else if (visible === 'messaging') updateMessagingRecipientCount();
+                else if (visible === 'messaging') {
+                    updateMessagingRecipientCount();
+                    if (typeof mailViewVisible === 'function' && mailViewVisible()) { loadMailSummary(); mailLoad(false, true); }
+                }
             };
             (function () {
                 var THRESHOLD = 70;

@@ -65,24 +65,57 @@ public class MailboxImap {
         return user != null && !user.isBlank() && password != null && !password.isBlank();
     }
 
-    /** Checks the inbox once. Safe to call from the schedule and from the Refresh button at the same time. */
-    public void poll() {
-        if (!configured()) return;
-        if (!running.compareAndSet(false, true)) return;
+    /** poll() answers: how many new emails were stored, or one of these. */
+    public static final int BUSY = -1;
+    public static final int NOT_CONFIGURED = -2;
+    public static final int FAILED = -3;
+
+    private volatile String lastFailure = "";
+
+    /** Readable reason for the last failed check ("" when the last check worked). */
+    public String lastFailure() {
+        return lastFailure;
+    }
+
+    /**
+     * Checks the inbox once. Safe to call from the schedule and from the Refresh button at the same time:
+     * a second caller gets BUSY instead of starting another check. A login/network hiccup is retried once.
+     */
+    public int poll() {
+        if (!configured()) return NOT_CONFIGURED;
+        if (!running.compareAndSet(false, true)) return BUSY;
         try {
-            doPoll();
+            int stored;
+            try {
+                stored = doPoll();
+            } catch (Exception first) {
+                log.info("Mailbox: first attempt failed ({}), trying once more", first.toString());
+                try {
+                    Thread.sleep(3000);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw first;
+                }
+                stored = doPoll();
+            }
+            lastFailure = "";
+            return stored;
         } catch (AuthenticationFailedException e) {
             log.warn("Mailbox: the mail server refused the login: {}", e.getMessage());
-            service.saveError("The mail server refused the login. Check INBOX_IMAP_USER and the app password.");
+            lastFailure = "The mail server refused the login. Check INBOX_IMAP_USER and the app password.";
+            service.saveError(lastFailure);
+            return FAILED;
         } catch (Exception e) {
             log.warn("Mailbox: could not read the inbox: {}", e.toString());
-            service.saveError("Could not read the inbox: " + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()));
+            lastFailure = "Could not read the inbox: " + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
+            service.saveError(lastFailure);
+            return FAILED;
         } finally {
             running.set(false);
         }
     }
 
-    private void doPoll() throws Exception {
+    private int doPoll() throws Exception {
         Properties props = new Properties();
         props.put("mail.imaps.ssl.enable", "true");
         props.put("mail.imaps.connectiontimeout", "15000");
@@ -130,6 +163,7 @@ public class MailboxImap {
                 }
                 service.saveState(validity, maxUid);
                 if (stored > 0) log.info("Mailbox: {} new email(s) stored", stored);
+                return stored;
             } finally {
                 try { if (folder.isOpen()) folder.close(false); } catch (Exception ignored) { }
             }

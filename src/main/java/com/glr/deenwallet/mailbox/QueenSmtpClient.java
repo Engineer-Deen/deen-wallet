@@ -41,6 +41,16 @@ public class QueenSmtpClient {
 
     public record Sent(String id, String status) { }
 
+    /**
+     * The request may or may not have reached QueenSMTP (connection dropped, timeout, unreadable answer).
+     * The caller must NOT send the same email again on its own.
+     */
+    public static class Uncertain extends RuntimeException {
+        public Uncertain() {
+            super("It is not known whether the email was sent.");
+        }
+    }
+
     public record Status(String status, String error) { }
 
     public boolean configured() {
@@ -75,17 +85,24 @@ public class QueenSmtpClient {
             HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             code = res.statusCode();
             json = parse(res.body());
-        } catch (IOException e) {
+        } catch (java.net.http.HttpConnectTimeoutException | java.net.ConnectException e) {
+            // never connected: nothing was sent
             throw new IllegalStateException("The email service could not be reached. Please try again.");
+        } catch (IOException e) {
+            throw new Uncertain();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException("The email service could not be reached. Please try again.");
+            throw new Uncertain();
         }
-        if (code >= 200 && code < 300 && json.path("success").asBoolean(false)) {
+        if (code >= 200 && code < 300) {
+            if (!json.path("success").asBoolean(false)) throw new Uncertain();
             JsonNode data = json.path("data");
             return new Sent(data.path("id").asText(""), data.path("status").asText("queued"));
         }
-        throw failure(json.path("code").asText(""), json.path("error").asText(""));
+        String errCode = json.path("code").asText("");
+        // a 5xx without QueenSMTP's own error code (gateway timeout, proxy page) says nothing about whether it was accepted
+        if (code >= 500 && errCode.isEmpty()) throw new Uncertain();
+        throw failure(errCode, json.path("error").asText(""));
     }
 
     /** queued | sent | failed, or null when it cannot be read right now. */
@@ -93,7 +110,7 @@ public class QueenSmtpClient {
         if (!configured() || messageId == null || messageId.isBlank()) return null;
         try {
             HttpRequest req = HttpRequest.newBuilder(URI.create(baseUrl + "/messages/" + URLEncoder.encode(messageId, StandardCharsets.UTF_8)))
-                    .timeout(Duration.ofSeconds(10))
+                    .timeout(Duration.ofSeconds(6))
                     .header("Authorization", "Bearer " + apiKey.trim())
                     .GET().build();
             HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
