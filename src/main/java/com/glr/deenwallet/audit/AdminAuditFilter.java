@@ -66,7 +66,7 @@ public class AdminAuditFilter extends OncePerRequestFilter {
     private static final List<String> SKIP_PREFIXES = List.of(
             "/api/admin/kyc", "/api/admin/waec", "/api/admin/wallet", "/api/admin/audit", "/api/admin/failed-payouts",
             "/api/admin/auth/refresh", "/api/admin/auth/recovery/send-otp", "/api/admin/auth/forgot",
-            "/api/admin/auth/reset", "/api/admin/verify-pin");
+            "/api/admin/auth/reset", "/api/admin/verify-pin", "/api/admin/mail");
 
     private final AuditService audit;
     private final UserRepository users;
