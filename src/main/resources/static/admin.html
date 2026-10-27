@@ -6840,6 +6840,8 @@
             // ==============================================================
             var adminNotif = { unread: null, listenersOn: false, pushBusy: false, pushDone: false, sentToken: null, open: false, seen: false };
             var ADMIN_FCM_KEY = 'dw_admin_fcm_token';
+            // Phone push is switched off until the admin APK is confirmed to include its Firebase file (set to true then).
+            var ADMIN_PUSH_ENABLED = false;
 
             function notifVibrate() { try { if (navigator.vibrate) navigator.vibrate([140, 70, 140]); } catch (e) { } }
             function notifSetBadge(n) {
@@ -6926,6 +6928,7 @@
                 }).catch(function () { adminNotif.sentToken = null; });
             }
             function adminPushInit() {
+                if (!ADMIN_PUSH_ENABLED) return;
                 if (adminNotif.pushBusy || adminNotif.pushDone) return;
                 var C = window.Capacitor;
                 if (!C || typeof C.isNativePlatform !== 'function' || !C.isNativePlatform()) return;
