@@ -28,7 +28,7 @@ public class MailboxController {
 
     public record ReplyRequest(String body, String requestId) { }
 
-    public record SendRequest(String to, String subject, String body, String requestId) { }
+    public record SendRequest(String to, List<UUID> userIds, String subject, String body, String requestId) { }
 
     /** busy = a check was already running; error = why the check failed (null when it worked). */
     public record Refresh(int newEmails, boolean busy, boolean connected, String error, MailboxService.Summary summary) { }
@@ -93,8 +93,8 @@ public class MailboxController {
     }
 
     @PostMapping("/send")
-    public ResponseEntity<MailboxService.Msg> send(@RequestBody SendRequest r) {
-        return ResponseEntity.ok(mail.compose(admin(), r.to(), r.subject(), r.body(), r.requestId()));
+    public ResponseEntity<MailboxService.SendResult> send(@RequestBody SendRequest r) {
+        return ResponseEntity.ok(mail.send(admin(), r.to(), r.userIds(), r.subject(), r.body(), r.requestId()));
     }
 
     private static Instant cursor(String before) {

@@ -1,6 +1,7 @@
 package com.glr.deenwallet.mailbox;
 
 import com.glr.deenwallet.audit.AuditService;
+import com.glr.deenwallet.notification.AdminAlertService;
 import com.glr.deenwallet.user.User;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -49,11 +50,13 @@ public class MailboxService {
     private final TransactionTemplate tx;
     private final QueenSmtpClient smtp;
     private final AuditService audit;
+    private final AdminAlertService alerts;
 
-    public MailboxService(TransactionTemplate tx, QueenSmtpClient smtp, AuditService audit) {
+    public MailboxService(TransactionTemplate tx, QueenSmtpClient smtp, AuditService audit, AdminAlertService alerts) {
         this.tx = tx;
         this.smtp = smtp;
         this.audit = audit;
+        this.alerts = alerts;
     }
 
     // ------------------------------------------------------------------ shapes
@@ -277,7 +280,7 @@ public class MailboxService {
         try {
             tx.executeWithoutResult(st -> {
                 em.createNativeQuery("UPDATE mail_messages SET status = 'UNSURE', error = 'The server stopped before this email was confirmed.' "
-                        + "WHERE direction = 'OUT' AND status = 'SENDING' AND created_at < now() - interval '3 minutes'").executeUpdate();
+                        + "WHERE direction = 'OUT' AND status = 'SENDING' AND created_at < now() - interval '10 minutes'").executeUpdate();
                 em.createNativeQuery("UPDATE mail_messages SET status = 'UNSURE', error = 'The email service never confirmed this email.' "
                         + "WHERE direction = 'OUT' AND status = 'QUEUED' AND created_at < now() - interval '1 day'").executeUpdate();
             });
@@ -303,39 +306,118 @@ public class MailboxService {
             if (name.isEmpty() && r[1] != null && !((String) r[1]).isBlank()) name = (String) r[1];
             if (inReplyTo == null && r[3] != null) inReplyTo = (String) r[3];
         }
-        return deliver(me, threadId, email, name, "Re: " + normSubject(subject), body, inReplyTo, requestId, "EMAIL_REPLY", "Replied to a customer email");
+        return deliver(me, threadId, email, name, "Re: " + normSubject(subject), draft(me, body), inReplyTo, requestId, "EMAIL_REPLY", "Replied to a customer email");
     }
 
-    public Msg compose(User me, String to, String subject, String body, String requestId) {
-        String email = to == null ? "" : to.trim();
-        if (!email.matches("^[A-Za-z0-9._%+'-]+@[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)+$") || email.length() > 254) {
-            throw new IllegalArgumentException("Enter a valid email address.");
+    /** What the page gets back from /send: how many emails were started, and whether they continue in the background. */
+    public record SendResult(int count, boolean background, Msg first) { }
+
+    private static final int MAX_BULK = 100;
+    private static final java.util.concurrent.ExecutorService BULK = java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "mail-bulk");
+        t.setDaemon(true);
+        return t;
+    });
+    private static final String ADDRESS = "^[A-Za-z0-9._%+'-]+@[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)+$";
+
+    private void addRecipient(Map<String, String> out, String rawEmail, String name, boolean typed) {
+        String email = rawEmail == null ? "" : rawEmail.trim();
+        if (!email.matches(ADDRESS) || email.length() > 254) {
+            if (typed) throw new IllegalArgumentException("Enter a valid email address.");
+            return;
         }
+        if (email.equalsIgnoreCase(supportEmail) || email.equalsIgnoreCase(systemEmail)) {
+            if (typed) throw new IllegalArgumentException("Choose a customer's address, not our own.");
+            return;
+        }
+        out.putIfAbsent(email.toLowerCase(), email + "\n" + (name == null ? "" : name.trim()));
+    }
+
+    /** One typed address and/or any number of registered customers. One customer = one email, sent separately. */
+    @SuppressWarnings("unchecked")
+    public SendResult send(User me, String to, List<UUID> userIds, String subject, String body, String requestId) {
         String subj = subject == null ? "" : subject.trim().replaceAll("[\\r\\n]+", " ");
         if (subj.isEmpty()) throw new IllegalArgumentException("Enter a subject.");
         if (subj.length() > 200) throw new IllegalArgumentException("The subject is too long (200 characters at most).");
-        if (email.equalsIgnoreCase(supportEmail) || email.equalsIgnoreCase(systemEmail)) {
-            throw new IllegalArgumentException("Choose a customer's address, not our own.");
+        Draft draft = draft(me, body);
+
+        Map<String, String> rcpt = new LinkedHashMap<>();
+        if (to != null && !to.trim().isEmpty()) addRecipient(rcpt, to, "", true);
+        if (userIds != null && !userIds.isEmpty()) {
+            List<UUID> ids = new ArrayList<>(new java.util.LinkedHashSet<>(userIds));
+            if (ids.size() > MAX_BULK) throw new IllegalArgumentException("You can email up to " + MAX_BULK + " customers at once.");
+            for (UUID uid : ids) {
+                List<Object[]> rows = em.createNativeQuery("SELECT email, full_name FROM users WHERE id = :i AND role = 'USER'")
+                        .setParameter("i", uid).getResultList();
+                if (rows.isEmpty()) throw new IllegalArgumentException("One or more customers could not be found.");
+                addRecipient(rcpt, (String) rows.get(0)[0], (String) rows.get(0)[1], false);
+            }
         }
-        return deliver(me, threadOf(email, normSubject(subj)), email, "", subj, body, null, requestId, "EMAIL_SENT", "Sent an email to a customer");
+        if (rcpt.isEmpty()) throw new IllegalArgumentException("Choose a customer or enter an email address.");
+        if (rcpt.size() > MAX_BULK) throw new IllegalArgumentException("You can email up to " + MAX_BULK + " customers at once.");
+
+        if (rcpt.size() == 1) {
+            String[] parts = rcpt.values().iterator().next().split("\n", -1);
+            Msg m = deliver(me, threadOf(parts[0], normSubject(subj)), parts[0], parts[1], subj, draft, null, requestId, "EMAIL_SENT", "Sent an email to a customer");
+            return new SendResult(1, false, m);
+        }
+
+        // several customers: every email is recorded first (so a retry can never send it twice), then sent one by one
+        UUID base = parseRequestId(requestId);
+        List<Claim> work = new ArrayList<>();
+        Msg first = null;
+        for (String packed : rcpt.values()) {
+            String[] parts = packed.split("\n", -1);
+            UUID rid = UUID.nameUUIDFromBytes((base + "|" + parts[0].toLowerCase()).getBytes(StandardCharsets.UTF_8));
+            Claim c = claim(me, threadOf(parts[0], normSubject(subj)), parts[0], parts[1], subj, draft.text(), rid);
+            if (c.existing() != null) { if (first == null) first = c.existing(); continue; }
+            if (first == null) first = new Msg(c.id().toString(), "OUT", parts[1], parts[0], subj, draft.text(), 0, c.at(), me.getFullName(), "SENDING", "");
+            work.add(c);
+        }
+        final int total = rcpt.size();
+        if (!work.isEmpty()) {
+            audit.record(me, "MESSAGING", "EMAIL_BULK", "Sent an email to " + total + " customers", null, total + " customers", cut(subj, 200), null);
+            final String fSubj = subj;
+            BULK.execute(() -> {
+                int ok = 0, bad = 0;
+                for (Claim c : work) {
+                    try {
+                        transmit(c, fSubj, draft, null, true);
+                        ok++;
+                    } catch (RuntimeException e) {
+                        bad++;
+                    }
+                    try { Thread.sleep(150); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
+                }
+                alerts.notifyAdmins(me.getId(), "EMAIL_SENT", "Emails sent",
+                        who(me) + " emailed " + (ok + bad) + " customers: " + cut(fSubj, 120) + (bad > 0 ? " (" + bad + " could not be sent)" : ""));
+            });
+        }
+        return new SendResult(total, true, first);
     }
 
-    /**
-     * One send attempt = one row, claimed BEFORE anything leaves. The browser gives every attempt its own requestId;
-     * pressing Send again (or a retry after a dropped connection) with the same id finds the row and returns it
-     * instead of sending a second email.
-     */
-    private Msg deliver(User me, UUID threadId, String toEmail, String toName, String subject, String body, String inReplyTo,
-                        String requestId, String action, String summary) {
+    private static String who(User me) {
+        String n = me.getFullName() == null ? "" : me.getFullName().trim();
+        return n.isEmpty() ? "An admin" : n;
+    }
+
+    private record Draft(String text, String full, String html) { }
+
+    private record Claim(UUID id, UUID threadId, String toEmail, String toName, Instant at, User me, Msg existing) { }
+
+    private Draft draft(User me, String body) {
         String text = body == null ? "" : body.replace("\r\n", "\n").trim();
         if (text.isEmpty()) throw new IllegalArgumentException("Write your message first.");
         if (text.length() > MAX_BODY) throw new IllegalArgumentException("The message is too long (" + MAX_BODY + " characters at most).");
-        UUID rid = parseRequestId(requestId);
         String first = me.getFirstName() == null || me.getFirstName().isBlank() ? "" : me.getFirstName().trim();
         String full = text + "\n\n" + (first.isEmpty() ? "" : first + "\n") + SIGNATURE_NAME;
         String html = "<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;color:#1F2937;\">"
                 + escape(full).replace("\n", "<br>") + "</div>";
+        return new Draft(text, full, html);
+    }
 
+    /** One send attempt = one row, claimed BEFORE anything leaves. The same request id again finds the row and sends nothing. */
+    private Claim claim(User me, UUID threadId, String toEmail, String toName, String subject, String text, UUID rid) {
         UUID id = UUID.randomUUID();
         Instant now = Instant.now();
         String byName = cut(me.getFullName() == null ? "" : me.getFullName(), 200);
@@ -349,24 +431,35 @@ public class MailboxService {
                 .setParameter("by", me.getId()).setParameter("byn", byName).setParameter("rid", rid).executeUpdate());
         if (claimed == null || claimed == 0) {
             Msg existing = byRequest(rid);
-            if (existing != null) return existing;       // same attempt again: nothing is sent twice
+            if (existing != null) return new Claim(id, threadId, toEmail, toName, now, me, existing);   // same attempt again: nothing is sent twice
             throw new IllegalStateException("This email is already being sent. Please wait a moment and check Sent.");
         }
+        return new Claim(id, threadId, toEmail, toName, now, me, null);
+    }
 
+    /**
+     * Sends a claimed row. A single send removes the row when it certainly did not go out; a bulk send keeps it as
+     * "Failed" so the admin can see which customer did not get the email. An unclear outcome is always "Not confirmed".
+     */
+    private Msg transmit(Claim c, String subject, Draft d, String inReplyTo, boolean keepFailed) {
         QueenSmtpClient.Sent sent;
         try {
-            sent = smtp.send(supportEmail, SIGNATURE_NAME, supportEmail, toEmail, subject, html, full, inReplyTo);
+            sent = smtp.send(supportEmail, SIGNATURE_NAME, supportEmail, c.toEmail(), subject, d.html(), d.full(), inReplyTo);
         } catch (QueenSmtpClient.Uncertain e) {
             // it may have been sent: keep the row (listed as "Not confirmed") and never resend on our own
-            setStatus(id, "UNSURE", "The connection dropped while sending, so it is not known whether this email was sent.");
+            setStatus(c.id(), "UNSURE", "The connection dropped while sending, so it is not known whether this email was sent.");
             throw new IllegalStateException("The connection dropped while sending, so we cannot tell if the email went out. "
                     + "It is listed in Sent as \"Not confirmed\". Check with the customer before sending it again.");
         } catch (RuntimeException e) {
-            // definitely not sent: remove the row so nothing misleading stays behind
-            try {
-                tx.executeWithoutResult(st -> em.createNativeQuery("DELETE FROM mail_messages WHERE id = :i").setParameter("i", id).executeUpdate());
-            } catch (RuntimeException ignore) {
-                log.warn("Mailbox: could not remove the unsent row {}", id);
+            if (keepFailed) {
+                setStatus(c.id(), "FAILED", e.getMessage() == null ? "The email could not be sent." : e.getMessage());
+            } else {
+                // definitely not sent: remove the row so nothing misleading stays behind
+                try {
+                    tx.executeWithoutResult(st -> em.createNativeQuery("DELETE FROM mail_messages WHERE id = :i").setParameter("i", c.id()).executeUpdate());
+                } catch (RuntimeException ignore) {
+                    log.warn("Mailbox: could not remove the unsent row {}", c.id());
+                }
             }
             throw e;
         }
@@ -374,15 +467,26 @@ public class MailboxService {
         try {
             tx.executeWithoutResult(st -> em.createNativeQuery(
                             "UPDATE mail_messages SET status = :st, provider_message_id = :pid, error = '' WHERE id = :i")
-                    .setParameter("st", status).setParameter("pid", cut(sent.id() == null ? "" : sent.id(), 80)).setParameter("i", id).executeUpdate());
+                    .setParameter("st", status).setParameter("pid", cut(sent.id() == null ? "" : sent.id(), 80)).setParameter("i", c.id()).executeUpdate());
         } catch (RuntimeException e) {
             // the email already left; a saving problem must not look like a failed send
-            log.error("Mailbox: email to {} was sent but its status could not be saved: {}", toEmail, e.toString());
+            log.error("Mailbox: email to {} was sent but its status could not be saved: {}", c.toEmail(), e.toString());
         }
+        return new Msg(c.id().toString(), "OUT", c.toName(), c.toEmail(), subject, d.text(), 0, c.at(), c.me().getFullName(), status, "");
+    }
+
+    private Msg deliver(User me, UUID threadId, String toEmail, String toName, String subject, Draft d, String inReplyTo,
+                        String requestId, String action, String summary) {
+        Claim c = claim(me, threadId, toEmail, toName, subject, d.text(), parseRequestId(requestId));
+        if (c.existing() != null) return c.existing();
+        Msg m = transmit(c, subject, d, inReplyTo, false);
         // a reply means the customer's messages were dealt with
         markRead(threadId);
         audit.record(me, "MESSAGING", action, summary, null, toName == null || toName.isBlank() ? toEmail : toName, cut(subject, 200), null);
-        return new Msg(id.toString(), "OUT", toName, toEmail, subject, text, 0, now, me.getFullName(), status, "");
+        alerts.notifyAdmins(me.getId(), "EMAIL_SENT", "EMAIL_REPLY".equals(action) ? "Email reply sent" : "Email sent",
+                who(me) + ("EMAIL_REPLY".equals(action) ? " replied to " : " emailed ")
+                        + (toName == null || toName.isBlank() ? toEmail : toName) + ": " + cut(subject, 120));
+        return m;
     }
 
     private void setStatus(UUID id, String status, String error) {

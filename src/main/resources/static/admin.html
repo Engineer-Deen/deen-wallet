@@ -298,6 +298,20 @@
             margin-left: 6px;
         }
 
+        .top-bar .notif-btn { grid-column: 3; grid-row: 1; justify-self: end; position: relative; width: 38px; height: 38px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+        .notif-badge { position: absolute; top: -5px; right: -5px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #E85D5D; color: #fff; font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+        .nt-list { max-height: 58dvh; overflow-y: auto; margin: 4px 0 8px; scrollbar-width: thin; scrollbar-color: #C5D0D6 transparent; }
+        .nt-list::-webkit-scrollbar { width: 6px; }
+        .nt-list::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+        .nt-list::-webkit-scrollbar-thumb { background: #C5D0D6; border-radius: 6px; }
+        .nt-item { display: flex; gap: 10px; width: 100%; margin-top: 8px; padding: 12px; border: 0; border-radius: 12px; background: #F3F6F8; font-family: inherit; text-align: left; cursor: pointer; }
+        .nt-item.unread { background: #E3F3F6; }
+        .nt-dot { flex: 0 0 auto; width: 9px; height: 9px; margin-top: 6px; border-radius: 50%; background: transparent; }
+        .nt-item.unread .nt-dot { background: var(--primary); }
+        .nt-title { font-size: 14px; font-weight: 800; color: var(--text); }
+        .nt-msg { margin-top: 2px; font-size: 13px; line-height: 1.45; color: var(--muted); word-break: break-word; }
+        .nt-time { margin-top: 4px; font-size: 11px; color: var(--muted); }
+
         .top-bar .menu-btn {
             background: var(--card);
             border: 1px solid var(--border);
@@ -2677,6 +2691,7 @@
         <div class="top-bar">
             <div style="display:flex;align-items:center;gap:9px;"><img class="top-brand-logo" src="deenwallet-logo.png" alt="DeenWallet Transfer" /><div><span class="brand">DeenWallet Transfer</span><span class="admin-badge">Admin</span></div></div>
             <button class="menu-btn" id="menu-btn" aria-label="Open admin menu" aria-expanded="false"><span></span><span></span><span></span></button>
+            <button type="button" class="notif-btn" id="notif-btn" aria-label="Notifications"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="notif-badge hidden" id="notif-badge"></span></button>
         </div>
 
         <!-- ===== ADMIN SIDE DRAWER ===== -->
@@ -2859,7 +2874,7 @@
                         <button type="button" class="mail-tab active" data-mtab="inbox">Inbox <span class="mail-dot hidden" id="mail-tab-unread"></span></button>
                         <button type="button" class="mail-tab" data-mtab="sent">Sent</button>
                     </div>
-                    <div class="wallet-search-wrap" style="margin-top:8px;"><input id="mail-search" class="wallet-input" type="search" autocomplete="off" placeholder="Search emails" /></div>
+                    <div class="wallet-search-wrap" style="margin-top:8px;"><input id="mail-search" name="mail_filter_q" class="wallet-input" type="text" inputmode="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search emails" /></div>
                     <div id="mail-loading" class="loading-state hidden"><div class="spinner"></div>Loading&hellip;</div>
                     <div id="mail-list"></div>
                     <button type="button" class="btn-sm refresh hidden" id="mail-more" style="margin:10px 0 4px;width:100%;">Load more</button>
@@ -2880,7 +2895,8 @@
                     <div class="wallet-sheet">
                         <div class="wallet-sheet-head"><strong>New email</strong><button type="button" class="wallet-sheet-close" id="mail-compose-close" aria-label="Close">&times;</button></div>
                         <div class="wallet-note">Sent from the support address. Replies come back to the Inbox.</div>
-                        <div class="wallet-field"><label for="mail-to">To</label><input id="mail-to" class="wallet-input" type="email" autocomplete="off" maxlength="254" placeholder="customer@example.com" /></div>
+                        <div class="wallet-field"><label for="mail-to">To (an email address)</label><input id="mail-to" name="mail_recipient_x" class="wallet-input" type="text" inputmode="email" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" maxlength="254" placeholder="customer@example.com" /></div>
+                        <div class="wallet-field"><label>Or choose registered customers</label><button type="button" class="btn-outline" id="mail-pick-users" style="width:100%;margin-top:0;">Choose customers</button><div id="mail-picked" class="messaging-selection-preview"></div></div>
                         <div class="wallet-field"><label for="mail-subject">Subject</label><input id="mail-subject" class="wallet-input" maxlength="200" placeholder="Subject" /></div>
                         <div class="wallet-field"><label for="mail-body">Message</label><textarea id="mail-body" class="messaging-textarea" maxlength="10000" placeholder="Write your message..."></textarea></div>
                         <div class="wallet-note bad hidden" id="mail-compose-error"></div>
@@ -2911,7 +2927,7 @@
             <div class="admin-card" style="margin-top:10px;padding:6px 12px 10px;">
                 <p class="admin-card-title" id="wallet-list-title" style="margin:10px 0 0;">Activity</p>
                 <p class="admin-card-sub" id="wallet-list-sub" style="margin:2px 0 4px;"></p>
-                <div class="wallet-search-wrap hidden" id="wallet-search-wrap"><input id="wallet-search" class="wallet-input" type="search" autocomplete="off" placeholder="Search DeenWallet or payment reference" /></div>
+                <div class="wallet-search-wrap hidden" id="wallet-search-wrap"><input id="wallet-search" name="wallet_filter_q" class="wallet-input" type="text" inputmode="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search DeenWallet or payment reference" /></div>
                 <div id="wallet-loading" class="loading-state hidden"><div class="spinner"></div>Loading&hellip;</div>
                 <div id="wallet-list"></div>
                 <button type="button" class="btn-sm refresh hidden" id="wallet-more" style="margin:10px 0 4px;width:100%;">Load more</button>
@@ -3194,6 +3210,15 @@
                     <button type="button" class="btn-primary" id="messaging-picker-done" style="margin-top:0;">Done</button>
                 </div>
             </section>
+        </div>
+
+        <div class="wallet-sheet-overlay" id="notif-overlay" aria-hidden="true">
+            <div class="wallet-sheet">
+                <div class="wallet-sheet-head"><strong>Notifications</strong><button type="button" class="wallet-sheet-close" id="notif-close" aria-label="Close">&times;</button></div>
+                <div style="display:flex;justify-content:flex-end;"><button type="button" class="btn-sm refresh" id="notif-readall">Mark all as read</button></div>
+                <div id="notif-error" class="wallet-note bad hidden"></div>
+                <div id="nt-list" class="nt-list"></div>
+            </div>
         </div>
 
         <!-- ===== FIXED BOTTOM NAVIGATION ===== -->
@@ -3621,6 +3646,7 @@
             }
 
             function clearToken() {
+                if (typeof adminPushUnregister === 'function') { try { adminPushUnregister(); } catch (e) { /* never block logout */ } }
                 localStorage.removeItem(TOKEN_KEY);
                 localStorage.removeItem('deenwallet_admin_refresh_token');
                 sessionStorage.removeItem('deenwallet_admin_session_last_active');
@@ -3675,7 +3701,7 @@
                             // No HTTP response at all: DNS failure, connection refused, CORS
                             // block or timeout. Report it BEFORE normalizing, so the raw
                             // message is what shows up in the admin Errors tab.
-                            reportErrorToBackend('NETWORK_ERROR', String(fetchError && fetchError.message || fetchError),
+                            if (!options.quiet) reportErrorToBackend('NETWORK_ERROR', String(fetchError && fetchError.message || fetchError),
                                 fetchError && fetchError.stack, window.location.href, 0, 0,
                                 { endpointPath: path, httpMethod: options.method || 'GET' });
                             // Normalize every network-level failure (no
@@ -3707,7 +3733,7 @@
                     if (!response.ok) {
                         // Trace WHICH endpoint failed. Skip expected 401s (a stale token
                         // about to redirect to login is normal, not a bug worth an admin's time).
-                        if (response.status !== 401) {
+                        if (response.status !== 401 && !options.quiet) {
                             reportErrorToBackend('API_ERROR', (data && data.message) || 'Request failed.', '',
                                 window.location.href, 0, 0,
                                 { endpointPath: path, httpMethod: options.method || 'GET', statusCode: response.status });
@@ -6175,6 +6201,8 @@
             var messagingUsers = [];
             var messagingSelectedUserIds = new Set();
             var messagingPickerSnapshot = new Set();
+            var messagingPickerMode = 'inapp';
+            var messagingStash = null;
 
             function showMessagingView(view) {
                 var hub = document.getElementById('messaging-hub');
@@ -6203,6 +6231,7 @@
             // ==============================================================
             var mailState = { tab: 'inbox', q: '', rows: [], more: false, seq: 0, loading: false, timer: null, summary: null, openId: null,
                 replyRid: null, composeRid: null, pollTries: 0, pollTimer: null, lastSig: '' };
+            var mailPicked = new Set();
 
             function mailNewRid() {
                 try { if (window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID(); } catch (e) { }
@@ -6310,6 +6339,9 @@
             function mailLoad(append, silent) {
                 var loading = document.getElementById('mail-loading');
                 var seq = ++mailState.seq;
+                // the box always shows exactly what is being searched, never text a phone put there by itself
+                var sbx = document.getElementById('mail-search');
+                if (sbx && sbx.value.trim() !== mailState.q) sbx.value = mailState.q;
                 mailState.loading = true;
                 if (!append && !silent) { mailState.rows = []; mailState.more = false; }
                 if (!mailState.rows.length && !silent) show(loading);
@@ -6335,7 +6367,7 @@
             function mailWatchPending() {
                 if (mailState.pollTimer) { clearTimeout(mailState.pollTimer); mailState.pollTimer = null; }
                 var pending = mailState.tab === 'sent' && mailState.rows.some(function (r) { return r.status === 'QUEUED' || r.status === 'SENDING'; });
-                if (!pending || !mailViewVisible() || mailState.pollTries >= 12) { if (!pending) mailState.pollTries = 0; return; }
+                if (!pending || !mailViewVisible() || mailState.pollTries >= 30) { if (!pending) mailState.pollTries = 0; return; }
                 mailState.pollTries++;
                 mailState.pollTimer = setTimeout(function () { if (mailViewVisible()) mailLoad(false, true); }, 4000);
             }
@@ -6345,6 +6377,9 @@
             }
             function mailOpen() {
                 mailState.pollTries = 0;
+                mailState.q = '';
+                var sbox = document.getElementById('mail-search');
+                if (sbox) sbox.value = '';
                 loadMailSummary();
                 mailLoad(false);
             }
@@ -6457,9 +6492,31 @@
                   .finally(function () { btn.disabled = false; btn.textContent = 'Send reply'; });
             }
             function mailReloadThreadSoon(id) { setTimeout(function () { if (mailState.openId === id && document.getElementById('mail-thread-overlay').classList.contains('open')) mailReloadThread(id, 0); }, 4000); }
+            function mailRenderPicked() {
+                var box = document.getElementById('mail-picked');
+                var btn = document.getElementById('mail-pick-users');
+                if (!box) return;
+                box.innerHTML = '';
+                var chosen = messagingUsers.filter(function (u) { return mailPicked.has(u.id); });
+                chosen.slice(0, 6).forEach(function (u) {
+                    var chip = document.createElement('span');
+                    chip.className = 'messaging-selection-chip';
+                    chip.textContent = u.fullName || u.email || 'Customer';
+                    box.appendChild(chip);
+                });
+                if (chosen.length > 6) {
+                    var more = document.createElement('span');
+                    more.className = 'messaging-selection-chip';
+                    more.textContent = '+' + (chosen.length - 6) + ' more';
+                    box.appendChild(more);
+                }
+                if (btn) btn.textContent = mailPicked.size ? mailPicked.size + ' customer' + (mailPicked.size === 1 ? '' : 's') + ' selected (change)' : 'Choose customers';
+            }
             function mailOpenCompose() {
                 ['mail-to', 'mail-subject', 'mail-body'].forEach(function (i) { document.getElementById(i).value = ''; });
                 mailState.composeRid = mailNewRid();
+                mailPicked = new Set();
+                mailRenderPicked();
                 mailError('mail-compose-error', null);
                 mailSheet('mail-compose-overlay', true);
             }
@@ -6470,15 +6527,17 @@
                 var body = document.getElementById('mail-body').value.trim();
                 mailError('mail-compose-error', null);
                 if (btn.disabled) return;
-                if (!to) { mailError('mail-compose-error', 'Enter the customer\'s email address.'); return; }
+                if (!to && !mailPicked.size) { mailError('mail-compose-error', 'Enter an email address or choose customers.'); return; }
                 if (!subject) { mailError('mail-compose-error', 'Enter a subject.'); return; }
                 if (!body) { mailError('mail-compose-error', 'Write your message first.'); return; }
                 var rid = mailState.composeRid || (mailState.composeRid = mailNewRid());
                 btn.disabled = true; btn.textContent = 'Sending...';
-                adminApiRequest('/api/admin/mail/send', { method: 'POST', body: { to: to, subject: subject, body: body, requestId: rid }, timeoutMs: 60000 }).then(function () {
+                adminApiRequest('/api/admin/mail/send', { method: 'POST', body: { to: to, userIds: Array.from(mailPicked), subject: subject, body: body, requestId: rid }, timeoutMs: 60000 }).then(function (r) {
                     mailState.composeRid = null;
                     mailSheet('mail-compose-overlay', false);
-                    showToast('Email sent.');
+                    showToast(r && r.background ? 'Sending to ' + r.count + ' customers...' : 'Email sent.');
+                    mailPicked = new Set();
+                    mailRenderPicked();
                     mailSetTab('sent');
                     loadMailSummary();
                 }).catch(function (e) { mailError('mail-compose-error', mailSendError(e)); })
@@ -6503,13 +6562,16 @@
                 el('mail-back-btn').addEventListener('click', function () { showMessagingView('hub'); loadMailSummary(); });
                 el('mail-more').addEventListener('click', function () { mailLoad(true); });
                 el('mail-compose-btn').addEventListener('click', mailOpenCompose);
+                el('mail-pick-users').addEventListener('click', function () { messagingPickerMode = 'email'; openMessagingPicker(); });
                 el('mail-reply-send').addEventListener('click', mailSendReply);
                 el('mail-compose-send').addEventListener('click', mailSendCompose);
                 el('mail-refresh').addEventListener('click', function () { mailRefreshNow(this); });
                 document.querySelectorAll('#mail-tabs [data-mtab]').forEach(function (b) {
                     b.addEventListener('click', function () { mailSetTab(b.getAttribute('data-mtab')); });
                 });
-                el('mail-search').addEventListener('input', function () {
+                el('mail-search').addEventListener('input', function (ev) {
+                    // text a phone's autofill puts in the box (not typed by the admin) is thrown away
+                    if (!ev.inputType || ev.inputType === 'insertReplacementText') { this.value = mailState.q; return; }
                     var v = this.value.trim();
                     if (mailState.timer) clearTimeout(mailState.timer);
                     mailState.timer = setTimeout(function () { if (v !== mailState.q) { mailState.q = v; mailLoad(false); } }, 350);
@@ -6640,6 +6702,11 @@
             function openMessagingPicker() {
                 var overlay = document.getElementById('messaging-picker-overlay');
                 if (!overlay) return;
+                if (messagingPickerMode === 'email') {
+                    messagingStash = messagingSelectedUserIds;
+                    messagingSelectedUserIds = new Set(mailPicked);
+                    overlay.style.zIndex = '170';
+                }
                 messagingPickerSnapshot = new Set(messagingSelectedUserIds);
                 overlay.classList.add('open');
                 overlay.setAttribute('aria-hidden', 'false');
@@ -6659,6 +6726,14 @@
                 if (!saveChanges) {
                     messagingSelectedUserIds = new Set(messagingPickerSnapshot);
                 }
+                if (messagingPickerMode === 'email') {
+                    if (saveChanges) mailPicked = new Set(messagingSelectedUserIds);
+                    if (messagingStash) messagingSelectedUserIds = messagingStash;
+                    messagingStash = null;
+                    messagingPickerMode = 'inapp';
+                    overlay.style.zIndex = '';
+                    mailRenderPicked();
+                }
                 overlay.classList.remove('open');
                 overlay.setAttribute('aria-hidden', 'true');
                 document.body.classList.remove('drawer-open');
@@ -6666,7 +6741,7 @@
             }
 
             var messagingOpenPicker = document.getElementById('messaging-open-picker');
-            if (messagingOpenPicker) messagingOpenPicker.addEventListener('click', openMessagingPicker);
+            if (messagingOpenPicker) messagingOpenPicker.addEventListener('click', function () { messagingPickerMode = 'inapp'; openMessagingPicker(); });
 
             var messagingPickerClose = document.getElementById('messaging-picker-close');
             if (messagingPickerClose) messagingPickerClose.addEventListener('click', function () { closeMessagingPicker(false); });
@@ -6759,6 +6834,165 @@
                     }
                 });
             }
+
+            // ==============================================================
+            // ADMIN NOTIFICATIONS (bell: emails sent, new KYC submissions - same notification system the customers use)
+            // ==============================================================
+            var adminNotif = { unread: null, listenersOn: false, pushBusy: false, pushDone: false, sentToken: null, open: false, seen: false };
+            var ADMIN_FCM_KEY = 'dw_admin_fcm_token';
+
+            function notifVibrate() { try { if (navigator.vibrate) navigator.vibrate([140, 70, 140]); } catch (e) { } }
+            function notifSetBadge(n) {
+                var b = document.getElementById('notif-badge');
+                if (!b) return;
+                b.textContent = n > 99 ? '99+' : String(n);
+                b.classList.toggle('hidden', !(n > 0));
+            }
+            function notifLoggedIn() {
+                var s = document.getElementById('screen-main');
+                return !!getToken() && !!s && s.classList.contains('active');
+            }
+            function notifPoll() {
+                if (!notifLoggedIn()) return;
+                adminApiRequest('/api/admin/my-notifications/unread-count', { quiet: true, timeoutMs: 10000 }).then(function (n) {
+                    n = Number(n) || 0;
+                    var rose = adminNotif.unread !== null && n > adminNotif.unread;
+                    adminNotif.unread = n;
+                    notifSetBadge(n);
+                    if (rose) notifAnnounce();
+                    if (rose && adminNotif.open) notifLoad();
+                }).catch(function () { });
+                adminPushInit();
+            }
+            // a new alert arrived while the app is open: vibrate and show it
+            function notifAnnounce() {
+                notifVibrate();
+                adminApiRequest('/api/admin/my-notifications', { quiet: true, timeoutMs: 10000 }).then(function (rows) {
+                    var fresh = (rows || []).filter(function (r) { return !r.read; })[0];
+                    if (fresh) showToast(fresh.title + ': ' + fresh.message);
+                }).catch(function () { });
+            }
+            function notifRender(rows) {
+                var box = document.getElementById('nt-list');
+                if (!rows.length) { box.innerHTML = '<div class="empty-state">No notifications yet.</div>'; return; }
+                box.innerHTML = rows.map(function (r, i) {
+                    return '<button type="button" class="nt-item' + (r.read ? '' : ' unread') + '" data-ni="' + i + '"><span class="nt-dot"></span><span><div class="nt-title">'
+                        + escapeHtml(r.title || '') + '</div><div class="nt-msg">' + escapeHtml(r.message || '') + '</div><div class="nt-time">' + escapeHtml(mailFullTime(r.createdAt)) + '</div></span></button>';
+                }).join('');
+                box.querySelectorAll('[data-ni]').forEach(function (el) {
+                    el.addEventListener('click', function () { notifOpenItem(rows[Number(el.getAttribute('data-ni'))]); });
+                });
+            }
+            function notifLoad() {
+                var err = document.getElementById('notif-error');
+                adminApiRequest('/api/admin/my-notifications', { quiet: true, timeoutMs: 20000 }).then(function (rows) {
+                    hide(err);
+                    notifRender(rows || []);
+                    var unread = (rows || []).filter(function (r) { return !r.read; }).length;
+                    adminNotif.unread = unread;
+                    notifSetBadge(unread);
+                }).catch(function (e) { err.textContent = e.message || 'Could not load notifications.'; show(err); });
+            }
+            function notifSheet(open) {
+                var ov = document.getElementById('notif-overlay');
+                adminNotif.open = !!open;
+                ov.classList.toggle('open', !!open);
+                ov.setAttribute('aria-hidden', open ? 'false' : 'true');
+            }
+            function notifOpenItem(r) {
+                if (!r) return;
+                if (!r.read) {
+                    adminApiRequest('/api/admin/my-notifications/' + encodeURIComponent(r.id) + '/read', { method: 'PUT', quiet: true }).then(function () {
+                        adminNotif.unread = Math.max(0, (adminNotif.unread || 1) - 1);
+                        notifSetBadge(adminNotif.unread);
+                    }).catch(function () { });
+                }
+                notifSheet(false);
+                if (r.type === 'KYC_SUBMITTED') {
+                    var k = document.querySelector('[data-drawer-action="kyc"]');
+                    if (k) k.click();
+                } else if (r.type === 'EMAIL_SENT') {
+                    var m = document.querySelector('[data-bottom-tab="messaging"]');
+                    if (m) m.click();
+                    setTimeout(function () { var c = document.getElementById('messaging-ch-email'); if (c) c.click(); }, 150);
+                }
+            }
+            // Push to the phone (works when this app was built with the Capacitor push plugin; otherwise the bell and alerts still work while the app is open)
+            function adminPushSend(token) {
+                if (adminNotif.sentToken === token) return;
+                adminNotif.sentToken = token;
+                adminApiRequest('/api/admin/device-token', { method: 'POST', body: { fcmToken: token, platform: 'android' }, quiet: true }).then(function () {
+                    try { localStorage.setItem(ADMIN_FCM_KEY, token); } catch (e) { }
+                }).catch(function () { adminNotif.sentToken = null; });
+            }
+            function adminPushInit() {
+                if (adminNotif.pushBusy || adminNotif.pushDone) return;
+                var C = window.Capacitor;
+                if (!C || typeof C.isNativePlatform !== 'function' || !C.isNativePlatform()) return;
+                var P = C.Plugins && C.Plugins.PushNotifications;
+                if (!P) return;
+                adminNotif.pushBusy = true;
+                (async function () {
+                    try {
+                        if (!adminNotif.listenersOn) {
+                            adminNotif.listenersOn = true;
+                            await P.addListener('registration', function (t) { if (t && t.value) adminPushSend(t.value); });
+                            await P.addListener('registrationError', function () { });
+                            await P.addListener('pushNotificationReceived', function (n) {
+                                notifVibrate();
+                                showToast(((n && n.title) || 'Notification') + ((n && n.body) ? ': ' + n.body : ''));
+                                notifPoll();
+                            });
+                            try {
+                                if (typeof P.createChannel === 'function') {
+                                    await P.createChannel({ id: 'deenwallet_alerts', name: 'DeenWallet Transfer alerts', description: 'Admin alerts', importance: 5, visibility: 1, vibration: true, lights: true });
+                                }
+                            } catch (e) { }
+                        }
+                        var perm = await P.checkPermissions();
+                        var rec = perm && perm.receive;
+                        if (rec === 'prompt') { var asked = await P.requestPermissions(); rec = asked && asked.receive; }
+                        if (rec === 'granted') await P.register();
+                        adminNotif.pushDone = true;
+                    } catch (e) { /* push is optional */ } finally { adminNotif.pushBusy = false; }
+                })();
+            }
+            // called on logout / session end: this phone stops getting this admin's alerts
+            function adminPushUnregister() {
+                var tok = null;
+                try { tok = localStorage.getItem(ADMIN_FCM_KEY); } catch (e) { }
+                var access = getToken();
+                adminNotif.pushDone = false;
+                adminNotif.sentToken = null;
+                adminNotif.unread = null;
+                adminNotif.seen = false;
+                notifSetBadge(0);
+                if (!tok || !access) return;
+                try { localStorage.removeItem(ADMIN_FCM_KEY); } catch (e) { }
+                try {
+                    fetch(API_BASE_URL + '/api/admin/device-token', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + access },
+                        body: JSON.stringify({ fcmToken: tok, platform: 'android' })
+                    }).catch(function () { });
+                } catch (e) { }
+            }
+            (function () {
+                var bell = document.getElementById('notif-btn');
+                if (!bell) return;
+                bell.addEventListener('click', function () { notifSheet(true); notifLoad(); });
+                document.getElementById('notif-close').addEventListener('click', function () { notifSheet(false); });
+                document.getElementById('notif-overlay').addEventListener('click', function (e) { if (e.target === this) notifSheet(false); });
+                document.getElementById('notif-readall').addEventListener('click', function () {
+                    adminApiRequest('/api/admin/my-notifications/read-all', { method: 'PUT', quiet: true }).then(function () { notifLoad(); }).catch(function () { });
+                });
+                setInterval(function () { if (document.visibilityState !== 'hidden') notifPoll(); }, 30000);
+                // first check right after signing in
+                setInterval(function () {
+                    if (notifLoggedIn()) { if (!adminNotif.seen) { adminNotif.seen = true; notifPoll(); } } else { adminNotif.seen = false; }
+                }, 2000);
+                document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') notifPoll(); });
+            })();
 
             // ==============================================================
             // WHATSAPP SETTINGS

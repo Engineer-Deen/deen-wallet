@@ -68,6 +68,9 @@ app:
     enabled: ${DATA_RETENTION_ENABLED:true}
     days: ${DATA_RETENTION_DAYS:30}
 
+    mailbox:
+        retention-days: 365
+
   transaction-archive:
     after-days: ${TRANSACTION_ARCHIVE_AFTER_DAYS:180}
     enabled: ${TRANSACTION_ARCHIVE_ENABLED:true}

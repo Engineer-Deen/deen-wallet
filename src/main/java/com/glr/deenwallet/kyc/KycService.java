@@ -1,6 +1,7 @@
 package com.glr.deenwallet.kyc;
 
 import com.glr.deenwallet.email.EmailService;
+import com.glr.deenwallet.notification.AdminAlertService;
 import com.glr.deenwallet.notification.NotificationService;
 import com.glr.deenwallet.notification.PushNotificationService;
 import com.glr.deenwallet.transaction.TooManyRequestsException;
@@ -57,11 +58,12 @@ public class KycService {
     private final NotificationService notifications;
     private final PushNotificationService push;
     private final EmailService emails;
+    private final AdminAlertService adminAlerts;
 
     public KycService(KycSubmissionRepository submissions, KycDocumentRepository documents,
                       KycAuditRepository audit, KycCrypto crypto, KycLimitService limits,
                       UserRepository users, NotificationService notifications,
-                      PushNotificationService push, EmailService emails) {
+                      PushNotificationService push, EmailService emails, AdminAlertService adminAlerts) {
         this.submissions = submissions;
         this.documents = documents;
         this.audit = audit;
@@ -71,6 +73,7 @@ public class KycService {
         this.notifications = notifications;
         this.push = push;
         this.emails = emails;
+        this.adminAlerts = adminAlerts;
     }
 
     // =====================================================================
@@ -179,6 +182,12 @@ public class KycService {
         submissions.save(s);
         audit.save(new KycAudit(s.getId(), userId, "SUBMITTED", userId, null,
                 s.getDocumentType().name() + " ending " + s.getDocumentLast4()));
+        // tell every admin there is a new submission to review (after the save is final; a problem here never blocks the customer)
+        runAfterCommit(() -> {
+            User submitter = users.findById(userId).orElse(null);
+            String who = submitter == null || submitter.getFullName() == null || submitter.getFullName().isBlank() ? "A customer" : submitter.getFullName().trim();
+            adminAlerts.notifyAdmins(null, "KYC_SUBMITTED", "New KYC submission", who + " submitted ID documents for verification. Open KYC Verification to review.");
+        });
         return buildStatus(userId);
     }
 
