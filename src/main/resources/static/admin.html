@@ -6840,8 +6840,7 @@
             // ==============================================================
             var adminNotif = { unread: null, listenersOn: false, pushBusy: false, pushDone: false, sentToken: null, open: false, seen: false };
             var ADMIN_FCM_KEY = 'dw_admin_fcm_token';
-            // Phone push is switched off until the admin APK is confirmed to include its Firebase file (set to true then).
-            var ADMIN_PUSH_ENABLED = false;
+            var ADMIN_PUSH_ENABLED = true;
 
             function notifVibrate() { try { if (navigator.vibrate) navigator.vibrate([140, 70, 140]); } catch (e) { } }
             function notifSetBadge(n) {
@@ -6913,7 +6912,7 @@
                 if (r.type === 'KYC_SUBMITTED') {
                     var k = document.querySelector('[data-drawer-action="kyc"]');
                     if (k) k.click();
-                } else if (r.type === 'EMAIL_SENT') {
+                } else if (r.type === 'EMAIL_SENT' || r.type === 'EMAIL_RECEIVED') {
                     var m = document.querySelector('[data-bottom-tab="messaging"]');
                     if (m) m.click();
                     setTimeout(function () { var c = document.getElementById('messaging-ch-email'); if (c) c.click(); }, 150);

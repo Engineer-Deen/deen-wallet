@@ -10,6 +10,7 @@ import jakarta.mail.Session;
 import jakarta.mail.Store;
 import jakarta.mail.UIDFolder;
 import jakarta.mail.internet.InternetAddress;
+import com.glr.deenwallet.notification.AdminAlertService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -55,10 +56,12 @@ public class MailboxImap {
     private String password;
 
     private final MailboxService service;
+    private final AdminAlertService alerts;
     private final AtomicBoolean running = new AtomicBoolean(false);
 
-    public MailboxImap(MailboxService service) {
+    public MailboxImap(MailboxService service, AdminAlertService alerts) {
         this.service = service;
+        this.alerts = alerts;
     }
 
     public boolean configured() {
@@ -149,12 +152,22 @@ public class MailboxImap {
                 long maxUid = lastUid;
                 int stored = 0;
                 int handled = 0;
+                List<String> arrived = new ArrayList<>();
                 for (Message m : fresh) {
                     if (handled >= PER_POLL) break;
                     handled++;
                     long uid = uids.getUID(m);
                     try {
-                        if (service.importIncoming(read(m, uid))) stored++;
+                        MailboxService.Incoming in = read(m, uid);
+                        if (service.importIncoming(in)) {
+                            stored++;
+                            // only mail that really just arrived is announced (never the old backlog of a first run)
+                            if (lastUid > 0 && (in.at() == null || in.at().isAfter(Instant.now().minus(1, ChronoUnit.DAYS)))) {
+                                String who = in.fromName() == null || in.fromName().isBlank() ? in.fromEmail() : in.fromName().trim();
+                                String subj = in.subject() == null || in.subject().isBlank() ? "(no subject)" : in.subject().trim();
+                                arrived.add(who + ": " + (subj.length() > 100 ? subj.substring(0, 100) : subj));
+                            }
+                        }
                     } catch (Exception e) {
                         // an unreadable email must not block the ones behind it
                         log.warn("Mailbox: could not read the email with UID {}: {}", uid, e.toString());
@@ -162,6 +175,15 @@ public class MailboxImap {
                     if (uid > maxUid) maxUid = uid;
                 }
                 service.saveState(validity, maxUid);
+                try {
+                    if (arrived.size() == 1) {
+                        alerts.notifyAdmins(null, "EMAIL_RECEIVED", "New customer email", arrived.get(0));
+                    } else if (arrived.size() > 1) {
+                        alerts.notifyAdmins(null, "EMAIL_RECEIVED", "New customer emails", arrived.size() + " new emails in the support inbox, latest from " + arrived.get(arrived.size() - 1));
+                    }
+                } catch (RuntimeException e) {
+                    log.warn("Mailbox: could not announce new emails: {}", e.toString());
+                }
                 if (stored > 0) log.info("Mailbox: {} new email(s) stored", stored);
                 return stored;
             } finally {
