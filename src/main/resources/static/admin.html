@@ -311,6 +311,10 @@
         .nt-title { font-size: 14px; font-weight: 800; color: var(--text); }
         .nt-msg { margin-top: 2px; font-size: 13px; line-height: 1.45; color: var(--muted); word-break: break-word; }
         .nt-time { margin-top: 4px; font-size: 11px; color: var(--muted); }
+        .nt-pop { position: fixed; left: 12px; right: 12px; top: calc(10px + env(safe-area-inset-top, 0px)); z-index: 400; max-width: 520px; margin: 0 auto; padding: 12px 14px; border-radius: 14px; background: #12343D; color: #fff; box-shadow: 0 10px 30px rgba(0, 0, 0, .35); cursor: pointer; transform: translateY(-160%); transition: transform .25s ease; }
+        .nt-pop.show { transform: translateY(0); }
+        .nt-pop strong { display: block; font-size: 14px; }
+        .nt-pop span { display: block; margin-top: 2px; font-size: 13px; opacity: .92; word-break: break-word; }
 
         .top-bar .menu-btn {
             background: var(--card);
@@ -3217,6 +3221,8 @@
                 <div class="wallet-sheet-head"><strong>Notifications</strong><button type="button" class="wallet-sheet-close" id="notif-close" aria-label="Close">&times;</button></div>
                 <div style="display:flex;justify-content:flex-end;"><button type="button" class="btn-sm refresh" id="notif-readall">Mark all as read</button></div>
                 <div id="notif-error" class="wallet-note bad hidden"></div>
+                <div class="wallet-note" id="notif-push-status" style="margin-top:8px;"></div>
+                <button type="button" class="btn-outline hidden" id="notif-push-btn" style="width:100%;margin-top:6px;">Turn on phone alerts</button>
                 <div id="nt-list" class="nt-list"></div>
             </div>
         </div>
@@ -6843,6 +6849,33 @@
             var ADMIN_PUSH_ENABLED = true;
 
             function notifVibrate() { try { if (navigator.vibrate) navigator.vibrate([140, 70, 140]); } catch (e) { } }
+            // a banner at the top of the screen (tap it to open the bell)
+            function notifPopup(title, body) {
+                try {
+                    var old = document.getElementById('nt-pop');
+                    if (old && old.parentNode) old.parentNode.removeChild(old);
+                    var d = document.createElement('div');
+                    d.id = 'nt-pop';
+                    d.className = 'nt-pop';
+                    d.setAttribute('role', 'alert');
+                    var inner = document.createElement('div');
+                    var s = document.createElement('strong');
+                    s.textContent = title || 'Notification';
+                    var sp = document.createElement('span');
+                    sp.textContent = body || '';
+                    inner.appendChild(s);
+                    inner.appendChild(sp);
+                    d.appendChild(inner);
+                    document.body.appendChild(d);
+                    requestAnimationFrame(function () { d.classList.add('show'); });
+                    var gone = function () {
+                        d.classList.remove('show');
+                        setTimeout(function () { if (d.parentNode) d.parentNode.removeChild(d); }, 300);
+                    };
+                    d.addEventListener('click', function () { gone(); notifSheet(true); notifLoad(); notifPushStatus(); });
+                    setTimeout(gone, 7000);
+                } catch (e) { showToast((title || 'Notification') + ': ' + (body || '')); }
+            }
             function notifSetBadge(n) {
                 var b = document.getElementById('notif-badge');
                 if (!b) return;
@@ -6870,7 +6903,7 @@
                 notifVibrate();
                 adminApiRequest('/api/admin/my-notifications', { quiet: true, timeoutMs: 10000 }).then(function (rows) {
                     var fresh = (rows || []).filter(function (r) { return !r.read; })[0];
-                    if (fresh) showToast(fresh.title + ': ' + fresh.message);
+                    if (fresh) notifPopup(fresh.title, fresh.message);
                 }).catch(function () { });
             }
             function notifRender(rows) {
@@ -6920,7 +6953,9 @@
             }
             // Push to the phone (works when this app was built with the Capacitor push plugin; otherwise the bell and alerts still work while the app is open)
             function adminPushSend(token) {
-                if (adminNotif.sentToken === token) return;
+                var stored = null;
+                try { stored = localStorage.getItem(ADMIN_FCM_KEY); } catch (e) { }
+                if (adminNotif.sentToken === token && stored === token) return;
                 adminNotif.sentToken = token;
                 adminApiRequest('/api/admin/device-token', { method: 'POST', body: { fcmToken: token, platform: 'android' }, quiet: true }).then(function () {
                     try { localStorage.setItem(ADMIN_FCM_KEY, token); } catch (e) { }
@@ -6942,7 +6977,7 @@
                             await P.addListener('registrationError', function () { });
                             await P.addListener('pushNotificationReceived', function (n) {
                                 notifVibrate();
-                                showToast(((n && n.title) || 'Notification') + ((n && n.body) ? ': ' + n.body : ''));
+                                notifPopup((n && n.title) || 'Notification', (n && n.body) || '');
                                 notifPoll();
                             });
                             try {
@@ -6958,6 +6993,43 @@
                         adminNotif.pushDone = true;
                     } catch (e) { /* push is optional */ } finally { adminNotif.pushBusy = false; }
                 })();
+            }
+            // what the bell sheet says about phone alerts, and the button that asks Android for permission
+            async function notifPushStatus() {
+                var el = document.getElementById('notif-push-status');
+                var btn = document.getElementById('notif-push-btn');
+                if (!el) return;
+                var C = window.Capacitor;
+                var P = C && C.Plugins && C.Plugins.PushNotifications;
+                var msg = '';
+                var showBtn = false;
+                if (!C || typeof C.isNativePlatform !== 'function' || !C.isNativePlatform()) {
+                    msg = 'Phone alerts work in the installed admin app. In a browser you only get the bell.';
+                } else if (!P) {
+                    msg = 'This app version cannot receive phone alerts. Install admin app 1.8 or newer.';
+                } else {
+                    try {
+                        var perm = await P.checkPermissions();
+                        var r = perm && perm.receive;
+                        var registered = false;
+                        try { registered = !!localStorage.getItem(ADMIN_FCM_KEY); } catch (e) { }
+                        if (r === 'granted' && registered) msg = 'Phone alerts are ON for this phone.';
+                        else if (r === 'granted') { msg = 'Notifications are allowed, but this phone is not registered yet. Tap the button to register it.'; showBtn = true; }
+                        else if (r === 'denied') msg = 'Notifications are blocked. Open Android Settings > Apps > DeenWallet Admin > Notifications, allow them, then come back here.';
+                        else { msg = 'Phone alerts are off. Tap the button to allow notifications.'; showBtn = true; }
+                    } catch (e) { msg = 'Could not read the notification setting: ' + (e && e.message ? e.message : e); }
+                }
+                el.textContent = msg;
+                if (btn) btn.classList.toggle('hidden', !showBtn);
+            }
+            function notifPushEnable(btn) {
+                btn.disabled = true;
+                btn.textContent = 'Working...';
+                adminNotif.pushDone = false;
+                adminNotif.pushBusy = false;
+                adminPushInit();
+                setTimeout(notifPushStatus, 2500);
+                setTimeout(function () { notifPushStatus().then(function () { btn.disabled = false; btn.textContent = 'Turn on phone alerts'; }); }, 6000);
             }
             // called on logout / session end: this phone stops getting this admin's alerts
             function adminPushUnregister() {
@@ -6982,7 +7054,9 @@
             (function () {
                 var bell = document.getElementById('notif-btn');
                 if (!bell) return;
-                bell.addEventListener('click', function () { notifSheet(true); notifLoad(); });
+                bell.addEventListener('click', function () { notifSheet(true); notifLoad(); notifPushStatus(); });
+                var pushBtn = document.getElementById('notif-push-btn');
+                if (pushBtn) pushBtn.addEventListener('click', function () { notifPushEnable(pushBtn); });
                 document.getElementById('notif-close').addEventListener('click', function () { notifSheet(false); });
                 document.getElementById('notif-overlay').addEventListener('click', function (e) { if (e.target === this) notifSheet(false); });
                 document.getElementById('notif-readall').addEventListener('click', function () {
