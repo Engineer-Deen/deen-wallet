@@ -94,6 +94,7 @@ public class SecurityConfig {
                                 "/firebase-messaging-sw.js",
                                 "/deenwallet-logo.png",
                                 "/deenwallet-logo-sm.png",
+                                "/deenwallet-logo-md.png",
                                 "/favicon.ico",
                                 "/error",
                                 "/assets/**",
