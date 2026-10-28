@@ -40,6 +40,18 @@ public class User {
     @Column(name="admin_recovery_required", nullable=false)
     private boolean adminRecoveryRequired;
 
+    /** The head of all admins. Cannot be controlled by anyone else. */
+    @Column(name="main_admin", nullable=false)
+    private boolean mainAdmin;
+
+    /** Comma separated sections this ADMIN may not open (see AdminSections). Empty = everything. */
+    @Column(name="denied_sections", nullable=false)
+    private String deniedSections;
+
+    /** Who created this admin account. */
+    @Column(name="created_by")
+    private UUID createdBy;
+
     @Column(name="created_at", nullable=false, updatable=false) private Instant createdAt;
     @Column(name="updated_at", nullable=false) private Instant updatedAt;
 
@@ -57,6 +69,7 @@ public class User {
         adminRecoveryRequired = false;
         if (role == null) role = "USER";
         if (pinHash == null) pinHash = "";
+        if (deniedSections == null) deniedSections = "";
     }
 
     @PreUpdate protected void onUpdate() { updatedAt = Instant.now(); }

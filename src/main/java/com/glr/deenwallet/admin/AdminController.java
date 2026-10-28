@@ -151,12 +151,7 @@ public class AdminController {
         User currentUser = getCurrentUser();
         validateAdmin();
         User targetUser = userRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("User not found"));
-        if ("SUPER_ADMIN".equals(targetUser.getRole())) {
-            throw new SecurityException("Cannot deactivate super admin.");
-        }
-        if ("ADMIN".equals(targetUser.getRole()) && !"SUPER_ADMIN".equals(currentUser.getRole())) {
-            throw new SecurityException("Only a super admin can manage another admin account.");
-        }
+        requireManage(currentUser, targetUser);
         User updated = adminService.toggleUserActive(id, request.isActive());
         return ResponseEntity.ok(AdminUserResponse.from(updated));
     }
@@ -166,12 +161,7 @@ public class AdminController {
         User currentUser = getCurrentUser();
         validateAdmin();
         User targetUser = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("User not found"));
-        if ("SUPER_ADMIN".equals(targetUser.getRole())) {
-            throw new SecurityException("Cannot lock super admin.");
-        }
-        if ("ADMIN".equals(targetUser.getRole()) && !"SUPER_ADMIN".equals(currentUser.getRole())) {
-            throw new SecurityException("Only a super admin can manage another admin account.");
-        }
+        requireManage(currentUser, targetUser);
         adminService.lockUser(userId);
         return ResponseEntity.noContent().build();
     }
@@ -180,12 +170,7 @@ public class AdminController {
     public ResponseEntity<AdminUserResponse> unlockUser(@PathVariable UUID userId) {
         validateAdmin();
         User targetUser = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("User not found"));
-        if ("SUPER_ADMIN".equals(targetUser.getRole())) {
-            throw new SecurityException("Super admin cannot be locked/unlocked.");
-        }
-        if ("ADMIN".equals(targetUser.getRole()) && !"SUPER_ADMIN".equals(getCurrentUser().getRole())) {
-            throw new SecurityException("Only a super admin can manage another admin account.");
-        }
+        requireManage(getCurrentUser(), targetUser);
         User unlocked = adminService.unlockUser(userId);
         return ResponseEntity.ok(AdminUserResponse.from(unlocked));
     }
@@ -197,12 +182,7 @@ public class AdminController {
         User target = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        if ("SUPER_ADMIN".equals(target.getRole())) {
-            throw new SecurityException("Super admin login protection cannot be reset from another account.");
-        }
-        if ("ADMIN".equals(target.getRole()) && !"SUPER_ADMIN".equals(current.getRole())) {
-            throw new SecurityException("Only a super admin can reset another admin's login protection.");
-        }
+        requireManage(current, target);
 
         User updated = adminService.resetLoginProtection(userId);
         return ResponseEntity.ok(AdminUserResponse.from(updated));
@@ -224,6 +204,18 @@ public class AdminController {
     public ResponseEntity<AdminUserResponse> createAdmin(@Valid @RequestBody CreateAdminRequest request) {
         User currentUser = getCurrentUser();
         validateSuperAdmin(currentUser);
+        return ResponseEntity.ok(AdminUserResponse.from(createAccount(request, "ADMIN", currentUser)));
+    }
+
+    /** Only the main super admin can create another super admin. */
+    @PostMapping("/super-admins")
+    public ResponseEntity<AdminUserResponse> createSuperAdmin(@Valid @RequestBody CreateAdminRequest request) {
+        User currentUser = getCurrentUser();
+        validateMainAdmin(currentUser);
+        return ResponseEntity.ok(AdminUserResponse.from(createAccount(request, "SUPER_ADMIN", currentUser)));
+    }
+
+    private User createAccount(CreateAdminRequest request, String role, User creator) {
         String email = request.getEmail().trim().toLowerCase(java.util.Locale.ROOT);
 
         boolean adminEmailExists =
@@ -243,6 +235,9 @@ public class AdminController {
         if (adminPhoneExists) {
             throw new IllegalArgumentException("Phone number already registered");
         }
+        if (request.getPin() == null || !request.getPin().matches("^\\d{4}$")) {
+            throw new IllegalArgumentException("PIN must be exactly 4 digits.");
+        }
 
         User newAdmin = User.builder()
                 .email(email)
@@ -254,12 +249,83 @@ public class AdminController {
                 .emailVerified(false)
                 .locked(false)
                 .phone(phone)
-                .pinHash("")
+                .pinHash(passwordEncoder.encode(request.getPin()))
                 .phoneVerified(false)
-                .role("ADMIN")
+                .role(role)
+                .mainAdmin(false)
+                .createdBy(creator.getId())
                 .build();
         userRepository.save(newAdmin);
-        return ResponseEntity.ok(AdminUserResponse.from(newAdmin));
+        return newAdmin;
+    }
+
+    /** Edit an admin's (or, for the main super admin, a super admin's) details. */
+    @PutMapping("/admins/{id}")
+    public ResponseEntity<AdminUserResponse> editAdmin(@PathVariable UUID id, @Valid @RequestBody EditAdminRequest request) {
+        User current = getCurrentUser();
+        validateSuperAdmin(current);
+        User target = userRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Admin not found"));
+        if (!"ADMIN".equals(target.getRole()) && !"SUPER_ADMIN".equals(target.getRole())) {
+            throw new IllegalArgumentException("That account is not an admin.");
+        }
+        requireManage(current, target);
+
+        String email = request.getEmail().trim().toLowerCase(java.util.Locale.ROOT);
+        String phone = request.getPhone().trim();
+        String username = request.getUsername().trim();
+        boolean emailTaken = userRepository.findByEmailAndRole(email, "ADMIN").filter(x -> !x.getId().equals(target.getId())).isPresent()
+                || userRepository.findByEmailAndRole(email, "SUPER_ADMIN").filter(x -> !x.getId().equals(target.getId())).isPresent();
+        if (emailTaken) throw new IllegalArgumentException("Email already registered");
+        boolean phoneTaken = userRepository.findByPhoneAndRole(phone, "ADMIN").filter(x -> !x.getId().equals(target.getId())).isPresent()
+                || userRepository.findByPhoneAndRole(phone, "SUPER_ADMIN").filter(x -> !x.getId().equals(target.getId())).isPresent();
+        if (phoneTaken) throw new IllegalArgumentException("Phone number already registered");
+        if (userRepository.findByUsername(username).filter(x -> !x.getId().equals(target.getId())).isPresent()) {
+            throw new IllegalArgumentException("Username already in use");
+        }
+        String newPin = request.getNewPin() == null ? "" : request.getNewPin().trim();
+        if (!newPin.isEmpty() && !newPin.matches("^\\d{4}$")) throw new IllegalArgumentException("PIN must be exactly 4 digits.");
+        String newPassword = request.getNewPassword() == null ? "" : request.getNewPassword();
+        if (!newPassword.isEmpty() && newPassword.length() < 8) throw new IllegalArgumentException("Password must be at least 8 characters.");
+
+        boolean emailChanged = !email.equalsIgnoreCase(target.getEmail());
+        boolean phoneChanged = !phone.equals(target.getPhone());
+        target.setFullName(request.getFullName().trim());
+        target.setUsername(username);
+        target.setEmail(email);
+        target.setPhone(phone);
+        if (emailChanged) target.setEmailVerified(false);
+        if (phoneChanged) target.setPhoneVerified(false);
+        if (!newPin.isEmpty()) {
+            target.setPinHash(passwordEncoder.encode(newPin));
+            target.setPinAttempts(0);
+        }
+        if (!newPassword.isEmpty()) target.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(target);
+        if (emailChanged) {
+            try {
+                otpService.generateAndSend(target.getEmail());
+            } catch (Exception e) {
+                log.warn("Admin email changed for {} but the verification email could not be sent: {}", target.getId(), e.toString());
+            }
+        }
+        log.info("Admin {} edited the details of admin {}", current.getEmail(), target.getId());
+        return ResponseEntity.ok(AdminUserResponse.from(target));
+    }
+
+    /** Switch sections on or off for one admin (super admins are never limited). */
+    @PutMapping("/admins/{id}/access")
+    public ResponseEntity<AdminUserResponse> setAdminAccess(@PathVariable UUID id, @RequestBody AccessRequest request) {
+        User current = getCurrentUser();
+        validateSuperAdmin(current);
+        User target = userRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Admin not found"));
+        if (!"ADMIN".equals(target.getRole())) {
+            throw new IllegalArgumentException("Access can only be limited for admins. Super admins can open everything.");
+        }
+        requireManage(current, target);
+        List<String> denied = AdminSections.parse(request.getDenied() == null ? "" : String.join(",", request.getDenied()));
+        target.setDeniedSections(AdminSections.join(denied));
+        userRepository.save(target);
+        return ResponseEntity.ok(AdminUserResponse.from(target));
     }
 
     @PutMapping("/users/{userId}/contact")
@@ -268,8 +334,8 @@ public class AdminController {
         validateAdmin();
         User target = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        if (("ADMIN".equals(target.getRole()) || "SUPER_ADMIN".equals(target.getRole())) && !"SUPER_ADMIN".equals(admin.getRole())) {
-            throw new SecurityException("Only a super admin can change another admin's contact details");
+        if (("ADMIN".equals(target.getRole()) || "SUPER_ADMIN".equals(target.getRole())) && !canManage(admin, target) && !isOwnSuperAdminAccount(admin, target)) {
+            throw new AdminAccessException("Only a super admin can change an admin's details, and only the main super admin can change a super admin's.");
         }
         String email = request.getEmail().trim().toLowerCase(java.util.Locale.ROOT);
         String phone = request.getPhone().trim();
@@ -340,8 +406,8 @@ public class AdminController {
         validateAdmin();
         User target = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        if (("ADMIN".equals(target.getRole()) || "SUPER_ADMIN".equals(target.getRole())) && !"SUPER_ADMIN".equals(currentUser.getRole())) {
-            throw new SecurityException("Only a super admin can verify another admin's email");
+        if (("ADMIN".equals(target.getRole()) || "SUPER_ADMIN".equals(target.getRole())) && !canManage(currentUser, target) && !isOwnSuperAdminAccount(currentUser, target)) {
+            throw new AdminAccessException("Only a super admin can verify an admin's email, and only the main super admin a super admin's.");
         }
         if (!target.isEmailVerified()) {
             target.setEmailVerified(true);
@@ -601,6 +667,28 @@ public class AdminController {
         @Pattern(regexp = "^[^<>]*$", message = "Username cannot contain '<' or '>'")
         private String username;
         @NotBlank @Pattern(regexp = "^\\+232\\d{8}$", message = "Phone must be in format +232XXXXXXXX") private String phone;
+        private String pin;
+    }
+
+    @Data
+    public static class EditAdminRequest {
+        @NotBlank
+        @jakarta.validation.constraints.Size(max = 100, message = "Full name must be at most 100 characters")
+        @Pattern(regexp = "^[^<>]*$", message = "Full name cannot contain '<' or '>'")
+        private String fullName;
+        @NotBlank
+        @jakarta.validation.constraints.Size(max = 40, message = "Username must be at most 40 characters")
+        @Pattern(regexp = "^[^<>]*$", message = "Username cannot contain '<' or '>'")
+        private String username;
+        @NotBlank @Email private String email;
+        @NotBlank @Pattern(regexp = "^\\+232\\d{8}$", message = "Phone must be in format +232XXXXXXXX") private String phone;
+        private String newPin;
+        private String newPassword;
+    }
+
+    @Data
+    public static class AccessRequest {
+        private List<String> denied;
     }
 
     @Data
@@ -639,6 +727,38 @@ public class AdminController {
         }
         if (!user.isActive()) throw new SecurityException("Admin account is inactive.");
         if (user.isLocked() && !"SUPER_ADMIN".equals(role)) throw new SecurityException("Admin account is locked. Complete recovery or ask a super admin to unlock it.");
+    }
+
+    /** Can this signed-in admin control (lock, deactivate, edit, reset) the target account? Never the account itself. */
+    private boolean canManage(User current, User target) {
+        if (current == null || target == null || current.getId().equals(target.getId())) return false;
+        if ("USER".equals(target.getRole())) return true;
+        if ("ADMIN".equals(target.getRole())) return "SUPER_ADMIN".equals(current.getRole());
+        if ("SUPER_ADMIN".equals(target.getRole())) {
+            return "SUPER_ADMIN".equals(current.getRole()) && current.isMainAdmin() && !target.isMainAdmin();
+        }
+        return false;
+    }
+
+    private boolean isOwnSuperAdminAccount(User current, User target) {
+        return current != null && target != null && current.getId().equals(target.getId()) && "SUPER_ADMIN".equals(current.getRole());
+    }
+
+    private void requireManage(User current, User target) {
+        if (canManage(current, target)) return;
+        if ("SUPER_ADMIN".equals(target.getRole()) && target.isMainAdmin()) {
+            throw new AdminAccessException("The main super admin cannot be changed by anyone else.");
+        }
+        if ("SUPER_ADMIN".equals(target.getRole())) {
+            throw new AdminAccessException("Only the main super admin can manage a super admin.");
+        }
+        throw new AdminAccessException("Only a super admin can manage an admin account.");
+    }
+
+    private void validateMainAdmin(User user) {
+        if (!"SUPER_ADMIN".equals(user.getRole()) || !user.isMainAdmin()) {
+            throw new AdminAccessException("Only the main super admin can do this.");
+        }
     }
 
     private void validateSuperAdmin(User user) {

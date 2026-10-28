@@ -54,6 +54,9 @@ public class AdminAuditFilter extends OncePerRequestFilter {
             rule("PUT", "^/api/support/users/" + UUID_RE + "/lock$", "USERS", "USER_LOCK", "Locked a user account (support)"),
             rule("PUT", "^/api/support/users/" + UUID_RE + "/unlock$", "USERS", "USER_UNLOCK", "Unlocked a user account (support)"),
             rule("POST", "^/api/admin/admins$", "ADMINS", "ADMIN_CREATE", "Created an admin account"),
+            rule("POST", "^/api/admin/super-admins$", "ADMINS", "SUPER_CREATE", "Created a super admin account"),
+            rule("PUT", "^/api/admin/admins/" + UUID_RE + "$", "ADMINS", "ADMIN_EDIT", "Edited an admin's details"),
+            rule("PUT", "^/api/admin/admins/" + UUID_RE + "/access$", "ADMINS", "ADMIN_ACCESS", "Changed what an admin can open"),
             rule("POST", "^/api/admin/pin$", "SECURITY", "PIN_CHANGE", "Set or changed their admin PIN"),
             rule("PUT", "^/api/admin/profile/verify-email$", "SECURITY", "VERIFY_OWN_EMAIL", "Verified their own email"),
             rule("POST", "^/api/admin/notifications$", "MESSAGING", "NOTIFICATION", "Sent an in-app notification"),
@@ -148,7 +151,17 @@ public class AdminAuditFilter extends OncePerRequestFilter {
                         summary = body.path("active").asBoolean() ? "Activated a user account" : "Deactivated a user account";
                     }
                 }
-                case "ADMIN_CREATE" -> {
+                case "ADMIN_ACCESS" -> {
+                    java.util.List<String> names = new java.util.ArrayList<>();
+                    if (body != null && body.path("denied").isArray()) {
+                        for (JsonNode d : body.path("denied")) {
+                            String label = com.glr.deenwallet.admin.AdminSections.LABELS.get(d.asText());
+                            if (label != null) names.add(label);
+                        }
+                    }
+                    detail = names.isEmpty() ? "Can open everything" : "Cannot open: " + String.join(", ", names);
+                }
+                case "ADMIN_CREATE", "SUPER_CREATE" -> {
                     targetName = firstNonBlank(text(body, "fullName"), text(body, "email"));
                     detail = text(body, "email");
                 }

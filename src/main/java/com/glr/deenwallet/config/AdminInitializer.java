@@ -112,6 +112,7 @@ public class AdminInitializer {
                             .pinHash("")
                             .phoneVerified(false)
                             .role("SUPER_ADMIN")
+                            .mainAdmin(true)
                             .build();
 
                     try {

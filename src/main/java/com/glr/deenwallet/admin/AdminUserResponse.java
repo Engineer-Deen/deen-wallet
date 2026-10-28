@@ -21,13 +21,16 @@ public record AdminUserResponse(
         boolean adminRecoveryRequired,
         Instant loginLockedUntil,
         Instant createdAt,
-        String role) {
+        String role,
+        boolean mainAdmin,
+        java.util.List<String> deniedSections) {
 
     public static AdminUserResponse from(User u) {
         return new AdminUserResponse(
                 u.getId(), u.getFullName(), u.getUsername(), u.getPhone(), u.getEmail(),
                 u.getAccountNumber(), u.isEmailVerified(), u.isPhoneVerified(), u.isActive(),
                 u.isLocked(), u.getPinAttempts(), u.getLoginFailedAttempts(),
-                u.isAdminRecoveryRequired(), u.getLoginLockedUntil(), u.getCreatedAt(), u.getRole());
+                u.isAdminRecoveryRequired(), u.getLoginLockedUntil(), u.getCreatedAt(), u.getRole(),
+                u.isMainAdmin(), AdminSections.parse(u.getDeniedSections()));
     }
 }

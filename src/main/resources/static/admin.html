@@ -2405,6 +2405,22 @@
         .add-admin-form {
             margin-top: 12px;
         }
+        .am-sheet { position: fixed; inset: 0; z-index: 600; background: rgba(18, 36, 43, .45); display: flex; align-items: flex-end; justify-content: center; }
+        .am-sheet-card { width: min(100%, 560px); max-height: 88vh; overflow-y: auto; background: #fff; border-radius: 18px 18px 0 0; padding: 16px 16px calc(18px + env(safe-area-inset-bottom, 0px)); }
+        .am-sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 16px; }
+        .am-x { border: none; background: none; font-size: 26px; line-height: 1; color: var(--muted); cursor: pointer; }
+        .am-label { display: block; margin: 10px 0 4px; font-size: 12px; font-weight: 700; color: var(--muted); }
+        .am-input { width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 14px; outline: none; box-sizing: border-box; }
+        .am-input:focus { border-color: var(--primary-light); }
+        .am-note { margin: 10px 0 0; font-size: 12px; color: var(--muted); }
+        .am-switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--border); cursor: pointer; }
+        .am-switch-row strong { display: block; font-size: 14px; }
+        .am-switch-row small { display: block; margin-top: 2px; font-size: 12px; color: var(--muted); }
+        .am-switch { appearance: none; -webkit-appearance: none; flex: none; width: 46px; height: 26px; border-radius: 999px; background: #C9D4D8; position: relative; cursor: pointer; transition: background .2s; outline: none; }
+        .am-switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .3); transition: transform .2s; }
+        .am-switch:checked { background: var(--primary); }
+        .am-switch:checked::after { transform: translateX(20px); }
+        [data-denied] { display: none !important; }
 
         .add-admin-form input {
             width: 100%;
@@ -3735,7 +3751,7 @@
                     var data = null;
                     try { data = await response.json(); } catch (_) { }
 
-                    if (!response.ok && (response.status === 401 || response.status === 403) && getRefreshToken()) {
+                    if (!response.ok && (response.status === 401 || response.status === 403) && response.headers.get('X-Reason') !== 'ACCESS_DENIED' && getRefreshToken()) {
                         try {
                             var fresh = await refreshAdminToken();
                             headers['Authorization'] = 'Bearer ' + fresh;
@@ -3758,7 +3774,7 @@
                             hideAdminPinModal();
                             forceToLoginScreen();
                             showToast('Admin PIN disabled. Please log in again.');
-                        } else if (response.status === 401 || response.status === 403) {
+                        } else if (reason !== 'ACCESS_DENIED' && (response.status === 401 || response.status === 403)) {
                             clearToken(); forceToLoginScreen(); showToast('Session expired. Please login again.');
                         }
                         var message = (data && data.message) || 'Request failed.'; throw new Error(message);
@@ -4318,6 +4334,8 @@
 
             function showMainSection(section) {
                 if (section === 'audit' && !isSuperAdmin()) section = 'dashboard';
+                var amKey = { 'kyc': 'kyc', 'failed-payouts': 'failed-payouts', 'waec-pins': 'waec', 'users': 'users', 'errors': 'errors', 'wallet': 'wallet', 'messaging': 'messaging' }[section];
+                if (amKey && adminDeniedSections().indexOf(amKey) >= 0) { showToast('You do not have access to that section. Ask a super admin.'); section = 'dashboard'; }
                 applyRoleNav();
                 Object.keys(tabContents).forEach(function (key) {
                     if (!tabContents[key]) return;
@@ -4408,12 +4426,32 @@
                 if (!r) { try { var p = JSON.parse(sessionStorage.getItem('deenwallet_admin_profile') || 'null'); r = (p && p.role) || ''; } catch (e) { } }
                 return r === 'SUPER_ADMIN';
             }
+            // Sections a super admin switched off for this admin are hidden (the server blocks them too).
+            var AM_NAV = [['kyc', '[data-drawer-action="kyc"]'], ['failed-payouts', '[data-drawer-action="failed-payouts"]'], ['failed-payouts', '#card-failed-payouts'],
+                ['waec', '[data-drawer-action="waec-pins"]'], ['users', '[data-drawer-action="users"]'], ['errors', '[data-drawer-action="errors"]'],
+                ['wallet', '[data-bottom-tab="wallet"]'], ['messaging', '[data-bottom-tab="messaging"]']];
+            function adminDeniedSections() {
+                var u = currentAdminUser;
+                if (!u) { try { u = JSON.parse(sessionStorage.getItem('deenwallet_admin_profile') || 'null'); } catch (e) { u = null; } }
+                return (u && u.role === 'ADMIN' && u.deniedSections) ? u.deniedSections : [];
+            }
             function applyRoleNav() {
                 var nav = document.getElementById('bottom-nav');
                 var btn = nav ? nav.querySelector('[data-bottom-tab="audit"]') : null;
                 var sup = isSuperAdmin();
                 if (btn) btn.style.display = sup ? '' : 'none';
-                if (nav) nav.classList.toggle('three', !sup);
+                var denied = adminDeniedSections();
+                AM_NAV.forEach(function (p) {
+                    document.querySelectorAll(p[1]).forEach(function (el) {
+                        if (denied.indexOf(p[0]) >= 0) el.setAttribute('data-denied', '1'); else el.removeAttribute('data-denied');
+                    });
+                });
+                if (nav) {
+                    var shown = 0;
+                    nav.querySelectorAll('.bottom-nav-btn').forEach(function (b) { if (b.style.display !== 'none' && !b.hasAttribute('data-denied')) shown++; });
+                    nav.classList.toggle('three', shown === 3);
+                    nav.style.gridTemplateColumns = (shown === 3 || shown === 4) ? '' : 'repeat(' + Math.max(1, shown) + ', 1fr)';
+                }
             }
 
             function openAdminDrawer() {
@@ -7602,171 +7640,276 @@
                 });
             }
 
+            // ==============================================================
+            // ADMIN MANAGEMENT (Admins / Super admins, edit details, choose what an admin can open)
+            // ==============================================================
+            var AM_SECTIONS = [
+                { key: 'users', label: 'Users', sub: 'See and manage customer accounts' },
+                { key: 'kyc', label: 'KYC Verification', sub: 'Review customer ID documents' },
+                { key: 'failed-payouts', label: 'Failed Payouts', sub: 'Resend or refund failed transfers' },
+                { key: 'waec', label: 'WAEC Pins', sub: 'WAEC pin stock and sales' },
+                { key: 'wallet', label: 'Wallet', sub: 'Balance, payments in and out' },
+                { key: 'messaging', label: 'Messaging', sub: 'Email and in-app messages to customers' },
+                { key: 'errors', label: 'Error Logs', sub: 'App and server problems' }
+            ];
+            var amState = { role: 'ADMIN', admins: [] };
+            function amIsMain() { return !!(currentAdminUser && currentAdminUser.mainAdmin); }
+            function amTitle(role) { return role === 'SUPER_ADMIN' ? 'Super Admins' : 'Admins'; }
+
             function renderAdminManagement() {
                 var content = document.getElementById('admin-management-content');
-                content.innerHTML = `
-                    <div class="admin-card">
-                        <p class="admin-card-title">Create Admin</p>
-                        <p class="admin-card-sub">Only the Super Admin can create and manage administrator accounts.</p>
-                        <div class="add-admin-form">
-                            <input type="email" id="new-admin-email" name="new-admin-email" autocomplete="off" placeholder="Admin Email" />
-                            <div class="password-field-wrap">
-                                <input type="password" id="new-admin-password" name="new-admin-password" autocomplete="new-password" placeholder="Password" />
-                                <button type="button" class="password-toggle-btn" data-target="new-admin-password" aria-label="Show password">&#128065;</button>
-                            </div>
-                            <input type="text" id="new-admin-fullname" name="new-admin-fullname" autocomplete="off" placeholder="Full Name" />
-                            <input type="text" id="new-admin-username" name="new-admin-username" autocomplete="off" placeholder="Username" />
-                            <input type="text" id="new-admin-phone" name="new-admin-phone" autocomplete="off" placeholder="Phone (e.g. +23276123456)" />
-                            <button class="btn-primary" id="create-admin-btn">Create Admin</button>
-                            <div id="create-admin-error" class="error-state hidden"></div>
-                            <div id="create-admin-success" class="inline-success hidden"><span>&#10003;</span><span>Admin created successfully!</span></div>
-                        </div>
-                    </div>
-                    <div class="admin-card" style="margin-top:14px;">
-                        <p class="admin-card-title">Existing Administrators</p>
-                        <p class="admin-card-sub">Manage current admin accounts and their login protection.</p>
-                        <div id="admin-list" class="admin-list"></div>
-                    </div>`;
-
-                document.getElementById('create-admin-btn').addEventListener('click', function(){
-                    var email=document.getElementById('new-admin-email').value.trim();
-                    var password=document.getElementById('new-admin-password').value;
-                    var fullName=document.getElementById('new-admin-fullname').value.trim();
-                    var username=document.getElementById('new-admin-username').value.trim();
-                    var phone=document.getElementById('new-admin-phone').value.trim();
-                    var errorEl=document.getElementById('create-admin-error'); var successEl=document.getElementById('create-admin-success'); hide(errorEl); hide(successEl);
-                    if(!email||!password||!fullName||!username||!phone){errorEl.textContent='Email, password, full name, username, and phone are required.';show(errorEl);return;}
-                    var btn=this; btn.disabled=true; btn.textContent='Creating…';
-                    adminApiRequest('/api/admin/admins',{method:'POST',body:{email:email,password:password,fullName:fullName,username:username,phone:phone}})
-                        .then(function(){show(successEl);showToast('Admin created successfully!');['new-admin-email','new-admin-password','new-admin-fullname','new-admin-username','new-admin-phone'].forEach(function(id){document.getElementById(id).value='';});loadAdminList();})
-                        .catch(function(err){errorEl.textContent=err.message || 'Failed to create admin.';show(errorEl);})
-                        .finally(function(){btn.disabled=false;btn.textContent='Create Admin';});
+                if (!currentAdminUser || typeof currentAdminUser.mainAdmin === 'undefined') {
+                    content.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading…</div>';
+                    adminApiRequest('/api/admin/me').then(function (u) {
+                        if (u) { currentAdminUser = u; try { sessionStorage.setItem('deenwallet_admin_profile', JSON.stringify(u)); } catch (e) { } }
+                    }).catch(function () { }).then(amStart);
+                    return;
+                }
+                amStart();
+            }
+            function amStart() {
+                if (amIsMain()) amRenderHub(); else amOpen('ADMIN', false);
+            }
+            function amRenderHub() {
+                var content = document.getElementById('admin-management-content');
+                var icon = function (p) { return '<span class="channel-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' + p + '</svg></span>'; };
+                content.innerHTML =
+                    '<div class="admin-card messaging-card">' +
+                    '<p class="admin-card-title">Admin Management</p>' +
+                    '<p class="admin-card-sub">Choose who you want to manage.</p>' +
+                    '<div class="channel-list">' +
+                    '<button type="button" class="channel-card" id="am-card-admins">' + icon('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>') +
+                    '<span class="channel-copy"><span class="channel-title">Admins</span><span class="channel-sub" style="display:block;">Create admins, edit their details and choose what each one can open.</span></span><span class="channel-go">&#8250;</span></button>' +
+                    '<button type="button" class="channel-card" id="am-card-supers">' + icon('<path d="M12 3l2.5 5 5.5.8-4 3.9.9 5.5L12 15.5 7.1 18.2 8 12.7 4 8.8l5.5-.8z"/>') +
+                    '<span class="channel-copy"><span class="channel-title">Super Admins</span><span class="channel-sub" style="display:block;">Create super admins. They can do everything you can, and you stay in control of them.</span></span><span class="channel-go">&#8250;</span></button>' +
+                    '</div></div>';
+                document.getElementById('am-card-admins').addEventListener('click', function () { amOpen('ADMIN', true); });
+                document.getElementById('am-card-supers').addEventListener('click', function () { amOpen('SUPER_ADMIN', true); });
+            }
+            function amOpen(role, withBack) {
+                amState.role = role;
+                var isSuper = role === 'SUPER_ADMIN';
+                var content = document.getElementById('admin-management-content');
+                content.innerHTML =
+                    (withBack ? '<button type="button" class="messaging-back" id="am-back">&#8592; Admin Management</button>' : '') +
+                    '<div class="admin-card">' +
+                    '<p class="admin-card-title">' + (isSuper ? 'Create Super Admin' : 'Create Admin') + '</p>' +
+                    '<p class="admin-card-sub">' + (isSuper
+                        ? 'A super admin can do everything you can, except manage other super admins. Only you can manage them.'
+                        : 'Admins can use the app, but only the parts you allow, and they cannot edit their own details.') + '</p>' +
+                    '<div class="add-admin-form">' +
+                    '<input type="email" id="new-admin-email" name="new-admin-email" autocomplete="off" placeholder="Email" />' +
+                    '<div class="password-field-wrap"><input type="password" id="new-admin-password" name="new-admin-password" autocomplete="new-password" placeholder="Password" />' +
+                    '<button type="button" class="password-toggle-btn" data-target="new-admin-password" aria-label="Show password">&#128065;</button></div>' +
+                    '<div class="password-field-wrap"><input type="password" id="new-admin-pin" name="new-admin-pin" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="4-digit PIN" />' +
+                    '<button type="button" class="password-toggle-btn" data-target="new-admin-pin" aria-label="Show PIN">&#128065;</button></div>' +
+                    '<input type="text" id="new-admin-fullname" name="new-admin-fullname" autocomplete="off" placeholder="Full Name" />' +
+                    '<input type="text" id="new-admin-username" name="new-admin-username" autocomplete="off" placeholder="Username" />' +
+                    '<input type="text" id="new-admin-phone" name="new-admin-phone" autocomplete="off" placeholder="Phone (e.g. +23276123456)" />' +
+                    '<button class="btn-primary" id="create-admin-btn">' + (isSuper ? 'Create Super Admin' : 'Create Admin') + '</button>' +
+                    '<div id="create-admin-error" class="error-state hidden"></div>' +
+                    '<div id="create-admin-success" class="inline-success hidden"><span>&#10003;</span><span>' + (isSuper ? 'Super admin' : 'Admin') + ' created successfully!</span></div>' +
+                    '</div></div>' +
+                    '<div class="admin-card" style="margin-top:14px;">' +
+                    '<p class="admin-card-title">' + (isSuper ? 'Existing Super Admins' : 'Existing Admins') + '</p>' +
+                    '<p class="admin-card-sub">Tap an account to see its details.</p>' +
+                    '<div id="admin-list" class="admin-list"></div></div>';
+                var back = document.getElementById('am-back');
+                if (back) back.addEventListener('click', amRenderHub);
+                document.querySelectorAll('#admin-management-content .password-toggle-btn').forEach(function (b) {
+                    b.addEventListener('click', function () {
+                        var inp = document.getElementById(b.dataset.target);
+                        if (inp) inp.type = inp.type === 'password' ? 'text' : 'password';
+                    });
+                });
+                var pin = document.getElementById('new-admin-pin');
+                pin.addEventListener('input', function () { pin.value = pin.value.replace(/\D/g, '').slice(0, 4); });
+                document.getElementById('create-admin-btn').addEventListener('click', function () {
+                    var email = document.getElementById('new-admin-email').value.trim();
+                    var password = document.getElementById('new-admin-password').value;
+                    var pinV = pin.value;
+                    var fullName = document.getElementById('new-admin-fullname').value.trim();
+                    var username = document.getElementById('new-admin-username').value.trim();
+                    var phone = document.getElementById('new-admin-phone').value.trim();
+                    var errorEl = document.getElementById('create-admin-error'); var successEl = document.getElementById('create-admin-success'); hide(errorEl); hide(successEl);
+                    if (!email || !password || !fullName || !username || !phone) { errorEl.textContent = 'Email, password, PIN, full name, username, and phone are required.'; show(errorEl); return; }
+                    if (!/^\d{4}$/.test(pinV)) { errorEl.textContent = 'The PIN must be exactly 4 digits.'; show(errorEl); return; }
+                    var btn = this; btn.disabled = true; btn.textContent = 'Creating…';
+                    adminApiRequest(isSuper ? '/api/admin/super-admins' : '/api/admin/admins', { method: 'POST', body: { email: email, password: password, pin: pinV, fullName: fullName, username: username, phone: phone } })
+                        .then(function () {
+                            show(successEl); showToast((isSuper ? 'Super admin' : 'Admin') + ' created successfully!');
+                            ['new-admin-email', 'new-admin-password', 'new-admin-pin', 'new-admin-fullname', 'new-admin-username', 'new-admin-phone'].forEach(function (id) { document.getElementById(id).value = ''; });
+                            loadAdminList();
+                        })
+                        .catch(function (err) { errorEl.textContent = err.message || 'Failed to create the account.'; show(errorEl); })
+                        .finally(function () { btn.disabled = false; btn.textContent = isSuper ? 'Create Super Admin' : 'Create Admin'; });
                 });
                 loadAdminList();
             }
 
-            // Load admin list (only for super admin)
+            // a small pop-up sheet used by Edit and Access
+            function amSheetClose() { var o = document.getElementById('am-sheet'); if (o && o.parentNode) o.parentNode.removeChild(o); }
+            function amSheet(title, html) {
+                amSheetClose();
+                var o = document.createElement('div');
+                o.id = 'am-sheet'; o.className = 'am-sheet';
+                o.innerHTML = '<div class="am-sheet-card"><div class="am-sheet-head"><strong id="am-sheet-title"></strong><button type="button" class="am-x" aria-label="Close">&times;</button></div><div class="am-sheet-body"></div></div>';
+                o.querySelector('#am-sheet-title').textContent = title;
+                var body = o.querySelector('.am-sheet-body');
+                body.innerHTML = html;
+                o.querySelector('.am-x').addEventListener('click', amSheetClose);
+                o.addEventListener('click', function (e) { if (e.target === o) amSheetClose(); });
+                document.body.appendChild(o);
+                return body;
+            }
+            function amFindAdmin(id) { for (var i = 0; i < amState.admins.length; i++) { if (amState.admins[i].id === id) return amState.admins[i]; } return null; }
+
+            function amEdit(id) {
+                var a = amFindAdmin(id);
+                if (!a) return;
+                var f = function (label, fid, val, type, extra) {
+                    return '<label class="am-label" for="' + fid + '">' + label + '</label><input class="am-input" id="' + fid + '" type="' + (type || 'text') + '" value="' + escapeHtml(val || '') + '" autocomplete="off"' + (extra || '') + ' />';
+                };
+                var body = amSheet('Edit ' + (a.role === 'SUPER_ADMIN' ? 'super admin' : 'admin'),
+                    f('Full name', 'am-e-name', a.fullName) + f('Username', 'am-e-user', a.username) + f('Email', 'am-e-email', a.email, 'email') + f('Phone', 'am-e-phone', a.phone) +
+                    f('New PIN (leave empty to keep)', 'am-e-pin', '', 'password', ' inputmode="numeric" maxlength="4" placeholder="4 digits"') +
+                    f('New password (leave empty to keep)', 'am-e-pass', '', 'password', ' placeholder="At least 8 characters"') +
+                    '<p class="am-note">If you change the email, the account must verify the new one before it can sign in.</p>' +
+                    '<div id="am-e-err" class="error-state hidden"></div><button type="button" class="btn-primary" id="am-e-save" style="width:100%;margin-top:6px;">Save changes</button>');
+                var pin = body.querySelector('#am-e-pin');
+                pin.addEventListener('input', function () { pin.value = pin.value.replace(/\D/g, '').slice(0, 4); });
+                body.querySelector('#am-e-save').addEventListener('click', function () {
+                    var btn = this, err = body.querySelector('#am-e-err'); hide(err);
+                    var payload = { fullName: body.querySelector('#am-e-name').value.trim(), username: body.querySelector('#am-e-user').value.trim(),
+                        email: body.querySelector('#am-e-email').value.trim(), phone: body.querySelector('#am-e-phone').value.trim(),
+                        newPin: pin.value, newPassword: body.querySelector('#am-e-pass').value };
+                    if (!payload.fullName || !payload.username || !payload.email || !payload.phone) { err.textContent = 'Name, username, email and phone cannot be empty.'; show(err); return; }
+                    if (payload.newPin && !/^\d{4}$/.test(payload.newPin)) { err.textContent = 'The PIN must be exactly 4 digits.'; show(err); return; }
+                    btn.disabled = true; btn.textContent = 'Saving…';
+                    adminApiRequest('/api/admin/admins/' + encodeURIComponent(id), { method: 'PUT', body: payload })
+                        .then(function () { amSheetClose(); showToast('Details saved.'); loadAdminList(); })
+                        .catch(function (e) { err.textContent = e.message || 'Could not save the changes.'; show(err); btn.disabled = false; btn.textContent = 'Save changes'; });
+                });
+            }
+
+            function amAccess(id) {
+                var a = amFindAdmin(id);
+                if (!a) return;
+                var denied = a.deniedSections || [];
+                var rows = AM_SECTIONS.map(function (s) {
+                    return '<label class="am-switch-row"><span><strong>' + escapeHtml(s.label) + '</strong><small>' + escapeHtml(s.sub) + '</small></span>' +
+                        '<input type="checkbox" class="am-switch" data-key="' + s.key + '"' + (denied.indexOf(s.key) < 0 ? ' checked' : '') + ' /></label>';
+                }).join('');
+                var body = amSheet('What ' + (a.fullName || 'this admin') + ' can open',
+                    '<p class="am-note" style="margin-top:0;">Switch a part off and this admin will no longer see it or be able to use it. Home, profile, PIN and About are always available.</p>' + rows +
+                    '<div id="am-a-err" class="error-state hidden"></div><button type="button" class="btn-primary" id="am-a-save" style="width:100%;margin-top:10px;">Save</button>');
+                body.querySelector('#am-a-save').addEventListener('click', function () {
+                    var btn = this, err = body.querySelector('#am-a-err'); hide(err);
+                    var off = [];
+                    body.querySelectorAll('.am-switch').forEach(function (c) { if (!c.checked) off.push(c.getAttribute('data-key')); });
+                    btn.disabled = true; btn.textContent = 'Saving…';
+                    adminApiRequest('/api/admin/admins/' + encodeURIComponent(id) + '/access', { method: 'PUT', body: { denied: off } })
+                        .then(function () { amSheetClose(); showToast('Access saved.'); loadAdminList(); })
+                        .catch(function (e) { err.textContent = e.message || 'Could not save.'; show(err); btn.disabled = false; btn.textContent = 'Save'; });
+                });
+            }
+
+            // Load the list for the open tab (admins or super admins)
             async function loadAdminList() {
                 var container = document.getElementById('admin-list');
                 if (!container) return;
-                container.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading admins…</div>';
-
+                container.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading…</div>';
                 try {
-                    var admins = await adminApiRequest('/api/admin/admins');
+                    var all = await adminApiRequest('/api/admin/admins');
+                    amState.admins = all || [];
+                    var admins = amState.admins.filter(function (x) { return x.role === amState.role; });
                     container.innerHTML = '';
-                    if (!admins || admins.length === 0) {
-                        container.innerHTML = '<div class="empty-state">No admins found.</div>';
+                    if (amState.role === 'SUPER_ADMIN') {
+                        // the main super admin is shown first, with no controls
+                        admins.sort(function (x, y) { return (y.mainAdmin ? 1 : 0) - (x.mainAdmin ? 1 : 0); });
+                    }
+                    if (!admins.length) {
+                        container.innerHTML = '<div class="empty-state">' + (amState.role === 'SUPER_ADMIN' ? 'No super admins yet.' : 'No admins yet.') + '</div>';
                         return;
                     }
-
+                    var me = currentAdminUser ? currentAdminUser.id : null;
                     admins.forEach(function (admin) {
                         var card = document.createElement('div');
                         card.className = 'item-card';
                         var isActive = admin.active !== false;
                         var isLocked = admin.locked === true;
-                        var isSuper = admin.role === 'SUPER_ADMIN';
-
-                        var statusBadge = '';
-                        if (isSuper) {
-                            statusBadge = '<span class="badge super">👑 Super</span>';
-                        } else if (isLocked) {
-                            statusBadge = '<span class="badge locked">🔒 Locked</span>';
-                        } else if (isActive) {
-                            statusBadge = '<span class="badge active">✅ Active</span>';
-                        } else {
-                            statusBadge = '<span class="badge inactive">⛔ Inactive</span>';
-                        }
-
-                        card.innerHTML = `
-                            <div class="item-info">
-                                <div class="name">${escapeHtml(admin.fullName || admin.username)}</div>
-                                <div class="meta">
-                                    <span>${escapeHtml(admin.email)}</span>
-                                    <span style="font-size:11px;color:var(--muted);">${escapeHtml(admin.accountNumber || 'No account number')}</span>
-                                    ${statusBadge}
-                                    <span style="font-size:11px;color:var(--muted);">PIN attempts: ${escapeHtml(admin.pinAttempts || 0)}</span>
-                                    <span style="font-size:11px;color:var(--muted);">Login attempts: ${escapeHtml(admin.loginFailedAttempts || 0)}</span>
-                                </div>
-                            </div>
-                            <div class="item-actions">
-                                <button class="icon-btn" data-action="view-admin" data-id="${admin.id}" title="View Details">👁️</button>
-                                ${(!isSuper && (admin.loginFailedAttempts > 0 || admin.loginLockedUntil || admin.adminRecoveryRequired)) ? `<button class="icon-btn" data-action="reset-admin-login" data-id="${admin.id}" title="Reset Login Protection">↻</button>` : ''}
-                                ${isSuper ? '' : `<button class="icon-btn" data-action="toggle-admin" data-id="${admin.id}" data-active="${isActive}" data-locked="${isLocked}" title="${isLocked ? 'Unlock' : isActive ? 'Deactivate' : 'Activate'}">
-                                    ${isLocked ? '🔓' : (isActive ? '🔒' : '✅')}
-                                </button>`}
-                            </div>
-                        `;
+                        var isMain = admin.mainAdmin === true;
+                        var isSelf = me && admin.id === me;
+                        var controllable = !isMain && !isSelf;
+                        var badge = isMain ? '<span class="badge super">👑 Main</span>'
+                            : (admin.role === 'SUPER_ADMIN' && isActive && !isLocked ? '<span class="badge super">★ Super</span>' : '')
+                            + (isLocked ? '<span class="badge locked">🔒 Locked</span>' : (isActive ? '<span class="badge active">✅ Active</span>' : '<span class="badge inactive">⛔ Inactive</span>'));
+                        var limited = admin.role === 'ADMIN' && admin.deniedSections && admin.deniedSections.length
+                            ? '<span style="font-size:11px;color:var(--muted);">Access limited (' + admin.deniedSections.length + ' off)</span>' : '';
+                        var canEdit = controllable;
+                        var canAccess = controllable && admin.role === 'ADMIN';
+                        card.innerHTML =
+                            '<div class="item-info"><div class="name">' + escapeHtml(admin.fullName || admin.username) + (isSelf ? ' <span style="font-size:11px;color:var(--muted);">(you)</span>' : '') + '</div>' +
+                            '<div class="meta"><span>' + escapeHtml(admin.email) + '</span>' + badge + limited + '</div></div>' +
+                            '<div class="item-actions">' +
+                            '<button class="icon-btn" data-action="view-admin" data-id="' + admin.id + '" title="View details">👁️</button>' +
+                            (canEdit ? '<button class="icon-btn" data-action="edit-admin" data-id="' + admin.id + '" title="Edit details">✎</button>' : '') +
+                            (canAccess ? '<button class="icon-btn" data-action="access-admin" data-id="' + admin.id + '" title="What this admin can open">⚙</button>' : '') +
+                            (controllable && (admin.loginFailedAttempts > 0 || admin.loginLockedUntil || admin.adminRecoveryRequired) ? '<button class="icon-btn" data-action="reset-admin-login" data-id="' + admin.id + '" title="Reset login protection">↻</button>' : '') +
+                            (controllable ? '<button class="icon-btn" data-action="toggle-admin" data-id="' + admin.id + '" data-active="' + isActive + '" data-locked="' + isLocked + '" title="' + (isLocked ? 'Unlock' : isActive ? 'Deactivate' : 'Activate') + '">' + (isLocked ? '🔓' : (isActive ? '🔒' : '✅')) + '</button>' : '') +
+                            '</div>';
                         container.appendChild(card);
                     });
 
                     container.querySelectorAll('[data-action="view-admin"]').forEach(function (btn) {
                         btn.addEventListener('click', function (e) {
                             e.stopPropagation();
-                            var id = btn.dataset.id;
-                            adminApiRequest('/api/admin/users/' + id)
+                            adminApiRequest('/api/admin/users/' + btn.dataset.id)
                                 .then(function (admin) { openUserDetail(admin, 'admin-management'); })
-                                .catch(function (err) { showToast(err.message || 'Failed to load admin details.'); });
+                                .catch(function (err) { showToast(err.message || 'Failed to load details.'); });
                         });
                     });
-
+                    container.querySelectorAll('[data-action="edit-admin"]').forEach(function (btn) {
+                        btn.addEventListener('click', function (e) { e.stopPropagation(); amEdit(btn.dataset.id); });
+                    });
+                    container.querySelectorAll('[data-action="access-admin"]').forEach(function (btn) {
+                        btn.addEventListener('click', function (e) { e.stopPropagation(); amAccess(btn.dataset.id); });
+                    });
                     container.querySelectorAll('[data-action="reset-admin-login"]').forEach(function (btn) {
                         btn.addEventListener('click', function (e) {
                             e.stopPropagation();
-                            showModal('Reset Admin Login Protection', "Clear this child admin's failed login attempts and recovery/temporary lock state?", function () {
+                            showModal('Reset login protection', "Clear this account's failed login attempts and temporary lock?", function () {
                                 btn.disabled = true;
                                 adminApiRequest('/api/admin/users/' + btn.dataset.id + '/reset-login-protection', { method: 'PUT' })
-                                    .then(function () { showToast('Admin login protection reset.'); loadAdminList(); })
-                                    .catch(function (err) { showToast(err.message || 'Failed to reset admin login protection.'); })
+                                    .then(function () { showToast('Login protection reset.'); loadAdminList(); })
+                                    .catch(function (err) { showToast(err.message || 'Could not reset login protection.'); })
                                     .finally(function () { btn.disabled = false; });
                             });
                         });
                     });
-
                     container.querySelectorAll('[data-action="toggle-admin"]').forEach(function (btn) {
                         btn.addEventListener('click', function (e) {
                             e.stopPropagation();
                             var id = btn.dataset.id;
                             var active = btn.dataset.active === 'true';
                             var locked = btn.dataset.locked === 'true';
-
-                            var action = '';
-                            if (locked) {
-                                action = 'unlock';
-                            } else if (active) {
-                                action = 'deactivate';
-                            } else {
-                                action = 'activate';
-                            }
-
-                            if (!confirm('Are you sure you want to ' + action + ' this admin?')) return;
-
-                            var endpoint = locked
-                                ? '/api/admin/users/' + id + '/unlock'
-                                : '/api/admin/users/' + id + '/toggle';
-                            var options = locked
-                                ? { method: 'PUT' }
-                                : { method: 'PUT', body: { active: !active } };
-
+                            var action = locked ? 'unlock' : (active ? 'deactivate' : 'activate');
+                            if (!confirm('Are you sure you want to ' + action + ' this account?')) return;
+                            var endpoint = locked ? '/api/admin/users/' + id + '/unlock' : '/api/admin/users/' + id + '/toggle';
+                            var options = locked ? { method: 'PUT' } : { method: 'PUT', body: { active: !active } };
                             adminApiRequest(endpoint, options)
-                                .then(function () {
-                                    showToast('Admin ' + (action === 'unlock' ? 'unlocked' : action + 'd') + ' successfully.');
-                                    loadAdminList();
-                                })
-                                .catch(function (err) {
-                                    showToast(err.message || 'Failed to update admin.');
-                                });
+                                .then(function () { showToast('Account ' + (action === 'unlock' ? 'unlocked' : action + 'd') + '.'); loadAdminList(); })
+                                .catch(function (err) { showToast(err.message || 'Could not update the account.'); });
                         });
                     });
-
                     container.querySelectorAll('.item-card').forEach(function (card) {
                         card.addEventListener('click', function () {
                             var view = card.querySelector('[data-action="view-admin"]');
                             if (view) view.click();
                         });
                     });
-
                 } catch (e) {
-                    container.innerHTML = '<div class="error-state">Failed to load admins: ' + e.message + '</div>';
+                    container.innerHTML = '<div class="error-state">Could not load the list: ' + escapeHtml(e.message || '') + '</div>';
                 }
             }
 

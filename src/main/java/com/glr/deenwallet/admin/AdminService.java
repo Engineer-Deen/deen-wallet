@@ -45,7 +45,7 @@ public class AdminService {
     @Transactional
     public User lockUser(UUID userId) {
         User user = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("User not found"));
-        if ("SUPER_ADMIN".equals(user.getRole())) throw new SecurityException("Cannot lock super admin.");
+        if ("SUPER_ADMIN".equals(user.getRole()) && user.isMainAdmin()) throw new SecurityException("The main super admin cannot be locked.");
         userRepository.lockUserFast(userId, Instant.now(), null);
         User locked = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("User not found"));
         emailService.sendAccountLockedEmail(locked);
@@ -55,7 +55,7 @@ public class AdminService {
     @Transactional
     public User unlockUser(UUID userId) {
         User user = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("User not found"));
-        if ("SUPER_ADMIN".equals(user.getRole())) throw new SecurityException("Super admin cannot be locked/unlocked.");
+        if ("SUPER_ADMIN".equals(user.getRole()) && user.isMainAdmin()) throw new SecurityException("The main super admin cannot be locked or unlocked.");
         int changed = userRepository.unlockUserFast(userId);
         User unlocked = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("User not found"));
         if (changed > 0) {

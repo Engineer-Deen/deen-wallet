@@ -112,6 +112,16 @@ public class GlobalExceptionHandler {
                 .body(body(ex.getMessage()));
     }
 
+    /** Allowed to be signed in, not allowed to do this one thing: never signs the admin out. */
+    @ExceptionHandler(com.glr.deenwallet.admin.AdminAccessException.class)
+    public ResponseEntity<Map<String, String>> handleAdminAccess(
+            com.glr.deenwallet.admin.AdminAccessException ex) {
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .header("X-Reason", "ACCESS_DENIED")
+                .body(body(ex.getMessage()));
+    }
+
     @ExceptionHandler(SecurityException.class)
     public ResponseEntity<Map<String, String>> handle(
             SecurityException ex) {

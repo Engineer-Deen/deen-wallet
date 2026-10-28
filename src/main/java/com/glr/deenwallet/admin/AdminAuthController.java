@@ -65,7 +65,7 @@ public class AdminAuthController {
             );
         }
 
-        if (u.isLocked() && !"SUPER_ADMIN".equals(u.getRole())) {
+        if (u.isLocked() && !("SUPER_ADMIN".equals(u.getRole()) && u.isMainAdmin())) {
             throw new AdminLockedException(
                     "Admin account is disabled after multiple incorrect password attempts. Request an OTP to restore access or contact the super admin."
             );
