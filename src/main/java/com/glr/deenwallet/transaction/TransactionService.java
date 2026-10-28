@@ -9,6 +9,7 @@ import com.glr.deenwallet.monime.MonimeProperties;
 import com.glr.deenwallet.monime.PaymentCodeResult;
 import com.glr.deenwallet.monime.PayoutResult;
 import com.glr.deenwallet.monime.ProviderKycResult;
+import com.glr.deenwallet.notification.AdminAlertService;
 import com.glr.deenwallet.notification.NotificationService;
 import com.glr.deenwallet.recipient.SavedRecipient;
 import com.glr.deenwallet.recipient.SavedRecipientRepository;
@@ -57,6 +58,7 @@ public class TransactionService {
     private final UserRepository userRepository;
     private final PushNotificationService pushNotificationService;
     private final NotificationService notificationService;
+    private final AdminAlertService adminAlerts;
     private final TransactionTemplate transactionTemplate;
     private final BankTransferService bankTransferService;
     private final SavedRecipientRepository savedRecipientRepository;
@@ -770,6 +772,14 @@ public class TransactionService {
         recordAction(transaction.getId(), firstFailure ? "PAYOUT_FAILED" : "RESEND_FAILED", null, null, clean);
         log.error("ALERT payout failed for transaction {} ({}), awaiting admin: {}",
                 transaction.getTransactionCode(), transaction.getId(), clean);
+
+        try {
+            adminAlerts.notifyAdmins(null, "PAYOUT_FAILED", "Payout failed",
+                    (firstFailure ? "A customer transfer could not be delivered: " : "A resend failed again: ")
+                            + transaction.getTransactionCode() + ". Open Failed Payouts to resend or refund it.");
+        } catch (RuntimeException e) {
+            log.warn("Could not alert admins about failed payout {}: {}", transaction.getTransactionCode(), e.toString());
+        }
 
         if (firstFailure) {
             String msg = "We couldn't deliver transfer " + transaction.getTransactionCode()

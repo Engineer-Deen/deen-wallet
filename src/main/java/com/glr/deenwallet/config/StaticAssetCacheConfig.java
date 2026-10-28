@@ -30,7 +30,7 @@ public class StaticAssetCacheConfig implements WebMvcConfigurer {
                 .setCacheControl(sevenDays);
 
         // The DeenWallet logo shown on the login, app and website pages.
-        registry.addResourceHandler("/deenwallet-logo.png", "/deenwallet-logo-sm.png")
+        registry.addResourceHandler("/deenwallet-logo.png", "/deenwallet-logo-sm.png", "/deenwallet-logo-md.png")
                 .addResourceLocations("classpath:/static/")
                 .setCacheControl(sevenDays);
     }

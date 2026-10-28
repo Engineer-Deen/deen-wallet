@@ -122,7 +122,7 @@ public class AdminPayoutController {
                 t.getSourceProviderId(), t.getSourcePhone(),
                 t.getDestinationProviderId(), t.getDestinationPhone(), t.getDestinationHolderName(),
                 t.getDestinationBankName(), t.getDestinationBankAccountNumber(), t.getDestinationBankHolderName(),
-                t.getMonimePaymentCodeId(), t.getMonimePayoutId(), t.getRefundPayoutId(),
+                t.getMonimeUssdCode(), t.getMonimePayoutId(), t.getRefundPayoutId(),
                 u == null ? null : new Customer(u.getId(), u.getFullName(), u.getUsername(), u.getEmail(), u.getPhone(),
                         u.getAccountNumber(), u.isActive(), u.isLocked(), u.isEmailVerified(), u.getCreatedAt()),
                 actionable, actionable, history);
@@ -161,6 +161,6 @@ public class AdminPayoutController {
                          String sourceProviderId, String sourcePhone,
                          String destinationProviderId, String destinationPhone, String destinationHolderName,
                          String bankName, String bankAccountNumber, String bankHolderName,
-                         String paymentCodeId, String payoutId, String refundPayoutId,
+                         String ussdCode, String payoutId, String refundPayoutId,
                          Customer customer, boolean canResend, boolean canRefund, List<Event> history) {}
 }

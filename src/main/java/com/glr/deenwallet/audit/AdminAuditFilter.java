@@ -66,7 +66,8 @@ public class AdminAuditFilter extends OncePerRequestFilter {
     private static final List<String> SKIP_PREFIXES = List.of(
             "/api/admin/kyc", "/api/admin/waec", "/api/admin/wallet", "/api/admin/audit", "/api/admin/failed-payouts",
             "/api/admin/auth/refresh", "/api/admin/auth/recovery/send-otp", "/api/admin/auth/forgot",
-            "/api/admin/auth/reset", "/api/admin/verify-pin", "/api/admin/mail");
+            "/api/admin/auth/reset", "/api/admin/verify-pin", "/api/admin/mail",
+            "/api/admin/my-notifications", "/api/admin/device-token", "/api/admin/notifications/read");
 
     private final AuditService audit;
     private final UserRepository users;
@@ -126,8 +127,8 @@ public class AdminAuditFilter extends OncePerRequestFilter {
 
         String category = "SYSTEM";
         String action = "OTHER";
-        String summary = "Changed something";
-        String detail = method + " " + path.replaceAll(UUID_RE, "{id}");
+        String summary = "Made a change";
+        String detail = null;
         UUID targetId = null;
         String targetName = null;
 

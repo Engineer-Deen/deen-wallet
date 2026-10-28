@@ -5,6 +5,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>DeenWallet Transfer — Admin</title>
+    <link rel="preload" as="image" href="deenwallet-logo-md.png" />
+    <style>html.dw-in #screen-login.active { display: none !important; }</style>
+    <script>
+        // Signed in already: never flash the login screen while the page is still loading.
+        (function () { try { if (localStorage.getItem('deenwallet_admin_token')) document.documentElement.className += ' dw-in'; } catch (e) { } })();
+    </script>
     <style>
         /* ===== ADMIN SPLASH ===== */
         #admin-splash { position:fixed; inset:0; z-index:10000; display:flex; align-items:center; justify-content:center; background:linear-gradient(145deg,#FFFFFF 0%,#F1F8FA 100%); transition:opacity .35s ease,visibility .35s ease; }
@@ -2648,7 +2654,7 @@
 
 <div id="admin-splash" aria-label="DeenWallet Transfer loading">
     <div class="admin-splash-inner">
-        <img class="admin-splash-logo" src="deenwallet-logo.png" alt="DeenWallet Transfer" />
+        <img class="admin-splash-logo" src="deenwallet-logo-md.png" alt="DeenWallet Transfer" width="480" height="423" fetchpriority="high" />
         <div class="admin-splash-name">DeenWallet Transfer</div>
         <div class="admin-splash-sub">Secure Administration</div>
     </div>
@@ -2659,7 +2665,7 @@
     <!-- ===== LOGIN SCREEN ===== -->
     <div class="screen active" id="screen-login">
         <div class="login-screen">
-            <img class="admin-login-logo" src="deenwallet-logo.png" alt="DeenWallet Transfer" />
+            <img class="admin-login-logo" src="deenwallet-logo-md.png" alt="DeenWallet Transfer" />
             <div class="brand">DeenWallet Transfer <span class="admin-badge">Admin</span></div>
             <p class="subtitle">Sign in to manage users, transactions, and support.</p>
             <label for="admin-email">Email</label>
@@ -2693,7 +2699,7 @@
     <!-- ===== MAIN SCREEN ===== -->
     <div class="screen" id="screen-main">
         <div class="top-bar">
-            <div style="display:flex;align-items:center;gap:9px;"><img class="top-brand-logo" src="deenwallet-logo.png" alt="DeenWallet Transfer" /><div><span class="brand">DeenWallet Transfer</span><span class="admin-badge">Admin</span></div></div>
+            <div style="display:flex;align-items:center;gap:9px;"><img class="top-brand-logo" src="deenwallet-logo-sm.png" alt="DeenWallet Transfer" /><div><span class="brand">DeenWallet Transfer</span><span class="admin-badge">Admin</span></div></div>
             <button class="menu-btn" id="menu-btn" aria-label="Open admin menu" aria-expanded="false"><span></span><span></span><span></span></button>
             <button type="button" class="notif-btn" id="notif-btn" aria-label="Notifications"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="notif-badge hidden" id="notif-badge"></span></button>
         </div>
@@ -3318,7 +3324,7 @@
                 </div>
             </div>
             <div class="admin-card about-card">
-                <div class="about-logo-wrap"><img src="deenwallet-logo.png" alt="DeenWallet Transfer" /></div>
+                <div class="about-logo-wrap"><img src="deenwallet-logo-sm.png" alt="DeenWallet Transfer" /></div>
                 <h2>DeenWallet Transfer Admin</h2>
                 <p class="about-version">Secure Administration</p>
                 <div class="about-info-list">
@@ -3547,6 +3553,7 @@
             // an admin was inside, the page reloads so nothing from that session
             // (lists, open details, half-filled forms) is carried into the next login.
             function forceToLoginScreen() {
+                document.documentElement.classList.remove('dw-in');
                 if (window.__adminReloading) return;
                 stopErrorAutoRefresh();
                 try { clearToken(); } catch (e) { /* tokens may already be gone */ }
@@ -4498,6 +4505,20 @@
                     });
             }
 
+            // plain wording for the recovery history (no provider ids / internal codes)
+            function fpHistoryLabel(a) {
+                var m = { PAYOUT_FAILED: 'Payout failed', RESEND_FAILED: 'Sending again failed', RESEND: 'Sent again', REFUND: 'Refund started',
+                    REFUND_SENT: 'Refund completed', REFUND_FAILED: 'Refund rejected by the provider' };
+                return m[a] || String(a || '').replace(/_/g, ' ').toLowerCase().replace(/^./, function (c) { return c.toUpperCase(); });
+            }
+            function fpPlainHistory(t) {
+                if (!t) return '';
+                t = String(t);
+                if (/^Refund payout \S+ completed$/i.test(t)) return 'The refund reached the customer.';
+                t = t.replace(/;\s*previous payout \S+/i, '');
+                t = t.replace(/WAEC pin sale retry/i, 'Retried selling the WAEC pin');
+                return t;
+            }
             function fpRow(label, value) {
                 return '<div class="fp-row"><span class="l">' + escapeHtml(label) + '</span><span class="v">' + escapeHtml(value === null || value === undefined || value === '' ? '—' : value) + '</span></div>';
             }
@@ -4547,14 +4568,15 @@
                     html += fpRow('Provider', d.destinationProviderId) + fpRow('Phone', d.destinationPhone) + fpRow('Name', d.destinationHolderName);
                 }
 
-                html += '<div class="fp-section-title">Provider references</div>' +
-                    fpRow('Payment code', d.paymentCodeId) + fpRow('Payout', d.payoutId) + fpRow('Refund payout', d.refundPayoutId) + fpRow('Payout attempts', String(d.payoutAttempts));
+                html += '<div class="fp-section-title">Payment details</div>' +
+                    fpRow('Code the customer dialled to pay', d.ussdCode) + fpRow('Payout attempts', String(d.payoutAttempts));
 
                 html += '<div class="fp-section-title">Recovery history</div><div class="fp-history">';
                 if (d.history && d.history.length) {
                     d.history.forEach(function (e) {
-                        html += '<div><strong>' + escapeHtml(e.action) + '</strong> · ' + escapeHtml(fpTime(e.at)) + (e.actor ? ' · ' + escapeHtml(e.actor) : ' · system') +
-                            (e.detail ? '<br><span style="color:var(--muted);">' + escapeHtml(e.detail) + '</span>' : '') + '</div>';
+                        var fpDetail = fpPlainHistory(e.detail);
+                        html += '<div><strong>' + escapeHtml(fpHistoryLabel(e.action)) + '</strong> · ' + escapeHtml(fpTime(e.at)) + (e.actor ? ' · ' + escapeHtml(e.actor) : ' · system') +
+                            (fpDetail ? '<br><span style="color:var(--muted);">' + escapeHtml(fpDetail) + '</span>' : '') + '</div>';
                     });
                 } else { html += '<div style="color:var(--muted);">No recovery actions yet.</div>'; }
                 html += '</div>';
@@ -5454,11 +5476,15 @@
                     });
                 });
             }
+            // never show a raw endpoint (older lines may still hold one)
+            function auditPlain(t) {
+                return t && !/^(GET|POST|PUT|PATCH|DELETE)\s+\/|^\/api\//i.test(String(t)) ? t : '';
+            }
             function auditRowHtml(r, i) {
                 var who = auditIsSuper() && r.actorName ? escapeHtml(r.actorName) : '';
                 var sub = who;
                 if (r.targetName) sub += (sub ? ' &middot; ' : '') + escapeHtml(r.targetName);
-                if (r.detail) sub += (sub ? '<br>' : '') + escapeHtml(r.detail);
+                if (auditPlain(r.detail)) sub += (sub ? '<br>' : '') + escapeHtml(r.detail);
                 var d = r.at ? new Date(r.at) : null;
                 var t = d && !isNaN(d.getTime()) ? d.toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
                 return '<div class="audit-row" data-aidx="' + i + '">'
@@ -5491,8 +5517,10 @@
                 return adminApiRequest('/api/admin/audit', { params: params }).then(function (rows) {
                     if (seq !== auditState.seq) return;
                     rows = rows || [];
+                    var rawCount = rows.length;
+                    rows = rows.filter(function (x) { return !(x.action === 'OTHER' && !auditPlain(x.detail) && x.detail); });
                     auditState.rows = append ? auditState.rows.concat(rows) : rows;
-                    auditState.more = rows.length >= 30;
+                    auditState.more = rawCount >= 30;
                     auditState.loading = false; hide(loading);
                     auditShowError(null); auditRender();
                 }).catch(function (e) {
@@ -5507,7 +5535,7 @@
                 if (!r) return;
                 var d = r.at ? new Date(r.at) : null;
                 var rows = [['What', r.summary], ['Section', auditCatLabel(r.category)], ['Done by', r.actorName], ['Email', r.actorEmail],
-                    ['On', r.targetName], ['Details', r.detail], ['When', d && !isNaN(d.getTime()) ? d.toLocaleString() : ''], ['From IP', r.ip]];
+                    ['On', r.targetName], ['Details', auditPlain(r.detail)], ['When', d && !isNaN(d.getTime()) ? d.toLocaleString() : ''], ['From IP', r.ip]];
                 var html = '';
                 rows.forEach(function (x) {
                     if (x[1]) html += '<div class="wallet-detail-row"><span>' + escapeHtml(x[0]) + '</span><strong>' + escapeHtml(x[1]) + '</strong></div>';
@@ -5520,6 +5548,19 @@
             function auditCloseDetail() {
                 var ov = document.getElementById('audit-detail-overlay');
                 ov.classList.remove('open'); ov.setAttribute('aria-hidden', 'true');
+            }
+            // plain description of where an error happened (no raw endpoints)
+            function errPlainWhere(method, path) {
+                var p = String(path || '').split('?')[0].toLowerCase();
+                var areas = [[/\/kyc/, 'ID verification'], [/\/failed-payouts/, 'Failed payouts'], [/\/wallet/, 'Wallet'], [/\/waec/, 'WAEC pins'],
+                    [/\/mail/, 'Email'], [/\/audit/, 'Activity log'], [/\/errors/, 'Error logs'], [/notification|device-token/, 'Notifications'],
+                    [/\/users|\/support/, 'User accounts'], [/\/admins|\/pin|\/profile/, 'Admin account'], [/\/transactions|\/transfer|\/recipient/, 'Transfers'],
+                    [/\/auth|login|refresh/, 'Signing in'], [/\/home/, 'Home overview']];
+                var area = 'The server';
+                for (var i = 0; i < areas.length; i++) { if (areas[i][0].test(p)) { area = areas[i][1]; break; } }
+                var m = String(method || 'GET').toUpperCase();
+                var verb = m === 'GET' ? 'loading' : (m === 'DELETE' ? 'removing' : 'saving');
+                return area + ' (' + verb + ')';
             }
             function loadAudit() {
                 document.getElementById('audit-sub').textContent = auditIsSuper()
@@ -6945,6 +6986,9 @@
                 if (r.type === 'KYC_SUBMITTED') {
                     var k = document.querySelector('[data-drawer-action="kyc"]');
                     if (k) k.click();
+                } else if (r.type === 'PAYOUT_FAILED') {
+                    var fpb = document.querySelector('[data-drawer-action="failed-payouts"]');
+                    if (fpb) fpb.click();
                 } else if (r.type === 'EMAIL_SENT' || r.type === 'EMAIL_RECEIVED') {
                     var m = document.querySelector('[data-bottom-tab="messaging"]');
                     if (m) m.click();
@@ -7322,8 +7366,8 @@
                     // that's the endpoint + method; for a JS crash it's the page + line:col.
                     var whereHtml = '';
                     if (err.endpointPath) {
-                        whereHtml = '<span style="font-size:11px;color:var(--muted);font-family:monospace;">' +
-                            escapeHtml(err.httpMethod || 'GET') + ' ' + escapeHtml(err.endpointPath) + '</span>';
+                        whereHtml = '<span style="font-size:11px;color:var(--muted);">' +
+                            escapeHtml(errPlainWhere(err.httpMethod, err.endpointPath)) + '</span>';
                     }
                     var pageHtml = '<span style="font-size:11px;color:var(--muted);">' +
                         escapeHtml(err.url ? err.url.replace(/^https?:\/\/[^\/]+/, '') : '') +
@@ -7347,7 +7391,7 @@
                         (err.stack ? '<div style="font-size:10px;color:var(--muted);margin-top:4px;padding:4px 8px;background:#fff;border-radius:6px;border:1px solid var(--border);overflow-x:auto;white-space:pre-wrap;word-break:break-word;">' + escapeHtml(err.stack.substring(0, 300)) + (err.stack.length > 300 ? '…' : '') + '</div>' : '') +
                         '</div>' +
                         '<div class="item-actions">' +
-                        '<button class="icon-btn" data-action="copy" data-msg="' + escapeHtml((err.httpMethod && err.endpointPath ? err.httpMethod + ' ' + err.endpointPath + ' — ' : '') + (err.message || '')) + '">&#128203;</button>' +
+                        '<button class="icon-btn" data-action="copy" data-msg="' + escapeHtml((err.endpointPath ? errPlainWhere(err.httpMethod, err.endpointPath) + ' — ' : '') + (err.message || '')) + '">&#128203;</button>' +
                         '</div>';
                     list.appendChild(card);
                 });
