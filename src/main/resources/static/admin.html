@@ -2421,6 +2421,35 @@
         .am-switch:checked { background: var(--primary); }
         .am-switch:checked::after { transform: translateX(20px); }
         [data-denied] { display: none !important; }
+        /* ===== Metrics tab ===== */
+        .mx-live { display:inline-block; width:8px; height:8px; border-radius:50%; background:#22c55e; margin-left:6px; vertical-align:middle; animation:errorLivePulse 2s infinite; }
+        .mx-health { border-radius:16px; padding:16px; margin-top:14px; border:1px solid var(--border); }
+        .mx-health.ok { background:#E9F8F0; border-color:#BDE8D0; }
+        .mx-health.warn { background:#FFF7E6; border-color:#F5DDA6; }
+        .mx-health.bad { background:#FDECEC; border-color:#F3BDBD; }
+        .mx-health h3 { margin:0 0 4px; font-size:17px; }
+        .mx-health ul { margin:8px 0 0; padding-left:18px; font-size:13px; line-height:1.5; }
+        .mx-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:12px; }
+        .mx-gauge, .mx-stat { background:var(--bg); border:1px solid var(--border); border-radius:14px; padding:12px; min-width:0; }
+        .mx-g-t, .mx-s-l { font-size:12px; color:var(--muted); font-weight:600; }
+        .mx-g-v { font-size:26px; font-weight:800; margin:2px 0 6px; }
+        .mx-s-v { font-size:18px; font-weight:800; margin-top:2px; word-break:break-word; }
+        .mx-g-s, .mx-s-h { font-size:11.5px; color:var(--muted); margin-top:5px; line-height:1.4; }
+        .mx-bar { height:8px; border-radius:6px; background:#E4ECEF; overflow:hidden; }
+        .mx-bar i { display:block; height:100%; border-radius:6px; background:#22a06b; transition:width .4s ease; }
+        .mx-gauge.warn .mx-bar i { background:#e0a100; } .mx-gauge.bad .mx-bar i { background:#d64545; }
+        .mx-gauge.warn .mx-g-v { color:#B9770E; } .mx-gauge.bad .mx-g-v { color:#C0392B; }
+        .mx-sub { font-size:13px; font-weight:700; margin:16px 0 0; }
+        .mx-spark { background:var(--bg); border:1px solid var(--border); border-radius:14px; padding:10px 12px; margin-top:10px; }
+        .mx-spark svg { width:100%; height:44px; display:block; }
+        .mx-pill { display:inline-block; font-size:11px; font-weight:700; padding:3px 8px; border-radius:20px; margin:2px 4px 2px 0; background:#EAF6F8; color:#1C7A91; }
+        .mx-pill.high, .mx-pill.bad { background:#FDECEC; color:#C0392B; } .mx-pill.medium, .mx-pill.warn { background:#FFF7E6; color:#B9770E; }
+        .mx-pill.ok, .mx-pill.low { background:#E9F8F0; color:#1d8a58; } .mx-pill.info { background:#EEF1F3; color:#51606a; }
+        .mx-row { background:var(--bg); border:1px solid var(--border); border-radius:12px; padding:10px 12px; margin-top:8px; font-size:12.5px; line-height:1.5; word-break:break-word; }
+        .mx-row b.ip { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; }
+        .mx-fix { margin-top:6px; padding:8px 10px; border-radius:8px; background:#12242B; color:#d6f1f7; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11.5px; line-height:1.45; white-space:pre-wrap; word-break:break-word; }
+        .mx-muted { color:var(--muted); }
+        .mx-err { background:#FDECEC; color:#C0392B; border-radius:12px; padding:10px 12px; margin-top:12px; font-size:13px; }
         .online-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #22c55e; margin-right: 5px; vertical-align: middle; box-shadow: 0 0 0 3px rgba(34, 197, 94, .25); }
 
         .add-admin-form input {
@@ -2739,6 +2768,7 @@
                 <button type="button" class="admin-drawer-item" data-drawer-action="support"><span class="admin-drawer-icon">◉</span><span class="admin-drawer-label">Support</span><span class="admin-drawer-chevron">›</span></button>
                 <button type="button" class="admin-drawer-item" data-drawer-action="failed-payouts"><span class="admin-drawer-icon">⚠</span><span class="admin-drawer-label">Failed Payouts</span><span class="admin-drawer-chevron">›</span></button>
                 <button type="button" class="admin-drawer-item" data-drawer-action="kyc"><span class="admin-drawer-icon">✔</span><span class="admin-drawer-label">KYC Verification</span><span class="admin-drawer-chevron">›</span></button>
+                <button type="button" class="admin-drawer-item" id="metrics-drawer-item" data-drawer-action="metrics" style="display:none;"><span class="admin-drawer-icon">◔</span><span class="admin-drawer-label">Server Metrics</span><span class="admin-drawer-chevron">›</span></button>
                 <button type="button" class="admin-drawer-item" data-drawer-action="waec-pins"><span class="admin-drawer-icon">▦</span><span class="admin-drawer-label">WAEC Pins</span><span class="admin-drawer-chevron">›</span></button>
                 <div class="admin-drawer-divider"></div>
                 <button type="button" class="admin-drawer-item" data-drawer-action="profile"><span class="admin-drawer-icon">♙</span><span class="admin-drawer-label">Admin Profile</span><span class="admin-drawer-chevron">›</span></button>
@@ -3028,6 +3058,16 @@
                 <div id="user-list-error" class="error-state hidden"></div>
                 <div id="user-list"></div>
             </div>
+        </div>
+
+        <!-- ===== SERVER METRICS (super admins) ===== -->
+        <div class="scroll hidden" id="tab-metrics">
+            <div class="admin-card">
+                <p class="admin-card-title">Server Metrics <span class="mx-live"></span></p>
+                <p class="admin-card-sub">Live, updates every 3 seconds. Your Oracle server, the DeenWallet app and the database in one place. <span id="mx-updated" class="mx-muted"></span></p>
+            </div>
+            <div id="mx-error" class="mx-err hidden"></div>
+            <div id="mx-body"><div class="admin-card"><p class="admin-card-sub" style="margin:0;">Loading…</p></div></div>
         </div>
 
         <!-- ===== ERRORS ===== -->
@@ -4325,6 +4365,7 @@
                 dashboard: document.getElementById('tab-dashboard'),
                 users: document.getElementById('tab-users'),
                 errors: document.getElementById('tab-errors'),
+                metrics: document.getElementById('tab-metrics'),
                 support: document.getElementById('tab-support'),
                 wallet: document.getElementById('tab-wallet'),
                 audit: document.getElementById('tab-audit'),
@@ -4335,7 +4376,7 @@
             };
 
             function showMainSection(section) {
-                if (section === 'audit' && !isSuperAdmin()) section = 'dashboard';
+                if ((section === 'audit' || section === 'metrics') && !isSuperAdmin()) section = 'dashboard';
                 var amKey = { 'kyc': 'kyc', 'failed-payouts': 'failed-payouts', 'waec-pins': 'waec', 'users': 'users', 'errors': 'errors', 'wallet': 'wallet', 'messaging': 'messaging' }[section];
                 if (amKey && adminDeniedSections().indexOf(amKey) >= 0) { showToast('You do not have access to that section. Ask a super admin.'); section = 'dashboard'; }
                 applyRoleNav();
@@ -4351,6 +4392,7 @@
                 if (section === 'users') loadUsers();
                 if (section === 'errors') { loadErrors(); startErrorAutoRefresh(); }
                 else { stopErrorAutoRefresh(); }
+                if (section === 'metrics') { loadMetrics(); startMetricsRefresh(); } else { stopMetricsRefresh(); }
                 if (section === 'messaging') { showMessagingView('hub'); updateMessagingRecipientCount(); loadMailSummary(); }
                 if (section === 'failed-payouts') loadFailedPayouts();
                 if (section === 'kyc') loadKyc();
@@ -4442,6 +4484,8 @@
                 var btn = nav ? nav.querySelector('[data-bottom-tab="audit"]') : null;
                 var sup = isSuperAdmin();
                 if (btn) btn.style.display = sup ? '' : 'none';
+                var mxItem = document.getElementById('metrics-drawer-item');
+                if (mxItem) mxItem.style.display = sup ? '' : 'none';
                 var denied = adminDeniedSections();
                 AM_NAV.forEach(function (p) {
                     document.querySelectorAll(p[1]).forEach(function (el) {
@@ -4492,6 +4536,228 @@
             document.querySelectorAll('[data-drawer-action]').forEach(function(item){ item.addEventListener('click',function(){ drawerNavigate(item.dataset.drawerAction); }); });
             document.addEventListener('keydown',function(e){ if(e.key==='Escape' && adminDrawer.classList.contains('open')) closeAdminDrawer(); });
 
+
+            // ==============================================================
+            // SERVER METRICS (super admins): server, app, database, attacks, weak spots
+            // ==============================================================
+            var metricsTimer = null, metricsBusy = false;
+
+            function mxBytes(n) {
+                n = Number(n) || 0;
+                var u = ['B', 'KB', 'MB', 'GB', 'TB'], i = 0;
+                while (n >= 1024 && i < 4) { n /= 1024; i++; }
+                return (i >= 3 ? n.toFixed(2) : Math.round(n)) + ' ' + u[i];
+            }
+            function mxDur(s) {
+                s = Math.max(0, Number(s) || 0);
+                var d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
+                if (d > 0) return d + 'd ' + h + 'h';
+                if (h > 0) return h + 'h ' + m + 'm';
+                return m + 'm';
+            }
+            function mxAgo(iso) {
+                if (!iso) return '—';
+                var s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+                if (s < 60) return 'just now';
+                if (s < 3600) return Math.round(s / 60) + ' min ago';
+                if (s < 86400) return Math.round(s / 3600) + ' h ago';
+                return Math.round(s / 86400) + ' d ago';
+            }
+            function mxLevel(pct, warn, bad) { return pct >= bad ? 'bad' : pct >= warn ? 'warn' : 'ok'; }
+            function mxWord(level) { return level === 'bad' ? 'Critical' : level === 'warn' ? 'Getting high' : 'Healthy'; }
+            function mxGauge(title, pct, big, sub, level) {
+                var w = Math.max(0, Math.min(100, Number(pct) || 0));
+                return '<div class="mx-gauge ' + level + '"><div class="mx-g-t">' + escapeHtml(title) + '</div><div class="mx-g-v">' + escapeHtml(big) +
+                    '</div><div class="mx-bar"><i style="width:' + w + '%"></i></div><div class="mx-g-s">' + escapeHtml(mxWord(level)) + (sub ? ' · ' + escapeHtml(sub) : '') + '</div></div>';
+            }
+            function mxStat(label, value, hint) {
+                return '<div class="mx-stat"><div class="mx-s-l">' + escapeHtml(label) + '</div><div class="mx-s-v">' + escapeHtml(String(value)) + '</div>' +
+                    (hint ? '<div class="mx-s-h">' + escapeHtml(hint) + '</div>' : '') + '</div>';
+            }
+            function mxSpark(title, values, max, color, last) {
+                var vals = (values || []).map(Number);
+                if (vals.length < 2) return '<div class="mx-spark"><div class="mx-s-l">' + escapeHtml(title) + '</div><div class="mx-s-h">Collecting data…</div></div>';
+                var top = max || Math.max.apply(null, vals.concat([1]));
+                var pts = vals.map(function (v, i) { return (i / (vals.length - 1) * 100).toFixed(2) + ',' + (30 - Math.min(v, top) / top * 28 - 1).toFixed(2); }).join(' ');
+                return '<div class="mx-spark"><div class="mx-s-l">' + escapeHtml(title) + ' <b style="color:var(--text);">' + escapeHtml(last) + '</b></div>' +
+                    '<svg viewBox="0 0 100 30" preserveAspectRatio="none"><polygon points="0,30 ' + pts + ' 100,30" fill="' + color + '" fill-opacity=".14"></polygon>' +
+                    '<polyline points="' + pts + '" fill="none" stroke="' + color + '" stroke-width="1.6" vector-effect="non-scaling-stroke"></polyline></svg></div>';
+            }
+            function mxBars(values) {
+                var vals = (values || []).map(Number), top = Math.max.apply(null, vals.concat([1]));
+                var w = 100 / Math.max(1, vals.length);
+                var bars = vals.map(function (v, i) {
+                    var h = v / top * 28;
+                    return '<rect x="' + (i * w + 0.4).toFixed(2) + '" y="' + (30 - h).toFixed(2) + '" width="' + (w - 0.8).toFixed(2) + '" height="' + Math.max(v > 0 ? 1 : 0, h).toFixed(2) + '" fill="#d64545" fill-opacity=".75"></rect>';
+                }).join('');
+                return '<div class="mx-spark"><div class="mx-s-l">Attacks per hour (left = 24 hours ago, right = now)</div><svg viewBox="0 0 100 30" preserveAspectRatio="none">' + bars + '</svg></div>';
+            }
+            var MX_KIND = {
+                RATE_LIMIT: 'Too many requests (blocked)', LOGIN_FAILED: 'Wrong password', PIN_FAILED: 'Wrong PIN',
+                SCAN: 'Probing for weak files', ADMIN_PROBE: 'Tried the admin area without signing in'
+            };
+            function mxKinds(obj) {
+                return Object.keys(obj || {}).map(function (k) {
+                    return '<span class="mx-pill info">' + escapeHtml(MX_KIND[k] || k) + ' × ' + escapeHtml(String(obj[k])) + '</span>';
+                }).join('');
+            }
+            function mxRiskLabel(l) { return l === 'high' ? 'High risk' : l === 'medium' ? 'Watch' : 'Low'; }
+            function mxSection(title, sub, inner) {
+                return '<div class="admin-card"><p class="admin-card-title">' + escapeHtml(title) + '</p>' + (sub ? '<p class="admin-card-sub">' + escapeHtml(sub) + '</p>' : '') + inner + '</div>';
+            }
+
+            function mxRender(m) {
+                var s = m.server || {}, a = m.app || {}, d = m.database || {}, at = m.attacks || {}, ssh = m.ssh || {}, v = m.vulnerabilities || {}, hl = m.health || {};
+                var html = '';
+
+                // 1) overall verdict
+                var issues = (hl.issues || []).map(function (i) { return '<li>' + escapeHtml(i.text) + '</li>'; }).join('');
+                html += '<div class="mx-health ' + escapeHtml(hl.level || 'ok') + '"><h3>' + (hl.level === 'ok' ? '✔ ' : '⚠ ') + escapeHtml(hl.headline || '') + '</h3>' +
+                    '<div class="mx-s-h" style="margin:0;">Checked ' + escapeHtml(mxAgo(m.time)) + '</div>' + (issues ? '<ul>' + issues + '</ul>' : '') + '</div>';
+
+                // 2) server
+                var cpuL = mxLevel(s.cpuPercent, 75, 90), ramL = mxLevel(s.ramPercent, 80, 92), diskL = mxLevel(s.diskPercent, 80, 90);
+                var perCore = (s.cores ? (s.load1 / s.cores) : 0), loadL = perCore >= 2 ? 'bad' : perCore >= 1 ? 'warn' : 'ok';
+                var inner = '<div class="mx-grid">' +
+                    mxGauge('Processor (CPU)', s.cpuPercent, Math.round(s.cpuPercent || 0) + '%', s.cores + ' core(s)', cpuL) +
+                    mxGauge('Memory (RAM)', s.ramPercent, Math.round(s.ramPercent || 0) + '%', mxBytes(s.ramUsed) + ' of ' + mxBytes(s.ramTotal), ramL) +
+                    mxGauge('Storage (disk)', s.diskPercent, Math.round(s.diskPercent || 0) + '%', mxBytes(s.diskUsed) + ' of ' + mxBytes(s.diskTotal), diskL) +
+                    mxGauge('Load (work queue)', Math.min(100, perCore * 50), String(s.load1), '5 min ' + s.load5 + ' · 15 min ' + s.load15, loadL) +
+                    '</div><div class="mx-grid">' +
+                    mxStat('Server running for', mxDur(s.uptimeSeconds), s.os || '') +
+                    mxStat('Internet traffic', '↓ ' + mxBytes(s.rxPerSec) + '/s', '↑ ' + mxBytes(s.txPerSec) + '/s going out') +
+                    mxStat('Swap (spare memory on disk)', s.swapTotal ? mxBytes(s.swapUsed) + ' / ' + mxBytes(s.swapTotal) : 'None', s.swapTotal ? '' : 'Normal for small servers') +
+                    mxStat('Machine name', s.host || '—', '') + '</div>';
+                var hist = s.history || [];
+                inner += mxSpark('Processor, last 10 minutes', hist.map(function (p) { return p.cpu; }), 100, '#1C7A91', Math.round(s.cpuPercent || 0) + '%') +
+                    mxSpark('Memory, last 10 minutes', hist.map(function (p) { return p.ram; }), 100, '#8E44AD', Math.round(s.ramPercent || 0) + '%') +
+                    mxSpark('Internet coming in, last 10 minutes', hist.map(function (p) { return p.rx; }), 0, '#2E9FB0', mxBytes(s.rxPerSec) + '/s');
+                html += mxSection('Server (your Oracle machine)', 'The computer everything runs on.', inner);
+
+                // 3) app
+                var rq = a.requests || {};
+                var heapL = mxLevel(a.heapPercent, 80, 90);
+                inner = '<div class="mx-grid">' +
+                    mxGauge('App memory (Java)', a.heapPercent, Math.round(a.heapPercent || 0) + '%', mxBytes(a.heapUsed) + ' of ' + mxBytes(a.heapMax), heapL) +
+                    mxStat('Requests per minute', rq.lastMinute || 0, (rq.last5Min || 0) + ' in the last 5 min') +
+                    mxStat('Server errors (5 min)', rq.serverErrors5Min || 0, (rq.clientErrors5Min || 0) + ' client errors (wrong input, expired login)') +
+                    mxStat('Average answer time', (rq.avgMs || 0) + ' ms', rq.slowestMs ? 'Slowest ' + rq.slowestMs + ' ms · ' + (rq.slowestPath || '') : '') +
+                    mxStat('App running for', mxDur(a.uptimeSeconds), 'Java ' + (a.java || '')) +
+                    mxStat('Active threads', a.threads || 0, 'Peak ' + (a.threadsPeak || 0)) +
+                    mxStat('Memory taken from server', a.memoryFromOs ? mxBytes(a.memoryFromOs) : '—', 'What the app really uses') +
+                    mxStat('Open files', a.openFiles !== undefined ? a.openFiles + ' / ' + a.maxFiles : '—', 'Connections and files in use') + '</div>';
+                html += mxSection('DeenWallet app', 'The server program that the user and admin apps talk to.', inner);
+
+                // 4) database
+                if (!d.up) {
+                    inner = '<div class="mx-health bad" style="margin-top:12px;"><h3>⚠ Database is not answering</h3><div class="mx-s-h">' + escapeHtml(d.error || '') + '</div></div>';
+                } else {
+                    var cPct = d.maxConnections ? (d.connections / d.maxConnections * 100) : 0;
+                    var latL = d.latencyMs >= 1000 ? 'bad' : d.latencyMs >= 200 ? 'warn' : 'ok';
+                    inner = '<div class="mx-grid">' +
+                        mxStat('Status', '✔ Online', (d.version || '') + (d.uptimeSeconds ? ' · up ' + mxDur(d.uptimeSeconds) : '')) +
+                        mxStat('Answer speed', d.latencyMs + ' ms', latL === 'ok' ? 'Fast' : latL === 'warn' ? 'Slow' : 'Very slow') +
+                        mxStat('Database size', mxBytes(d.sizeBytes), 'Space the data takes') +
+                        mxGauge('Connections', cPct, d.connections + ' / ' + d.maxConnections, 'in use', mxLevel(cPct, 70, 85)) +
+                        mxStat('Memory hit rate', (d.cacheHitPercent !== undefined ? d.cacheHitPercent + '%' : '—'), 'Higher is better (99% is great)') +
+                        mxStat('Longest running query', (d.longestQuerySeconds || 0) + ' s', 'Should be near 0') +
+                        mxStat('Deadlocks', d.deadlocks || 0, 'Queries that blocked each other') +
+                        mxStat('Rolled back', d.rollbacks || 0, 'of ' + ((d.commits || 0) + (d.rollbacks || 0)) + ' changes') + '</div>';
+                    if (d.pool) inner += '<div class="mx-row">App connection pool: <b>' + d.pool.active + '</b> busy · <b>' + d.pool.idle + '</b> idle · <b>' + d.pool.waiting + '</b> waiting · max ' + d.pool.max + '</div>';
+                    if ((d.biggestTables || []).length) {
+                        inner += '<p class="mx-sub">Biggest tables</p>' + d.biggestTables.map(function (t) {
+                            return '<div class="mx-row"><b>' + escapeHtml(t.name) + '</b> · ' + escapeHtml(mxBytes(t.bytes)) + ' · ' + escapeHtml(Number(t.rows).toLocaleString()) + ' rows</div>';
+                        }).join('');
+                    }
+                }
+                html += mxSection('Database (PostgreSQL)', 'Where users, transfers and records are stored.', inner);
+
+                // 5) attacks
+                inner = '';
+                if (at.available === false) {
+                    inner = '<div class="mx-row">' + escapeHtml(at.error || 'Not available yet.') + '</div>';
+                } else {
+                    inner = '<div class="mx-grid">' + mxStat('Suspicious requests (24 h)', at.total24h || 0, 'From all addresses') +
+                        mxStat('Different addresses', (at.topIps || []).length >= 10 ? '10+' : (at.topIps || []).length, 'Top offenders listed below') + '</div>';
+                    if (at.byKind && Object.keys(at.byKind).length) inner += '<div style="margin-top:10px;">' + mxKinds(at.byKind) + '</div>';
+                    inner += mxBars(at.perHour);
+                    if ((at.topIps || []).length) {
+                        inner += '<p class="mx-sub">Addresses causing the most trouble</p>' + at.topIps.map(function (t) {
+                            return '<div class="mx-row"><b class="ip">' + escapeHtml(t.ip) + '</b> <span class="mx-pill ' + escapeHtml(t.level) + '">' + mxRiskLabel(t.level) + '</span><br>' +
+                                '<b>' + escapeHtml(String(t.count)) + '</b> attempts · first ' + escapeHtml(mxAgo(t.firstSeen)) + ' · last ' + escapeHtml(mxAgo(t.lastSeen)) + '<br>' + mxKinds(t.kinds) + '</div>';
+                        }).join('');
+                        inner += '<div class="mx-s-h">The app already slows these addresses down. To block one completely, run on the server: <span style="font-family:ui-monospace,Menlo,monospace;">sudo ufw deny from ADDRESS</span></div>';
+                    } else {
+                        inner += '<div class="mx-row">✔ No attacks recorded in the last 24 hours.</div>';
+                    }
+                    if ((at.recent || []).length) {
+                        inner += '<p class="mx-sub">Latest events</p>' + at.recent.slice(0, 10).map(function (e) {
+                            return '<div class="mx-row"><b class="ip">' + escapeHtml(e.ip) + '</b> · ' + escapeHtml(MX_KIND[e.kind] || e.kind) + '<br><span class="mx-muted">' + escapeHtml(mxAgo(e.time)) + ' · ' +
+                                escapeHtml(String(e.method || '')) + ' ' + escapeHtml(String(e.path || '')) + ' → ' + escapeHtml(String(e.status)) + '</span></div>';
+                        }).join('');
+                    }
+                }
+                html += mxSection('Attacks (last 24 hours)', 'People wrongly guessing passwords or PINs, hammering the app, or probing for hidden files.', inner);
+
+                // 5b) SSH guessing
+                inner = '';
+                if (ssh.available) {
+                    inner = '<div class="mx-grid">' + mxStat('Wrong-password tries', ssh.attempts || 0, 'In the recent log') + mxStat('Different addresses', ssh.uniqueIps || 0, '') + '</div>';
+                    (ssh.topIps || []).forEach(function (t) {
+                        inner += '<div class="mx-row"><b class="ip">' + escapeHtml(t.ip) + '</b> <span class="mx-pill ' + escapeHtml(t.level) + '">' + mxRiskLabel(t.level) + '</span><br><b>' +
+                            escapeHtml(String(t.attempts)) + '</b> tries · usernames tried: ' + escapeHtml((t.usernames || []).join(', ')) + '</div>';
+                    });
+                    if (!(ssh.topIps || []).length) inner += '<div class="mx-row">✔ Nobody has been guessing server passwords lately.</div>';
+                    if ((ssh.recentLogins || []).length) {
+                        inner += '<p class="mx-sub">Latest successful logins to the server</p>' + ssh.recentLogins.map(function (e) {
+                            return '<div class="mx-row"><b>' + escapeHtml(e.user) + '</b> from <b class="ip">' + escapeHtml(e.ip) + '</b> · ' + escapeHtml(e.how) + '<br><span class="mx-muted">' + escapeHtml(e.time) + '</span></div>';
+                        }).join('');
+                        inner += '<div class="mx-s-h">If you do not recognise one of these, change your server keys immediately.</div>';
+                    }
+                } else {
+                    inner = '<div class="mx-row">' + escapeHtml(ssh.hint || 'Checking…') + '</div>';
+                }
+                html += mxSection('Attempts to break into the server (SSH)', 'From the server\'s own login log.', inner);
+
+                // 6) weak spots
+                inner = '';
+                var items = v.items || [];
+                if (!items.length) inner = '<div class="mx-row">' + escapeHtml(v.error || 'The first check is still running. Open this tab again in a minute.') + '</div>';
+                items.forEach(function (it) {
+                    var lbl = it.level === 'bad' ? 'Fix now' : it.level === 'warn' ? 'Needs attention' : it.level === 'ok' ? 'Good' : 'Note';
+                    inner += '<div class="mx-row"><span class="mx-pill ' + escapeHtml(it.level) + '">' + lbl + '</span> <b>' + escapeHtml(it.title) + '</b>' +
+                        (it.detail ? '<br><span class="mx-muted">' + escapeHtml(it.detail) + '</span>' : '') +
+                        (it.fix ? '<div class="mx-fix">' + escapeHtml(it.fix) + '</div>' : '') + '</div>';
+                });
+                html += mxSection('Weak spots', v.scannedAt ? 'Checked ' + mxAgo(v.scannedAt) + ' · re-checked every 5 minutes. Fixes are copy-and-paste for the server.' : 'Things an attacker could use, with the fix.', inner);
+
+                document.getElementById('mx-body').innerHTML = html;
+                document.getElementById('mx-updated').textContent = '· updated ' + new Date().toLocaleTimeString();
+            }
+
+            function loadMetrics() {
+                if (metricsBusy) return;
+                metricsBusy = true;
+                var err = document.getElementById('mx-error');
+                adminApiRequest('/api/admin/metrics', { quiet: true, timeoutMs: 12000 }).then(function (m) {
+                    hide(err);
+                    mxRender(m || {});
+                }).catch(function (e) {
+                    err.textContent = (e && e.message) ? e.message : 'Could not load the metrics.';
+                    show(err);
+                }).finally(function () { metricsBusy = false; });
+            }
+            function startMetricsRefresh() {
+                stopMetricsRefresh();
+                metricsTimer = setInterval(function () {
+                    var tab = tabContents.metrics;
+                    if (document.hidden || !tab || tab.classList.contains('hidden')) return;
+                    loadMetrics();
+                }, 3000);
+            }
+            function stopMetricsRefresh() {
+                if (metricsTimer) { clearInterval(metricsTimer); metricsTimer = null; }
+            }
 
             // ==============================================================
             // FAILED PAYOUTS (customer paid, payout failed / rejected)
