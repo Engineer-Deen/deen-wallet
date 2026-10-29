@@ -1766,150 +1766,143 @@ function isNetworkError(error) {
 }
 
 (function () {
-  let banner = null;
-  let serverReachable = true;
+  var banner = null;
+  var reachable = true;
+  var seq = 0;
+  var timer = null;
 
   function ensureBanner() {
     if (banner) return banner;
     banner = document.createElement('div');
     banner.id = 'dw-offline-banner';
     banner.textContent = 'No internet connection';
-    banner.style.cssText = [
-      'position:fixed', 'top:0', 'left:0', 'right:0', 'z-index:99999',
-      'background:#b91c1c', 'color:#fff', 'text-align:center',
-      'font:600 13px/1 -apple-system,Segoe UI,Roboto,sans-serif',
-      'padding:10px 12px', 'transform:translateY(-100%)',
-      'transition:transform 0.25s ease', 'box-shadow:0 2px 8px rgba(0,0,0,0.25)'
-    ].join(';');
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#b91c1c;color:#fff;text-align:center;font:600 13px/1 -apple-system,Segoe UI,Roboto,sans-serif;padding:10px 12px;transform:translateY(-100%);transition:transform 0.2s ease;box-shadow:0 2px 8px rgba(0,0,0,0.25);pointer-events:none;';
     document.body.appendChild(banner);
     return banner;
   }
-
-  function showOfflineBanner() {
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', showOfflineBanner, { once: true });
-      return;
-    }
+  function showBanner() {
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', showBanner, { once: true }); return; }
     ensureBanner().style.transform = 'translateY(0)';
   }
+  // Only hides the banner. It never reloads or refreshes the page by itself.
+  function hideBanner() { if (banner) banner.style.transform = 'translateY(-100%)'; }
+  function schedule(ms) { clearTimeout(timer); timer = setTimeout(probe, ms); }
 
-  function hideOfflineBanner() {
-    if (banner) banner.style.transform = 'translateY(-100%)';
-    // Don't just hide the banner and leave stale data - proactively refresh
-    // whatever the current page knows how to refresh, the same hook used
-    // by pull-to-refresh. Falls back to a full reload if a page hasn't
-    // defined one (e.g. auth.html, which has no meaningful state to lose).
-    if (typeof window.dwOnPullToRefresh === 'function') {
-      window.dwOnPullToRefresh();
-    } else {
-      window.location.reload();
-    }
+  // Real-time check: asks the server every 1.5 s while offline (15 s while online), and instantly when the
+  // phone says the network changed or the app comes back to the screen. Old answers are ignored.
+  function probe() {
+    if (document.hidden) { schedule(3000); return; }
+    var mine = ++seq;
+    var controller = new AbortController();
+    var t = setTimeout(function () { controller.abort(); }, 4000);
+    fetch(DEENWALLET_CONFIG.API_BASE_URL + '/api/app/version', { cache: 'no-store', signal: controller.signal })
+      .then(function () { if (mine !== seq) return; reachable = true; hideBanner(); })
+      .catch(function () { if (mine !== seq) return; reachable = false; showBanner(); })
+      .finally(function () { clearTimeout(t); if (mine === seq) schedule(reachable ? 15000 : 1500); });
   }
 
-  // Covers both failure modes with one check: no internet at all (fetch
-  // never completes) AND internet is fine but the backend specifically is
-  // unreachable (fetch completes but fails, or times out). navigator.onLine
-  // alone can't tell these apart or catch the second case at all.
-  let probing = false;
-  async function probeServer() {
-    if (probing || document.hidden) return;
-    probing = true;
+  window.addEventListener('offline', function () { seq++; reachable = false; showBanner(); schedule(1500); });
+  window.addEventListener('online', function () { hideBanner(); probe(); });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) probe(); });
+  window.addEventListener('pageshow', function () { probe(); });
+  if (!navigator.onLine) showBanner();
+  probe();
+})();
+
+// Tells the server this customer is using the app (feeds "online now" in the admin Home). Quiet and harmless.
+(function () {
+  function ping() {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-      try {
-        await fetch(DEENWALLET_CONFIG.API_BASE_URL + '/api/app/version', { cache: 'no-store', signal: controller.signal });
-        if (!serverReachable) { serverReachable = true; hideOfflineBanner(); }
-      } catch (_) {
-        if (serverReachable) { serverReachable = false; showOfflineBanner(); }
-      } finally {
-        clearTimeout(timeoutId);
-      }
-    } finally {
-      probing = false;
-    }
+      if (document.hidden || !getAccessToken() || (typeof isPinLockPending === 'function' && isPinLockPending())) return;
+      var p = apiRequest('/api/users/me/ping', { method: 'POST', timeoutMs: 8000 });
+      if (p && p.catch) p.catch(function () { });
+    } catch (_) { }
   }
-
-  window.addEventListener('offline', showOfflineBanner);
-  window.addEventListener('online', probeServer);
-  if (!navigator.onLine) showOfflineBanner();
-  probeServer();
-  setInterval(probeServer, 30000);
+  setTimeout(ping, 4000);
+  setInterval(ping, 60000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) setTimeout(ping, 1500); });
 })();
 
 // ==============================================================
 // PULL TO REFRESH
 // ==============================================================
-// A wrapped WebView has no built-in pull-to-refresh the way a real mobile
-// browser tab does, so this adds one. Only activates when the page is
-// already scrolled to the very top (so it never interferes with normal
-// scrolling anywhere else). A page can opt into a lighter-weight refresh by
-// defining window.dwOnPullToRefresh = async () => { ...reload just the
-// data... }; otherwise this falls back to a full page reload.
+// Chrome-style: pull down from the very top and a round spinner follows your finger. Release past the mark and
+// it spins while the page's own refresh (window.dwOnPullToRefresh) runs. It never fires on its own and ignores
+// any drag that starts on a screen or list that is scrolled down. A page can hide it with window.dwPtrAllowed.
 (function () {
-  const THRESHOLD = 70;
-  let startY = null;
-  let pulling = false;
-  let indicator = null;
+  var THRESHOLD = 60, MAX = 110;
+  var startY = null, startX = 0, pulling = false, busy = false, dist = 0, el = null, svg = null;
 
-  function ensureIndicator() {
-    if (indicator) return indicator;
-    indicator = document.createElement('div');
-    indicator.id = 'dw-pull-refresh-indicator';
-    indicator.textContent = '↓ Pull to refresh';
-    indicator.style.cssText = [
-      'position:fixed', 'top:0', 'left:0', 'right:0', 'z-index:9998',
-      'text-align:center', 'padding:10px', 'font:600 12px/1 -apple-system,Segoe UI,Roboto,sans-serif',
-      'color:#555', 'background:rgba(255,255,255,0.95)',
-      'transform:translateY(-100%)', 'transition:transform 0.15s ease'
-    ].join(';');
-    document.body.appendChild(indicator);
-    return indicator;
+  function ensure() {
+    if (el) return el;
+    var st = document.createElement('style');
+    st.textContent = '@keyframes dwptr-spin{to{transform:rotate(360deg)}}';
+    document.head.appendChild(st);
+    el = document.createElement('div');
+    el.id = 'dw-pull-refresh-indicator';
+    el.style.cssText = 'position:fixed;top:0;left:50%;width:40px;height:40px;margin-left:-20px;border-radius:50%;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.28);z-index:9998;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transform:translateY(-60px);';
+    el.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" style="display:block"><path d="M12 4a8 8 0 1 0 8 8" fill="none" stroke="#1C7A91" stroke-width="2.6" stroke-linecap="round"/></svg>';
+    svg = el.firstChild;
+    document.body.appendChild(el);
+    return el;
   }
-
-  function onTouchStart(e) {
-    if (window.scrollY > 0) { startY = null; return; }
-    if (document.querySelector('.modal-overlay.active, #pin-modal-overlay.active')) { startY = null; return; }
-    startY = e.touches[0].clientY;
-    pulling = false;
+  function place(d, animate) {
+    var e = ensure();
+    e.style.transition = animate ? 'transform .2s ease, opacity .2s ease' : 'none';
+    e.style.opacity = d <= 0 ? '0' : String(Math.min(1, d / (THRESHOLD * 0.7)));
+    e.style.transform = 'translateY(' + (d - 48 + 14) + 'px)';
   }
+  function blocked(t) {
+    if (busy) return true;
+    if (typeof window.dwPtrAllowed === 'function' && !window.dwPtrAllowed()) return true;
+    if (document.querySelector('.modal-overlay.active, #pin-modal-overlay.active, .wallet-sheet-overlay.open')) return true;
+    var pin = document.getElementById('pin-modal-overlay');
+    if (pin && pin.style.display && pin.style.display !== 'none') return true;
+    for (var n = t; n && n.nodeType === 1; n = n.parentElement) {
+      if (n.tagName === 'INPUT' || n.tagName === 'TEXTAREA' || n.tagName === 'SELECT' || n.hasAttribute('data-no-ptr')) return true;
+      if (n.scrollTop > 0) return true; // some area under the finger is scrolled down: it should scroll up, not refresh
+    }
+    return window.scrollY > 0;
+  }
+  function reset() { startY = null; pulling = false; dist = 0; if (el) place(0, true); }
 
-  function onTouchMove(e) {
+  document.addEventListener('touchstart', function (e) {
+    if (e.touches.length !== 1 || blocked(e.target)) { startY = null; return; }
+    startY = e.touches[0].clientY; startX = e.touches[0].clientX; pulling = false; dist = 0;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', function (e) {
     if (startY === null) return;
-    const delta = e.touches[0].clientY - startY;
-    if (delta <= 0) return;
-    pulling = true;
-    const el = ensureIndicator();
-    const progress = Math.min(delta / THRESHOLD, 1);
-    el.style.transform = 'translateY(' + (progress * 100 - 100) + '%)';
-    el.textContent = progress >= 1 ? '↑ Release to refresh' : '↓ Pull to refresh';
-  }
-
-  async function onTouchEnd(e) {
-    if (!pulling || startY === null) { startY = null; return; }
-    const delta = (e.changedTouches[0].clientY - startY);
-    startY = null;
-    pulling = false;
-    if (delta < THRESHOLD) {
-      if (indicator) indicator.style.transform = 'translateY(-100%)';
-      return;
+    var dy = e.touches[0].clientY - startY, dx = e.touches[0].clientX - startX;
+    if (!pulling) {
+      if (dy < 10) { if (dy < -10) startY = null; return; }
+      if (Math.abs(dx) > dy) { startY = null; return; }
+      pulling = true;
     }
-    const el = ensureIndicator();
-    el.textContent = 'Refreshing…';
-    el.style.transform = 'translateY(0)';
+    dist = Math.max(0, Math.min(MAX, (dy - 10) * 0.55));
+    if (e.cancelable) e.preventDefault();
+    place(dist, false);
+    svg.style.transform = 'rotate(' + (dist * 5) + 'deg)';
+  }, { passive: false });
+
+  document.addEventListener('touchend', function () {
+    if (!pulling) { startY = null; return; }
+    var go = dist >= THRESHOLD;
+    startY = null; pulling = false;
+    if (!go) { dist = 0; place(0, true); return; }
+    busy = true;
+    place(THRESHOLD * 0.75, true);
+    svg.style.transform = '';
+    svg.style.animation = 'dwptr-spin .7s linear infinite';
+    var started = Date.now();
+    var job;
     try {
-      if (typeof window.dwOnPullToRefresh === 'function') {
-        await window.dwOnPullToRefresh();
-        el.style.transform = 'translateY(-100%)';
-      } else {
-        window.location.reload();
-      }
-    } catch (_) {
-      el.style.transform = 'translateY(-100%)';
-    }
-  }
-
-  document.addEventListener('touchstart', onTouchStart, { passive: true });
-  document.addEventListener('touchmove', onTouchMove, { passive: true });
-  document.addEventListener('touchend', onTouchEnd, { passive: true });
+      if (typeof window.dwOnPullToRefresh === 'function') job = Promise.resolve(window.dwOnPullToRefresh());
+      else { window.location.reload(); return; }
+    } catch (_) { job = Promise.resolve(); }
+    job.catch(function () { }).then(function () {
+      setTimeout(function () { svg.style.animation = ''; busy = false; dist = 0; place(0, true); }, Math.max(0, 700 - (Date.now() - started)));
+    });
+  }, { passive: true });
+  document.addEventListener('touchcancel', function () { reset(); }, { passive: true });
 })();

@@ -55,6 +55,8 @@ public class AdminAuditFilter extends OncePerRequestFilter {
             rule("PUT", "^/api/support/users/" + UUID_RE + "/unlock$", "USERS", "USER_UNLOCK", "Unlocked a user account (support)"),
             rule("POST", "^/api/admin/admins$", "ADMINS", "ADMIN_CREATE", "Created an admin account"),
             rule("POST", "^/api/admin/super-admins$", "ADMINS", "SUPER_CREATE", "Created a super admin account"),
+            rule("DELETE", "^/api/admin/users/" + UUID_RE + "$", "USERS", "USER_DELETE", "Deleted a customer account"),
+            rule("DELETE", "^/api/admin/admins/" + UUID_RE + "$", "ADMINS", "ADMIN_DELETE", "Deleted an admin account"),
             rule("PUT", "^/api/admin/admins/" + UUID_RE + "$", "ADMINS", "ADMIN_EDIT", "Edited an admin's details"),
             rule("PUT", "^/api/admin/admins/" + UUID_RE + "/access$", "ADMINS", "ADMIN_ACCESS", "Changed what an admin can open"),
             rule("POST", "^/api/admin/pin$", "SECURITY", "PIN_CHANGE", "Set or changed their admin PIN"),
@@ -174,6 +176,8 @@ public class AdminAuditFilter extends OncePerRequestFilter {
                 default -> { }
             }
         }
+        Object nameAttr = req.getAttribute("auditTargetName");
+        if (nameAttr instanceof String s && !s.isBlank()) targetName = s;
         audit.record(actor.getId(), actor.getFullName(), actor.getEmail(), category, action, summary, targetId,
                 targetName, detail, clientIp(req), status);
     }

@@ -50,6 +50,7 @@ public class AdminController {
     private final OtpService otpService;
     private final NotificationService notificationService;
     private final PushNotificationService pushNotificationService;
+    private final com.glr.deenwallet.user.AccountDeletionService accountDeletion;
 
     @Value("${app.support.whatsapp:+23280613600}")
     private String supportWhatsApp;
@@ -310,6 +311,40 @@ public class AdminController {
         }
         log.info("Admin {} edited the details of admin {}", current.getEmail(), target.getId());
         return ResponseEntity.ok(AdminUserResponse.from(target));
+    }
+
+    /** Any admin can delete a customer account. */
+    @DeleteMapping("/users/{id}")
+    public ResponseEntity<Void> deleteCustomer(@PathVariable UUID id, jakarta.servlet.http.HttpServletRequest http) {
+        User current = getCurrentUser();
+        validateAdmin();
+        User target = userRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("User not found"));
+        if (!"USER".equals(target.getRole())) {
+            throw new AdminAccessException("Only customer accounts can be deleted here.");
+        }
+        http.setAttribute("auditTargetName", target.getFullName());
+        accountDeletion.delete(id);
+        log.info("Admin {} deleted customer account {}", current.getEmail(), id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** Only a super admin can delete an admin (the main super admin also the super admins it created), never their own account. */
+    @DeleteMapping("/admins/{id}")
+    public ResponseEntity<Void> deleteAdmin(@PathVariable UUID id, jakarta.servlet.http.HttpServletRequest http) {
+        User current = getCurrentUser();
+        validateSuperAdmin(current);
+        User target = userRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Admin not found"));
+        if (current.getId().equals(target.getId())) {
+            throw new AdminAccessException("You cannot delete your own account.");
+        }
+        if (!"ADMIN".equals(target.getRole()) && !"SUPER_ADMIN".equals(target.getRole())) {
+            throw new IllegalArgumentException("That account is not an admin.");
+        }
+        requireManage(current, target);
+        http.setAttribute("auditTargetName", target.getFullName());
+        accountDeletion.delete(id);
+        log.info("Admin {} deleted admin account {}", current.getEmail(), id);
+        return ResponseEntity.noContent().build();
     }
 
     /** Switch sections on or off for one admin (super admins are never limited). */

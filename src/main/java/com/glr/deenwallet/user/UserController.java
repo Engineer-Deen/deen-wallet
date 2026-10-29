@@ -20,6 +20,7 @@ public class UserController {
 
     private final UserRepository repo;
     private final AuthService authService;
+    private final AccountDeletionService accountDeletion;
 
     @GetMapping("/me")
     public ResponseEntity<UserProfileResponse> me() {
@@ -51,6 +52,21 @@ public class UserController {
     @PostMapping("/me/pin")
     public ResponseEntity<Void> setPin(@Valid @RequestBody SetPinRequest request) {
         authService.setPin(current().getId(), request.pin(), request.currentPassword());
+        return ResponseEntity.noContent().build();
+    }
+
+    /** The customer deletes their own account (confirmed with their PIN). */
+    @PostMapping("/me/delete")
+    public ResponseEntity<Void> deleteMyAccount(@Valid @RequestBody PinRequest request) {
+        UUID id = currentUserId();
+        authService.verifyPin(id, request.pin());
+        accountDeletion.delete(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** "I am still here" signal from the app; the PresenceFilter does the work. */
+    @PostMapping("/me/ping")
+    public ResponseEntity<Void> ping() {
         return ResponseEntity.noContent().build();
     }
 

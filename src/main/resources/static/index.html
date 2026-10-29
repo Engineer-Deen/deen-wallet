@@ -3220,6 +3220,18 @@
                 <p class="profile-admin-note">Email and phone number can only be changed by an administrator.</p>
             </div>
 
+            <div class="profile-section-heading">
+                <h2>Delete account</h2>
+                <p>Permanently remove your DeenWallet Transfer account.</p>
+            </div>
+            <div class="profile-edit-card" id="delete-account-card">
+                <p class="profile-admin-note" style="margin:0 0 10px;">Your name, email, phone number and saved recipients are removed and you can never sign in to this account again. Your past transfer records are kept for legal and accounting reasons. This cannot be undone.</p>
+                <label for="delete-account-pin">Enter your PIN to confirm</label>
+                <input class="text-input" id="delete-account-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••" />
+                <button class="btn-primary" id="delete-account-btn" style="background:#d32f2f;margin-top:10px;">Delete my account</button>
+                <div id="delete-account-error" class="pin-error hidden"></div>
+            </div>
+
             <p class="field-note profile-note" id="profile-note"></p>
         </div>
     </div>
@@ -5948,6 +5960,32 @@
             }
         }
 
+        (function () {
+            const btn = document.getElementById('delete-account-btn');
+            const pinInput = document.getElementById('delete-account-pin');
+            const errBox = document.getElementById('delete-account-error');
+            if (!btn) return;
+            function fail(m) { errBox.textContent = m; errBox.classList.remove('hidden'); }
+            btn.addEventListener('click', async function () {
+                errBox.classList.add('hidden');
+                const pin = (pinInput.value || '').trim();
+                if (!/^\d{4}$/.test(pin)) { fail('Enter your 4-digit PIN.'); return; }
+                const ok = await showConfirmModal('🗑️', 'Delete your account?', 'This permanently deletes your account and signs you out. It cannot be undone.', 'Delete', true);
+                if (!ok) return;
+                btn.disabled = true;
+                try {
+                    await apiRequest('/api/users/me/delete', { method: 'POST', body: { pin: pin } });
+                    clearTokens();
+                    try { localStorage.clear(); sessionStorage.clear(); } catch (_) { }
+                    window.location.href = 'auth.html';
+                } catch (error) {
+                    btn.disabled = false;
+                    pinInput.value = '';
+                    fail(error && error.message ? error.message : 'Could not delete the account. Please try again.');
+                }
+            });
+        })();
+
         if (profileSaveBtn) {
             profileSaveBtn.addEventListener('click', async function () {
                 const fullName = profileFullNameInput ? profileFullNameInput.value.trim() : '';
@@ -8216,7 +8254,10 @@
         };
 
         window.dwOnPullToRefresh = async function () {
-            if (document.getElementById('screen-step1').classList.contains('active')) {
+            if (document.getElementById('screen-home').classList.contains('active')) {
+                try { if (typeof loadRecentActivity === 'function') await loadRecentActivity(); } catch (_) { }
+                try { if (typeof loadNotifications === 'function') await loadNotifications(true); } catch (_) { }
+            } else if (document.getElementById('screen-step1').classList.contains('active')) {
                 await loadRecipients();
             } else if (screenProfile.classList.contains('active')) {
                 await openProfile();

@@ -32,7 +32,14 @@ public class AdminHomeController {
                        long failedPayouts, long kycPending,
                        long waecAvailable, boolean waecOperational,
                        long todayTransactions, double todayVolumeSle,
-                       long monthTransactions, double monthVolumeSle, double monthFeesSle) { }
+                       long monthTransactions, double monthVolumeSle, double monthFeesSle,
+                       long onlineNow) {
+        Home withOnline(long n) {
+            return new Home(totalUsers, emailVerifiedUsers, kycVerifiedUsers, failedPayouts, kycPending,
+                    waecAvailable, waecOperational, todayTransactions, todayVolumeSle,
+                    monthTransactions, monthVolumeSle, monthFeesSle, n);
+        }
+    }
 
     @PersistenceContext
     private EntityManager em;
@@ -40,11 +47,14 @@ public class AdminHomeController {
     private final UserRepository users;
     private final KycSubmissionRepository kycSubmissions;
     private final WaecPinService waecPins;
+    private final com.glr.deenwallet.user.PresenceService presence;
 
     private volatile Home cached;
     private volatile long cachedAt;
 
-    public AdminHomeController(UserRepository users, KycSubmissionRepository kycSubmissions, WaecPinService waecPins) {
+    public AdminHomeController(UserRepository users, KycSubmissionRepository kycSubmissions, WaecPinService waecPins,
+                               com.glr.deenwallet.user.PresenceService presence) {
+        this.presence = presence;
         this.users = users;
         this.kycSubmissions = kycSubmissions;
         this.waecPins = waecPins;
@@ -54,11 +64,13 @@ public class AdminHomeController {
     public ResponseEntity<Home> home() {
         long now = System.currentTimeMillis();
         Home c = cached;
-        if (c != null && now - cachedAt < CACHE_MS) return ResponseEntity.ok(c);
-        Home fresh = compute();
-        cached = fresh;
-        cachedAt = now;
-        return ResponseEntity.ok(fresh);
+        if (c == null || now - cachedAt >= CACHE_MS) {
+            c = compute();
+            cached = c;
+            cachedAt = now;
+        }
+        // "online now" is never cached: it is a quick count of customers seen in the last 3 minutes
+        return ResponseEntity.ok(c.withOnline(presence.onlineCustomers(3)));
     }
 
     private Home compute() {
@@ -95,7 +107,7 @@ public class AdminHomeController {
         long monthFees = n(live[2]) + n(old[2]);
 
         return new Home(
-                users.count(),
+                n(em.createNativeQuery("SELECT COUNT(*) FROM users WHERE role <> 'DELETED'").getSingleResult()),
                 users.countByEmailVerifiedTrue(),
                 kycSubmissions.countByStatus(KycStatus.APPROVED),
                 failedPayouts,
@@ -103,7 +115,7 @@ public class AdminHomeController {
                 waecPins.summary().available(),
                 waecPins.isOperational(),
                 n(t[0]), n(t[1]) / 100.0,
-                monthTx, monthVol / 100.0, monthFees / 100.0);
+                monthTx, monthVol / 100.0, monthFees / 100.0, 0L);
     }
 
     private static long n(Object o) {

@@ -2421,6 +2421,7 @@
         .am-switch:checked { background: var(--primary); }
         .am-switch:checked::after { transform: translateX(20px); }
         [data-denied] { display: none !important; }
+        .online-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #22c55e; margin-right: 5px; vertical-align: middle; box-shadow: 0 0 0 3px rgba(34, 197, 94, .25); }
 
         .add-admin-form input {
             width: 100%;
@@ -2765,6 +2766,7 @@
                 <div class="stat-card primary">
                     <div class="number" id="stat-users">—</div>
                     <div class="label">Total Users</div>
+                    <div class="sub" id="stat-users-sub">&nbsp;</div>
                 </div>
                 <div class="stat-card success">
                     <div class="number" id="stat-verified">—</div>
@@ -5135,6 +5137,19 @@
             // ==============================================================
             // DASHBOARD
             // ==============================================================
+            // keeps the "online now" number fresh while the Home tab is on screen
+            setInterval(function () {
+                if (document.hidden || !getToken()) return;
+                var tab = tabContents.dashboard;
+                if (!tab || tab.classList.contains('hidden')) return;
+                var main = document.getElementById('screen-main');
+                if (!main || !main.classList.contains('active')) return;
+                adminApiRequest('/api/admin/home', { quiet: true }).then(function (h) {
+                    var el = document.getElementById('stat-users-sub');
+                    if (el && h) el.innerHTML = '<span class="online-dot"></span>' + Number(h.onlineNow || 0).toLocaleString() + ' online now';
+                }).catch(function () { });
+            }, 30000);
+
             function loadDashboard() {
                 var loading = document.getElementById('dashboard-loading');
                 var error = document.getElementById('dashboard-error');
@@ -5146,6 +5161,8 @@
                         function money(v) { return Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
                         function num(v) { return Number(v || 0).toLocaleString(); }
                         document.getElementById('stat-users').textContent = num(h.totalUsers);
+                        var onlineEl = document.getElementById('stat-users-sub');
+                        if (onlineEl) onlineEl.innerHTML = '<span class="online-dot"></span>' + num(h.onlineNow) + ' online now';
                         document.getElementById('stat-verified').textContent = num(h.emailVerifiedUsers);
                         document.getElementById('stat-verified-sub').textContent = num(h.kycVerifiedUsers) + ' ID verified';
                         document.getElementById('stat-today-tx').textContent = num(h.todayTransactions);
@@ -6108,6 +6125,10 @@
                 var statusClass = isLocked || !isActive ? 'bad' : 'good';
                 var detailKicker = document.getElementById('account-detail-kicker');
                 detailKicker.textContent = isAdmin ? 'Administrator Profile' : 'Customer Profile';
+                var meAcc = currentAdminUser || {};
+                var canDeleteAcc = !isAdmin ? true
+                    : (isSuperAdmin() && user.mainAdmin !== true && user.id !== meAcc.id && (user.role === 'ADMIN' || meAcc.mainAdmin === true));
+                var deleteAccHtml = canDeleteAcc ? '<button id="account-detail-delete" class="btn-sm danger" type="button">🗑 Delete account</button>' : '';
 
                 content.innerHTML = `
                     <section class="account-detail-hero">
@@ -6179,6 +6200,7 @@
                         </div>
                         <div class="account-detail-actions">
                             ${isSuper ? '<div></div>' : `<button id="account-detail-toggle" class="btn-sm ${isLocked || !isActive ? 'success' : 'danger'}">${isLocked ? '🔓 Unlock Account' : (isActive ? '🔒 Deactivate' : '✅ Activate')}</button>`}
+                            ${deleteAccHtml}
                             <button id="account-detail-back-action" class="btn-outline" type="button">← Back to ${isAdmin ? 'Admin Management' : 'Users'}</button>
                         </div>
                     </section>
@@ -6265,6 +6287,15 @@
                     });
                 }
 
+                var deleteAccBtn = document.getElementById('account-detail-delete');
+                if (deleteAccBtn) {
+                    deleteAccBtn.addEventListener('click', function () {
+                        amDeleteAccount(user.id, !isAdmin, name, function () {
+                            if (returnScreen === 'admin-management') loadAdminList(); else loadUsers();
+                            returnFromAccountDetail();
+                        });
+                    });
+                }
                 document.getElementById('account-detail-back-action').addEventListener('click', returnFromAccountDetail);
                 openSubScreen(accountDetailScreen);
             }
@@ -7762,6 +7793,16 @@
                 document.body.appendChild(o);
                 return body;
             }
+            // Delete an account (customer: any admin; admin / super admin: only a super admin, never yourself)
+            function amDeleteAccount(id, isCustomer, name, done) {
+                showModal('Delete account', 'Delete ' + (name || 'this account') + ' permanently? ' +
+                    (isCustomer ? 'The customer will be signed out and can no longer use the app. Their transfer history is kept for the records.'
+                        : 'They will be signed out and lose all access. This cannot be undone.'), function () {
+                    adminApiRequest((isCustomer ? '/api/admin/users/' : '/api/admin/admins/') + encodeURIComponent(id), { method: 'DELETE' })
+                        .then(function () { showToast('Account deleted.'); if (done) done(); })
+                        .catch(function (e) { showToast(e.message || 'Could not delete the account.'); });
+                });
+            }
             function amFindAdmin(id) { for (var i = 0; i < amState.admins.length; i++) { if (amState.admins[i].id === id) return amState.admins[i]; } return null; }
 
             function amEdit(id) {
@@ -7857,6 +7898,7 @@
                             (canAccess ? '<button class="icon-btn" data-action="access-admin" data-id="' + admin.id + '" title="What this admin can open">⚙</button>' : '') +
                             (controllable && (admin.loginFailedAttempts > 0 || admin.loginLockedUntil || admin.adminRecoveryRequired) ? '<button class="icon-btn" data-action="reset-admin-login" data-id="' + admin.id + '" title="Reset login protection">↻</button>' : '') +
                             (controllable ? '<button class="icon-btn" data-action="toggle-admin" data-id="' + admin.id + '" data-active="' + isActive + '" data-locked="' + isLocked + '" title="' + (isLocked ? 'Unlock' : isActive ? 'Deactivate' : 'Activate') + '">' + (isLocked ? '🔓' : (isActive ? '🔒' : '✅')) + '</button>' : '') +
+                            (controllable ? '<button class="icon-btn" data-action="delete-admin" data-id="' + admin.id + '" title="Delete account">🗑</button>' : '') +
                             '</div>';
                         container.appendChild(card);
                     });
@@ -7900,6 +7942,13 @@
                             adminApiRequest(endpoint, options)
                                 .then(function () { showToast('Account ' + (action === 'unlock' ? 'unlocked' : action + 'd') + '.'); loadAdminList(); })
                                 .catch(function (err) { showToast(err.message || 'Could not update the account.'); });
+                        });
+                    });
+                    container.querySelectorAll('[data-action="delete-admin"]').forEach(function (btn) {
+                        btn.addEventListener('click', function (e) {
+                            e.stopPropagation();
+                            var a = amFindAdmin(btn.dataset.id);
+                            amDeleteAccount(btn.dataset.id, false, a ? (a.fullName || a.email) : '', loadAdminList);
                         });
                     });
                     container.querySelectorAll('.item-card').forEach(function (card) {
@@ -7954,42 +8003,47 @@
             window.dwIsNetworkError = isNetworkError;
 
             (function () {
-                var banner = null;
-                var serverReachable = true;
-                function ensureBanner() {
-                    if (banner) return banner;
-                    banner = document.createElement('div');
-                    banner.id = 'dw-offline-banner';
-                    banner.textContent = 'No internet connection';
-                    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#b91c1c;color:#fff;text-align:center;font:600 13px/1 -apple-system,Segoe UI,Roboto,sans-serif;padding:10px 12px;transform:translateY(-100%);transition:transform 0.25s ease;box-shadow:0 2px 8px rgba(0,0,0,0.25);';
-                    document.body.appendChild(banner);
-                    return banner;
-                }
-                function showOfflineBanner() { ensureBanner().style.transform = 'translateY(0)'; }
-                function hideOfflineBanner() {
-                    if (banner) banner.style.transform = 'translateY(-100%)';
-                    if (typeof window.dwOnPullToRefresh === 'function') window.dwOnPullToRefresh();
-                }
-                var probing = false;
-                function probeServer() {
-                    if (probing) return;
-                    probing = true;
-                    var controller = new AbortController();
-                    var timeoutId = setTimeout(function () { controller.abort(); }, 5000);
-                    fetch(API_BASE_URL + '/api/app/version', { cache: 'no-store', signal: controller.signal })
-                        .then(function () {
-                            if (!serverReachable) { serverReachable = true; hideOfflineBanner(); }
-                        })
-                        .catch(function () {
-                            if (serverReachable) { serverReachable = false; showOfflineBanner(); }
-                        })
-                        .finally(function () { clearTimeout(timeoutId); probing = false; });
-                }
-                window.addEventListener('offline', showOfflineBanner);
-                window.addEventListener('online', probeServer);
-                if (!navigator.onLine) showOfflineBanner();
-                probeServer();
-                setInterval(probeServer, 5000);
+              var banner = null;
+              var reachable = true;
+              var seq = 0;
+              var timer = null;
+
+              function ensureBanner() {
+                if (banner) return banner;
+                banner = document.createElement('div');
+                banner.id = 'dw-offline-banner';
+                banner.textContent = 'No internet connection';
+                banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#b91c1c;color:#fff;text-align:center;font:600 13px/1 -apple-system,Segoe UI,Roboto,sans-serif;padding:10px 12px;transform:translateY(-100%);transition:transform 0.2s ease;box-shadow:0 2px 8px rgba(0,0,0,0.25);pointer-events:none;';
+                document.body.appendChild(banner);
+                return banner;
+              }
+              function showBanner() {
+                if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', showBanner, { once: true }); return; }
+                ensureBanner().style.transform = 'translateY(0)';
+              }
+              // Only hides the banner. It never reloads or refreshes the page by itself.
+              function hideBanner() { if (banner) banner.style.transform = 'translateY(-100%)'; }
+              function schedule(ms) { clearTimeout(timer); timer = setTimeout(probe, ms); }
+
+              // Real-time check: asks the server every 1.5 s while offline (15 s while online), and instantly when the
+              // phone says the network changed or the app comes back to the screen. Old answers are ignored.
+              function probe() {
+                if (document.hidden) { schedule(3000); return; }
+                var mine = ++seq;
+                var controller = new AbortController();
+                var t = setTimeout(function () { controller.abort(); }, 4000);
+                fetch(API_BASE_URL + '/api/app/version', { cache: 'no-store', signal: controller.signal })
+                  .then(function () { if (mine !== seq) return; reachable = true; hideBanner(); })
+                  .catch(function () { if (mine !== seq) return; reachable = false; showBanner(); })
+                  .finally(function () { clearTimeout(t); if (mine === seq) schedule(reachable ? 15000 : 1500); });
+              }
+
+              window.addEventListener('offline', function () { seq++; reachable = false; showBanner(); schedule(1500); });
+              window.addEventListener('online', function () { hideBanner(); probe(); });
+              document.addEventListener('visibilitychange', function () { if (!document.hidden) probe(); });
+              window.addEventListener('pageshow', function () { probe(); });
+              if (!navigator.onLine) showBanner();
+              probe();
             })();
 
             // ==============================================================
@@ -8060,49 +8114,93 @@
                     if (typeof mailViewVisible === 'function' && mailViewVisible()) { loadMailSummary(); mailLoad(false, true); }
                 }
             };
+            // Pull-to-refresh is only for Home, Users and Audit. Messaging, Wallet, Errors, Failed Payouts, KYC and
+            // WAEC PINs have their own Refresh buttons, and sub-screens / the menu never pull.
+            window.dwPtrAllowed = function () {
+                var main = document.getElementById('screen-main');
+                if (!main || !main.classList.contains('active')) return false;
+                if (adminDrawer && adminDrawer.classList.contains('open')) return false;
+                var vis = Object.keys(tabContents).find(function (key) {
+                    return tabContents[key] && !tabContents[key].classList.contains('hidden');
+                }) || 'dashboard';
+                return vis === 'dashboard' || vis === 'users' || vis === 'audit';
+            };
             (function () {
-                var THRESHOLD = 70;
-                var startY = null, pulling = false, indicator = null;
-                function ensureIndicator() {
-                    if (indicator) return indicator;
-                    indicator = document.createElement('div');
-                    indicator.id = 'dw-pull-refresh-indicator';
-                    indicator.textContent = '↓ Pull to refresh';
-                    indicator.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9998;text-align:center;padding:10px;font:600 12px/1 -apple-system,Segoe UI,Roboto,sans-serif;color:#555;background:rgba(255,255,255,0.95);transform:translateY(-100%);transition:transform 0.15s ease;';
-                    document.body.appendChild(indicator);
-                    return indicator;
+              var THRESHOLD = 60, MAX = 110;
+              var startY = null, startX = 0, pulling = false, busy = false, dist = 0, el = null, svg = null;
+
+              function ensure() {
+                if (el) return el;
+                var st = document.createElement('style');
+                st.textContent = '@keyframes dwptr-spin{to{transform:rotate(360deg)}}';
+                document.head.appendChild(st);
+                el = document.createElement('div');
+                el.id = 'dw-pull-refresh-indicator';
+                el.style.cssText = 'position:fixed;top:0;left:50%;width:40px;height:40px;margin-left:-20px;border-radius:50%;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.28);z-index:9998;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transform:translateY(-60px);';
+                el.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" style="display:block"><path d="M12 4a8 8 0 1 0 8 8" fill="none" stroke="#1C7A91" stroke-width="2.6" stroke-linecap="round"/></svg>';
+                svg = el.firstChild;
+                document.body.appendChild(el);
+                return el;
+              }
+              function place(d, animate) {
+                var e = ensure();
+                e.style.transition = animate ? 'transform .2s ease, opacity .2s ease' : 'none';
+                e.style.opacity = d <= 0 ? '0' : String(Math.min(1, d / (THRESHOLD * 0.7)));
+                e.style.transform = 'translateY(' + (d - 48 + 14) + 'px)';
+              }
+              function blocked(t) {
+                if (busy) return true;
+                if (typeof window.dwPtrAllowed === 'function' && !window.dwPtrAllowed()) return true;
+                if (document.querySelector('.modal-overlay.active, #pin-modal-overlay.active, .wallet-sheet-overlay.open')) return true;
+                var pin = document.getElementById('pin-modal-overlay');
+                if (pin && pin.style.display && pin.style.display !== 'none') return true;
+                for (var n = t; n && n.nodeType === 1; n = n.parentElement) {
+                  if (n.tagName === 'INPUT' || n.tagName === 'TEXTAREA' || n.tagName === 'SELECT' || n.hasAttribute('data-no-ptr')) return true;
+                  if (n.scrollTop > 0) return true; // some area under the finger is scrolled down: it should scroll up, not refresh
                 }
-                document.addEventListener('touchstart', function (e) {
-                    if (window.scrollY > 0) { startY = null; return; }
-                    if (document.querySelector('.modal-overlay.active')) { startY = null; return; }
-                    startY = e.touches[0].clientY;
-                    pulling = false;
-                }, { passive: true });
-                document.addEventListener('touchmove', function (e) {
-                    if (startY === null) return;
-                    var delta = e.touches[0].clientY - startY;
-                    if (delta <= 0) return;
-                    pulling = true;
-                    var el = ensureIndicator();
-                    var progress = Math.min(delta / THRESHOLD, 1);
-                    el.style.transform = 'translateY(' + (progress * 100 - 100) + '%)';
-                    el.textContent = progress >= 1 ? '↑ Release to refresh' : '↓ Pull to refresh';
-                }, { passive: true });
-                document.addEventListener('touchend', function (e) {
-                    if (!pulling || startY === null) { startY = null; return; }
-                    var delta = e.changedTouches[0].clientY - startY;
-                    startY = null;
-                    pulling = false;
-                    if (delta < THRESHOLD) { if (indicator) indicator.style.transform = 'translateY(-100%)'; return; }
-                    var el = ensureIndicator();
-                    el.textContent = 'Refreshing…';
-                    el.style.transform = 'translateY(0)';
-                    try {
-                        window.dwOnPullToRefresh();
-                    } finally {
-                        el.style.transform = 'translateY(-100%)';
-                    }
-                }, { passive: true });
+                return window.scrollY > 0;
+              }
+              function reset() { startY = null; pulling = false; dist = 0; if (el) place(0, true); }
+
+              document.addEventListener('touchstart', function (e) {
+                if (e.touches.length !== 1 || blocked(e.target)) { startY = null; return; }
+                startY = e.touches[0].clientY; startX = e.touches[0].clientX; pulling = false; dist = 0;
+              }, { passive: true });
+
+              document.addEventListener('touchmove', function (e) {
+                if (startY === null) return;
+                var dy = e.touches[0].clientY - startY, dx = e.touches[0].clientX - startX;
+                if (!pulling) {
+                  if (dy < 10) { if (dy < -10) startY = null; return; }
+                  if (Math.abs(dx) > dy) { startY = null; return; }
+                  pulling = true;
+                }
+                dist = Math.max(0, Math.min(MAX, (dy - 10) * 0.55));
+                if (e.cancelable) e.preventDefault();
+                place(dist, false);
+                svg.style.transform = 'rotate(' + (dist * 5) + 'deg)';
+              }, { passive: false });
+
+              document.addEventListener('touchend', function () {
+                if (!pulling) { startY = null; return; }
+                var go = dist >= THRESHOLD;
+                startY = null; pulling = false;
+                if (!go) { dist = 0; place(0, true); return; }
+                busy = true;
+                place(THRESHOLD * 0.75, true);
+                svg.style.transform = '';
+                svg.style.animation = 'dwptr-spin .7s linear infinite';
+                var started = Date.now();
+                var job;
+                try {
+                  if (typeof window.dwOnPullToRefresh === 'function') job = Promise.resolve(window.dwOnPullToRefresh());
+                  else { window.location.reload(); return; }
+                } catch (_) { job = Promise.resolve(); }
+                job.catch(function () { }).then(function () {
+                  setTimeout(function () { svg.style.animation = ''; busy = false; dist = 0; place(0, true); }, Math.max(0, 700 - (Date.now() - started)));
+                });
+              }, { passive: true });
+              document.addEventListener('touchcancel', function () { reset(); }, { passive: true });
             })();
 
             console.log('=== Admin page ready ===');
