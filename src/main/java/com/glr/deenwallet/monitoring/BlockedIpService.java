@@ -62,6 +62,30 @@ public class BlockedIpService {
         blocked = Map.copyOf(next);
     }
 
+    /** Cloudflare's published address ranges. A visitor never really comes from these: they are Cloudflare's own servers. */
+    private static final String[] CLOUDFLARE = {
+            "173.245.48.0/20", "103.21.244.0/22", "103.22.200.0/22", "103.31.4.0/22", "141.101.64.0/18", "108.162.192.0/18",
+            "190.93.240.0/20", "188.114.96.0/20", "197.234.240.0/22", "198.41.128.0/17", "162.158.0.0/15", "104.16.0.0/13",
+            "104.24.0.0/14", "172.64.0.0/13", "131.0.72.0/22",
+            "2400:cb00::/32", "2606:4700::/32", "2803:f800::/32", "2405:b500::/32", "2405:8100::/32", "2a06:98c0::/29", "2c0f:f248::/32"};
+
+    public static boolean isCloudflare(String ip) {
+        try {
+            byte[] a = InetAddress.getByName(ip).getAddress();
+            for (String c : CLOUDFLARE) {
+                String[] p = c.split("/");
+                byte[] n = InetAddress.getByName(p[0]).getAddress();
+                if (n.length != a.length) continue;
+                int bits = Integer.parseInt(p[1]), full = bits / 8, rest = bits % 8;
+                boolean same = true;
+                for (int i = 0; i < full && same; i++) same = a[i] == n[i];
+                if (same && rest > 0) same = ((a[full] ^ n[full]) & (0xFF << (8 - rest))) == 0;
+                if (same) return true;
+            }
+        } catch (Exception ignored) { }
+        return false;
+    }
+
     /** Why this address must not be blocked, or null when it is fine to block. */
     static String refusal(String ip, String yourIp) {
         if (ip == null || ip.isBlank()) return "Empty address";
@@ -75,6 +99,7 @@ public class BlockedIpService {
         }
         if (!ok) return "Not a valid address";
         if (ip.equals(yourIp)) return "This is your own address: blocking it would lock you out";
+        if (isCloudflare(ip)) return "This is a Cloudflare address: blocking it would cut off real customers";
         try {
             InetAddress a = InetAddress.getByName(ip); // an address written in digits: no name lookup happens
             if (a.isLoopbackAddress() || a.isAnyLocalAddress() || a.isSiteLocalAddress() || a.isLinkLocalAddress() || a.isMulticastAddress()) {
@@ -112,6 +137,7 @@ public class BlockedIpService {
                         .setParameter(1, ip).setParameter(2, why).setParameter(3, by).setParameter(4, h).executeUpdate();
             }
             done++;
+            dismissOne(ip); // once blocked, the address leaves the attack lists
         }
         reloadNow();
         Map<String, Object> out = new LinkedHashMap<>();
@@ -126,9 +152,43 @@ public class BlockedIpService {
         for (String raw : ips == null ? List.<String>of() : ips.stream().limit(500).toList()) {
             if (raw == null) continue;
             n += em.createNativeQuery("DELETE FROM blocked_ips WHERE ip = ?1").setParameter(1, raw.trim()).executeUpdate();
+            em.createNativeQuery("DELETE FROM dismissed_ips WHERE ip = ?1").setParameter(1, raw.trim()).executeUpdate();
         }
         reloadNow();
         return n;
+    }
+
+    private void dismissOne(String ip) {
+        em.createNativeQuery("INSERT INTO dismissed_ips (ip) VALUES (?1) ON CONFLICT (ip) DO UPDATE SET created_at = now()").setParameter(1, ip).executeUpdate();
+        em.createNativeQuery("DELETE FROM security_events WHERE ip = ?1").setParameter(1, ip).executeUpdate();
+    }
+
+    /** Remove addresses from the Metrics attack lists (their recorded events are deleted). Does not block them. */
+    @Transactional
+    public int dismiss(List<String> ips) {
+        int n = 0;
+        for (String raw : ips == null ? List.<String>of() : ips.stream().limit(500).toList()) {
+            if (raw == null || raw.isBlank() || raw.length() > 64) continue;
+            dismissOne(raw.trim());
+            n++;
+        }
+        return n;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Transactional(readOnly = true)
+    public java.util.Set<String> dismissedSet() {
+        java.util.Set<String> out = new java.util.HashSet<>();
+        try {
+            for (Object o : em.createNativeQuery("SELECT ip FROM dismissed_ips WHERE created_at > now() - interval '30 days'").getResultList()) out.add(String.valueOf(o));
+        } catch (RuntimeException ignored) { }
+        return out;
+    }
+
+    @Scheduled(cron = "0 40 3 * * *")
+    @Transactional
+    public void cleanup() {
+        em.createNativeQuery("DELETE FROM dismissed_ips WHERE created_at < now() - interval '30 days'").executeUpdate();
     }
 
     @SuppressWarnings("unchecked")

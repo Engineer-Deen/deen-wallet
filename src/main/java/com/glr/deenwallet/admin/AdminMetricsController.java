@@ -111,6 +111,18 @@ public class AdminMetricsController {
         return ResponseEntity.ok(result);
     }
 
+    /** Remove addresses from the attack lists and delete their recorded events. */
+    @PostMapping("/clear")
+    public ResponseEntity<Map<String, Object>> clear(@RequestBody UnblockRequest body, HttpServletRequest http) {
+        requireSuperAdmin();
+        http.setAttribute("auditTargetName", audited(body.ips()));
+        int n = blockedIps.dismiss(body.ips());
+        cached = null;
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("cleared", n);
+        return ResponseEntity.ok(out);
+    }
+
     @PostMapping("/unblock")
     public ResponseEntity<Map<String, Object>> unblock(@RequestBody UnblockRequest body, HttpServletRequest http) {
         requireSuperAdmin();
@@ -129,7 +141,18 @@ public class AdminMetricsController {
         Map<String, Object> db = databaseMetrics.collect();
         Map<String, Object> attacks = securityEvents.overview();
         Map<String, Object> vulns = securityScan.vulnerabilities();
-        Map<String, Object> ssh = securityScan.sshAttempts();
+        Map<String, Object> ssh = new LinkedHashMap<>(securityScan.sshAttempts());
+        java.util.Set<String> dismissed = blockedIps.dismissedSet();
+        if (ssh.get("topIps") instanceof List<?> sl) {
+            List<Object> kept = new ArrayList<>();
+            for (Object o : sl) if (!(o instanceof Map<?, ?> m && dismissed.contains(String.valueOf(m.get("ip"))))) kept.add(o);
+            ssh.put("topIps", kept);
+        }
+        boolean behindCloudflare = false;
+        if (attacks.get("topIps") instanceof List<?> al) {
+            for (Object o : al) if (o instanceof Map<?, ?> m && BlockedIpService.isCloudflare(String.valueOf(m.get("ip")))) { behindCloudflare = true; break; }
+        }
+        out.put("behindCloudflare", behindCloudflare);
         out.put("time", Instant.now().toString());
         out.put("server", server);
         out.put("app", app);
@@ -212,6 +235,14 @@ public class AdminMetricsController {
                 long warn = tl.stream().filter(o -> o instanceof Map<?, ?> t && "warn".equals(t.get("level"))).count();
                 if (bad > 0) issue(issues, "bad", who + ": " + bad + " serious item(s) to fix on that machine.");
                 else if (warn > 0) issue(issues, "warn", who + ": " + warn + " item(s) need attention on that machine.");
+            }
+        }
+        if (attacks.get("topIps") instanceof List<?> cl) {
+            for (Object o : cl) {
+                if (o instanceof Map<?, ?> m && BlockedIpService.isCloudflare(String.valueOf(m.get("ip")))) {
+                    issue(issues, "bad", "Your app sees Cloudflare's addresses instead of your visitors'. Blocking and the attack list cannot work until the real visitor address is passed on. Open the Attacks card for the fix.");
+                    break;
+                }
             }
         }
         Object kinds = attacks.get("byKind");

@@ -4639,9 +4639,10 @@
                 return '<div class="mx-toolbar">' +
                     '<button type="button" class="btn-sm refresh" data-mx="sel-high">Select high risk</button>' +
                     '<button type="button" class="btn-sm refresh" data-mx="sel-all">Select all</button>' +
-                    '<button type="button" class="btn-sm refresh" data-mx="sel-none">Clear</button></div>' +
+                    '<button type="button" class="btn-sm refresh" data-mx="sel-none">Untick all</button></div>' +
                     '<div class="mx-toolbar"><select class="mx-hours-sel">' + opts + '</select>' +
                     '<button type="button" class="btn-sm danger" data-mx="block">Block selected (' + n + ')</button>' +
+                    '<button type="button" class="btn-sm refresh" data-mx="clear">Remove from list (' + n + ')</button>' +
                     '<button type="button" class="btn-sm refresh" data-mx="copy-ufw">Copy server block commands (' + n + ')</button></div>';
             }
             function mxSqliCard(at) {
@@ -4803,6 +4804,7 @@
                 function refreshCounts() {
                     var n = mxSelCount();
                     box.querySelectorAll('[data-mx="block"]').forEach(function (b) { b.textContent = 'Block selected (' + n + ')'; });
+                    box.querySelectorAll('[data-mx="clear"]').forEach(function (b) { b.textContent = 'Remove from list (' + n + ')'; });
                     box.querySelectorAll('[data-mx="copy-ufw"]').forEach(function (b) { b.textContent = 'Copy server block commands (' + n + ')'; });
                 }
                 box.addEventListener('change', function (e) {
@@ -4821,6 +4823,18 @@
                     var act = b.getAttribute('data-mx');
                     if (act === 'sel-high' || act === 'sel-all') { mxVisibleIps(mxLast, act === 'sel-high').forEach(function (ip) { mxSel[ip] = 1; }); mxRender(mxLast); return; }
                     if (act === 'sel-none') { mxSel = {}; mxRender(mxLast); return; }
+                    if (act === 'clear') {
+                        var cl = Object.keys(mxSel);
+                        if (!cl.length) { showToast('Tick the addresses to remove first.'); return; }
+                        showModal('Remove ' + cl.length + ' address(es) from the list?', 'They disappear from these lists and their recorded attempts are deleted. This does not block them. If they attack again they will show up again.', function () {
+                            adminApiRequest('/api/admin/metrics/clear', { method: 'POST', body: { ips: cl } }).then(function (r) {
+                                showToast('Removed ' + (r.cleared || 0) + ' address(es).');
+                                mxSel = {};
+                                loadMetrics();
+                            }).catch(function (er) { showToast(er.message || 'Could not remove.'); });
+                        });
+                        return;
+                    }
                     if (act === 'toggle-all') { mxShowAll = !mxShowAll; mxRender(mxLast); return; }
                     if (act === 'copy-text') {
                         mxCopy(b.getAttribute('data-text') || '').then(function () { showToast('Copied. Paste it into your SSH session.'); }).catch(function () { showToast('Could not copy. Long-press the command to copy it.'); });
@@ -4849,7 +4863,7 @@
                             adminApiRequest('/api/admin/metrics/block', { method: 'POST', body: { ips: list, hours: hrs, reason: 'Blocked from Server Metrics' } }).then(function (r) {
                                 var msg = 'Blocked ' + (r.blocked || 0) + ' address(es).';
                                 if (r.skipped && r.skipped.length) msg += ' Skipped ' + r.skipped.length + ': ' + r.skipped[0].why + '.';
-                                showToast(msg);
+                                showToast(msg + ' They are removed from the list.');
                                 mxSel = {};
                                 loadMetrics();
                             }).catch(function (er) { showToast(er.message || 'Could not block.'); });
@@ -5011,7 +5025,12 @@
                         }).join('');
                     }
                 }
-                sec.attacks = mxSection('Attacks (last 24 hours)', 'People wrongly guessing passwords or PINs, hammering the app, or probing for hidden files.', inner);
+                var cfWarn = '';
+                if (m.behindCloudflare) {
+                    var cfCmd = '( for i in $(curl -s https://www.cloudflare.com/ips-v4 https://www.cloudflare.com/ips-v6); do echo "set_real_ip_from $i;"; done; echo "real_ip_header CF-Connecting-IP;" ) | sudo tee /etc/nginx/conf.d/cloudflare-realip.conf\nsudo nginx -t && sudo systemctl reload nginx';
+                    cfWarn = '<div class="mx-health bad"><h3>⚠ Cloudflare addresses are showing</h3><div class="mx-s-h" style="margin:0;">Some addresses in the list belong to Cloudflare itself, so your server is not seeing who the real visitor is. Blocking those would cut off real customers (the app refuses to), and iptables on this server cannot stop an attacker who comes through Cloudflare. Fix it once on the server so the real visitor address is passed on:</div><div class="mx-fix">' + escapeHtml(cfCmd) + '</div><div style="margin-top:6px;"><button type="button" class="btn-sm refresh" data-mx="copy-text" data-text="' + escapeHtml(cfCmd) + '">Copy</button></div><div class="mx-s-h">Needs your nginx to already send X-Forwarded-For to the app. To block an attacker for good while behind Cloudflare, add the address in Cloudflare: Security > WAF > Tools > IP Access Rules (or a custom rule).</div></div>';
+                }
+                sec.attacks = cfWarn + mxSection('Attacks (last 24 hours)', 'People wrongly guessing passwords or PINs, hammering the app, or probing for hidden files.', inner);
 
                 sec.attacks += mxSqliCard(at);
                 sec.attacks += mxBlockedCard(m);
