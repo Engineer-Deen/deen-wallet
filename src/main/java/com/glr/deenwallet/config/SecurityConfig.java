@@ -112,7 +112,9 @@ public class SecurityConfig {
                                 "/api/config/firebase-web",
                                 "/api/auth/biometric/challenge",
                                 "/api/auth/biometric/login",
-                                "/icon-192.png"
+                                "/icon-192.png",
+                                "/dw-agent.py",
+                                "/api/monitor/agent/report"
                         ).permitAll()
 
                         // User-protected endpoints

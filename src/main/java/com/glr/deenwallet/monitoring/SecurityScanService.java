@@ -15,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -177,6 +178,8 @@ public class SecurityScanService {
         int feature = Runtime.version().feature();
         if (feature < 21) items.add(item("warn", "Old Java version (" + feature + ")", "Old Java versions stop receiving security fixes.", "Install a newer Java (21 or later) and restart the app."));
 
+        extraChecks(items);
+
         items.sort(Comparator.comparingInt(m -> rank(String.valueOf(m.get("level")))));
         int bad = 0, warn = 0;
         for (Map<String, Object> m : items) {
@@ -189,6 +192,62 @@ public class SecurityScanService {
         out.put("warn", warn);
         out.put("scannedAt", Instant.now().toString());
         return out;
+    }
+
+    /** Housekeeping a person would otherwise have to remember: end of support, disk cleanup, old logs, leftover packages. */
+    private void extraChecks(List<Map<String, Object>> items) {
+        try {
+            String id = "", ver = "";
+            for (String l : SecurityScanSupport.readAll("/etc/os-release")) {
+                if (l.startsWith("ID=")) id = l.substring(3).replace("\"", "").trim();
+                if (l.startsWith("VERSION_ID=")) ver = l.substring(11).replace("\"", "").trim();
+            }
+            if ("ubuntu".equals(id)) {
+                Map<String, LocalDate> eol = Map.of("18.04", LocalDate.of(2023, 5, 31), "20.04", LocalDate.of(2025, 5, 31),
+                        "22.04", LocalDate.of(2027, 6, 1), "24.04", LocalDate.of(2029, 6, 1));
+                LocalDate end = eol.get(ver);
+                if (end != null) {
+                    long days = java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), end);
+                    if (days < 0) items.add(item("bad", "Ubuntu " + ver + " is no longer supported", "It stopped getting free security fixes on " + end + ".",
+                            "Back up first, then: sudo do-release-upgrade   (or move to a new machine with a current Ubuntu)"));
+                    else if (days < 180) items.add(item("warn", "Ubuntu " + ver + " support ends in " + days + " days", "Free security fixes stop on " + end + ".",
+                            "Plan the upgrade: sudo do-release-upgrade   (back up first)"));
+                }
+            }
+        } catch (RuntimeException ignored) { }
+
+        double diskPct = 0;
+        try {
+            File root = new File("/");
+            if (root.getTotalSpace() > 0) diskPct = 100.0 * (root.getTotalSpace() - root.getUsableSpace()) / root.getTotalSpace();
+        } catch (RuntimeException ignored) { }
+        if (diskPct >= 75) {
+            items.add(item(diskPct >= 90 ? "bad" : "warn", "Storage is " + Math.round(diskPct) + "% full", "The app and the database can stop working when the disk fills.",
+                    "sudo apt autoremove -y && sudo apt clean && sudo journalctl --vacuum-size=200M\ndu -xh / --max-depth=2 2>/dev/null | sort -h | tail -15   # shows what is big"));
+        }
+        try {
+            Path j = Path.of("/var/log/journal");
+            if (Files.isReadable(j)) {
+                try (var walk = Files.walk(j, 3)) {
+                    long size = walk.filter(Files::isRegularFile).mapToLong(p -> p.toFile().length()).sum();
+                    if (size > 1_000_000_000L) items.add(item("warn", "System logs take " + Math.round(size / 1_000_000_000.0 * 10) / 10.0 + " GB", "Old logs can be trimmed safely.",
+                            "sudo journalctl --vacuum-size=200M"));
+                }
+            }
+        } catch (Exception ignored) { }
+        if (diskPct >= 70) {
+            try {
+                Process pr = new ProcessBuilder("apt-get", "-s", "autoremove").redirectError(ProcessBuilder.Redirect.DISCARD).start();
+                if (!pr.waitFor(15, TimeUnit.SECONDS)) { pr.destroyForcibly(); } else {
+                    int n = 0;
+                    try (var br = new java.io.BufferedReader(new java.io.InputStreamReader(pr.getInputStream(), StandardCharsets.UTF_8))) {
+                        String line;
+                        while ((line = br.readLine()) != null) if (line.startsWith("Remv ")) n++;
+                    }
+                    if (n > 0) items.add(item("info", n + " old package(s) can be removed", "Frees a little space.", "sudo apt autoremove -y && sudo apt clean"));
+                }
+            } catch (Exception ignored) { }
+        }
     }
 
     private static int rank(String level) {

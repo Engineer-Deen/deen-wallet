@@ -29,6 +29,11 @@ public class ServerMetricsService {
     private static final int KEEP = 120;
 
     private final ArrayDeque<Map<String, Object>> history = new ArrayDeque<>();
+    private final UsageService usage;
+
+    public ServerMetricsService(UsageService usage) {
+        this.usage = usage;
+    }
     private long prevTotal = -1, prevIdle = -1;
     private long prevRx = -1, prevTx = -1, prevNetAt = 0;
     private volatile double cpuPercent = 0;
@@ -80,6 +85,7 @@ public class ServerMetricsService {
             readCpu();
             Map<String, Long> mem = readMem();
             readNet();
+            usage.notePeaks(cpuPercent, mem.getOrDefault("MemTotal", 0L) > 0 ? 100.0 * (mem.get("MemTotal") - mem.getOrDefault("MemAvailable", 0L)) / mem.get("MemTotal") : 0);
             Map<String, Object> p = new LinkedHashMap<>();
             p.put("t", System.currentTimeMillis());
             p.put("cpu", round1(cpuPercent));

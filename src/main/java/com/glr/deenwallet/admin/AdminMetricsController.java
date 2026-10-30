@@ -1,9 +1,11 @@
 package com.glr.deenwallet.admin;
 
+import com.glr.deenwallet.monitoring.AgentReportService;
 import com.glr.deenwallet.monitoring.BlockedIpService;
 import com.glr.deenwallet.monitoring.DatabaseMetricsService;
 import com.glr.deenwallet.monitoring.SecurityEventService;
 import com.glr.deenwallet.monitoring.SecurityScanService;
+import com.glr.deenwallet.monitoring.UsageService;
 import com.glr.deenwallet.monitoring.ServerMetricsService;
 import com.glr.deenwallet.user.User;
 import com.glr.deenwallet.user.UserRepository;
@@ -39,6 +41,8 @@ public class AdminMetricsController {
     private final SecurityScanService securityScan;
     private final UserRepository users;
     private final BlockedIpService blockedIps;
+    private final AgentReportService agents;
+    private final UsageService usage;
 
     @Value("${server.port:8080}")
     private int serverPort;
@@ -48,8 +52,10 @@ public class AdminMetricsController {
 
     public AdminMetricsController(ServerMetricsService serverMetrics, DatabaseMetricsService databaseMetrics,
                                   SecurityEventService securityEvents, SecurityScanService securityScan, UserRepository users,
-                                  BlockedIpService blockedIps) {
+                                  BlockedIpService blockedIps, AgentReportService agents, UsageService usage) {
+        this.usage = usage;
         this.blockedIps = blockedIps;
+        this.agents = agents;
         this.serverMetrics = serverMetrics;
         this.databaseMetrics = databaseMetrics;
         this.securityEvents = securityEvents;
@@ -132,7 +138,11 @@ public class AdminMetricsController {
         out.put("ssh", ssh);
         out.put("vulnerabilities", vulns);
         out.put("blockedIps", blockedIps.list());
-        out.put("health", health(server, app, db, attacks, vulns));
+        List<Map<String, Object>> machines = agents.list();
+        out.put("machines", machines);
+        out.put("agentEnabled", agents.enabled());
+        out.put("usage", usage.overview());
+        out.put("health", health(server, app, db, attacks, vulns, machines));
         return out;
     }
 
@@ -147,7 +157,8 @@ public class AdminMetricsController {
 
     /** One plain verdict plus the reasons behind it. */
     private static Map<String, Object> health(Map<String, Object> server, Map<String, Object> app, Map<String, Object> db,
-                                              Map<String, Object> attacks, Map<String, Object> vulns) {
+                                              Map<String, Object> attacks, Map<String, Object> vulns,
+                                              List<Map<String, Object>> machines) {
         List<Map<String, Object>> issues = new ArrayList<>();
         double cpu = n(server.get("cpuPercent")), ram = n(server.get("ramPercent")), disk = n(server.get("diskPercent"));
         double cores = Math.max(1, n(server.get("cores"))), load1 = n(server.get("load1"));
@@ -180,6 +191,27 @@ public class AdminMetricsController {
         if (topIps instanceof List<?> l) {
             for (Object o : l) {
                 if (o instanceof Map<?, ?> m && "high".equals(m.get("level"))) { issue(issues, "warn", "Heavy attack activity from " + m.get("ip") + " in the last 24 hours."); break; }
+            }
+        }
+        for (Map<String, Object> mc : machines) {
+            String who = String.valueOf(mc.get("name"));
+            if (!Boolean.TRUE.equals(mc.get("online"))) {
+                long mins = Math.round(n(mc.get("ageSeconds")) / 60.0);
+                issue(issues, n(mc.get("ageSeconds")) >= 300 ? "bad" : "warn", who + " has not reported for " + mins + " minute(s). It may be down or off the network.");
+                continue;
+            }
+            if (mc.get("server") instanceof Map<?, ?> sv) {
+                if (n(sv.get("diskPercent")) >= 90) issue(issues, "bad", who + ": storage is almost full (" + Math.round(n(sv.get("diskPercent"))) + "%).");
+                else if (n(sv.get("diskPercent")) >= 80) issue(issues, "warn", who + ": storage is filling up (" + Math.round(n(sv.get("diskPercent"))) + "%).");
+                if (n(sv.get("ramPercent")) >= 92) issue(issues, "bad", who + ": memory (RAM) is almost full.");
+                else if (n(sv.get("ramPercent")) >= 80) issue(issues, "warn", who + ": memory (RAM) is getting full.");
+                if (n(sv.get("cpuPercent")) >= 90) issue(issues, "warn", who + ": the processor is almost fully used.");
+            }
+            if (mc.get("tasks") instanceof List<?> tl) {
+                long bad = tl.stream().filter(o -> o instanceof Map<?, ?> t && "bad".equals(t.get("level"))).count();
+                long warn = tl.stream().filter(o -> o instanceof Map<?, ?> t && "warn".equals(t.get("level"))).count();
+                if (bad > 0) issue(issues, "bad", who + ": " + bad + " serious item(s) to fix on that machine.");
+                else if (warn > 0) issue(issues, "warn", who + ": " + warn + " item(s) need attention on that machine.");
             }
         }
         Object kinds = attacks.get("byKind");

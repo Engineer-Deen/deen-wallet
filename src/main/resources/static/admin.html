@@ -2454,6 +2454,17 @@
         .mx-iprow { display:flex; gap:10px; align-items:flex-start; }
         .mx-iprow > div { min-width:0; flex:1; }
         .mx-chk { width:22px; height:22px; flex:none; margin-top:1px; accent-color:#C0392B; }
+        .mx-hub { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:12px; }
+        .mx-tile { position:relative; text-align:left; background:var(--card); border:1px solid var(--border); border-radius:16px; padding:14px 12px 12px; cursor:pointer; min-width:0; font:inherit; color:var(--text); }
+        .mx-tile:active { transform:scale(.98); }
+        .mx-tile .t-ic { font-size:20px; line-height:1; }
+        .mx-tile .t-ti { font-size:14px; font-weight:800; margin-top:8px; }
+        .mx-tile .t-v { font-size:12.5px; color:var(--muted); margin-top:3px; line-height:1.4; }
+        .mx-tile .t-dot { position:absolute; top:12px; right:12px; width:10px; height:10px; border-radius:50%; background:#22a06b; }
+        .mx-tile.warn .t-dot { background:#e0a100; } .mx-tile.bad .t-dot { background:#d64545; } .mx-tile.info .t-dot { background:#9aa7ad; }
+        .mx-tile.warn { border-color:#F5DDA6; } .mx-tile.bad { border-color:#F3BDBD; }
+        .mx-wide { grid-column:1 / -1; }
+        .mx-back { display:flex; align-items:center; gap:6px; margin-top:12px; background:none; border:0; color:var(--primary); font:700 14px/1 inherit; padding:6px 0; cursor:pointer; }
         .mx-err { background:#FDECEC; color:#C0392B; border-radius:12px; padding:10px 12px; margin-top:12px; font-size:13px; }
         .online-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #22c55e; margin-right: 5px; vertical-align: middle; box-shadow: 0 0 0 3px rgba(34, 197, 94, .25); }
 
@@ -4397,7 +4408,7 @@
                 if (section === 'users') loadUsers();
                 if (section === 'errors') { loadErrors(); startErrorAutoRefresh(); }
                 else { stopErrorAutoRefresh(); }
-                if (section === 'metrics') { loadMetrics(); startMetricsRefresh(); } else { stopMetricsRefresh(); }
+                if (section === 'metrics') { mxView = null; if (mxLast) mxRender(mxLast); loadMetrics(); startMetricsRefresh(); } else { stopMetricsRefresh(); }
                 if (section === 'messaging') { showMessagingView('hub'); updateMessagingRecipientCount(); loadMailSummary(); }
                 if (section === 'failed-payouts') loadFailedPayouts();
                 if (section === 'kyc') loadKyc();
@@ -4660,6 +4671,108 @@
                 });
                 return mxSection('Blocked addresses', 'These get "Access denied" from the app. Blocking is done by the app, so it stops them using DeenWallet; it does not stop them reaching your server\'s SSH (use the firewall commands for that).', inner);
             }
+            function mxFixRow(it) {
+                var lbl = it.level === 'bad' ? 'Fix now' : it.level === 'warn' ? 'Needs attention' : it.level === 'ok' ? 'Good' : 'Note';
+                return '<div class="mx-row"><span class="mx-pill ' + escapeHtml(it.level) + '">' + lbl + '</span> <b>' + escapeHtml(it.title) + '</b>' +
+                    (it.detail ? '<br><span class="mx-muted">' + escapeHtml(it.detail) + '</span>' : '') +
+                    (it.fix ? '<div class="mx-fix">' + escapeHtml(it.fix) + '</div><div style="margin-top:6px;"><button type="button" class="btn-sm refresh" data-mx="copy-text" data-text="' + escapeHtml(it.fix) + '">Copy command</button></div>' : '') + '</div>';
+            }
+            // Everything that needs you on an SSH session, grouped by machine, each with the command to run.
+            function mxTodoCard(m) {
+                var s = m.server || {}, groups = [];
+                var local = ((m.vulnerabilities || {}).items || []).filter(function (i) { return i.level !== 'ok' && i.fix; });
+                if (local.length) groups.push({ name: 'This server (' + (s.host || 'main') + ')', items: local });
+                (m.machines || []).forEach(function (mc) {
+                    var t = (mc.tasks || []).filter(function (i) { return i.level !== 'ok' && i.fix; });
+                    if (t.length) groups.push({ name: mc.name, items: t });
+                });
+                var total = groups.reduce(function (n, g) { return n + g.items.length; }, 0);
+                var inner = '';
+                if (!total) inner = '<div class="mx-row">✔ Nothing needs you on any server right now.</div>';
+                groups.forEach(function (g) {
+                    inner += '<p class="mx-sub">' + escapeHtml(g.name) + ' · ' + g.items.length + ' to do</p>' + g.items.map(mxFixRow).join('');
+                });
+                return mxSection('To do on your servers (needs SSH)', total ? 'Open an SSH session to the machine named, paste the command, done. Updates and fixes that only you can do.' : 'Updates, restarts and clean-ups that need an SSH session will appear here with the command to run.', inner);
+            }
+            function mxMachineCard(mc) {
+                var s = mc.server || {}, t = mc.tasks || [], ssh = mc.ssh || {};
+                var perCore = (s.cores ? (s.load1 / s.cores) : 0);
+                var inner = '<div class="mx-health ' + (mc.online ? 'ok' : 'bad') + '" style="margin-top:10px;padding:10px 12px;"><b>' + (mc.online ? '● Online' : '⚠ Not reporting') + '</b> · last report ' + escapeHtml(mxAgo(mc.lastReport)) +
+                    '<div class="mx-s-h" style="margin:2px 0 0;">' + escapeHtml((s.os || '') + (s.kernel ? ' · kernel ' + s.kernel : '')) + '</div></div>';
+                if (s.cores) {
+                    inner += '<div class="mx-grid">' +
+                        mxGauge('Processor (CPU)', s.cpuPercent, Math.round(s.cpuPercent || 0) + '%', s.cores + ' core(s)', mxLevel(s.cpuPercent, 75, 90)) +
+                        mxGauge('Memory (RAM)', s.ramPercent, Math.round(s.ramPercent || 0) + '%', mxBytes(s.ramUsed) + ' of ' + mxBytes(s.ramTotal), mxLevel(s.ramPercent, 80, 92)) +
+                        mxGauge('Storage (disk)', s.diskPercent, Math.round(s.diskPercent || 0) + '%', mxBytes(s.diskUsed) + ' of ' + mxBytes(s.diskTotal), mxLevel(s.diskPercent, 80, 90)) +
+                        mxGauge('Load (work queue)', Math.min(100, perCore * 50), String(s.load1), '5 min ' + s.load5 + ' · 15 min ' + s.load15, perCore >= 2 ? 'bad' : perCore >= 1 ? 'warn' : 'ok') +
+                        mxStat('Running for', mxDur(s.uptimeSeconds), s.host || '') +
+                        mxStat('Swap', s.swapTotal ? mxBytes(s.swapUsed) + ' / ' + mxBytes(s.swapTotal) : 'None', '') + '</div>';
+                }
+                if (t.length) inner += '<p class="mx-sub">Updates and weak spots</p>' + t.map(mxFixRow).join('');
+                if (ssh.available) {
+                    inner += '<p class="mx-sub">SSH guessing on this machine · ' + escapeHtml(String(ssh.attempts || 0)) + ' tries from ' + escapeHtml(String(ssh.uniqueIps || 0)) + ' address(es)</p>';
+                    (ssh.topIps || []).slice(0, 5).forEach(function (x) {
+                        inner += '<div class="mx-row"><b class="ip">' + escapeHtml(x.ip) + '</b> <span class="mx-pill ' + escapeHtml(x.level) + '">' + mxRiskLabel(x.level) + '</span> · <b>' + escapeHtml(String(x.attempts)) + '</b> tries · ' + escapeHtml((x.usernames || []).join(', ')) +
+                            '<div class="mx-fix">sudo ufw prepend deny from ' + escapeHtml(x.ip) + '</div></div>';
+                    });
+                    if ((ssh.recentLogins || []).length) {
+                        inner += ssh.recentLogins.map(function (e) {
+                            return '<div class="mx-row">Login: <b>' + escapeHtml(e.user) + '</b> from <b class="ip">' + escapeHtml(e.ip) + '</b> · ' + escapeHtml(e.how) + '<br><span class="mx-muted">' + escapeHtml(e.time) + '</span></div>';
+                        }).join('');
+                    }
+                } else if (ssh.hint) {
+                    inner += '<div class="mx-row">' + escapeHtml(ssh.hint) + '</div>';
+                }
+                return mxSection(mc.name, 'An extra machine reporting to this tab every minute.', inner);
+            }
+            function mxMachines(m) {
+                var html = '', list = m.machines || [];
+                list.forEach(function (mc) { html += mxMachineCard(mc); });
+                var api = String(API_BASE_URL || '').replace(/\/$/, '');
+                var step1 = 'openssl rand -hex 24\nsudo nano /var/www/deenwallet/deenwallet.env     # add the line:  MONITOR_AGENT_TOKEN=<the value printed above>\nsudo systemctl restart deenwallet';
+                var step2 = 'curl -fsSL ' + api + '/dw-agent.py -o dw-agent.py\nsudo python3 dw-agent.py --install --url ' + api + ' --token <the same value> --name "Database VM"';
+                var inner = '<div class="mx-row"><span class="mx-pill ' + (m.agentEnabled ? 'ok' : 'warn') + '">' + (m.agentEnabled ? 'Receiving is on' : 'Not switched on yet') + '</span> ' +
+                    (list.length ? list.length + ' machine(s) reporting.' : 'No extra machine is reporting yet.') + '</div>' +
+                    '<p class="mx-sub">Step 1 · on this main server (once)</p><div class="mx-fix">' + escapeHtml(step1) + '</div><div style="margin-top:6px;"><button type="button" class="btn-sm refresh" data-mx="copy-text" data-text="' + escapeHtml(step1) + '">Copy</button></div>' +
+                    '<p class="mx-sub">Step 2 · on the other machine</p><div class="mx-fix">' + escapeHtml(step2) + '</div><div style="margin-top:6px;"><button type="button" class="btn-sm refresh" data-mx="copy-text" data-text="' + escapeHtml(step2) + '">Copy</button></div>' +
+                    '<div class="mx-s-h">The token is a password only your machines know: keep it in the server\'s environment file, never in chat. The agent only reads the machine and sends a small report. Remove it any time with: sudo python3 /usr/local/bin/dw-agent.py --uninstall</div>';
+                html += mxSection('Add another machine', 'Monitor your second virtual machine (or more) the same way.', inner);
+                return html;
+            }
+            function mxGb(b) { return (Number(b || 0) / 1073741824); }
+            function mxMonthName(ym) {
+                var p = String(ym || '').split('-');
+                return p.length === 2 ? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][Number(p[1]) - 1] + ' ' + p[0] : ym;
+            }
+            function mxUsageCard(u) {
+                u = u || {};
+                var months = u.months || [];
+                var payg = u.plan === 'payg';
+                var inner = '<div class="mx-row"><span class="mx-pill ' + (payg ? 'warn' : 'ok') + '">' + (payg ? 'Pay As You Go' : 'Free tier') + '</span> ' +
+                    (payg ? (u.paygStart ? 'Paying since ' + escapeHtml(u.paygStart) + '.' : 'Pay As You Go is on.') : 'Not paying yet. Usage is recorded now, so the history is already here when you start paying.') + '</div>';
+                if (u.available === false || !months.length) {
+                    inner += '<div class="mx-row">Collecting the first numbers. Come back in a few minutes.</div>';
+                    return mxSection('Oracle usage and cost', 'What this month is using, against Oracle\'s free allowance.', inner);
+                }
+                var cur = months[0];
+                var outGb = mxGb(cur.txBytes), diskGb = mxGb(cur.diskUsed);
+                var outPct = u.freeOutboundGb ? outGb / u.freeOutboundGb * 100 : 0, diskPct = u.freeStorageGb ? diskGb / u.freeStorageGb * 100 : 0;
+                inner += '<div class="mx-grid">' +
+                    mxGauge('Data sent out · ' + mxMonthName(cur.month), outPct, outGb < 10 ? outGb.toFixed(2) + ' GB' : Math.round(outGb) + ' GB', 'free allowance ' + Math.round(u.freeOutboundGb) + ' GB / month', mxLevel(outPct, 70, 90)) +
+                    mxGauge('Storage used', diskPct, Math.round(diskGb) + ' GB', 'free allowance ' + Math.round(u.freeStorageGb) + ' GB', mxLevel(diskPct, 80, 95)) +
+                    mxStat('Data received', (mxGb(cur.rxBytes) < 10 ? mxGb(cur.rxBytes).toFixed(2) : Math.round(mxGb(cur.rxBytes))) + ' GB', 'Coming in is always free') +
+                    mxStat('Busiest moment', 'CPU ' + Math.round(cur.cpuPeak) + '% · RAM ' + Math.round(cur.ramPeak) + '%', 'Highest this month') + '</div>';
+                inner += '<div class="mx-row"><b>Estimated extra cost this month: $' + Number(cur.estimatedCost || 0).toFixed(2) + '</b><br><span class="mx-muted">' +
+                    (cur.estimatedCost > 0 ? 'Only the part above the free allowance is charged.' : 'Everything is inside the free allowance, so nothing to pay for data or storage.') +
+                    ' This is an estimate from the numbers above (about $' + u.priceOutbound + ' per GB out, $' + u.priceStorage + ' per GB of storage per month). The exact bill is in the Oracle console: Billing &amp; Cost Management &gt; Cost Analysis. Machines and databases you create yourself are billed there too.</span></div>';
+                if (months.length > 1) {
+                    inner += '<p class="mx-sub">Earlier months</p>' + months.slice(1, 7).map(function (m) {
+                        return '<div class="mx-row"><b>' + escapeHtml(mxMonthName(m.month)) + '</b> · out ' + escapeHtml(mxGb(m.txBytes).toFixed(1)) + ' GB · storage ' + escapeHtml(Math.round(mxGb(m.diskUsed))) + ' GB · estimated $' + Number(m.estimatedCost || 0).toFixed(2) + '</div>';
+                    }).join('');
+                }
+                inner += '<div class="mx-s-h">When you subscribe, add ORACLE_PLAN=payg (and ORACLE_PAYG_START=the date) to the server\'s environment file and restart. Prices can change: set ORACLE_PRICE_PER_GB_OUTBOUND and ORACLE_PRICE_PER_GB_STORAGE_MONTH if Oracle\'s differ.</div>';
+                return mxSection('Oracle usage and cost', 'Recorded every minute and kept month by month, even while you are on the free tier.', inner);
+            }
             function mxCopy(text) {
                 try {
                     if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
@@ -4707,10 +4820,14 @@
                     if (act === 'sel-high' || act === 'sel-all') { mxVisibleIps(mxLast, act === 'sel-high').forEach(function (ip) { mxSel[ip] = 1; }); mxRender(mxLast); return; }
                     if (act === 'sel-none') { mxSel = {}; mxRender(mxLast); return; }
                     if (act === 'toggle-all') { mxShowAll = !mxShowAll; mxRender(mxLast); return; }
+                    if (act === 'copy-text') {
+                        mxCopy(b.getAttribute('data-text') || '').then(function () { showToast('Copied. Paste it into your SSH session.'); }).catch(function () { showToast('Could not copy. Long-press the command to copy it.'); });
+                        return;
+                    }
                     if (act === 'copy-ufw') {
                         var ips = Object.keys(mxSel).filter(function (ip) { return /^[0-9a-fA-F:.]{2,45}$/.test(ip); });
                         if (!ips.length) { showToast('Tick the addresses first.'); return; }
-                        mxCopy(ips.map(function (ip) { return 'sudo ufw insert 1 deny from ' + ip; }).join('\n')).then(function () {
+                        mxCopy(ips.map(function (ip) { return 'sudo ufw prepend deny from ' + ip; }).join('\n')).then(function () {
                             showToast('Copied ' + ips.length + ' command(s). Paste them into your server over SSH.');
                         }).catch(function () { showToast('Could not copy. Long-press to copy instead.'); });
                         return;
@@ -4739,16 +4856,71 @@
                 });
             })();
 
+            var mxView = null;
+            var MX_TITLES = { todo: 'To do (needs SSH)', server: 'Server', app: 'App', db: 'Database', attacks: 'Attacks', ssh: 'Server break-ins (SSH)', weak: 'Weak spots', machines: 'Other machines', usage: 'Oracle usage & cost' };
+            function mxBack() {
+                var tab = tabContents.metrics;
+                if (mxView && tab && !tab.classList.contains('hidden')) { mxView = null; if (mxLast) mxRender(mxLast); tab.scrollTop = 0; return true; }
+                return false;
+            }
+            function mxTiles(m, sec) {
+                var s = m.server || {}, a = m.app || {}, d = m.database || {}, at = m.attacks || {}, ssh = m.ssh || {}, v = m.vulnerabilities || {}, u = m.usage || {}, rq = (a.requests || {});
+                var todo = 0, todoBad = 0;
+                ((v.items || []).filter(function (i) { return i.level !== 'ok' && i.fix; })).forEach(function (i) { todo++; if (i.level === 'bad') todoBad++; });
+                (m.machines || []).forEach(function (mc) { (mc.tasks || []).forEach(function (i) { if (i.level !== 'ok' && i.fix) { todo++; if (i.level === 'bad') todoBad++; } }); });
+                var sl = Math.max(mxLevel(s.cpuPercent, 75, 90) === 'bad' ? 2 : mxLevel(s.cpuPercent, 75, 90) === 'warn' ? 1 : 0, mxLevel(s.ramPercent, 80, 92) === 'bad' ? 2 : mxLevel(s.ramPercent, 80, 92) === 'warn' ? 1 : 0, mxLevel(s.diskPercent, 80, 90) === 'bad' ? 2 : mxLevel(s.diskPercent, 80, 90) === 'warn' ? 1 : 0);
+                var L = ['ok', 'warn', 'bad'];
+                var sqli = (at.byKind || {}).SQLI || 0, blockedN = (m.blockedIps || []).length;
+                var highIps = (at.topIps || []).filter(function (t) { return t.level === 'high'; }).length;
+                var machines = m.machines || [], down = machines.filter(function (x) { return !x.online; }).length;
+                var cur = (u.months || [])[0];
+                var tiles = [
+                    ['todo', '✔', todo ? todo + ' thing(s) to do' : 'All clear', todoBad ? 'bad' : todo ? 'warn' : 'ok'],
+                    ['server', '▣', 'CPU ' + Math.round(s.cpuPercent || 0) + '% · RAM ' + Math.round(s.ramPercent || 0) + '%<br>Storage ' + Math.round(s.diskPercent || 0) + '%', L[sl]],
+                    ['app', '◈', (rq.lastMinute || 0) + ' requests/min<br>' + (rq.serverErrors5Min || 0) + ' errors (5 min)', (rq.serverErrors5Min || 0) >= 5 ? 'warn' : 'ok'],
+                    ['db', '▤', d.up ? 'Online · ' + d.latencyMs + ' ms<br>' + (d.connections || 0) + '/' + (d.maxConnections || '?') + ' connections' : 'Not answering', d.up ? (d.latencyMs >= 200 ? 'warn' : 'ok') : 'bad'],
+                    ['attacks', '⚑', (at.total24h || 0) + ' attacks (24 h)<br>' + sqli + ' SQL tricks · ' + blockedN + ' blocked', highIps || sqli ? 'warn' : 'ok'],
+                    ['ssh', '⚿', ssh.available ? (ssh.attempts || 0) + ' password guesses<br>' + (ssh.uniqueIps || 0) + ' address(es)' : 'Log not readable', ssh.available ? ((ssh.topIps || []).some(function (t) { return t.level === 'high'; }) ? 'warn' : 'ok') : 'info'],
+                    ['weak', '⚠', (v.bad || 0) + ' serious · ' + (v.warn || 0) + ' to watch', v.bad ? 'bad' : v.warn ? 'warn' : 'ok'],
+                    ['machines', '▦', machines.length ? machines.length + ' reporting' + (down ? ' · ' + down + ' not answering' : '') : 'None added yet', down ? 'bad' : machines.length ? 'ok' : 'info'],
+                    ['usage', '$', cur ? mxGb(cur.txBytes).toFixed(1) + ' GB out this month<br>≈ $' + Number(cur.estimatedCost || 0).toFixed(2) + ' extra' : 'Collecting…', cur && cur.estimatedCost > 0 ? 'warn' : 'ok']
+                ];
+                return '<div class="mx-hub">' + tiles.map(function (t, i) {
+                    return '<button type="button" class="mx-tile ' + t[3] + (i === 0 || i === 8 ? ' mx-wide' : '') + '" data-mxv="' + t[0] + '"><span class="t-dot"></span><div class="t-ic">' + t[1] + '</div><div class="t-ti">' + escapeHtml(MX_TITLES[t[0]]) + '</div><div class="t-v">' + t[2] + '</div></button>';
+                }).join('') + '</div>';
+            }
+            function mxShow(m, sec) {
+                var box = document.getElementById('mx-body');
+                if (mxView && sec[mxView]) {
+                    box.innerHTML = '<button type="button" class="mx-back" data-mxv="">← All metrics</button>' + sec[mxView];
+                } else {
+                    mxView = null;
+                    box.innerHTML = sec.verdict + mxTiles(m, sec);
+                }
+            }
+            (function () {
+                var box = document.getElementById('mx-body');
+                if (!box) return;
+                box.addEventListener('click', function (e) {
+                    var t = e.target.closest ? e.target.closest('[data-mxv]') : null;
+                    if (!t || !mxLast) return;
+                    mxView = t.getAttribute('data-mxv') || null;
+                    mxRender(mxLast);
+                    var tab = tabContents.metrics; if (tab) tab.scrollTop = 0;
+                });
+            })();
             function mxRender(m) {
                 var s = m.server || {}, a = m.app || {}, d = m.database || {}, at = m.attacks || {}, ssh = m.ssh || {}, v = m.vulnerabilities || {}, hl = m.health || {};
                 mxLast = m; mxRendered = true;
                 var blockedMap = mxBlockedMap(m);
-                var html = '';
+                var html = '', sec = {};
 
                 // 1) overall verdict
                 var issues = (hl.issues || []).map(function (i) { return '<li>' + escapeHtml(i.text) + '</li>'; }).join('');
-                html += '<div class="mx-health ' + escapeHtml(hl.level || 'ok') + '"><h3>' + (hl.level === 'ok' ? '✔ ' : '⚠ ') + escapeHtml(hl.headline || '') + '</h3>' +
+                sec.verdict = '<div class="mx-health ' + escapeHtml(hl.level || 'ok') + '"><h3>' + (hl.level === 'ok' ? '✔ ' : '⚠ ') + escapeHtml(hl.headline || '') + '</h3>' +
                     '<div class="mx-s-h" style="margin:0;">Checked ' + escapeHtml(mxAgo(m.time)) + '</div>' + (issues ? '<ul>' + issues + '</ul>' : '') + '</div>';
+
+                sec.todo = mxTodoCard(m);
 
                 // 2) server
                 var cpuL = mxLevel(s.cpuPercent, 75, 90), ramL = mxLevel(s.ramPercent, 80, 92), diskL = mxLevel(s.diskPercent, 80, 90);
@@ -4767,7 +4939,7 @@
                 inner += mxSpark('Processor, last 10 minutes', hist.map(function (p) { return p.cpu; }), 100, '#1C7A91', Math.round(s.cpuPercent || 0) + '%') +
                     mxSpark('Memory, last 10 minutes', hist.map(function (p) { return p.ram; }), 100, '#8E44AD', Math.round(s.ramPercent || 0) + '%') +
                     mxSpark('Internet coming in, last 10 minutes', hist.map(function (p) { return p.rx; }), 0, '#2E9FB0', mxBytes(s.rxPerSec) + '/s');
-                html += mxSection('Server (your Oracle machine)', 'The computer everything runs on.', inner);
+                sec.server = mxSection('Server (your Oracle machine)', 'The computer everything runs on.', inner);
 
                 // 3) app
                 var rq = a.requests || {};
@@ -4781,7 +4953,7 @@
                     mxStat('Active threads', a.threads || 0, 'Peak ' + (a.threadsPeak || 0)) +
                     mxStat('Memory taken from server', a.memoryFromOs ? mxBytes(a.memoryFromOs) : '—', 'What the app really uses') +
                     mxStat('Open files', a.openFiles !== undefined ? a.openFiles + ' / ' + a.maxFiles : '—', 'Connections and files in use') + '</div>';
-                html += mxSection('DeenWallet app', 'The server program that the user and admin apps talk to.', inner);
+                sec.app = mxSection('DeenWallet app', 'The server program that the user and admin apps talk to.', inner);
 
                 // 4) database
                 if (!d.up) {
@@ -4805,7 +4977,10 @@
                         }).join('');
                     }
                 }
-                html += mxSection('Database (PostgreSQL)', 'Where users, transfers and records are stored.', inner);
+                sec.db = mxSection('Database (PostgreSQL)', 'Where users, transfers and records are stored.', inner);
+
+                sec.machines = mxMachines(m);
+                sec.usage = mxUsageCard(m.usage);
 
                 // 5) attacks
                 inner = '';
@@ -4834,10 +5009,10 @@
                         }).join('');
                     }
                 }
-                html += mxSection('Attacks (last 24 hours)', 'People wrongly guessing passwords or PINs, hammering the app, or probing for hidden files.', inner);
+                sec.attacks = mxSection('Attacks (last 24 hours)', 'People wrongly guessing passwords or PINs, hammering the app, or probing for hidden files.', inner);
 
-                html += mxSqliCard(at);
-                html += mxBlockedCard(m);
+                sec.attacks += mxSqliCard(at);
+                sec.attacks += mxBlockedCard(m);
 
                 // 5b) SSH guessing
                 inner = '';
@@ -4858,21 +5033,16 @@
                 } else {
                     inner = '<div class="mx-row">' + escapeHtml(ssh.hint || 'Checking…') + '</div>';
                 }
-                html += mxSection('Attempts to break into the server (SSH)', 'From the server\'s own login log.', inner);
+                sec.ssh = mxSection('Attempts to break into the server (SSH)', 'From the server\'s own login log.', inner);
 
                 // 6) weak spots
                 inner = '';
                 var items = v.items || [];
                 if (!items.length) inner = '<div class="mx-row">' + escapeHtml(v.error || 'The first check is still running. Open this tab again in a minute.') + '</div>';
-                items.forEach(function (it) {
-                    var lbl = it.level === 'bad' ? 'Fix now' : it.level === 'warn' ? 'Needs attention' : it.level === 'ok' ? 'Good' : 'Note';
-                    inner += '<div class="mx-row"><span class="mx-pill ' + escapeHtml(it.level) + '">' + lbl + '</span> <b>' + escapeHtml(it.title) + '</b>' +
-                        (it.detail ? '<br><span class="mx-muted">' + escapeHtml(it.detail) + '</span>' : '') +
-                        (it.fix ? '<div class="mx-fix">' + escapeHtml(it.fix) + '</div>' : '') + '</div>';
-                });
-                html += mxSection('Weak spots', v.scannedAt ? 'Checked ' + mxAgo(v.scannedAt) + ' · re-checked every 5 minutes. Fixes are copy-and-paste for the server.' : 'Things an attacker could use, with the fix.', inner);
+                items.forEach(function (it) { inner += mxFixRow(it); });
+                sec.weak = mxSection('Weak spots and updates (this server)', v.scannedAt ? 'Checked ' + mxAgo(v.scannedAt) + ' · re-checked every 5 minutes. Fixes are copy-and-paste for the server.' : 'Things an attacker could use, with the fix.', inner);
 
-                document.getElementById('mx-body').innerHTML = html;
+                mxShow(m, sec);
                 document.getElementById('mx-updated').textContent = '· updated ' + new Date().toLocaleTimeString();
             }
 
@@ -8467,6 +8637,7 @@
                 AppPlugin.addListener('backButton', function (data) {
                     if (adminDrawer && adminDrawer.classList.contains('open')) { closeAdminDrawer(); return; }
                     if (pinModalOverlay && pinModalOverlay.classList.contains('active')) return; // never bypass the PIN lock
+                    if (typeof mxBack === 'function' && mxBack()) return;
                     var userModalOverlay = document.getElementById('user-modal-overlay');
                     if (userModalOverlay && userModalOverlay.classList.contains('active')) {
                         userModalOverlay.classList.remove('active');
