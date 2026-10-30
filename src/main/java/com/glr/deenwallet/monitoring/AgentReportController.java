@@ -21,12 +21,12 @@ public class AgentReportController {
 
     private final AgentReportService service;
     private final SecurityEventService events;
-    private final ObjectMapper mapper;
+    // Created here on purpose: this app has no ObjectMapper bean to inject (that is what stopped it starting).
+    private final ObjectMapper mapper = new ObjectMapper();
 
-    public AgentReportController(AgentReportService service, SecurityEventService events, ObjectMapper mapper) {
+    public AgentReportController(AgentReportService service, SecurityEventService events) {
         this.service = service;
         this.events = events;
-        this.mapper = mapper;
     }
 
     @PostMapping("/report")

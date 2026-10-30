@@ -201,11 +201,12 @@ def tasks(disk_pct):
     else:
         t.append(item("warn", "No automatic blocking of attackers (fail2ban)", "People who keep guessing SSH passwords are never blocked.", "sudo apt install fail2ban -y"))
     ufw = read("/etc/ufw/ufw.conf")
-    if ufw:
-        if "ENABLED=yes" in ufw.replace(" ", ""):
-            t.append(item("ok", "Firewall (ufw) is on"))
-        else:
-            t.append(item("info", "Firewall (ufw) is off", "On Oracle Cloud the cloud firewall (Security List) may already protect this machine.", "sudo ufw allow 22/tcp && sudo ufw enable"))
+    if "ENABLED=yes" in ufw.replace(" ", ""):
+        t.append(item("ok", "Firewall (ufw) is on"))
+    elif os.path.exists("/etc/iptables/rules.v4"):
+        t.append(item("ok", "Firewall (iptables) rules are saved", "This is the firewall Oracle Ubuntu images use. Do not also turn on ufw."))
+    elif ufw:
+        t.append(item("info", "No saved firewall rules found", "On Oracle Cloud the cloud firewall (Security List) may still protect this machine."))
     ports = public_ports()
     risky = [p for p in ports if p in (5432, 3306, 6379, 27017, 9200, 11211, 2375, 5984)]
     other = [p for p in ports if p not in (22, 80, 443) and p not in risky]

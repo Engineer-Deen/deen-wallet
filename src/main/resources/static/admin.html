@@ -4642,7 +4642,7 @@
                     '<button type="button" class="btn-sm refresh" data-mx="sel-none">Clear</button></div>' +
                     '<div class="mx-toolbar"><select class="mx-hours-sel">' + opts + '</select>' +
                     '<button type="button" class="btn-sm danger" data-mx="block">Block selected (' + n + ')</button>' +
-                    '<button type="button" class="btn-sm refresh" data-mx="copy-ufw">Copy server firewall commands (' + n + ')</button></div>';
+                    '<button type="button" class="btn-sm refresh" data-mx="copy-ufw">Copy server block commands (' + n + ')</button></div>';
             }
             function mxSqliCard(at) {
                 var list = (at && at.sqli) || [];
@@ -4713,7 +4713,7 @@
                     inner += '<p class="mx-sub">SSH guessing on this machine · ' + escapeHtml(String(ssh.attempts || 0)) + ' tries from ' + escapeHtml(String(ssh.uniqueIps || 0)) + ' address(es)</p>';
                     (ssh.topIps || []).slice(0, 5).forEach(function (x) {
                         inner += '<div class="mx-row"><b class="ip">' + escapeHtml(x.ip) + '</b> <span class="mx-pill ' + escapeHtml(x.level) + '">' + mxRiskLabel(x.level) + '</span> · <b>' + escapeHtml(String(x.attempts)) + '</b> tries · ' + escapeHtml((x.usernames || []).join(', ')) +
-                            '<div class="mx-fix">sudo ufw prepend deny from ' + escapeHtml(x.ip) + '</div></div>';
+                            '<div class="mx-fix">' + escapeHtml(mxBlockCmd(x.ip)) + '\nsudo netfilter-persistent save</div></div>';
                     });
                     if ((ssh.recentLogins || []).length) {
                         inner += ssh.recentLogins.map(function (e) {
@@ -4773,6 +4773,8 @@
                 inner += '<div class="mx-s-h">When you subscribe, add ORACLE_PLAN=payg (and ORACLE_PAYG_START=the date) to the server\'s environment file and restart. Prices can change: set ORACLE_PRICE_PER_GB_OUTBOUND and ORACLE_PRICE_PER_GB_STORAGE_MONTH if Oracle\'s differ.</div>';
                 return mxSection('Oracle usage and cost', 'Recorded every minute and kept month by month, even while you are on the free tier.', inner);
             }
+            // Oracle servers use iptables (not ufw). -I INPUT 1 puts the block at the very top, before the rules that let traffic in.
+            function mxBlockCmd(ip) { return 'sudo ' + (String(ip).indexOf(':') >= 0 ? 'ip6tables' : 'iptables') + ' -I INPUT 1 -s ' + ip + ' -j DROP'; }
             function mxCopy(text) {
                 try {
                     if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
@@ -4801,7 +4803,7 @@
                 function refreshCounts() {
                     var n = mxSelCount();
                     box.querySelectorAll('[data-mx="block"]').forEach(function (b) { b.textContent = 'Block selected (' + n + ')'; });
-                    box.querySelectorAll('[data-mx="copy-ufw"]').forEach(function (b) { b.textContent = 'Copy server firewall commands (' + n + ')'; });
+                    box.querySelectorAll('[data-mx="copy-ufw"]').forEach(function (b) { b.textContent = 'Copy server block commands (' + n + ')'; });
                 }
                 box.addEventListener('change', function (e) {
                     var t = e.target;
@@ -4827,7 +4829,7 @@
                     if (act === 'copy-ufw') {
                         var ips = Object.keys(mxSel).filter(function (ip) { return /^[0-9a-fA-F:.]{2,45}$/.test(ip); });
                         if (!ips.length) { showToast('Tick the addresses first.'); return; }
-                        mxCopy(ips.map(function (ip) { return 'sudo ufw prepend deny from ' + ip; }).join('\n')).then(function () {
+                        mxCopy(ips.map(mxBlockCmd).join('\n') + '\nsudo netfilter-persistent save').then(function () {
                             showToast('Copied ' + ips.length + ' command(s). Paste them into your server over SSH.');
                         }).catch(function () { showToast('Could not copy. Long-press to copy instead.'); });
                         return;

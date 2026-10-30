@@ -132,9 +132,12 @@ public class SecurityScanService {
             items.add(item("ok", "fail2ban is installed", "Addresses that keep failing to log in are blocked automatically.", ""));
         else items.add(item("warn", "No automatic blocking of attackers (fail2ban)", "People who keep guessing SSH passwords are never blocked.", "Run on the server: sudo apt install fail2ban -y"));
         List<String> ufw = SecurityScanSupport.readAll("/etc/ufw/ufw.conf");
-        if (!ufw.isEmpty()) {
-            if (ufw.stream().anyMatch(s -> s.trim().equalsIgnoreCase("ENABLED=yes"))) items.add(item("ok", "Firewall (ufw) is on", "", ""));
-            else items.add(item("info", "Firewall (ufw) is off", "On Oracle Cloud the cloud firewall (Security List) may already protect the server. Check it in the Oracle console.", "Optional: sudo ufw allow 22,80,443/tcp && sudo ufw enable"));
+        if (ufw.stream().anyMatch(s -> s.trim().equalsIgnoreCase("ENABLED=yes"))) {
+            items.add(item("ok", "Firewall (ufw) is on", "", ""));
+        } else if (new File("/etc/iptables/rules.v4").exists()) {
+            items.add(item("ok", "Firewall (iptables) rules are saved", "This is the firewall Oracle Ubuntu images use. Do not also turn on ufw. Blocked addresses are added with the commands in Server Metrics.", ""));
+        } else if (!ufw.isEmpty()) {
+            items.add(item("info", "No saved firewall rules found", "On Oracle Cloud the cloud firewall (Security List) may still protect the server. Check it in the Oracle console.", ""));
         }
 
         // 5) ports open to the whole internet
