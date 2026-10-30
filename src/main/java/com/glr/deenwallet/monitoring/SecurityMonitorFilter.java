@@ -8,8 +8,11 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.util.ContentCachingRequestWrapper;
 
 import java.io.IOException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
 
 /**
@@ -27,37 +30,78 @@ public class SecurityMonitorFilter extends OncePerRequestFilter {
 
     private final SecurityEventService events;
     private final ServerMetricsService metrics;
+    private final BlockedIpService blockedIps;
 
-    public SecurityMonitorFilter(SecurityEventService events, ServerMetricsService metrics) {
+    public SecurityMonitorFilter(SecurityEventService events, ServerMetricsService metrics, BlockedIpService blockedIps) {
         this.events = events;
         this.metrics = metrics;
+        this.blockedIps = blockedIps;
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
+        String ip = request.getRemoteAddr();
+        if (blockedIps.isBlocked(ip)) {
+            blockedIps.countHit(ip);
+            response.setStatus(403);
+            response.setContentType("application/json");
+            response.getOutputStream().write("{\"message\":\"Access denied.\"}".getBytes(StandardCharsets.UTF_8));
+            return;
+        }
         long start = System.nanoTime();
+        HttpServletRequest forward = request;
+        ContentCachingRequestWrapper cached = null;
+        String type = request.getContentType();
+        String method = request.getMethod();
+        if (("POST".equals(method) || "PUT".equals(method) || "PATCH".equals(method)) && type != null
+                && type.toLowerCase().contains("json") && request.getContentLength() <= 20_000) {
+            cached = new ContentCachingRequestWrapper(request, 8192); // remembers what the app reads, so it can be checked afterwards
+            forward = cached;
+        }
         try {
-            chain.doFilter(request, response);
+            chain.doFilter(forward, response);
         } finally {
             try {
-                observe(request, response.getStatus(), (System.nanoTime() - start) / 1_000_000L);
+                String body = cached == null ? null : new String(cached.getContentAsByteArray(), StandardCharsets.UTF_8);
+                observe(request, response.getStatus(), (System.nanoTime() - start) / 1_000_000L, body);
             } catch (RuntimeException ignored) {
                 // monitoring must never break a request
             }
         }
     }
 
-    private void observe(HttpServletRequest req, int status, long ms) {
+    private static String decode(String s) {
+        if (s == null) return null;
+        try {
+            return URLDecoder.decode(s, StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            return s;
+        }
+    }
+
+    private void observe(HttpServletRequest req, int status, long ms, String body) {
         String path = req.getRequestURI() == null ? "" : req.getRequestURI();
         String method = req.getMethod();
         if (path.startsWith("/api/")) metrics.recordRequest(path, ms, status);
 
         String kind = null;
-        if (status == 429) {
+        String detail = null;
+        String q = req.getQueryString();
+        String sqli = SqlInjectionDetector.detect(decode(path));
+        String where = "in the address";
+        if (sqli == null && q != null) { sqli = SqlInjectionDetector.detect(decode(q)); where = "in the web address"; }
+        if (sqli == null && body != null) { sqli = SqlInjectionDetector.detect(body); where = "in the request body"; }
+        String tool = SqlInjectionDetector.tool(req.getHeader("User-Agent"));
+        if (sqli != null) {
+            kind = "SQLI";
+            detail = sqli + " " + where;
+        } else if (tool != null) {
+            kind = "SCAN";
+            detail = "Attack tool: " + tool;
+        } else if (status == 429) {
             kind = "RATE_LIMIT";
         } else if (status >= 400) {
-            String q = req.getQueryString();
             String lower = path.toLowerCase();
             if (SCAN.matcher(q == null ? path : path + "?" + q).find()) {
                 kind = "SCAN";
@@ -70,7 +114,7 @@ public class SecurityMonitorFilter extends OncePerRequestFilter {
             }
         }
         if (kind != null) {
-            events.record(req.getRemoteAddr(), kind, method, path, status, req.getHeader("User-Agent"));
+            events.record(req.getRemoteAddr(), kind, method, path, status, req.getHeader("User-Agent"), detail);
         }
     }
 }

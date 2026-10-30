@@ -27,7 +27,7 @@ public class SecurityEventService {
     private static final int QUEUE_LIMIT = 3000;
     private static final int PER_IP_KIND_PER_BATCH = 30;
 
-    private record Pending(String ip, String kind, String method, String path, int status, String ua) { }
+    private record Pending(String ip, String kind, String method, String path, int status, String ua, String detail) { }
 
     private final ConcurrentLinkedQueue<Pending> queue = new ConcurrentLinkedQueue<>();
     private final AtomicInteger queued = new AtomicInteger();
@@ -36,8 +36,12 @@ public class SecurityEventService {
     private EntityManager em;
 
     public void record(String ip, String kind, String method, String path, int status, String userAgent) {
+        record(ip, kind, method, path, status, userAgent, null);
+    }
+
+    public void record(String ip, String kind, String method, String path, int status, String userAgent, String detail) {
         if (queued.get() >= QUEUE_LIMIT) return; // under a huge attack we keep the server healthy instead of storing every hit
-        queue.add(new Pending(cut(ip, 64), kind, cut(method, 10), cut(path, 200), status, cut(userAgent, 160)));
+        queue.add(new Pending(cut(ip, 64), kind, cut(method, 10), cut(path, 200), status, cut(userAgent, 160), cut(detail, 120)));
         queued.incrementAndGet();
     }
 
@@ -60,9 +64,10 @@ public class SecurityEventService {
             int n = perKey.merge(key, 1, Integer::sum);
             if (n > PER_IP_KIND_PER_BATCH) continue;
             try {
-                em.createNativeQuery("INSERT INTO security_events (ip, kind, method, path, status, user_agent) VALUES (?1, ?2, ?3, ?4, ?5, ?6)")
+                em.createNativeQuery("INSERT INTO security_events (ip, kind, method, path, status, user_agent, detail) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)")
                         .setParameter(1, p.ip()).setParameter(2, p.kind()).setParameter(3, p.method())
                         .setParameter(4, p.path()).setParameter(5, p.status()).setParameter(6, p.ua())
+                        .setParameter(7, p.detail())
                         .executeUpdate();
             } catch (RuntimeException e) {
                 log.debug("Could not store security event: {}", e.getMessage());
@@ -113,13 +118,14 @@ public class SecurityEventService {
             List<Map<String, Object>> top = new ArrayList<>();
             for (Object[] r : (List<Object[]>) em.createNativeQuery(
                     "SELECT ip, COUNT(*) AS n, MIN(created_at), MAX(created_at) FROM security_events "
-                            + "WHERE created_at > now() - interval '24 hours' GROUP BY ip ORDER BY n DESC LIMIT 10").getResultList()) {
+                            + "WHERE created_at > now() - interval '24 hours' GROUP BY ip ORDER BY n DESC LIMIT 50").getResultList()) {
                 String ip = String.valueOf(r[0]);
                 long n = num(r[1]);
                 Map<String, Long> kinds = kindsByIp.getOrDefault(ip, Map.of());
                 long scans = kinds.getOrDefault("SCAN", 0L) + kinds.getOrDefault("ADMIN_PROBE", 0L);
                 long logins = kinds.getOrDefault("LOGIN_FAILED", 0L) + kinds.getOrDefault("PIN_FAILED", 0L);
-                String level = (n >= 100 || scans >= 10 || logins >= 15) ? "high" : (n >= 20 || scans >= 3 || logins >= 6) ? "medium" : "low";
+                long sqli = kinds.getOrDefault("SQLI", 0L);
+                String level = (n >= 100 || scans >= 10 || logins >= 15 || sqli >= 3) ? "high" : (n >= 20 || scans >= 3 || logins >= 6 || sqli >= 1) ? "medium" : "low";
                 Map<String, Object> m = new LinkedHashMap<>();
                 m.put("ip", ip);
                 m.put("count", n);
@@ -143,7 +149,7 @@ public class SecurityEventService {
 
             List<Map<String, Object>> recent = new ArrayList<>();
             for (Object[] r : (List<Object[]>) em.createNativeQuery(
-                    "SELECT created_at, ip, kind, method, path, status FROM security_events ORDER BY id DESC LIMIT 25").getResultList()) {
+                    "SELECT created_at, ip, kind, method, path, status, detail FROM security_events ORDER BY id DESC LIMIT 30").getResultList()) {
                 Map<String, Object> m = new LinkedHashMap<>();
                 m.put("time", iso(r[0]));
                 m.put("ip", r[1]);
@@ -151,9 +157,24 @@ public class SecurityEventService {
                 m.put("method", r[3]);
                 m.put("path", r[4]);
                 m.put("status", r[5]);
+                m.put("detail", r[6]);
                 recent.add(m);
             }
             out.put("recent", recent);
+            List<Map<String, Object>> sqli = new ArrayList<>();
+            for (Object[] r : (List<Object[]>) em.createNativeQuery(
+                    "SELECT created_at, ip, method, path, status, detail FROM security_events WHERE kind = 'SQLI' "
+                            + "AND created_at > now() - interval '24 hours' ORDER BY id DESC LIMIT 10").getResultList()) {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("time", iso(r[0]));
+                m.put("ip", r[1]);
+                m.put("method", r[2]);
+                m.put("path", r[3]);
+                m.put("status", r[4]);
+                m.put("detail", r[5]);
+                sqli.add(m);
+            }
+            out.put("sqli", sqli);
             out.put("available", true);
         } catch (RuntimeException e) {
             out.put("available", false);

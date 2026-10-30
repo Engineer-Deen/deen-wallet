@@ -1,5 +1,6 @@
 package com.glr.deenwallet.admin;
 
+import com.glr.deenwallet.monitoring.BlockedIpService;
 import com.glr.deenwallet.monitoring.DatabaseMetricsService;
 import com.glr.deenwallet.monitoring.SecurityEventService;
 import com.glr.deenwallet.monitoring.SecurityScanService;
@@ -11,8 +12,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -33,6 +38,7 @@ public class AdminMetricsController {
     private final SecurityEventService securityEvents;
     private final SecurityScanService securityScan;
     private final UserRepository users;
+    private final BlockedIpService blockedIps;
 
     @Value("${server.port:8080}")
     private int serverPort;
@@ -41,7 +47,9 @@ public class AdminMetricsController {
     private volatile long cachedAt;
 
     public AdminMetricsController(ServerMetricsService serverMetrics, DatabaseMetricsService databaseMetrics,
-                                  SecurityEventService securityEvents, SecurityScanService securityScan, UserRepository users) {
+                                  SecurityEventService securityEvents, SecurityScanService securityScan, UserRepository users,
+                                  BlockedIpService blockedIps) {
+        this.blockedIps = blockedIps;
         this.serverMetrics = serverMetrics;
         this.databaseMetrics = databaseMetrics;
         this.securityEvents = securityEvents;
@@ -62,7 +70,7 @@ public class AdminMetricsController {
         return ResponseEntity.ok(c);
     }
 
-    private void requireSuperAdmin() {
+    private User requireSuperAdmin() {
         User u = null;
         try {
             Authentication a = SecurityContextHolder.getContext().getAuthentication();
@@ -73,6 +81,39 @@ public class AdminMetricsController {
         if (u == null || !"SUPER_ADMIN".equals(u.getRole())) {
             throw new AdminAccessException("Server metrics are for super admins only.");
         }
+        return u;
+    }
+
+    public record BlockRequest(List<String> ips, Integer hours, String reason) { }
+
+    public record UnblockRequest(List<String> ips) { }
+
+    private static String audited(List<String> ips) {
+        if (ips == null || ips.isEmpty()) return "no addresses";
+        String s = ips.size() + " address(es): " + String.join(", ", ips.stream().limit(5).toList()) + (ips.size() > 5 ? ", ..." : "");
+        return s.length() > 140 ? s.substring(0, 140) : s;
+    }
+
+    /** Block the chosen addresses (hours = how long; empty = until unblocked). Never your own address. */
+    @PostMapping("/block")
+    public ResponseEntity<Map<String, Object>> block(@RequestBody BlockRequest body, HttpServletRequest http) {
+        User me = requireSuperAdmin();
+        http.setAttribute("auditTargetName", audited(body.ips()));
+        Map<String, Object> result = blockedIps.block(body.ips(), body.hours(), body.reason() == null || body.reason().isBlank() ? "Blocked from Server Metrics" : body.reason(),
+                me.getFullName(), http.getRemoteAddr());
+        cached = null;
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/unblock")
+    public ResponseEntity<Map<String, Object>> unblock(@RequestBody UnblockRequest body, HttpServletRequest http) {
+        requireSuperAdmin();
+        http.setAttribute("auditTargetName", audited(body.ips()));
+        int n = blockedIps.unblock(body.ips());
+        cached = null;
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("unblocked", n);
+        return ResponseEntity.ok(out);
     }
 
     private Map<String, Object> build() {
@@ -90,6 +131,7 @@ public class AdminMetricsController {
         out.put("attacks", attacks);
         out.put("ssh", ssh);
         out.put("vulnerabilities", vulns);
+        out.put("blockedIps", blockedIps.list());
         out.put("health", health(server, app, db, attacks, vulns));
         return out;
     }
@@ -139,6 +181,10 @@ public class AdminMetricsController {
             for (Object o : l) {
                 if (o instanceof Map<?, ?> m && "high".equals(m.get("level"))) { issue(issues, "warn", "Heavy attack activity from " + m.get("ip") + " in the last 24 hours."); break; }
             }
+        }
+        Object kinds = attacks.get("byKind");
+        if (kinds instanceof Map<?, ?> k && n(k.get("SQLI")) > 0) {
+            issue(issues, "warn", "SQL injection attempts were detected (" + Math.round(n(k.get("SQLI"))) + " in 24 hours). The app passes typed text to the database safely, but block the sender(s) below.");
         }
         String level = "ok";
         for (Map<String, Object> m : issues) {

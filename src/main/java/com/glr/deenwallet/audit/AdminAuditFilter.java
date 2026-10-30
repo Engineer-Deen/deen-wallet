@@ -59,6 +59,8 @@ public class AdminAuditFilter extends OncePerRequestFilter {
             rule("DELETE", "^/api/admin/admins/" + UUID_RE + "$", "ADMINS", "ADMIN_DELETE", "Deleted an admin account"),
             rule("PUT", "^/api/admin/admins/" + UUID_RE + "$", "ADMINS", "ADMIN_EDIT", "Edited an admin's details"),
             rule("PUT", "^/api/admin/admins/" + UUID_RE + "/access$", "ADMINS", "ADMIN_ACCESS", "Changed what an admin can open"),
+            rule("POST", "^/api/admin/metrics/block$", "SECURITY", "IP_BLOCK", "Blocked IP addresses"),
+            rule("POST", "^/api/admin/metrics/unblock$", "SECURITY", "IP_UNBLOCK", "Unblocked IP addresses"),
             rule("POST", "^/api/admin/pin$", "SECURITY", "PIN_CHANGE", "Set or changed their admin PIN"),
             rule("PUT", "^/api/admin/profile/verify-email$", "SECURITY", "VERIFY_OWN_EMAIL", "Verified their own email"),
             rule("POST", "^/api/admin/notifications$", "MESSAGING", "NOTIFICATION", "Sent an in-app notification"),

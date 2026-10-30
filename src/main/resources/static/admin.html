@@ -2449,6 +2449,11 @@
         .mx-row b.ip { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; }
         .mx-fix { margin-top:6px; padding:8px 10px; border-radius:8px; background:#12242B; color:#d6f1f7; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11.5px; line-height:1.45; white-space:pre-wrap; word-break:break-word; }
         .mx-muted { color:var(--muted); }
+        .mx-toolbar { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:12px; }
+        .mx-toolbar select { padding:7px 8px; border:1px solid var(--border); border-radius:10px; background:var(--bg); font-size:12.5px; }
+        .mx-iprow { display:flex; gap:10px; align-items:flex-start; }
+        .mx-iprow > div { min-width:0; flex:1; }
+        .mx-chk { width:22px; height:22px; flex:none; margin-top:1px; accent-color:#C0392B; }
         .mx-err { background:#FDECEC; color:#C0392B; border-radius:12px; padding:10px 12px; margin-top:12px; font-size:13px; }
         .online-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #22c55e; margin-right: 5px; vertical-align: middle; box-shadow: 0 0 0 3px rgba(34, 197, 94, .25); }
 
@@ -4594,7 +4599,7 @@
             }
             var MX_KIND = {
                 RATE_LIMIT: 'Too many requests (blocked)', LOGIN_FAILED: 'Wrong password', PIN_FAILED: 'Wrong PIN',
-                SCAN: 'Probing for weak files', ADMIN_PROBE: 'Tried the admin area without signing in'
+                SCAN: 'Probing for weak files', ADMIN_PROBE: 'Tried the admin area without signing in', SQLI: 'SQL injection attempt'
             };
             function mxKinds(obj) {
                 return Object.keys(obj || {}).map(function (k) {
@@ -4606,8 +4611,138 @@
                 return '<div class="admin-card"><p class="admin-card-title">' + escapeHtml(title) + '</p>' + (sub ? '<p class="admin-card-sub">' + escapeHtml(sub) + '</p>' : '') + inner + '</div>';
             }
 
+            var mxSel = {}, mxHours = '24', mxShowAll = false, mxTouchAt = 0, mxLast = null, mxRendered = false;
+            function mxSelCount() { return Object.keys(mxSel).length; }
+            function mxBlockedMap(m) { var o = {}; ((m && m.blockedIps) || []).forEach(function (b) { o[b.ip] = b; }); return o; }
+            function mxIpRow(ip, level, bodyHtml, blockedMap) {
+                var isBlocked = !!blockedMap[ip];
+                return '<div class="mx-row mx-iprow">' +
+                    (isBlocked ? '<span class="mx-pill bad" style="margin-top:0;">Blocked</span>' : '<input type="checkbox" class="mx-chk" data-ip="' + escapeHtml(ip) + '"' + (mxSel[ip] ? ' checked' : '') + '>') +
+                    '<div><b class="ip">' + escapeHtml(ip) + '</b> <span class="mx-pill ' + escapeHtml(level) + '">' + mxRiskLabel(level) + '</span><br>' + bodyHtml + '</div></div>';
+            }
+            function mxToolbar() {
+                var n = mxSelCount();
+                var opts = [['24', 'for 1 day'], ['168', 'for 7 days'], ['720', 'for 30 days'], ['', 'until I unblock']].map(function (o) {
+                    return '<option value="' + o[0] + '"' + (mxHours === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
+                }).join('');
+                return '<div class="mx-toolbar">' +
+                    '<button type="button" class="btn-sm refresh" data-mx="sel-high">Select high risk</button>' +
+                    '<button type="button" class="btn-sm refresh" data-mx="sel-all">Select all</button>' +
+                    '<button type="button" class="btn-sm refresh" data-mx="sel-none">Clear</button></div>' +
+                    '<div class="mx-toolbar"><select class="mx-hours-sel">' + opts + '</select>' +
+                    '<button type="button" class="btn-sm danger" data-mx="block">Block selected (' + n + ')</button>' +
+                    '<button type="button" class="btn-sm refresh" data-mx="copy-ufw">Copy server firewall commands (' + n + ')</button></div>';
+            }
+            function mxSqliCard(at) {
+                var list = (at && at.sqli) || [];
+                var count = ((at && at.byKind) || {}).SQLI || 0;
+                var inner = '<div class="mx-grid">' + mxStat('Attempts (24 h)', count, count ? 'Someone tried to trick the database' : 'None seen') +
+                    mxStat('Database calls', 'Safe', 'Typed text is passed separately from the SQL, so it cannot change a query') + '</div>';
+                if (list.length) {
+                    inner += '<p class="mx-sub">What was tried</p>' + list.map(function (e) {
+                        var passed = Number(e.status) < 400 ? 'The app answered normally: the text was treated as plain data, not as a command.' : 'The app refused it (answer ' + e.status + ').';
+                        return '<div class="mx-row"><b class="ip">' + escapeHtml(e.ip) + '</b> · ' + escapeHtml(e.detail || 'SQL injection') + '<br><span class="mx-muted">' + escapeHtml(mxAgo(e.time)) + ' · ' +
+                            escapeHtml(String(e.method || '')) + ' ' + escapeHtml(String(e.path || '')) + '</span><br>' + escapeHtml(passed) + '</div>';
+                    }).join('') + '<div class="mx-s-h">Tick the address in the list above and press Block selected. The contents of requests are never stored, only what kind of trick it was.</div>';
+                } else {
+                    inner += '<div class="mx-row">✔ No SQL injection attempts in the last 24 hours. This tab checks addresses, web forms and request bodies as they arrive.</div>';
+                }
+                return mxSection('SQL injection watch', 'Tricks typed into forms or the web address to read or damage the database.', inner);
+            }
+            function mxBlockedCard(m) {
+                var list = (m && m.blockedIps) || [];
+                var inner = '';
+                if (!list.length) inner = '<div class="mx-row">No address is blocked right now.</div>';
+                list.forEach(function (b) {
+                    inner += '<div class="mx-row mx-iprow"><div><b class="ip">' + escapeHtml(b.ip) + '</b><br><span class="mx-muted">' + escapeHtml(b.until ? 'Until ' + new Date(b.until).toLocaleString() : 'Until you unblock it') +
+                        ' · by ' + escapeHtml(b.by || '—') + ' · ' + escapeHtml(mxAgo(b.at)) + '<br>' + escapeHtml(String(b.hits || 0)) + ' request(s) refused since the app last started</span></div>' +
+                        '<button type="button" class="btn-sm refresh" data-mx="unblock" data-ip="' + escapeHtml(b.ip) + '">Unblock</button></div>';
+                });
+                return mxSection('Blocked addresses', 'These get "Access denied" from the app. Blocking is done by the app, so it stops them using DeenWallet; it does not stop them reaching your server\'s SSH (use the firewall commands for that).', inner);
+            }
+            function mxCopy(text) {
+                try {
+                    if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
+                } catch (e) { }
+                return new Promise(function (resolve, reject) {
+                    var ta = document.createElement('textarea');
+                    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+                    document.body.appendChild(ta); ta.select();
+                    try { document.execCommand('copy') ? resolve() : reject(); } catch (e) { reject(e); }
+                    document.body.removeChild(ta);
+                });
+            }
+            function mxVisibleIps(m, onlyHigh) {
+                var blocked = mxBlockedMap(m), seen = {}, out = [];
+                (((m.attacks || {}).topIps) || []).concat(((m.ssh || {}).topIps) || []).forEach(function (t) {
+                    if (!t.ip || blocked[t.ip] || seen[t.ip]) return;
+                    if (onlyHigh && t.level !== 'high') return;
+                    seen[t.ip] = 1; out.push(t.ip);
+                });
+                return out;
+            }
+            (function () {
+                var box = document.getElementById('mx-body');
+                if (!box) return;
+                ['touchstart', 'mousedown', 'keydown'].forEach(function (ev) { box.addEventListener(ev, function () { mxTouchAt = Date.now(); }, { passive: true }); });
+                function refreshCounts() {
+                    var n = mxSelCount();
+                    box.querySelectorAll('[data-mx="block"]').forEach(function (b) { b.textContent = 'Block selected (' + n + ')'; });
+                    box.querySelectorAll('[data-mx="copy-ufw"]').forEach(function (b) { b.textContent = 'Copy server firewall commands (' + n + ')'; });
+                }
+                box.addEventListener('change', function (e) {
+                    var t = e.target;
+                    if (t.classList && t.classList.contains('mx-chk')) {
+                        if (t.checked) mxSel[t.dataset.ip] = 1; else delete mxSel[t.dataset.ip];
+                        refreshCounts();
+                    } else if (t.classList && t.classList.contains('mx-hours-sel')) {
+                        mxHours = t.value;
+                        box.querySelectorAll('.mx-hours-sel').forEach(function (s) { s.value = mxHours; });
+                    }
+                });
+                box.addEventListener('click', function (e) {
+                    var b = e.target.closest ? e.target.closest('[data-mx]') : null;
+                    if (!b || !mxLast) return;
+                    var act = b.getAttribute('data-mx');
+                    if (act === 'sel-high' || act === 'sel-all') { mxVisibleIps(mxLast, act === 'sel-high').forEach(function (ip) { mxSel[ip] = 1; }); mxRender(mxLast); return; }
+                    if (act === 'sel-none') { mxSel = {}; mxRender(mxLast); return; }
+                    if (act === 'toggle-all') { mxShowAll = !mxShowAll; mxRender(mxLast); return; }
+                    if (act === 'copy-ufw') {
+                        var ips = Object.keys(mxSel).filter(function (ip) { return /^[0-9a-fA-F:.]{2,45}$/.test(ip); });
+                        if (!ips.length) { showToast('Tick the addresses first.'); return; }
+                        mxCopy(ips.map(function (ip) { return 'sudo ufw insert 1 deny from ' + ip; }).join('\n')).then(function () {
+                            showToast('Copied ' + ips.length + ' command(s). Paste them into your server over SSH.');
+                        }).catch(function () { showToast('Could not copy. Long-press to copy instead.'); });
+                        return;
+                    }
+                    if (act === 'unblock') {
+                        var ip1 = b.getAttribute('data-ip');
+                        adminApiRequest('/api/admin/metrics/unblock', { method: 'POST', body: { ips: [ip1] } }).then(function () { showToast('Unblocked ' + ip1 + '.'); loadMetrics(); })
+                            .catch(function (er) { showToast(er.message || 'Could not unblock.'); });
+                        return;
+                    }
+                    if (act === 'block') {
+                        var list = Object.keys(mxSel);
+                        if (!list.length) { showToast('Tick the addresses you want to block first.'); return; }
+                        var hrs = mxHours === '' ? null : Number(mxHours);
+                        var when = hrs === null ? 'until you unblock them' : (hrs === 24 ? 'for 1 day' : 'for ' + (hrs / 24) + ' days');
+                        showModal('Block ' + list.length + ' address(es)?', 'They will get "Access denied" from DeenWallet ' + when + '. Careful: many customers share one phone-network address, so only block addresses that are clearly attacking.', function () {
+                            adminApiRequest('/api/admin/metrics/block', { method: 'POST', body: { ips: list, hours: hrs, reason: 'Blocked from Server Metrics' } }).then(function (r) {
+                                var msg = 'Blocked ' + (r.blocked || 0) + ' address(es).';
+                                if (r.skipped && r.skipped.length) msg += ' Skipped ' + r.skipped.length + ': ' + r.skipped[0].why + '.';
+                                showToast(msg);
+                                mxSel = {};
+                                loadMetrics();
+                            }).catch(function (er) { showToast(er.message || 'Could not block.'); });
+                        });
+                    }
+                });
+            })();
+
             function mxRender(m) {
                 var s = m.server || {}, a = m.app || {}, d = m.database || {}, at = m.attacks || {}, ssh = m.ssh || {}, v = m.vulnerabilities || {}, hl = m.health || {};
+                mxLast = m; mxRendered = true;
+                var blockedMap = mxBlockedMap(m);
                 var html = '';
 
                 // 1) overall verdict
@@ -4682,31 +4817,37 @@
                     if (at.byKind && Object.keys(at.byKind).length) inner += '<div style="margin-top:10px;">' + mxKinds(at.byKind) + '</div>';
                     inner += mxBars(at.perHour);
                     if ((at.topIps || []).length) {
-                        inner += '<p class="mx-sub">Addresses causing the most trouble</p>' + at.topIps.map(function (t) {
-                            return '<div class="mx-row"><b class="ip">' + escapeHtml(t.ip) + '</b> <span class="mx-pill ' + escapeHtml(t.level) + '">' + mxRiskLabel(t.level) + '</span><br>' +
-                                '<b>' + escapeHtml(String(t.count)) + '</b> attempts · first ' + escapeHtml(mxAgo(t.firstSeen)) + ' · last ' + escapeHtml(mxAgo(t.lastSeen)) + '<br>' + mxKinds(t.kinds) + '</div>';
+                        inner += '<p class="mx-sub">Addresses causing the most trouble (' + at.topIps.length + ')</p>' + mxToolbar();
+                        var shownIps = mxShowAll ? at.topIps : at.topIps.slice(0, 12);
+                        inner += shownIps.map(function (t) {
+                            return mxIpRow(t.ip, t.level, '<b>' + escapeHtml(String(t.count)) + '</b> attempts · first ' + escapeHtml(mxAgo(t.firstSeen)) + ' · last ' + escapeHtml(mxAgo(t.lastSeen)) + '<br>' + mxKinds(t.kinds), blockedMap);
                         }).join('');
-                        inner += '<div class="mx-s-h">The app already slows these addresses down. To block one completely, run on the server: <span style="font-family:ui-monospace,Menlo,monospace;">sudo ufw deny from ADDRESS</span></div>';
+                        if (at.topIps.length > 12) inner += '<div style="margin-top:8px;"><button type="button" class="btn-sm refresh" data-mx="toggle-all">' + (mxShowAll ? 'Show fewer' : 'Show all ' + at.topIps.length) + '</button></div>';
+                        inner += '<div class="mx-s-h">Tick the ones you want to stop, choose how long, then Block selected. The app refuses them straight away. To also close the door on the server itself, use Copy server firewall commands and paste them over SSH.</div>';
                     } else {
                         inner += '<div class="mx-row">✔ No attacks recorded in the last 24 hours.</div>';
                     }
                     if ((at.recent || []).length) {
                         inner += '<p class="mx-sub">Latest events</p>' + at.recent.slice(0, 10).map(function (e) {
                             return '<div class="mx-row"><b class="ip">' + escapeHtml(e.ip) + '</b> · ' + escapeHtml(MX_KIND[e.kind] || e.kind) + '<br><span class="mx-muted">' + escapeHtml(mxAgo(e.time)) + ' · ' +
-                                escapeHtml(String(e.method || '')) + ' ' + escapeHtml(String(e.path || '')) + ' → ' + escapeHtml(String(e.status)) + '</span></div>';
+                                escapeHtml(String(e.method || '')) + ' ' + escapeHtml(String(e.path || '')) + ' → ' + escapeHtml(String(e.status)) + (e.detail ? ' · ' + escapeHtml(e.detail) : '') + '</span></div>';
                         }).join('');
                     }
                 }
                 html += mxSection('Attacks (last 24 hours)', 'People wrongly guessing passwords or PINs, hammering the app, or probing for hidden files.', inner);
 
+                html += mxSqliCard(at);
+                html += mxBlockedCard(m);
+
                 // 5b) SSH guessing
                 inner = '';
                 if (ssh.available) {
                     inner = '<div class="mx-grid">' + mxStat('Wrong-password tries', ssh.attempts || 0, 'In the recent log') + mxStat('Different addresses', ssh.uniqueIps || 0, '') + '</div>';
+                    if ((ssh.topIps || []).length) inner += mxToolbar();
                     (ssh.topIps || []).forEach(function (t) {
-                        inner += '<div class="mx-row"><b class="ip">' + escapeHtml(t.ip) + '</b> <span class="mx-pill ' + escapeHtml(t.level) + '">' + mxRiskLabel(t.level) + '</span><br><b>' +
-                            escapeHtml(String(t.attempts)) + '</b> tries · usernames tried: ' + escapeHtml((t.usernames || []).join(', ')) + '</div>';
+                        inner += mxIpRow(t.ip, t.level, '<b>' + escapeHtml(String(t.attempts)) + '</b> tries · usernames tried: ' + escapeHtml((t.usernames || []).join(', ')), blockedMap);
                     });
+                    if ((ssh.topIps || []).length) inner += '<div class="mx-s-h">These try to get into your server, not the app. Tick them and use Copy server firewall commands, then paste into your SSH session. Better still, install fail2ban (see Weak spots) so it happens by itself.</div>';
                     if (!(ssh.topIps || []).length) inner += '<div class="mx-row">✔ Nobody has been guessing server passwords lately.</div>';
                     if ((ssh.recentLogins || []).length) {
                         inner += '<p class="mx-sub">Latest successful logins to the server</p>' + ssh.recentLogins.map(function (e) {
@@ -4741,7 +4882,11 @@
                 var err = document.getElementById('mx-error');
                 adminApiRequest('/api/admin/metrics', { quiet: true, timeoutMs: 12000 }).then(function (m) {
                     hide(err);
-                    mxRender(m || {});
+                    mxLast = m || {};
+                    // do not redraw under a finger that is ticking a box or choosing a duration
+                    var el = document.activeElement;
+                    var busyUi = (Date.now() - mxTouchAt < 4000) || (el && el.classList && el.classList.contains('mx-hours-sel'));
+                    if (!busyUi || !mxRendered) mxRender(mxLast);
                 }).catch(function (e) {
                     err.textContent = (e && e.message) ? e.message : 'Could not load the metrics.';
                     show(err);
