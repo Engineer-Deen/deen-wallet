@@ -209,6 +209,46 @@ public class AdminPasskeyService {
         }
     }
 
+    // ------------------------------------------------------------ unlock the locked app with a passkey (signed in)
+
+    public Map<String, Object> unlockOptions(User admin) {
+        Map<String, Object> o = new LinkedHashMap<>();
+        o.put("rpId", rpId);
+        o.put("timeout", 120000);
+        o.put("userVerification", "required");
+        List<Map<String, Object>> allow = new ArrayList<>();
+        for (AdminPasskey p : repo.findByAdminIdOrderByCreatedAtAsc(admin.getId())) {
+            allow.add(Map.of("type", "public-key", "id", p.getCredentialId()));
+        }
+        o.put("allowCredentials", allow);
+        String cid = newChallenge("unlock", admin.getId(), o);
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("challengeId", cid);
+        out.put("options", o);
+        return out;
+    }
+
+    /** The passkey must belong to the signed-in admin. Nothing is issued: the admin is already signed in. */
+    @Transactional
+    public void verifyUnlock(User admin, String challengeId, String credentialId, String clientDataJson,
+                             String authenticatorData, String signature) {
+        Challenge c = take(challengeId, "unlock");
+        try {
+            if (!admin.getId().equals(c.adminId)) throw new IllegalArgumentException("Challenge belongs to someone else");
+            AdminPasskey p = repo.findByCredentialId(credentialId == null ? "" : credentialId)
+                    .orElseThrow(() -> new IllegalArgumentException("Unknown passkey"));
+            if (!admin.getId().equals(p.getAdminId())) throw new IllegalArgumentException("Passkey belongs to someone else");
+            long count = WebAuthnCore.verifyAssertion(clientDataJson, authenticatorData, signature, c.bytes, rpId, origins(),
+                    Base64.getDecoder().decode(p.getPublicKey()), p.getAlg(), p.getSignCount());
+            p.setSignCount(count);
+            p.setLastUsedAt(Instant.now());
+            repo.save(p);
+        } catch (IllegalArgumentException e) {
+            log.warn("Passkey unlock refused: {}", e.getMessage());
+            throw new IllegalArgumentException(BAD);
+        }
+    }
+
     private void requirePassword(User admin, String password) {
         if (password == null || !encoder.matches(password, admin.getPasswordHash())) {
             throw new IllegalArgumentException("Your account password is not correct.");

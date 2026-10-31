@@ -1372,6 +1372,24 @@
             transform: scale(0.97);
         }
 
+        #pin-modal-overlay .pk-lock { display:none; text-align:center; padding:6px 2px 2px; }
+        #pin-modal-overlay.pk-mode .pk-lock { display:block; }
+        #pin-modal-overlay.pk-mode .pin-info, #pin-modal-overlay.pk-mode .pin-pad { display:none; }
+        #pin-modal-overlay .pk-lock .pk-lock-ico { width:76px; height:76px; margin:4px auto 10px; border-radius:24px; background:var(--primary-soft); color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:38px; }
+        #pin-modal-overlay .pk-lock h3 { margin:0 0 4px; font-size:20px; color:var(--text); }
+        #pin-modal-overlay .pk-lock p { margin:0 0 14px; font-size:13px; color:var(--muted); }
+        #pin-modal-overlay .pk-lock .btn-primary { width:100%; min-height:52px; margin-bottom:8px; }
+        #pin-modal-overlay .pk-lock .btn-secondary { width:100%; min-height:46px; margin-bottom:6px; }
+        #pin-modal-overlay .pk-lock .pk-lock-err { min-height:18px; margin:0 0 10px; font-size:12.5px; color:var(--error); }
+        .lockopt { display:flex; align-items:center; gap:12px; width:100%; min-height:64px; padding:12px 14px; margin-bottom:10px; text-align:left; background:#fff; border:1.5px solid var(--border); border-radius:14px; cursor:pointer; font-family:inherit; color:var(--text); touch-action:manipulation; }
+        .lockopt.on { border-color:var(--primary); background:var(--primary-soft); }
+        .lockopt .lo-ico { width:42px; height:42px; border-radius:12px; background:var(--primary-soft); color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:21px; flex-shrink:0; }
+        .lockopt.on .lo-ico { background:#fff; }
+        .lockopt .lo-txt { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+        .lockopt .lo-txt b { font-size:15px; }
+        .lockopt .lo-txt small { font-size:12px; color:var(--muted); line-height:1.3; }
+        .lockopt .lo-tick { font-size:20px; color:var(--primary); visibility:hidden; }
+        .lockopt.on .lo-tick { visibility:visible; }
         .dw-field { display:block; width:100%; box-sizing:border-box; min-height:50px; padding:12px 14px; margin:0 0 10px; font-size:16px; font-family:inherit; color:var(--text); background:#fff; border:1.5px solid var(--border); border-radius:12px; outline:none; -webkit-appearance:none; appearance:none; }
         .dw-field::placeholder { color:#9AAAB0; }
         .dw-field:focus { border-color:var(--primary-light); box-shadow:0 0 0 3px rgba(46,159,176,.15); }
@@ -3494,6 +3512,15 @@
     <!-- ===== PIN MODAL (same layout as the customer app) ===== -->
     <div class="modal-overlay" id="pin-modal-overlay">
         <div class="modal-box">
+            <div class="pk-lock" id="pk-lock">
+                <div class="pk-lock-ico">&#128274;</div>
+                <h3>Session Locked</h3>
+                <p>Use your screen lock to continue.</p>
+                <div class="pk-lock-err" id="pk-lock-err"></div>
+                <button type="button" class="btn-primary" id="pk-lock-btn">Unlock with passkey</button>
+                <button type="button" class="btn-secondary" id="pk-lock-pin">Use PIN instead</button>
+                <button type="button" class="btn-secondary" id="pk-lock-logout">Log out</button>
+            </div>
             <div class="pin-info">
                 <div class="modal-icon">&#128274;</div>
                 <h3 class="modal-title">Session Locked</h3>
@@ -3532,6 +3559,7 @@
                         <button class="btn-secondary" id="pin-forgot-btn" type="button">Forgot PIN?</button>
                         <button class="btn-secondary" id="pin-logout-btn" type="button">Log out</button>
                     </div>
+                    <button class="btn-secondary hidden" id="pin-use-passkey" type="button">Use passkey instead</button>
                 </div>
             </div>
         </div>
@@ -3996,7 +4024,64 @@
                 setTimeout(function () { pinHiddenInput.focus(); }, 200);
                 fitPinModal();
                 setTimeout(fitPinModal, 350);   // again once the open animation has finished
+                applyLockMethod(true);
             }
+
+            // ---- App lock method: PIN keypad (default) or the phone's passkey / screen lock ----
+            function getLockMethod() {
+                try { return localStorage.getItem('dw_admin_lock_method') === 'passkey' ? 'passkey' : 'pin'; } catch (e) { return 'pin'; }
+            }
+            function setLockMethod(m) {
+                try { localStorage.setItem('dw_admin_lock_method', m === 'passkey' ? 'passkey' : 'pin'); } catch (e) { }
+            }
+            var pkUnlockBusy = false;
+            function lockUsesPasskey() { return getLockMethod() === 'passkey' && pkSupported(); }
+            // auto: true when the lock screen has just opened (starts the passkey popup by itself)
+            function applyLockMethod(auto) {
+                var overlay = pinModalOverlay;
+                var useIt = lockUsesPasskey() && !pinDisabledForSession;
+                overlay.classList.toggle('pk-mode', useIt);
+                var link = document.getElementById('pin-use-passkey');
+                if (link) link.classList.toggle('hidden', !lockUsesPasskey());
+                var err = document.getElementById('pk-lock-err');
+                if (err) err.textContent = '';
+                if (useIt && auto) setTimeout(function () { if (pinModalActive && overlay.classList.contains('pk-mode')) adminPasskeyUnlock(); }, 450);
+                fitPinModal();
+            }
+            async function adminPasskeyUnlock() {
+                if (pkUnlockBusy || !pinModalActive) return;
+                pkUnlockBusy = true;
+                var err = document.getElementById('pk-lock-err'), btn = document.getElementById('pk-lock-btn');
+                if (err) err.textContent = '';
+                if (btn) btn.disabled = true;
+                try {
+                    var start = await adminApiRequest('/api/admin/passkeys/unlock/options', { method: 'POST', body: {} });
+                    var answer = await pkGet(start.options);
+                    answer.challengeId = start.challengeId;
+                    await adminApiRequest('/api/admin/passkeys/unlock/verify', { method: 'POST', body: answer });
+                    pinAttempts = 0;
+                    hideAdminPinModal();
+                    showToast('Session unlocked');
+                    updateAdminSessionActive();
+                } catch (e) {
+                    if (err) err.textContent = (e && e.name && e.name !== 'Error') ? pkErrorText(e) : ((e && e.message) || 'Passkey failed. Try again or use your PIN.');
+                } finally {
+                    pkUnlockBusy = false;
+                    if (btn) btn.disabled = false;
+                }
+            }
+            (function () {
+                var b1 = document.getElementById('pk-lock-btn'), b2 = document.getElementById('pk-lock-pin'),
+                    b3 = document.getElementById('pk-lock-logout'), b4 = document.getElementById('pin-use-passkey');
+                if (b1) b1.addEventListener('click', adminPasskeyUnlock);
+                if (b2) b2.addEventListener('click', function () {
+                    pinModalOverlay.classList.remove('pk-mode');
+                    var link = document.getElementById('pin-use-passkey'); if (link && lockUsesPasskey()) link.classList.remove('hidden');
+                    setTimeout(function () { pinHiddenInput.focus(); }, 100); fitPinModal();
+                });
+                if (b3) b3.addEventListener('click', function () { var lo = document.getElementById('pin-logout-btn'); if (lo) lo.click(); });
+                if (b4) b4.addEventListener('click', function () { pinModalOverlay.classList.add('pk-mode'); fitPinModal(); adminPasskeyUnlock(); });
+            })();
 
             // Only shrinks the box slightly if a screen is still too small for it (same helper as the customer app).
             function fitPinModal() {
@@ -8454,6 +8539,7 @@
                         </div>
                     </div>`;
 
+                adminLockMethodCard(content);
                 adminPasscodeCard(content);
                 adminPasskeyCard(content);
                 document.getElementById('update-pin-btn').addEventListener('click', function () {
@@ -8472,6 +8558,36 @@
                         .then(function(){ successEl.textContent='PIN updated successfully!'; show(successEl); document.getElementById('new-pin-input').value=''; document.getElementById('confirm-pin-input').value=''; currentPasswordEl.value=''; showToast('PIN updated successfully!'); })
                         .catch(function(err){ errorEl.textContent=err.message || 'Failed to update PIN.'; show(errorEl); })
                         .finally(function(){ btn.disabled=false; btn.textContent='Update'; });
+                });
+            }
+
+            // "When the app locks": PIN keypad (default) or passkey popup. Saved on this phone / browser.
+            function adminLockMethodCard(content) {
+                var box = document.createElement('div');
+                box.className = 'admin-card';
+                box.innerHTML = '<div class="subscreen-card-icon">&#128275;</div>' +
+                    '<p class="admin-card-title">When the app locks</p>' +
+                    '<p class="admin-card-sub">Choose what opens the app after it was in the background or idle. This is saved on this phone. You can always switch to the PIN on the lock screen.</p>' +
+                    '<button type="button" class="lockopt" data-lm="pin"><span class="lo-ico">&#9919;</span><span class="lo-txt"><b>PIN</b><small>Enter your 4-digit PIN on the keypad</small></span><span class="lo-tick">&#10003;</span></button>' +
+                    '<button type="button" class="lockopt" data-lm="passkey"><span class="lo-ico">&#128274;</span><span class="lo-txt"><b>Passkey</b><small>Use your fingerprint, face or screen lock</small></span><span class="lo-tick">&#10003;</span></button>' +
+                    '<div id="lm-note" class="admin-card-sub" style="margin:0;"></div>';
+                content.appendChild(box);
+                var note = box.querySelector('#lm-note');
+                function paint() {
+                    var cur = getLockMethod();
+                    box.querySelectorAll('.lockopt').forEach(function (b) { b.classList.toggle('on', b.dataset.lm === cur); });
+                    note.textContent = cur === 'passkey' && !pkSupported() ? 'Passkeys are not available on this device, so the PIN will be used.' : '';
+                }
+                paint();
+                box.querySelectorAll('.lockopt').forEach(function (b) {
+                    b.addEventListener('click', function () {
+                        if (b.dataset.lm === 'pin') { setLockMethod('pin'); paint(); showToast('The app will ask for your PIN.'); return; }
+                        if (!pkSupported()) { showToast('Passkeys are not available on this device.'); return; }
+                        adminApiRequest('/api/admin/passkeys').then(function (r) {
+                            if (!r || !r.items || !r.items.length) { showToast('Add a passkey first (below), then choose Passkey.'); return; }
+                            setLockMethod('passkey'); paint(); showToast('The app will ask for your passkey.');
+                        }).catch(function (e) { showToast(e.message || 'Could not check your passkeys.'); });
+                    });
                 });
             }
 

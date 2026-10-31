@@ -50,6 +50,19 @@ public class AdminPasskeyController {
         return ResponseEntity.noContent().build();
     }
 
+    /** The app is locked: step 1, a one-time challenge for the signed-in admin's own passkeys. */
+    @PostMapping("/unlock/options")
+    public ResponseEntity<Map<String, Object>> unlockOptions() {
+        return ResponseEntity.ok(service.unlockOptions(me()));
+    }
+
+    /** Step 2: the signed answer. Success = 204; the page then closes the lock screen. */
+    @PostMapping("/unlock/verify")
+    public ResponseEntity<Void> unlockVerify(@Valid @RequestBody UnlockRequest r) {
+        service.verifyUnlock(me(), r.challengeId, r.id, r.clientDataJSON, r.authenticatorData, r.signature);
+        return ResponseEntity.noContent().build();
+    }
+
     private User me() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) throw new SecurityException("Not authenticated");
@@ -59,6 +72,15 @@ public class AdminPasskeyController {
             throw new SecurityException("Access denied: admin only");
         }
         return u;
+    }
+
+    @Getter @Setter
+    public static class UnlockRequest {
+        @NotBlank String challengeId;
+        @NotBlank String id;
+        @NotBlank String clientDataJSON;
+        @NotBlank String authenticatorData;
+        @NotBlank String signature;
     }
 
     @Getter @Setter
