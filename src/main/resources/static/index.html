@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <script>(function(){function f(){try{var h=Math.round(window.innerHeight);if(h>0)document.documentElement.style.setProperty("--app-h",h+"px");}catch(e){}}f();window.addEventListener("resize",f);window.addEventListener("orientationchange",function(){setTimeout(f,150);});if(window.visualViewport)window.visualViewport.addEventListener("resize",f);})();</script>
     <link rel="preload" as="image" href="deenwallet-logo-sm.png" />
     <title>DeenWallet Transfer — Send money</title>
     <style>
@@ -103,6 +104,21 @@
                 min-height: 100vh;
                 max-height: 100vh;
                 box-shadow: 0 0 40px rgba(0, 0, 0, 0.06);
+            }
+        }
+
+        /* Fit every Android phone: the text size the owner chose in Android settings must not stretch the layout,
+           and on any phone (tall, wide, big "display size") the app fills the whole screen. The height comes from
+           the real window height (--app-h), because 100vh/100dvh are wrong or missing on some Android versions. */
+        html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+        @media (max-width: 768px) {
+            #app {
+                max-width: none;
+                width: 100%;
+                height: var(--app-h, 100dvh);
+                min-height: 0;
+                max-height: none;
+                box-shadow: none;
             }
         }
 

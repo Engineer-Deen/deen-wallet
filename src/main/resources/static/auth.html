@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
+  <script>(function(){function f(){try{var h=Math.round(window.innerHeight);if(h>0)document.documentElement.style.setProperty("--app-h",h+"px");}catch(e){}}f();window.addEventListener("resize",f);window.addEventListener("orientationchange",function(){setTimeout(f,150);});if(window.visualViewport)window.visualViewport.addEventListener("resize",f);})();</script>
   <title>DeenWallet Transfer — Sign in</title>
   <link rel="preload" as="image" href="deenwallet-logo-md.png?v=2" />
   <style>html.dw-auto .screen { display: none !important; } html.dw-auto #deenwallet-splash.hide { opacity: 1 !important; visibility: visible !important; pointer-events: auto !important; }</style>
@@ -554,9 +555,10 @@
     .btn-secondary { background:#fff;border:1px solid var(--border);border-radius:28px;padding:13px 16px;color:var(--text);font-weight:700;cursor:pointer; }
 
     @media (max-width:768px) {
-      #app { max-width:480px;min-height:100dvh; }
-      .screen { padding:0;min-height:100dvh;overflow-y:auto; }
-      .login-shell { display:block;min-height:100dvh;border-radius:0; }
+      html { -webkit-text-size-adjust:100%;text-size-adjust:100%; }
+      #app { max-width:none;width:100%;min-height:100vh;min-height:var(--app-h,100dvh); }
+      .screen { padding:0;min-height:100vh;min-height:var(--app-h,100dvh);overflow-y:auto; }
+      .login-shell { display:block;min-height:100vh;min-height:var(--app-h,100dvh);border-radius:0; }
       .login-visual { min-height:auto;padding:24px 20px 20px; }
       .login-visual-copy { margin-top:26px; }
       .login-visual-copy h2 { font-size:32px;letter-spacing:-1px; }

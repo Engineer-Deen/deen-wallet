@@ -37,6 +37,7 @@ public class AdminAuthController {
     private final RefreshTokenRepository refreshTokens;
     private final OtpService otpService;
     private final EmailService emailService;
+    private final AdminPasscodeService passcodes;
 
     @PostMapping("/login")
     public ResponseEntity<AdminLoginResponse> login(
@@ -205,6 +206,35 @@ public class AdminAuthController {
         return ResponseEntity.ok(issue(user));
     }
 
+    /** Second recovery method: one of the admin's saved passcodes (works even when email is down). */
+    @PostMapping("/recovery/verify-passcode")
+    public ResponseEntity<AdminLoginResponse> verifyRecoveryPasscode(
+            @Valid @RequestBody RecoveryPasscodeRequest r
+    ) {
+        String email = r.email.trim().toLowerCase(Locale.ROOT);
+        User user = findAdminByEmailOrNull(email);
+
+        if (!passcodes.verifyForRecovery(email, user == null ? null : user.getId(), r.passcode)) {
+            throw new IllegalArgumentException(passcodes.badMessage());
+        }
+
+        user.setAdminRecoveryRequired(false);
+        user.setLoginFailedAttempts(0);
+        user.setLoginLockedUntil(null);
+        user.setLastLoginFailedAt(null);
+        user.setLocked(false);
+        user.setLockedAt(null);
+        user.setLockedBy(null);
+        user.setActive(true);
+        user.setPinAttempts(0);
+
+        repo.save(user);
+
+        log.info("Admin recovery by passcode completed for {}", email);
+
+        return ResponseEntity.ok(issue(user));
+    }
+
     @Transactional
     @PostMapping("/refresh")
     public ResponseEntity<AdminLoginResponse> refresh(
@@ -304,6 +334,17 @@ public class AdminAuthController {
 
         @NotBlank
         String code;
+    }
+
+    @Getter
+    @Setter
+    public static class RecoveryPasscodeRequest {
+        @NotBlank
+        @Email
+        String email;
+
+        @NotBlank
+        String passcode;
     }
 
     @Getter

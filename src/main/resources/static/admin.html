@@ -1372,6 +1372,19 @@
             transform: scale(0.97);
         }
 
+        .arp-card { display:flex; align-items:center; gap:12px; width:100%; min-height:64px; padding:12px 14px; margin-bottom:10px; text-align:left; background:#fff; border:1.5px solid var(--border); border-radius:14px; cursor:pointer; font-family:inherit; color:var(--text); touch-action:manipulation; }
+        .arp-card:active { background:var(--primary-soft); border-color:var(--primary-light); }
+        .arp-ico { width:42px; height:42px; border-radius:12px; background:var(--primary-soft); color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:21px; flex-shrink:0; }
+        .arp-txt { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+        .arp-txt b { font-size:15px; }
+        .arp-txt small { font-size:12px; color:var(--muted); line-height:1.3; }
+        .arp-go { font-size:24px; color:var(--muted); }
+        .pc-row { display:flex; align-items:center; gap:10px; padding:11px 0; border-bottom:1px solid var(--border); }
+        .pc-row:last-of-type { border-bottom:none; }
+        .pc-row .pc-name { flex:1; min-width:0; font-weight:600; font-size:14px; word-break:break-word; }
+        .pc-row .pc-name small { display:block; font-weight:400; font-size:11px; color:var(--muted); }
+        .pc-del { min-height:44px; min-width:76px; border-radius:10px; border:1px solid #F3D2CE; background:#FDF3F2; color:var(--error); font-weight:600; font-size:13px; cursor:pointer; }
+
         .icon-btn {
             background: none;
             border: none;
@@ -1391,6 +1404,29 @@
             color: var(--error);
             background: #FBEAEA;
         }
+
+        /* Admin Management: big, well spaced action buttons that are easy to tap on any phone */
+        .item-card.am-card { flex-wrap: wrap; align-items: flex-start; }
+        .am-card .item-info { flex: 1 1 100%; min-width: 0; }
+        .am-card .am-actions {
+            flex: 1 1 100%;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+            gap: 10px;
+            margin-top: 6px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+        .am-card .am-actions .icon-btn {
+            display: flex; align-items: center; justify-content: center; gap: 7px;
+            min-height: 50px; padding: 8px 10px;
+            font-size: 14px; font-weight: 600; color: var(--text);
+            background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+            touch-action: manipulation; -webkit-tap-highlight-color: rgba(28,122,145,.15);
+        }
+        .am-card .am-actions .icon-btn .am-ico { font-size: 19px; line-height: 1; }
+        .am-card .am-actions .icon-btn:active { background: var(--primary-soft); border-color: var(--primary-light); transform: scale(.97); }
+        .am-card .am-actions .icon-btn.danger { color: var(--error); background: #FDF3F2; border-color: #F3D2CE; }
 
         /* ===== Support ===== */
         .support-lookup {
@@ -2746,12 +2782,31 @@
                     id="login-error-text"></span></div>
             <button class="btn-primary" id="login-btn">Sign in</button>
             <div id="admin-recovery-panel" class="hidden" style="margin-top:12px;padding:14px;border:1px solid #E4ECEF;border-radius:12px;background:#F7FAFB;">
-                <div style="font-weight:700;margin-bottom:5px;">Admin recovery</div>
-                <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">If admin protection was triggered, verify ownership with a one-time code sent to the registered admin email.</div>
-                <button type="button" class="btn-outline recovery-btn" id="admin-send-otp-btn" style="width:100%;margin-bottom:8px;">✉ Send recovery code</button>
-                <div id="admin-otp-countdown" class="hidden" style="font-size:12px;color:var(--muted);margin-bottom:8px;text-align:center;"></div>
-                <input class="text-input" id="admin-recovery-code" inputmode="numeric" maxlength="6" placeholder="Enter 6-digit code" style="margin-bottom:8px;" />
-                <button type="button" class="btn-primary" id="admin-verify-otp-btn" style="width:100%;">Verify &amp; restore access</button>
+                <div style="font-weight:700;margin-bottom:5px;">Verify your account</div>
+                <div id="arp-intro" style="font-size:12px;color:var(--muted);margin-bottom:10px;">Select a login method to verify your account.</div>
+                <div id="arp-choose">
+                    <button type="button" class="arp-card" id="arp-pick-email">
+                        <span class="arp-ico">&#9993;</span>
+                        <span class="arp-txt"><b>Email</b><small>Get a one-time code sent to your admin email</small></span>
+                        <span class="arp-go">&#8250;</span>
+                    </button>
+                    <button type="button" class="arp-card" id="arp-pick-pass">
+                        <span class="arp-ico">&#128273;</span>
+                        <span class="arp-txt"><b>Passcode</b><small>Use one of your saved passcodes. No email needed</small></span>
+                        <span class="arp-go">&#8250;</span>
+                    </button>
+                </div>
+                <div id="arp-email" class="hidden">
+                    <button type="button" class="btn-outline recovery-btn" id="admin-send-otp-btn" style="width:100%;margin-bottom:8px;">✉ Send recovery code</button>
+                    <div id="admin-otp-countdown" class="hidden" style="font-size:12px;color:var(--muted);margin-bottom:8px;text-align:center;"></div>
+                    <input class="text-input" id="admin-recovery-code" inputmode="numeric" maxlength="6" placeholder="Enter 6-digit code" style="margin-bottom:8px;" />
+                    <button type="button" class="btn-primary" id="admin-verify-otp-btn" style="width:100%;">Verify &amp; restore access</button>
+                </div>
+                <div id="arp-pass" class="hidden">
+                    <input class="text-input" id="admin-recovery-passcode" type="password" autocomplete="off" placeholder="Enter your passcode" style="margin-bottom:8px;" />
+                    <button type="button" class="btn-primary" id="admin-verify-passcode-btn" style="width:100%;">Verify &amp; restore access</button>
+                </div>
+                <button type="button" class="admin-link-btn hidden" id="arp-back" style="margin-top:10px;">&#8592; Choose another method</button>
                 <div id="admin-recovery-message" style="font-size:12px;margin-top:8px;color:var(--muted);"></div>
             </div>
             <p class="default-hint">Use your admin credentials</p>
@@ -4258,10 +4313,67 @@
             // ==============================================================
             // ADMIN LOGIN + RECOVERY
             // ==============================================================
-            function showAdminRecovery(message) {
-                if (adminRecoveryPanel) adminRecoveryPanel.classList.remove('hidden');
-                if (adminRecoveryMessage) adminRecoveryMessage.textContent = message || 'Use the recovery code sent to your registered admin email.';
+            var arpMode = 'choose';
+            function arpShow(mode) {
+                arpMode = mode;
+                ['choose', 'email', 'pass'].forEach(function (k) {
+                    var el = document.getElementById('arp-' + k);
+                    if (el) el.classList.toggle('hidden', k !== mode);
+                });
+                var back = document.getElementById('arp-back');
+                if (back) back.classList.toggle('hidden', mode === 'choose');
+                var intro = document.getElementById('arp-intro');
+                if (intro) intro.textContent = mode === 'choose' ? 'Select a login method to verify your account.'
+                    : (mode === 'email' ? 'We will email you a one-time code.' : 'Enter one of the passcodes you saved.');
             }
+            function showAdminRecovery(message, mode) {
+                if (adminRecoveryPanel) adminRecoveryPanel.classList.remove('hidden');
+                arpShow(mode || arpMode);
+                if (adminRecoveryMessage) adminRecoveryMessage.textContent = message || '';
+            }
+
+            async function verifyAdminRecoveryPasscode() {
+                var email = document.getElementById('admin-email').value.trim();
+                var input = document.getElementById('admin-recovery-passcode');
+                var btn = document.getElementById('admin-verify-passcode-btn');
+                var code = input.value;
+                if (!email) { adminRecoveryMessage.textContent = 'Enter your admin email above first.'; return; }
+                if (!code.trim()) { adminRecoveryMessage.textContent = 'Enter your passcode.'; return; }
+                btn.disabled = true;
+                try {
+                    var response = await fetch(API_BASE_URL + '/api/admin/auth/recovery/verify-passcode', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email, passcode: code })
+                    });
+                    var data = {}; try { data = await response.json(); } catch (_) {}
+                    if (!response.ok) throw new Error(data.message || 'Invalid passcode.');
+                    input.value = '';
+                    setToken(data.accessToken);
+                    setRefreshToken(data.refreshToken);
+                    pinDisabledForSession = false;
+                    var user = await adminApiRequest('/api/admin/me');
+                    currentAdminUser = user;
+                    currentUserRole = user.role || 'ADMIN';
+                    sessionStorage.setItem('deenwallet_admin_profile', JSON.stringify(user));
+                    adminRecoveryPanel.classList.add('hidden');
+                    arpShow('choose');
+                    loginScreen.classList.remove('active');
+                    mainScreen.classList.add('active');
+                    updateAdminSessionActive();
+                    showToast('Admin access restored.');
+                    loadDashboard(); loadWhatsApp(); loadUsers();
+                } catch (e) { adminRecoveryMessage.textContent = e.message || 'Recovery failed.'; }
+                finally { btn.disabled = false; }
+            }
+            (function () {
+                var e1 = document.getElementById('arp-pick-email'), e2 = document.getElementById('arp-pick-pass'),
+                    e3 = document.getElementById('arp-back'), e4 = document.getElementById('admin-verify-passcode-btn'),
+                    e5 = document.getElementById('admin-recovery-passcode');
+                if (e1) e1.addEventListener('click', function () { adminRecoveryMessage.textContent = ''; arpShow('email'); });
+                if (e2) e2.addEventListener('click', function () { adminRecoveryMessage.textContent = ''; arpShow('pass'); });
+                if (e3) e3.addEventListener('click', function () { adminRecoveryMessage.textContent = ''; arpShow('choose'); });
+                if (e4) e4.addEventListener('click', verifyAdminRecoveryPasscode);
+                if (e5) e5.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') verifyAdminRecoveryPasscode(); });
+            })();
 
             function startAdminOtpCooldown(seconds) {
                 if (adminOtpCooldownTimer) clearInterval(adminOtpCooldownTimer);
@@ -4359,9 +4471,9 @@
                 }).catch(function (error) {
                     loginErrorText.textContent = error.message || 'Login failed. Check your credentials.'; show(loginError);
                     if (error.status === 423 || error.recovery === 'OTP') {
-                        showAdminRecovery('Admin protection is active. Request the recovery OTP to restore access.');
+                        showAdminRecovery('Too many wrong passwords. Choose how you want to verify it is you.', 'choose');
                     } else if (error.recovery === 'EMAIL_VERIFICATION') {
-                        showAdminRecovery('Your admin email is not verified. Request the verification code and enter it below.');
+                        showAdminRecovery('Your admin email is not verified. Request the verification code and enter it below.', 'email');
                     }
                 }).finally(function () { loginBtn.disabled = false; loginBtn.textContent = 'Sign in'; });
             });
@@ -8254,6 +8366,7 @@
                         </div>
                     </div>`;
 
+                adminPasscodeCard(content);
                 document.getElementById('update-pin-btn').addEventListener('click', function () {
                     var newPin = document.getElementById('new-pin-input').value.trim();
                     var confirmPin = document.getElementById('confirm-pin-input').value.trim();
@@ -8271,6 +8384,57 @@
                         .catch(function(err){ errorEl.textContent=err.message || 'Failed to update PIN.'; show(errorEl); })
                         .finally(function(){ btn.disabled=false; btn.textContent='Update'; });
                 });
+            }
+
+            // Recovery passcodes (up to 5): a second way back in when the email code is not possible.
+            function adminPasscodeCard(content) {
+                var box = document.createElement('div');
+                box.className = 'admin-card';
+                box.innerHTML = '<div class="subscreen-card-icon">&#128273;</div>' +
+                    '<p class="admin-card-title">Recovery passcodes</p>' +
+                    '<p class="admin-card-sub">If you get locked out after wrong passwords you can verify with Email or with one of these passcodes. You can keep up to 5, so you never depend on email alone.</p>' +
+                    '<div id="pc-list"><div class="loading-state"><div class="spinner"></div>Loading…</div></div>' +
+                    '<div id="pc-form" style="margin-top:10px;"></div>';
+                content.appendChild(box);
+                var list = box.querySelector('#pc-list'), form = box.querySelector('#pc-form');
+                function fmt(d) { try { return d ? new Date(d).toLocaleDateString() : ''; } catch (e) { return ''; } }
+                function load() {
+                    adminApiRequest('/api/admin/passcodes').then(function (r) {
+                        var items = (r && r.items) || [], max = (r && r.max) || 5;
+                        list.innerHTML = items.length ? items.map(function (p) {
+                            return '<div class="pc-row"><div class="pc-name">' + escapeHtml(p.label) + '<small>Added ' + escapeHtml(fmt(p.createdAt)) + (p.lastUsedAt ? ' · last used ' + escapeHtml(fmt(p.lastUsedAt)) : '') + '</small></div>' +
+                                '<button type="button" class="pc-del" data-id="' + escapeHtml(p.id) + '">Delete</button></div>';
+                        }).join('') : '<p class="admin-card-sub" style="margin:0;">No passcodes yet.</p>';
+                        list.querySelectorAll('.pc-del').forEach(function (b) {
+                            b.addEventListener('click', function () {
+                                var pwEl = form.querySelector('#pc-pass'), pw = pwEl ? pwEl.value : '';
+                                if (!pw) { showToast('Type your account password in the box below, then tap Delete.'); if (pwEl) pwEl.focus(); return; }
+                                adminApiRequest('/api/admin/passcodes/' + b.dataset.id + '/delete', { method: 'POST', body: { password: pw } })
+                                    .then(function () { showToast('Passcode deleted.'); load(); })
+                                    .catch(function (e) { showToast(e.message || 'Could not delete.'); });
+                            });
+                        });
+                        var full = items.length >= max;
+                        form.innerHTML = (full ? '<p class="admin-card-sub" style="margin:0 0 8px;">You have all ' + max + ' passcodes. Delete one to add another.</p>'
+                                : '<input class="text-input" id="pc-label" maxlength="40" placeholder="Name (for example: Phone note)" style="margin-bottom:8px;" />' +
+                                  '<input class="text-input" id="pc-code" type="password" autocomplete="new-password" placeholder="New passcode (8 or more characters)" style="margin-bottom:8px;" />') +
+                            '<input class="text-input" id="pc-pass" type="password" autocomplete="current-password" placeholder="Your account password (needed to add or delete)" style="margin-bottom:8px;" />' +
+                            '<div id="pc-err" class="pin-error hidden"></div>' +
+                            (full ? '' : '<button type="button" class="btn-primary" id="pc-add" style="width:100%;min-height:48px;">Add passcode (' + items.length + '/' + max + ')</button>');
+                        var addBtn = form.querySelector('#pc-add');
+                        if (addBtn) addBtn.addEventListener('click', function () {
+                            var err = form.querySelector('#pc-err'); hide(err);
+                            var code = form.querySelector('#pc-code').value, pw = form.querySelector('#pc-pass').value;
+                            if (code.trim().length < 8) { err.textContent = 'A passcode needs at least 8 characters.'; show(err); return; }
+                            if (!pw) { err.textContent = 'Enter your account password.'; show(err); return; }
+                            var btn = this; btn.disabled = true;
+                            adminApiRequest('/api/admin/passcodes', { method: 'POST', body: { label: form.querySelector('#pc-label').value, passcode: code, password: pw } })
+                                .then(function () { showToast('Passcode added.'); load(); })
+                                .catch(function (e) { err.textContent = e.message || 'Could not add the passcode.'; show(err); btn.disabled = false; });
+                        });
+                    }).catch(function (e) { list.innerHTML = '<div class="error-state">' + escapeHtml(e.message || 'Could not load passcodes.') + '</div>'; });
+                }
+                load();
             }
 
             // ==============================================================
@@ -8478,7 +8642,7 @@
                     var me = currentAdminUser ? currentAdminUser.id : null;
                     admins.forEach(function (admin) {
                         var card = document.createElement('div');
-                        card.className = 'item-card';
+                        card.className = 'item-card am-card';
                         var isActive = admin.active !== false;
                         var isLocked = admin.locked === true;
                         var isMain = admin.mainAdmin === true;
@@ -8494,13 +8658,13 @@
                         card.innerHTML =
                             '<div class="item-info"><div class="name">' + escapeHtml(admin.fullName || admin.username) + (isSelf ? ' <span style="font-size:11px;color:var(--muted);">(you)</span>' : '') + '</div>' +
                             '<div class="meta"><span>' + escapeHtml(admin.email) + '</span>' + badge + limited + '</div></div>' +
-                            '<div class="item-actions">' +
-                            '<button class="icon-btn" data-action="view-admin" data-id="' + admin.id + '" title="View details">👁️</button>' +
-                            (canEdit ? '<button class="icon-btn" data-action="edit-admin" data-id="' + admin.id + '" title="Edit details">✎</button>' : '') +
-                            (canAccess ? '<button class="icon-btn" data-action="access-admin" data-id="' + admin.id + '" title="What this admin can open">⚙</button>' : '') +
-                            (controllable && (admin.loginFailedAttempts > 0 || admin.loginLockedUntil || admin.adminRecoveryRequired) ? '<button class="icon-btn" data-action="reset-admin-login" data-id="' + admin.id + '" title="Reset login protection">↻</button>' : '') +
-                            (controllable ? '<button class="icon-btn" data-action="toggle-admin" data-id="' + admin.id + '" data-active="' + isActive + '" data-locked="' + isLocked + '" title="' + (isLocked ? 'Unlock' : isActive ? 'Deactivate' : 'Activate') + '">' + (isLocked ? '🔓' : (isActive ? '🔒' : '✅')) + '</button>' : '') +
-                            (controllable ? '<button class="icon-btn" data-action="delete-admin" data-id="' + admin.id + '" title="Delete account">🗑</button>' : '') +
+                            '<div class="item-actions am-actions">' +
+                            '<button class="icon-btn" data-action="view-admin" data-id="' + admin.id + '" title="View details"><span class="am-ico">👁️</span>View</button>' +
+                            (canEdit ? '<button class="icon-btn" data-action="edit-admin" data-id="' + admin.id + '" title="Edit details"><span class="am-ico">✎</span>Edit</button>' : '') +
+                            (canAccess ? '<button class="icon-btn" data-action="access-admin" data-id="' + admin.id + '" title="What this admin can open"><span class="am-ico">⚙</span>Access</button>' : '') +
+                            (controllable && (admin.loginFailedAttempts > 0 || admin.loginLockedUntil || admin.adminRecoveryRequired) ? '<button class="icon-btn" data-action="reset-admin-login" data-id="' + admin.id + '" title="Reset login protection"><span class="am-ico">↻</span>Reset login</button>' : '') +
+                            (controllable ? '<button class="icon-btn" data-action="toggle-admin" data-id="' + admin.id + '" data-active="' + isActive + '" data-locked="' + isLocked + '" title="' + (isLocked ? 'Unlock' : isActive ? 'Deactivate' : 'Activate') + '"><span class="am-ico">' + (isLocked ? '🔓' : (isActive ? '🔒' : '✅')) + '</span>' + (isLocked ? 'Unlock' : isActive ? 'Disable' : 'Enable') + '</button>' : '') +
+                            (controllable ? '<button class="icon-btn danger" data-action="delete-admin" data-id="' + admin.id + '" title="Delete account"><span class="am-ico">🗑</span>Delete</button>' : '') +
                             '</div>';
                         container.appendChild(card);
                     });
