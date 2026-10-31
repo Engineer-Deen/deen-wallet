@@ -2,6 +2,7 @@ package com.glr.deenwallet.admin;
 
 import com.glr.deenwallet.user.User;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Settings (optional, in the env file): WEBAUTHN_RP_ID (default deenwallapp.com) and WEBAUTHN_ORIGINS
  * (comma list, default https://deenwallapp.com, https://www.deenwallapp.com, https://api.deenwallapp.com).
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AdminPasskeyService {
@@ -43,6 +45,10 @@ public class AdminPasskeyService {
     @Value("${deenwallet.webauthn.origins:https://deenwallapp.com,https://www.deenwallapp.com,https://api.deenwallapp.com}")
     private String originsCsv;
 
+    /** The Android app's signing fingerprint (same value as for assetlinks.json). The app may report its own origin. */
+    @Value("${android.app.sha256:}")
+    private String androidSha256;
+
     private final SecureRandom random = new SecureRandom();
 
     private record Challenge(byte[] bytes, String purpose, UUID adminId, long expires) {}
@@ -54,6 +60,17 @@ public class AdminPasskeyService {
         for (String o : originsCsv.split(",")) {
             String t = o.trim();
             if (!t.isEmpty()) s.add(t);
+        }
+        for (String fp : androidSha256.split(",")) {
+            String hex = fp.replace(":", "").trim();
+            if (hex.length() != 64) continue;
+            try {
+                byte[] raw = new byte[32];
+                for (int i = 0; i < 32; i++) raw[i] = (byte) Integer.parseInt(hex.substring(i * 2, i * 2 + 2), 16);
+                s.add("android:apk-key-hash:" + WebAuthnCore.b64u(raw));
+            } catch (NumberFormatException ignored) {
+                // a malformed fingerprint is simply not used
+            }
         }
         return s;
     }
@@ -187,6 +204,7 @@ public class AdminPasskeyService {
             repo.save(p);
             return p.getAdminId();
         } catch (IllegalArgumentException e) {
+            log.warn("Passkey login refused: {}", e.getMessage());
             throw new IllegalArgumentException(BAD);
         }
     }

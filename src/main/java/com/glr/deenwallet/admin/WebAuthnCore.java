@@ -137,7 +137,11 @@ final class WebAuthnCore {
         if (n == null || !type.equals(n.path("type").asText(""))) throw new IllegalArgumentException("Invalid passkey data");
         byte[] ch = unb64u(n.path("challenge").asText(""));
         if (!MessageDigest.isEqual(ch, expectedChallenge)) throw new IllegalArgumentException("The passkey request expired. Try again.");
-        if (!origins.contains(n.path("origin").asText(""))) throw new IllegalArgumentException("This passkey was made for a different site");
+        String origin = n.path("origin").asText("");
+        if (!origins.contains(origin)) {
+            throw new IllegalArgumentException("This passkey was made for a different site ("
+                    + (origin.length() > 90 ? origin.substring(0, 90) : origin) + ")");
+        }
         if (n.path("crossOrigin").asBoolean(false)) throw new IllegalArgumentException("Invalid passkey data");
     }
 
