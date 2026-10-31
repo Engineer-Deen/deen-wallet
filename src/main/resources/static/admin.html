@@ -4334,7 +4334,7 @@
                 var n = e && e.name;
                 if (n === 'NotAllowedError') return 'The passkey was cancelled or timed out. Try again.';
                 if (n === 'InvalidStateError') return 'This device already has a passkey for your account.';
-                if (n === 'NotSupportedError' || n === 'SecurityError') return 'Passkeys are not available in this app or on this device yet. Use Email or a Passcode.';
+                if (n === 'NotSupportedError' || n === 'SecurityError') return 'Passkeys are not available in this app or on this device yet. Use Email or a Passcode. (' + n + (e.message ? ': ' + String(e.message).slice(0, 120) : '') + ')';
                 return (e && e.message) || 'Passkey failed.';
             }
             async function pkCreate(opts) {
