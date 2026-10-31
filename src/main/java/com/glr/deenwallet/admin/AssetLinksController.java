@@ -37,7 +37,7 @@ public class AssetLinksController {
                 String name = pkg.trim();
                 if (name.isEmpty()) continue;
                 out.add(Map.of(
-                        "relation", List.of("delegate_permission/common.get_login_creds"),
+                        "relation", List.of("delegate_permission/common.get_login_creds", "delegate_permission/common.handle_all_urls"),
                         "target", Map.of("namespace", "android_app", "package_name", name, "sha256_cert_fingerprints", prints)));
             }
         }
