@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -38,6 +39,7 @@ public class AdminAuthController {
     private final OtpService otpService;
     private final EmailService emailService;
     private final AdminPasscodeService passcodes;
+    private final AdminPasskeyService passkeys;
 
     @PostMapping("/login")
     public ResponseEntity<AdminLoginResponse> login(
@@ -225,12 +227,47 @@ public class AdminAuthController {
         user.setLocked(false);
         user.setLockedAt(null);
         user.setLockedBy(null);
-        user.setActive(true);
         user.setPinAttempts(0);
 
         repo.save(user);
 
         log.info("Admin recovery by passcode completed for {}", email);
+
+        return ResponseEntity.ok(issue(user));
+    }
+
+    /** Third recovery method: a passkey (the phone's screen lock). Step 1: a one-time challenge. */
+    @PostMapping("/recovery/passkey-options")
+    public ResponseEntity<Map<String, Object>> passkeyOptions(@RequestBody(required = false) PasskeyOptionsRequest r) {
+        User user = null;
+        if (r != null && r.email != null && !r.email.isBlank()) {
+            user = findAdminByEmailOrNull(r.email.trim().toLowerCase(Locale.ROOT));
+        }
+        return ResponseEntity.ok(passkeys.loginOptions(user));
+    }
+
+    /** Step 2: the signed answer. A valid signature restores access exactly like the email code does. */
+    @PostMapping("/recovery/verify-passkey")
+    public ResponseEntity<AdminLoginResponse> verifyRecoveryPasskey(
+            @Valid @RequestBody PasskeyVerifyRequest r
+    ) {
+        UUID adminId = passkeys.verifyLogin(r.challengeId, r.id, r.clientDataJSON, r.authenticatorData, r.signature);
+        User user = repo.findById(adminId)
+                .filter(this::isAdmin)
+                .orElseThrow(() -> new IllegalArgumentException("Passkey check failed. Try again, or use Email or a Passcode."));
+
+        user.setAdminRecoveryRequired(false);
+        user.setLoginFailedAttempts(0);
+        user.setLoginLockedUntil(null);
+        user.setLastLoginFailedAt(null);
+        user.setLocked(false);
+        user.setLockedAt(null);
+        user.setLockedBy(null);
+        user.setPinAttempts(0);
+
+        repo.save(user);
+
+        log.info("Admin recovery by passkey completed for {}", user.getEmail());
 
         return ResponseEntity.ok(issue(user));
     }
@@ -345,6 +382,31 @@ public class AdminAuthController {
 
         @NotBlank
         String passcode;
+    }
+
+    @Getter
+    @Setter
+    public static class PasskeyOptionsRequest {
+        String email;
+    }
+
+    @Getter
+    @Setter
+    public static class PasskeyVerifyRequest {
+        @NotBlank
+        String challengeId;
+
+        @NotBlank
+        String id;
+
+        @NotBlank
+        String clientDataJSON;
+
+        @NotBlank
+        String authenticatorData;
+
+        @NotBlank
+        String signature;
     }
 
     @Getter

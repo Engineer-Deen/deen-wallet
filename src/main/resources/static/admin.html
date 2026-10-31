@@ -2798,6 +2798,14 @@
                         <span class="arp-txt"><b>Passcode</b><small>Use one of your saved passcodes. No email needed</small></span>
                         <span class="arp-go">&#8250;</span>
                     </button>
+                    <button type="button" class="arp-card" id="arp-pick-passkey">
+                        <span class="arp-ico">&#128274;</span>
+                        <span class="arp-txt"><b>Passkey</b><small>Use your phone screen lock. Fastest, nothing to type</small></span>
+                        <span class="arp-go">&#8250;</span>
+                    </button>
+                </div>
+                <div id="arp-passkey" class="hidden">
+                    <button type="button" class="btn-primary" id="admin-verify-passkey-btn" style="width:100%;min-height:52px;">&#128274; Verify with passkey</button>
                 </div>
                 <div id="arp-email" class="hidden">
                     <button type="button" class="btn-outline recovery-btn" id="admin-send-otp-btn" style="width:100%;margin-bottom:8px;">✉ Send recovery code</button>
@@ -4316,10 +4324,38 @@
             // ==============================================================
             // ADMIN LOGIN + RECOVERY
             // ==============================================================
+            // ---- Passkeys (WebAuthn): helpers shared by the login card and the Change PIN screen ----
+            function pkB64u(buf) { var b = new Uint8Array(buf), s = ''; for (var i = 0; i < b.length; i++) s += String.fromCharCode(b[i]); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+            function pkFromB64u(s) { s = String(s).replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; var bin = atob(s), b = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i); return b.buffer; }
+            function pkSupported() { return !!(window.PublicKeyCredential && navigator.credentials && navigator.credentials.create && navigator.credentials.get); }
+            function pkErrorText(e) {
+                var n = e && e.name;
+                if (n === 'NotAllowedError') return 'The passkey was cancelled or timed out. Try again.';
+                if (n === 'InvalidStateError') return 'This device already has a passkey for your account.';
+                if (n === 'NotSupportedError' || n === 'SecurityError') return 'Passkeys are not available in this app or on this device yet. Use Email or a Passcode.';
+                return (e && e.message) || 'Passkey failed.';
+            }
+            async function pkCreate(opts) {
+                var o = JSON.parse(JSON.stringify(opts));
+                o.challenge = pkFromB64u(o.challenge); o.user.id = pkFromB64u(o.user.id);
+                (o.excludeCredentials || []).forEach(function (c) { c.id = pkFromB64u(c.id); });
+                var cred = await navigator.credentials.create({ publicKey: o });
+                if (!cred) throw new Error('No passkey was created.');
+                return { clientDataJSON: pkB64u(cred.response.clientDataJSON), attestationObject: pkB64u(cred.response.attestationObject) };
+            }
+            async function pkGet(opts) {
+                var o = JSON.parse(JSON.stringify(opts));
+                o.challenge = pkFromB64u(o.challenge);
+                (o.allowCredentials || []).forEach(function (c) { c.id = pkFromB64u(c.id); });
+                var cred = await navigator.credentials.get({ publicKey: o });
+                if (!cred) throw new Error('No passkey was chosen.');
+                return { id: pkB64u(cred.rawId), clientDataJSON: pkB64u(cred.response.clientDataJSON), authenticatorData: pkB64u(cred.response.authenticatorData), signature: pkB64u(cred.response.signature) };
+            }
+
             var arpMode = 'choose';
             function arpShow(mode) {
                 arpMode = mode;
-                ['choose', 'email', 'pass'].forEach(function (k) {
+                ['choose', 'email', 'pass', 'passkey'].forEach(function (k) {
                     var el = document.getElementById('arp-' + k);
                     if (el) el.classList.toggle('hidden', k !== mode);
                 });
@@ -4327,7 +4363,8 @@
                 if (back) back.classList.toggle('hidden', mode === 'choose');
                 var intro = document.getElementById('arp-intro');
                 if (intro) intro.textContent = mode === 'choose' ? 'Select a login method to verify your account.'
-                    : (mode === 'email' ? 'We will email you a one-time code.' : 'Enter one of the passcodes you saved.');
+                    : (mode === 'email' ? 'We will email you a one-time code.'
+                        : (mode === 'passkey' ? 'Use your screen lock (fingerprint, face or PIN).' : 'Enter one of the passcodes you saved.'));
             }
             function showAdminRecovery(message, mode) {
                 if (adminRecoveryPanel) adminRecoveryPanel.classList.remove('hidden');
@@ -4367,6 +4404,46 @@
                 } catch (e) { adminRecoveryMessage.textContent = e.message || 'Recovery failed.'; }
                 finally { btn.disabled = false; }
             }
+            async function verifyAdminRecoveryPasskey() {
+                var email = document.getElementById('admin-email').value.trim();
+                var btn = document.getElementById('admin-verify-passkey-btn');
+                if (!pkSupported()) { adminRecoveryMessage.textContent = 'Passkeys are not available on this device or app yet. Use Email or a Passcode.'; return; }
+                btn.disabled = true; adminRecoveryMessage.textContent = '';
+                try {
+                    var r1 = await fetch(API_BASE_URL + '/api/admin/auth/recovery/passkey-options', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email })
+                    });
+                    var d1 = {}; try { d1 = await r1.json(); } catch (_) {}
+                    if (!r1.ok) throw new Error(d1.message || 'Could not start the passkey check.');
+                    var answer = await pkGet(d1.options);
+                    answer.challengeId = d1.challengeId;
+                    var r2 = await fetch(API_BASE_URL + '/api/admin/auth/recovery/verify-passkey', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(answer)
+                    });
+                    var data = {}; try { data = await r2.json(); } catch (_) {}
+                    if (!r2.ok) throw new Error(data.message || 'Passkey check failed.');
+                    setToken(data.accessToken);
+                    setRefreshToken(data.refreshToken);
+                    pinDisabledForSession = false;
+                    var user = await adminApiRequest('/api/admin/me');
+                    currentAdminUser = user;
+                    currentUserRole = user.role || 'ADMIN';
+                    sessionStorage.setItem('deenwallet_admin_profile', JSON.stringify(user));
+                    adminRecoveryPanel.classList.add('hidden');
+                    arpShow('choose');
+                    loginScreen.classList.remove('active');
+                    mainScreen.classList.add('active');
+                    updateAdminSessionActive();
+                    showToast('Admin access restored.');
+                    loadDashboard(); loadWhatsApp(); loadUsers();
+                } catch (e) { adminRecoveryMessage.textContent = pkErrorText(e); }
+                finally { btn.disabled = false; }
+            }
+            (function () {
+                var pkPick = document.getElementById('arp-pick-passkey'), pkGo = document.getElementById('admin-verify-passkey-btn');
+                if (pkPick) pkPick.addEventListener('click', function () { adminRecoveryMessage.textContent = ''; arpShow('passkey'); });
+                if (pkGo) pkGo.addEventListener('click', verifyAdminRecoveryPasskey);
+            })();
             (function () {
                 var e1 = document.getElementById('arp-pick-email'), e2 = document.getElementById('arp-pick-pass'),
                     e3 = document.getElementById('arp-back'), e4 = document.getElementById('admin-verify-passcode-btn'),
@@ -8370,6 +8447,7 @@
                     </div>`;
 
                 adminPasscodeCard(content);
+                adminPasskeyCard(content);
                 document.getElementById('update-pin-btn').addEventListener('click', function () {
                     var newPin = document.getElementById('new-pin-input').value.trim();
                     var confirmPin = document.getElementById('confirm-pin-input').value.trim();
@@ -8387,6 +8465,61 @@
                         .catch(function(err){ errorEl.textContent=err.message || 'Failed to update PIN.'; show(errorEl); })
                         .finally(function(){ btn.disabled=false; btn.textContent='Update'; });
                 });
+            }
+
+            // Passkeys (up to 5): sign in with the phone's screen lock. Needs the account password to add or delete.
+            function adminPasskeyCard(content) {
+                var box = document.createElement('div');
+                box.className = 'admin-card';
+                box.innerHTML = '<div class="subscreen-card-icon">&#128274;</div>' +
+                    '<p class="admin-card-title">Passkeys</p>' +
+                    '<p class="admin-card-sub">Use your phone screen lock (fingerprint, face or PIN) to verify your account. Your phone can save the passkey in your Google account. You can keep up to 5.</p>' +
+                    '<div id="pk-list"><div class="loading-state"><div class="spinner"></div>Loading…</div></div>' +
+                    '<div id="pk-form" style="margin-top:10px;"></div>';
+                content.appendChild(box);
+                var list = box.querySelector('#pk-list'), form = box.querySelector('#pk-form');
+                function fmt(d) { try { return d ? new Date(d).toLocaleDateString() : ''; } catch (e) { return ''; } }
+                function load() {
+                    adminApiRequest('/api/admin/passkeys').then(function (r) {
+                        var items = (r && r.items) || [], max = (r && r.max) || 5;
+                        list.innerHTML = items.length ? items.map(function (p) {
+                            return '<div class="pc-row"><div class="pc-name">' + escapeHtml(p.label) + '<small>Added ' + escapeHtml(fmt(p.createdAt)) + (p.lastUsedAt ? ' · last used ' + escapeHtml(fmt(p.lastUsedAt)) : '') + '</small></div>' +
+                                '<button type="button" class="pc-del" data-id="' + escapeHtml(p.id) + '">Delete</button></div>';
+                        }).join('') : '<p class="admin-card-sub" style="margin:0;">No passkeys yet.</p>';
+                        var full = items.length >= max;
+                        form.innerHTML = (full ? '<p class="admin-card-sub" style="margin:0 0 8px;">You have all ' + max + ' passkeys. Delete one to add another.</p>'
+                                : '<input class="dw-field" id="pk-label" maxlength="40" placeholder="Name, e.g. My phone" />') +
+                            '<input class="dw-field" id="pk-pass" type="password" autocomplete="current-password" placeholder="Your account password" />' +
+                            '<div id="pk-err" class="pin-error hidden"></div>' +
+                            (full ? '' : '<button type="button" class="btn-primary" id="pk-add" style="width:100%;min-height:48px;">Add a passkey on this device (' + items.length + '/' + max + ')</button>');
+                        list.querySelectorAll('.pc-del').forEach(function (b) {
+                            b.addEventListener('click', function () {
+                                var pwEl = form.querySelector('#pk-pass'), pw = pwEl ? pwEl.value : '';
+                                if (!pw) { showToast('Type your account password in the box below, then tap Delete.'); if (pwEl) pwEl.focus(); return; }
+                                adminApiRequest('/api/admin/passkeys/' + b.dataset.id + '/delete', { method: 'POST', body: { password: pw } })
+                                    .then(function () { showToast('Passkey deleted.'); load(); })
+                                    .catch(function (e) { showToast(e.message || 'Could not delete.'); });
+                            });
+                        });
+                        var add = form.querySelector('#pk-add');
+                        if (add) add.addEventListener('click', async function () {
+                            var err = form.querySelector('#pk-err'); hide(err);
+                            var pw = form.querySelector('#pk-pass').value;
+                            if (!pkSupported()) { err.textContent = 'Passkeys are not available on this device or app yet.'; show(err); return; }
+                            if (!pw) { err.textContent = 'Enter your account password.'; show(err); return; }
+                            add.disabled = true;
+                            try {
+                                var start = await adminApiRequest('/api/admin/passkeys/register/options', { method: 'POST', body: { password: pw } });
+                                var att = await pkCreate(start.options);
+                                await adminApiRequest('/api/admin/passkeys/register/finish', { method: 'POST', body: {
+                                    challengeId: start.challengeId, label: form.querySelector('#pk-label').value,
+                                    clientDataJSON: att.clientDataJSON, attestationObject: att.attestationObject } });
+                                showToast('Passkey added.'); load();
+                            } catch (e) { err.textContent = (e && e.name && e.name !== 'Error') ? pkErrorText(e) : (e.message || 'Could not add the passkey.'); show(err); add.disabled = false; }
+                        });
+                    }).catch(function (e) { list.innerHTML = '<div class="error-state">' + escapeHtml(e.message || 'Could not load passkeys.') + '</div>'; });
+                }
+                load();
             }
 
             // Recovery passcodes (up to 5): a second way back in when the email code is not possible.

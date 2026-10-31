@@ -114,6 +114,7 @@ public class SecurityConfig {
                                 "/api/auth/biometric/login",
                                 "/icon-192.png",
                                 "/dw-agent.py",
+                                "/.well-known/assetlinks.json",
                                 "/api/monitor/agent/report"
                         ).permitAll()
 
