@@ -290,12 +290,18 @@
     /* ---------- Receipt detail screen ---------- */
     .receipt-page {
       flex: 1;
+      min-height: 0;
       background: var(--bg);
-      padding: 20px;
+      padding: 20px 20px 32px;
       display: flex;
       flex-direction: column;
       overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
     }
+
+    /* Children keep their full height and the page scrolls, instead of the card being squeezed and cut off. */
+    .receipt-page > * { flex-shrink: 0; }
 
     .receipt-back {
       background: none;

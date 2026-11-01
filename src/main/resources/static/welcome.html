@@ -775,6 +775,17 @@ img, svg, video, canvas { max-width:100%; height:auto; }
     window.setTimeout(function () { phone.classList.remove('press'); }, 3150);
   })();
 </script>
+<script>
+(function () {
+  try {
+    fetch('/api/app/support-whatsapp', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+      var digits = d && String(d.whatsappNumber || '').replace(/\D/g, '');
+      if (!digits) return;
+      document.querySelectorAll('a[href*="wa.me/"]').forEach(function (a) { a.setAttribute('href', a.getAttribute('href').replace(/wa\.me\/\d*/, 'wa.me/' + digits)); });
+    }).catch(function () { });
+  } catch (e) { }
+})();
+</script>
 </body>
 
 </html>

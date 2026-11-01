@@ -683,7 +683,7 @@
             width: 42px;
             height: 42px;
             flex: 0 0 42px;
-            border-radius: 12px;
+            border-radius: 50%;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -3622,7 +3622,7 @@
 
                 <a class="support-channel" href="https://wa.me/23280613600" target="_blank" rel="noopener noreferrer">
                     <span class="support-channel-icon">&#128222;</span>
-                    <span class="support-channel-copy"><strong>WhatsApp Support</strong><small>+232 806 13600</small></span>
+                    <span class="support-channel-copy"><strong>WhatsApp Support</strong><small data-support-wa-text>+232 806 13600</small></span>
                     <span class="support-channel-arrow">&#8250;</span>
                 </a>
 
@@ -4238,7 +4238,7 @@
             lockedWhatsappBtn.addEventListener('click', function (e) {
                 e.stopPropagation();
                 e.preventDefault();
-                const number = '+23280613600';
+                const number = (typeof getSupportWhatsApp === 'function' ? getSupportWhatsApp() : '+23280613600');
                 const cleanNumber = number.replace(/[^0-9+]/g, '');
                 window.open('https://wa.me/' + cleanNumber, '_blank');
             });
@@ -6295,7 +6295,17 @@
                 logo.textContent = '';
                 logo.classList.add('has-img');
                 // Small icons are drawn small and centred instead of stretched.
-                img.style.padding = url.startsWith('/assets/') ? '4px' : (img.naturalWidth < 48 ? '10px' : '6px');
+                if (url.startsWith('/assets/')) {
+                    // The brand pictures are full squares: fill the round badge edge to edge.
+                    img.style.padding = '0';
+                    img.style.objectFit = 'cover';
+                    img.style.transform = 'scale(.97)';
+                    img.style.background = 'transparent';
+                    const brand = { 'orange-money': '#060807', 'africell': '#A11776' }[slug];
+                    if (brand) { logo.style.background = brand; logo.style.borderColor = brand; }
+                } else {
+                    img.style.padding = img.naturalWidth < 48 ? '10px' : '6px';
+                }
                 logo.appendChild(img);
             };
             img.onload = show;
@@ -8294,7 +8304,7 @@
     var KEY = 'deenwallet_my_photo';
     var cur = null;
     var st = document.createElement('style');
-    st.textContent = '.has-photo{background-size:cover !important;background-position:center !important;background-repeat:no-repeat !important;color:transparent !important;}' +
+    st.textContent = '.has-photo{background-size:cover !important;background-position:center !important;background-repeat:no-repeat !important;background-origin:border-box !important;background-clip:border-box !important;background-color:transparent !important;border-color:transparent !important;color:transparent !important;}' +
         '.account-avatar{position:relative;cursor:pointer;}' +
         '#profile-avatar::after{content:"\\270E";position:absolute;right:-4px;bottom:-4px;width:24px;height:24px;border-radius:50%;background:var(--primary);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;}' +
         '.dw-ph-link{display:inline-block;margin-top:6px;margin-right:12px;padding:0;border:0;background:none;color:#fff;font-size:12px;font-weight:700;text-decoration:underline;cursor:pointer;opacity:.95;}';

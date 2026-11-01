@@ -1582,9 +1582,41 @@ async function fetchProviderConfig() {
   }
 }
 
+// The support WhatsApp number is set by an admin (Support tab) and kept on the server.
+// The last value is remembered so pages show it at once; it is refreshed on every load.
 function getSupportWhatsApp() {
-  return '+23280613600';
+  return window.DEENWALLET_SUPPORT_WHATSAPP || '+23280613600';
 }
+
+function dwApplySupportWhatsApp(number) {
+  const digits = String(number || '').replace(/\D/g, '');
+  if (!digits) return;
+  window.DEENWALLET_SUPPORT_WHATSAPP = '+' + digits;
+  try {
+    document.querySelectorAll('a[href*="wa.me/"]').forEach((a) => {
+      a.setAttribute('href', a.getAttribute('href').replace(/wa\.me\/\d*/, 'wa.me/' + digits));
+    });
+    const pretty = /^232\d{8}$/.test(digits) ? '+232 ' + digits.slice(3, 6) + ' ' + digits.slice(6) : '+' + digits;
+    document.querySelectorAll('[data-support-wa-text]').forEach((el) => { el.textContent = pretty; });
+  } catch (_) { /* cosmetic only */ }
+}
+
+(function loadSupportWhatsApp() {
+  const KEY = 'deenwallet_support_whatsapp';
+  try { const saved = localStorage.getItem(KEY); if (saved) window.DEENWALLET_SUPPORT_WHATSAPP = saved; } catch (_) { /* optional */ }
+  const run = () => {
+    dwApplySupportWhatsApp(window.DEENWALLET_SUPPORT_WHATSAPP);
+    fetch(DEENWALLET_CONFIG.API_BASE_URL + '/api/app/support-whatsapp', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!d || !d.whatsappNumber) return;
+        try { localStorage.setItem(KEY, d.whatsappNumber); } catch (_) { /* optional */ }
+        dwApplySupportWhatsApp(d.whatsappNumber);
+      })
+      .catch(() => { /* keep the remembered number */ });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run); else run();
+})();
 
 async function checkUserLocked() {
   try {

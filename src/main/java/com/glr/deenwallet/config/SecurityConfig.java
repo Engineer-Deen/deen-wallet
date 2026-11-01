@@ -105,6 +105,7 @@ public class SecurityConfig {
                                 "/api/errors",
                                 "/api/app/version",
                                 "/api/app/android-update",
+                                "/api/app/support-whatsapp",
                                 "/api/app/admin-android-update",
                                 "/api/app/admin-android-update/authorize",
                                 "/api/app/admin-android-update/download",

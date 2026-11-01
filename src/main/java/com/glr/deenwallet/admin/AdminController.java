@@ -51,6 +51,7 @@ public class AdminController {
     private final NotificationService notificationService;
     private final PushNotificationService pushNotificationService;
     private final com.glr.deenwallet.user.AccountDeletionService accountDeletion;
+    private final com.glr.deenwallet.settings.SupportContactService supportContact;
 
     @Value("${app.support.whatsapp:+23280613600}")
     private String supportWhatsApp;
@@ -684,13 +685,14 @@ public class AdminController {
     @GetMapping("/support/whatsapp")
     public ResponseEntity<SupportWhatsAppResponse> getSupportWhatsApp() {
         validateAdmin();
-        return ResponseEntity.ok(new SupportWhatsAppResponse(supportWhatsApp));
+        return ResponseEntity.ok(new SupportWhatsAppResponse(supportContact.getWhatsapp()));
     }
 
     @PutMapping("/support/whatsapp")
     public ResponseEntity<Void> updateSupportWhatsApp(@RequestBody SupportWhatsAppRequest request) {
         validateAdmin();
-        log.info("WhatsApp number updated to: {}", request.getWhatsappNumber());
+        String saved = supportContact.setWhatsapp(request.getWhatsappNumber());
+        log.info("WhatsApp number updated to: {}", saved);
         return ResponseEntity.noContent().build();
     }
 

@@ -8440,7 +8440,7 @@
             var dwPh = { idx: null, idxAt: 0, cache: {}, busy: false, again: false, timer: null };
             (function () {
                 var st = document.createElement('style');
-                st.textContent = '.has-photo{background-size:cover !important;background-position:center !important;background-repeat:no-repeat !important;color:transparent !important;}' +
+                st.textContent = '.has-photo{background-size:cover !important;background-position:center !important;background-repeat:no-repeat !important;background-origin:border-box !important;background-clip:border-box !important;background-color:transparent !important;border-color:transparent !important;color:transparent !important;}' +
                     '.item-avatar.mini{display:inline-flex;width:26px;height:26px;font-size:12px;margin-right:8px;vertical-align:middle;}' +
                     '.dw-ph-edit{position:relative;cursor:pointer;}' +
                     '.dw-ph-cam{position:absolute;right:-3px;bottom:-3px;width:24px;height:24px;border-radius:50%;background:var(--primary);color:#fff !important;font-size:12px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;}' +
