@@ -963,9 +963,14 @@ public class TransactionService {
                 transactionRepository.findByMonimePayoutIdForUpdate(payoutId);
 
         if (maybeTransaction.isEmpty()) {
+            if (safety.payoutIsOurs(payoutId)) {
+                log.info("payout.completed for {} belongs to a refund or an admin withdrawal; nothing to do here", payoutId);
+                return;
+            }
             log.warn("Received payout.completed for unknown payout {}", payoutId);
-            safety.alertOnce("unknown-payout:" + payoutId, "UNKNOWN_PAYOUT", "Payout we do not know about",
-                    "The payment provider reported payout " + payoutId + " as completed but it is not linked to any transfer here. Check the Monime dashboard.");
+            safety.alertOnce("unknown-payout:" + payoutId, "UNKNOWN_PAYOUT", "Unknown payout completed",
+                    "Monime says a payout was completed, but it is not one of our transfers, refunds or withdrawals. "
+                            + "If you did not send it yourself, check the Monime dashboard. Reference: " + payoutId);
             return;
         }
 
@@ -1068,9 +1073,14 @@ public class TransactionService {
                 transactionRepository.findByMonimePayoutIdForUpdate(payoutId);
 
         if (maybeTransaction.isEmpty()) {
+            if (safety.payoutIsOurs(payoutId)) {
+                log.info("payout.failed for {} belongs to a refund or an admin withdrawal; nothing to do here", payoutId);
+                return;
+            }
             log.warn("Received payout.failed for unknown payout {}", payoutId);
-            safety.alertOnce("unknown-payout:" + payoutId, "UNKNOWN_PAYOUT", "Payout we do not know about",
-                    "The payment provider reported payout " + payoutId + " as failed but it is not linked to any transfer here. Check the Monime dashboard.");
+            safety.alertOnce("unknown-payout:" + payoutId, "UNKNOWN_PAYOUT", "Unknown payout failed",
+                    "Monime says a payout failed, but it is not one of our transfers, refunds or withdrawals. "
+                            + "If you did not send it yourself, check the Monime dashboard. Reference: " + payoutId);
             return;
         }
 

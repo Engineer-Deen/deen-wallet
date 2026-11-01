@@ -216,6 +216,30 @@ public class MoneySafetyService {
         }
     }
 
+    /**
+     * True when this payout id belongs to something we sent: a customer transfer, a refund or an admin wallet withdrawal.
+     * The provider's notice can arrive a moment before we have saved the payout id, so it looks again a couple of times.
+     */
+    public boolean payoutIsOurs(String payoutId) {
+        if (payoutId == null || payoutId.isBlank()) return false;
+        for (int i = 0; i < 3; i++) {
+            try {
+                long n = ((Number) em.createNativeQuery(
+                        "SELECT (SELECT COUNT(*) FROM transactions WHERE monime_payout_id = :p OR refund_payout_id = :p) "
+                                + "+ (SELECT COUNT(*) FROM wallet_withdrawals WHERE monime_payout_id = :p)")
+                        .setParameter("p", payoutId).getSingleResult()).longValue();
+                if (n > 0) return true;
+            } catch (RuntimeException e) {
+                log.warn("Could not check payout {}: {}", payoutId, e.toString());
+                return true;   // when unsure, do not raise a false alarm
+            }
+            if (i < 2) {
+                try { Thread.sleep(2000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
+            }
+        }
+        return false;
+    }
+
     private long count(String sql) {
         return ((Number) em.createNativeQuery(sql).getSingleResult()).longValue();
     }

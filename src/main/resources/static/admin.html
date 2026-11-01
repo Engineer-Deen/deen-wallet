@@ -310,13 +310,14 @@
         .nt-list::-webkit-scrollbar { width: 6px; }
         .nt-list::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
         .nt-list::-webkit-scrollbar-thumb { background: #C5D0D6; border-radius: 6px; }
-        .nt-item { display: flex; gap: 10px; width: 100%; margin-top: 8px; padding: 12px; border: 0; border-radius: 12px; background: #F3F6F8; font-family: inherit; text-align: left; cursor: pointer; }
-        .nt-item.unread { background: #E3F3F6; }
+        .nt-item { display: flex; gap: 10px; width: 100%; margin-top: 8px; padding: 14px; border: 1px solid #DCE5EA; border-radius: 12px; background: #FFFFFF; font-family: inherit; text-align: left; cursor: pointer; }
+        .nt-item > span:last-child { min-width: 0; flex: 1 1 auto; }
+        .nt-item.unread { background: #FFFFFF; border-color: #1C7A91; box-shadow: inset 4px 0 0 #1C7A91; }
         .nt-dot { flex: 0 0 auto; width: 9px; height: 9px; margin-top: 6px; border-radius: 50%; background: transparent; }
         .nt-item.unread .nt-dot { background: var(--primary); }
-        .nt-title { font-size: 14px; font-weight: 800; color: var(--text); }
-        .nt-msg { margin-top: 2px; font-size: 13px; line-height: 1.45; color: var(--muted); word-break: break-word; }
-        .nt-time { margin-top: 4px; font-size: 11px; color: var(--muted); }
+        .nt-title { font-size: 15px; line-height: 1.3; font-weight: 800; color: #0B1A20; }
+        .nt-msg { margin-top: 4px; font-size: 14px; line-height: 1.5; color: #2A3B42; overflow-wrap: anywhere; }
+        .nt-time { margin-top: 6px; font-size: 12px; color: #55656C; }
         .nt-pop { position: fixed; left: 12px; right: 12px; top: calc(10px + env(safe-area-inset-top, 0px)); z-index: 400; max-width: 520px; margin: 0 auto; padding: 12px 14px; border-radius: 14px; background: #12343D; color: #fff; box-shadow: 0 10px 30px rgba(0, 0, 0, .35); cursor: pointer; transform: translateY(-160%); transition: transform .25s ease; }
         .nt-pop.show { transform: translateY(0); }
         .nt-pop strong { display: block; font-size: 14px; }
