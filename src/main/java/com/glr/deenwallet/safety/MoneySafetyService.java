@@ -63,6 +63,14 @@ public class MoneySafetyService {
     @Value("${app.safety.verify-cash-in:true}")
     private boolean verifyCashIn;
 
+    /** Stop a payout when the provider's amount differs from ours (off by default: it then only alerts). */
+    @Value("${app.safety.block-on-amount-mismatch:false}")
+    private boolean blockOnAmountMismatch;
+
+    public boolean blockOnAmountMismatch() {
+        return blockOnAmountMismatch;
+    }
+
     private final Map<String, Instant> alertSeen = new ConcurrentHashMap<>();
 
     public record Status(boolean frozen, String reason, Instant changedAt, long maxSingleMinor, long maxDailyMinor) { }

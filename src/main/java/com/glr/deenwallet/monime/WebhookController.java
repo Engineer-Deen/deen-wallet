@@ -62,6 +62,7 @@ public class WebhookController {
         // acknowledge an event whose financial work had not completed.
         switch (name) {
             case "payment_code.processed" -> tx.handlePaymentCodeProcessed(resource);
+            case "payment_code.completed" -> tx.handlePaymentCodeCompleted(resource);
             case "payment_code.failed", "payment_code.expired", "payment_code.canceled" ->
                     tx.handlePaymentCodeFailed(resource, reason);
             case "payout.completed" -> tx.handlePayoutCompleted(resource);

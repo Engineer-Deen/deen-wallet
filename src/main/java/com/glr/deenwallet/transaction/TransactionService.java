@@ -539,7 +539,7 @@ public class TransactionService {
             return; // unknown => never cancel
         }
         String status = code == null || code.status() == null ? "" : code.status().toLowerCase();
-        if (status.equals("processed")) {
+        if (status.equals("processed") || status.equals("completed")) {
             log.warn("Recovered missed payment_code.processed webhook for payment code {}", paymentCodeId);
             handlePaymentCodeProcessed(paymentCodeId);
         } else if (status.equals("expired") || status.equals("cancelled") || status.equals("canceled") || status.equals("failed")) {
@@ -581,6 +581,18 @@ public class TransactionService {
      * If the app dies between 1 and 3 the row stays PAID_IN with no payout id, and the expiry
      * scheduler resumes it after 120 s. Ambiguous Monime errors are rethrown so the webhook is retried.
      */
+    /**
+     * Monime also announces a paid payment code as payment_code.completed. Same handling as processed, but an id that
+     * matches no transfer is only logged (it may not be a payment code id), so it cannot raise a false alarm.
+     */
+    public void handlePaymentCodeCompleted(String resourceId) {
+        if (transactionRepository.findByMonimePaymentCodeId(resourceId).isEmpty()) {
+            log.info("payment_code.completed for {} does not match a transfer; ignored", resourceId);
+            return;
+        }
+        handlePaymentCodeProcessed(resourceId);
+    }
+
     public void handlePaymentCodeProcessed(String paymentCodeId) {
         if (!confirmPaymentWithProvider(paymentCodeId)) return;
         PayoutJob job = transactionTemplate.execute(st -> preparePayout(paymentCodeId));
@@ -623,7 +635,11 @@ public class TransactionService {
                             + st + ". Nothing was sent. Check the Monime dashboard.");
             return false;
         }
-        if (!st.equals("processed")) {
+        log.info("Cash-in check for {}: provider status={}, provider amount={}, expected {}",
+                t.getTransactionCode(), st.isEmpty() ? "unknown" : st,
+                code == null || code.amount() == null ? "none" : code.amount().value() + " " + code.amount().currency(),
+                t.getTotalChargedValue());
+        if (!st.equals("processed") && !st.equals("completed")) {
             throw new IllegalStateException("The payment provider does not yet confirm payment for transfer "
                     + t.getTransactionCode() + " (status: " + (st.isEmpty() ? "unknown" : st) + "); will retry.");
         }
@@ -632,10 +648,17 @@ public class TransactionService {
         boolean wrongCurrency = paid != null && paid.currency() != null && t.getAmountCurrency() != null
                 && !paid.currency().equalsIgnoreCase(t.getAmountCurrency());
         if (wrongAmount || wrongCurrency) {
-            safety.alertOnce("amount:" + t.getId(), "PAYMENT_AMOUNT_MISMATCH", "Payment amount does not match",
-                    "Transfer " + t.getTransactionCode() + ": the payment provider shows a different amount than the "
-                            + display(t.getTotalChargedValue()) + " we asked for. Nothing was sent. Check the Monime dashboard.");
-            return false;
+            String shown = paid.value() + " " + paid.currency();
+            if (safety.blockOnAmountMismatch()) {
+                safety.alertOnce("amount:" + t.getId(), "PAYMENT_AMOUNT_MISMATCH", "Payment amount does not match",
+                        "Transfer " + t.getTransactionCode() + ": the payment provider shows " + shown + " but we asked for "
+                                + t.getTotalChargedValue() + ". Nothing was sent. Check the Monime dashboard.");
+                return false;
+            }
+            // The provider confirmed the payment; the payout amount comes from our own record. Note it for the admins.
+            safety.alertOnce("amount:" + t.getId(), "PAYMENT_AMOUNT_NOTE", "Payment amount differs",
+                    "Transfer " + t.getTransactionCode() + ": the payment provider shows " + shown + " but we asked for "
+                            + t.getTotalChargedValue() + ". The payment is confirmed and the payout was sent. Please check it in Monime.");
         }
         return true;
     }
