@@ -8683,6 +8683,48 @@
                 }
             }
 
+            function adminFreezeCard(content) {
+                var box = document.createElement('div');
+                box.className = 'admin-card';
+                box.innerHTML = '<div class="subscreen-card-icon">&#10052;</div>' +
+                    '<p class="admin-card-title">Emergency freeze</p>' +
+                    '<p class="admin-card-sub" id="fz-sub">Checking…</p>' +
+                    '<div class="pin-change-form" id="fz-form"></div>';
+                content.appendChild(box);
+                var sub = box.querySelector('#fz-sub'), form = box.querySelector('#fz-form');
+                function sle(minor) { try { return 'SLE ' + (Number(minor) / 100).toLocaleString(undefined, { maximumFractionDigits: 2 }); } catch (e) { return String(minor); } }
+                function paint(s) {
+                    var frozen = !!(s && s.frozen);
+                    var limits = s ? ' Withdrawal limits: ' + sle(s.maxSingleMinor) + ' each, ' + sle(s.maxDailyMinor) + ' per 24 hours per admin.' : '';
+                    if (frozen) {
+                        sub.textContent = 'ALL MONEY MOVEMENT IS FROZEN. Customers cannot start new transfers and no payout, refund or withdrawal is sent. Money already collected is kept safe and is paid out after a super admin resumes.' + (s.reason ? ' Reason: ' + s.reason : '');
+                    } else {
+                        sub.textContent = 'If you suspect a break-in or something looks wrong, freeze everything at once. Customers cannot start new transfers and no payout, refund or withdrawal is sent until a super admin resumes.' + limits;
+                    }
+                    form.innerHTML = '';
+                    if (frozen && !isSuperAdmin()) {
+                        var p = document.createElement('p'); p.className = 'admin-card-sub'; p.textContent = 'Only a super admin can resume.'; form.appendChild(p); return;
+                    }
+                    var reason = null;
+                    if (!frozen) {
+                        reason = document.createElement('input'); reason.className = 'dw-field'; reason.placeholder = 'Reason (optional)'; reason.maxLength = 300; form.appendChild(reason);
+                    }
+                    var pin = document.createElement('input'); pin.className = 'dw-field'; pin.type = 'password'; pin.inputMode = 'numeric'; pin.maxLength = 4; pin.placeholder = 'Your 4-digit PIN'; pin.autocomplete = 'off'; pin.style.marginTop = '10px'; form.appendChild(pin);
+                    var err = document.createElement('div'); err.className = 'pin-error hidden'; err.style.marginTop = '8px'; form.appendChild(err);
+                    var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'btn-sm ' + (frozen ? 'success' : 'danger'); btn.style.marginTop = '12px';
+                    btn.textContent = frozen ? 'Resume money movement' : 'Freeze all money movement'; form.appendChild(btn);
+                    btn.addEventListener('click', function () {
+                        hide(err);
+                        if (!/^\d{4}$/.test(pin.value)) { err.textContent = 'Enter your 4-digit PIN.'; show(err); return; }
+                        btn.disabled = true;
+                        adminApiRequest('/api/admin/safety/freeze', { method: 'POST', body: { frozen: !frozen, pin: pin.value, reason: reason ? reason.value : '' } })
+                            .then(function (r) { showToast(r && r.frozen ? 'Money movement frozen.' : 'Money movement resumed.'); paint(r); })
+                            .catch(function (e) { btn.disabled = false; err.textContent = (e && e.message) || 'Could not change it.'; show(err); });
+                    });
+                }
+                adminApiRequest('/api/admin/safety/freeze').then(paint).catch(function () { sub.textContent = 'Could not load the freeze status.'; });
+            }
+
             function renderPinScreen() {
                 var content = document.getElementById('pin-content');
                 content.innerHTML = `
@@ -8705,6 +8747,7 @@
                 adminLockMethodCard(content);
                 adminPasscodeCard(content);
                 adminPasskeyCard(content);
+                adminFreezeCard(content);
                 document.getElementById('update-pin-btn').addEventListener('click', function () {
                     var newPin = document.getElementById('new-pin-input').value.trim();
                     var confirmPin = document.getElementById('confirm-pin-input').value.trim();

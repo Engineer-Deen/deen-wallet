@@ -68,6 +68,7 @@ public class TransactionService {
     private final WaecFulfillmentService waecFulfillmentService;
     private final WaecPricing waecPricing;
     private final com.glr.deenwallet.kyc.KycLimitService kycLimits;
+    private final com.glr.deenwallet.safety.MoneySafetyService safety;
 
     // ---- Abuse / velocity limits. SET THESE TO YOUR REAL COMPLIANCE LIMITS BEFORE LAUNCH. ----
     private static final int MAX_PENDING_PER_USER = 3;
@@ -85,6 +86,7 @@ public class TransactionService {
     // INITIATION GUARDS (account state, providers, spam, velocity, double-tap)
     // ==============================================================
     private void requireUsableUser(UUID userId) {
+        safety.requireOpenForCustomers();
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         if (!user.isActive()) throw new IllegalStateException("Account is inactive. Please contact support.");
@@ -486,6 +488,7 @@ public class TransactionService {
             }
         }
         resumeInterruptedPayouts(now);
+        if (safety.isFrozen()) return;   // frozen: money already collected waits until a super admin resumes
         // Money collected but the payout step was interrupted (e.g. Monime outage): resume it.
         for (Transaction t : transactionRepository.findByStatusAndCreatedAtBefore(
                 TransactionStatus.PAID_IN, now.minusSeconds(120), PageRequest.of(0, 50))) {
@@ -502,6 +505,7 @@ public class TransactionService {
 
     /** An admin resend that was interrupted (timeout / crash) leaves PAYING_OUT with no payout id. Same key => safe retry. */
     private void resumeInterruptedPayouts(Instant now) {
+        if (safety.isFrozen()) return;
         for (Transaction t : transactionRepository.findByStatusAndCreatedAtBefore(
                 TransactionStatus.PAYING_OUT, now.minusSeconds(120), PageRequest.of(0, 50))) {
             if (t.getMonimePayoutId() != null) continue;
@@ -578,12 +582,70 @@ public class TransactionService {
      * scheduler resumes it after 120 s. Ambiguous Monime errors are rethrown so the webhook is retried.
      */
     public void handlePaymentCodeProcessed(String paymentCodeId) {
+        if (!confirmPaymentWithProvider(paymentCodeId)) return;
         PayoutJob job = transactionTemplate.execute(st -> preparePayout(paymentCodeId));
         if (job == null) return;
 
         PayoutOutcome outcome = callMonimePayout(job);
 
         transactionTemplate.executeWithoutResult(st -> recordPayoutOutcome(paymentCodeId, outcome));
+    }
+
+    /**
+     * Defence in depth: a webhook, even a correctly signed one, is not enough to send money out. The payment
+     * code is read back from the payment provider and the payout only goes ahead when the provider itself says
+     * it was paid, for exactly the amount we asked to collect. Returns false = do nothing now (an alert was raised).
+     * Throws when the provider cannot answer yet, so the webhook is retried and the scheduler keeps trying.
+     * Not @Transactional on purpose: it calls the provider.
+     */
+    private boolean confirmPaymentWithProvider(String paymentCodeId) {
+        Transaction t = transactionRepository.findByMonimePaymentCodeId(paymentCodeId).orElse(null);
+        if (t == null) {
+            safety.alertOnce("unmatched:" + paymentCodeId, "UNMATCHED_PAYMENT", "Payment with no matching transfer",
+                    "The payment provider reports a payment for payment code " + paymentCodeId
+                            + " but there is no transfer for it here. Check the Monime dashboard.");
+            return false;
+        }
+        TransactionStatus s = t.getStatus();
+        boolean actionable = s == TransactionStatus.AWAITING_PAYMENT || s == TransactionStatus.PAID_IN
+                || s == TransactionStatus.CANCELED
+                || (s == TransactionStatus.FAILED && t.getPaidInAt() == null && t.getMonimePayoutId() == null);
+        if (!actionable) return true;                                   // a repeat of something already handled
+        if (s == TransactionStatus.PAID_IN && t.getMonimePayoutId() != null) return true;
+        if (s == TransactionStatus.PAID_IN && safety.isFrozen()) return false;   // money is in; waiting for the freeze to end
+        if (!safety.verifyCashInEnabled()) return true;
+
+        PaymentCodeResult code = monimeClient.getPaymentCode(paymentCodeId);   // a failure here is retried
+        String st = code == null || code.status() == null ? "" : code.status().toLowerCase();
+        if (st.equals("failed") || st.equals("expired") || st.equals("cancelled") || st.equals("canceled")) {
+            safety.alertOnce("notconfirmed:" + t.getId(), "PAYMENT_NOT_CONFIRMED", "Payment not confirmed",
+                    "Transfer " + t.getTransactionCode() + " was reported as paid, but the payment provider says the payment code is "
+                            + st + ". Nothing was sent. Check the Monime dashboard.");
+            return false;
+        }
+        if (!st.equals("processed")) {
+            throw new IllegalStateException("The payment provider does not yet confirm payment for transfer "
+                    + t.getTransactionCode() + " (status: " + (st.isEmpty() ? "unknown" : st) + "); will retry.");
+        }
+        Money paid = code.amount();
+        boolean wrongAmount = paid != null && paid.value() != t.getTotalChargedValue();
+        boolean wrongCurrency = paid != null && paid.currency() != null && t.getAmountCurrency() != null
+                && !paid.currency().equalsIgnoreCase(t.getAmountCurrency());
+        if (wrongAmount || wrongCurrency) {
+            safety.alertOnce("amount:" + t.getId(), "PAYMENT_AMOUNT_MISMATCH", "Payment amount does not match",
+                    "Transfer " + t.getTransactionCode() + ": the payment provider shows a different amount than the "
+                            + display(t.getTotalChargedValue()) + " we asked for. Nothing was sent. Check the Monime dashboard.");
+            return false;
+        }
+        return true;
+    }
+
+    /** A payout must never be larger than what was collected from the customer. */
+    private static boolean payoutAmountsConsistent(Transaction t) {
+        Long amount = t.getAmountValue();
+        Long total = t.getTotalChargedValue();
+        Long fee = t.getFeeValue();
+        return amount != null && total != null && amount > 0 && amount + (fee == null ? 0L : fee) <= total;
     }
 
     /** What step 2 needs. Plain data: no entity, so nothing depends on an open transaction. */
@@ -639,6 +701,16 @@ public class TransactionService {
             completeWaecPurchase(transaction);
             return null;
         }
+        if (safety.isFrozen()) {
+            log.warn("Payout for {} is on hold: money movement is frozen", transaction.getTransactionCode());
+            return null;   // stays PAID_IN; the scheduler resumes it after a super admin resumes
+        }
+        if (!payoutAmountsConsistent(transaction)) {
+            safety.alertOnce("guard:" + transaction.getId(), "PAYOUT_GUARD", "Payout blocked by a safety check",
+                    "Transfer " + transaction.getTransactionCode() + " has amounts that do not add up. Nothing was sent. Check it before doing anything.");
+            moveToPayoutFailed(transaction, "This transfer failed an internal safety check and was not sent. Support is looking at it.");
+            return null;
+        }
 
         // The payout is idempotent (key payout-{transactionId}), so resuming is always safe.
         CreatePayoutRequest payoutRequest;
@@ -663,6 +735,9 @@ public class TransactionService {
 
     /** Step 2. NO transaction. Same error rules as submitPayout: ambiguous outcomes are rethrown. */
     private PayoutOutcome callMonimePayout(PayoutJob job) {
+        if (safety.isFrozen()) {
+            throw new IllegalStateException("Money movement is paused; the payout will be sent after it resumes.");
+        }
         try {
             PayoutResult payout = monimeClient.createPayout(job.request(), job.key());
             if (payout == null || payout.id() == null || payout.id().isBlank()) {
@@ -866,6 +941,8 @@ public class TransactionService {
 
         if (maybeTransaction.isEmpty()) {
             log.warn("Received payout.completed for unknown payout {}", payoutId);
+            safety.alertOnce("unknown-payout:" + payoutId, "UNKNOWN_PAYOUT", "Payout we do not know about",
+                    "The payment provider reported payout " + payoutId + " as completed but it is not linked to any transfer here. Check the Monime dashboard.");
             return;
         }
 
@@ -969,6 +1046,8 @@ public class TransactionService {
 
         if (maybeTransaction.isEmpty()) {
             log.warn("Received payout.failed for unknown payout {}", payoutId);
+            safety.alertOnce("unknown-payout:" + payoutId, "UNKNOWN_PAYOUT", "Payout we do not know about",
+                    "The payment provider reported payout " + payoutId + " as failed but it is not linked to any transfer here. Check the Monime dashboard.");
             return;
         }
 
@@ -990,6 +1069,7 @@ public class TransactionService {
     // a refund the provider rejects goes to NEEDS_REVIEW (human).
     // ==============================================================
     public void processRefund(UUID transactionId) {
+        if (safety.isFrozen()) return;   // refunds wait while money movement is frozen
         Transaction t = transactionRepository.findById(transactionId).orElse(null);
         if (t == null || t.getStatus() != TransactionStatus.REFUND_PENDING) return;
 
@@ -1152,8 +1232,12 @@ public class TransactionService {
 
     /** Admin button "Send again": retry the payout to the recipient with a fresh idempotency key. */
     public Transaction adminResendPayout(UUID transactionId, UUID adminId, String adminEmail) {
+        safety.requireOpenForAdmins();
         Transaction current = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new IllegalArgumentException("Transaction not found"));
+        if (current.getServiceType() != TransactionServiceType.WAEC_RESULT_PIN && !payoutAmountsConsistent(current)) {
+            throw new IllegalStateException("This transfer failed an internal safety check (amounts do not add up). Do not resend it; refund it or ask the developer to check it.");
+        }
         if (current.getStatus() != TransactionStatus.PAYOUT_FAILED) {
             throw new IllegalStateException("Only a failed payout can be sent again (current status: " + current.getStatus() + ").");
         }
@@ -1211,6 +1295,7 @@ public class TransactionService {
 
     /** Admin button "Refund": send the money back to the number that paid. Never automatic. */
     public Transaction adminRequestRefund(UUID transactionId, UUID adminId, String adminEmail, String note) {
+        safety.requireOpenForAdmins();
         Transaction current = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new IllegalArgumentException("Transaction not found"));
         if (current.getStatus() != TransactionStatus.PAYOUT_FAILED) {

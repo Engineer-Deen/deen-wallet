@@ -30,7 +30,10 @@ public class WebhookController {
             HttpServletRequest req,
             @RequestHeader(value = HEADER, required = false) String sig
     ) throws Exception {
-        byte[] raw = req.getInputStream().readAllBytes();
+        byte[] raw = req.getInputStream().readNBytes(1_000_001);
+        if (raw.length > 1_000_000) {
+            return ResponseEntity.status(413).body(Map.of("error", "Payload too large"));
+        }
         if (!verifier.isValid(raw, sig)) {
             return ResponseEntity.badRequest().body(Map.of("error", "Invalid signature"));
         }

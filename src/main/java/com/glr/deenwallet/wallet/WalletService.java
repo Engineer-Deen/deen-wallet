@@ -93,11 +93,14 @@ public class WalletService {
     private final WalletMailer emails;
     private final com.glr.deenwallet.audit.AuditService audit;
     private final ProviderConfig providerConfig;
+    private final com.glr.deenwallet.safety.MoneySafetyService safety;
 
     public WalletService(TransactionTemplate tx, WalletMonimeApi monimeApi, MonimeClient monimeClient,
                          com.glr.deenwallet.monime.MonimeProperties monimeProps, BankTransferService banks,
                          UserRepository users, PasswordEncoder passwordEncoder, WalletMailer emails,
-                         com.glr.deenwallet.audit.AuditService audit, ProviderConfig providerConfig) {
+                         com.glr.deenwallet.audit.AuditService audit, ProviderConfig providerConfig,
+                         com.glr.deenwallet.safety.MoneySafetyService safety) {
+        this.safety = safety;
         this.audit = audit;
         this.providerConfig = providerConfig;
         this.tx = tx;
@@ -717,8 +720,10 @@ public class WalletService {
 
     public Summary transfer(User me, UUID adminId, BigDecimal amount, String note, String pin) {
         requireSuper(me);
+        safety.requireOpenForAdmins();
         verifyPin(me, pin);
         long minor = toMinor(amount);
+        requireWithinSingleLimit(me, minor);
         if (adminId == null) throw new IllegalArgumentException("Choose an admin.");
         User target = users.findById(adminId).orElseThrow(() -> new IllegalArgumentException("That admin was not found."));
         if (!"ADMIN".equals(target.getRole()) || !target.isActive()) {
@@ -745,6 +750,7 @@ public class WalletService {
             insertEntry(target.getId(), "TRANSFER_IN", minor, after, finalNote, me.getId(), me.getFullName(), null, me.getId());
         });
         log.info("Wallet: {} transferred {} to admin {}", me.getEmail(), money(minor), target.getEmail());
+        safety.alert("WALLET_TRANSFER", "Wallet transfer", me.getFullName() + " sent " + money(minor) + " to the wallet of " + target.getFullName() + ".");
         audit.record(me, "WALLET", "WALLET_TRANSFER", "Sent " + money(minor) + " to an admin wallet", target.getId(),
                 target.getFullName(), finalNote, null);
         try {
@@ -761,8 +767,10 @@ public class WalletService {
     public Summary withdraw(User me, String method, String providerId, String destination, BigDecimal amount, String pin,
                             boolean saveAccount) {
         if (!isSuper(me) && !"ADMIN".equals(me.getRole())) throw new IllegalArgumentException("Only admins can use the wallet.");
+        safety.requireOpenForAdmins();
         verifyPin(me, pin);
         long minor = toMinor(amount);
+        requireWithinSingleLimit(me, minor);
         Dest d = resolveDestination(me, method, providerId, destination);
         if (!monimeApi.configured()) throw new IllegalStateException("The payment account is not set up on the server.");
         long monime = monimeApi.availableBalance(true);
@@ -772,6 +780,18 @@ public class WalletService {
         final long fee = isSuper ? feeOf(minor) : 0L;
 
         tx.executeWithoutResult(st -> {
+            lockPlatform();
+            long usedToday = ((Number) em.createNativeQuery(
+                    "SELECT COALESCE(SUM(amount_value), 0) FROM wallet_withdrawals WHERE owner_user_id = :u "
+                            + "AND created_at > now() - interval '24 hours' AND status <> 'FAILED'")
+                    .setParameter("u", me.getId()).getSingleResult()).longValue();
+            if (usedToday + minor > safety.maxDailyMinor()) {
+                safety.alertOnce("daily:" + me.getId(), "WALLET_LIMIT", "Withdrawal limit reached",
+                        me.getFullName() + " tried to withdraw " + money(minor) + " and would go over the 24-hour limit of "
+                                + money(safety.maxDailyMinor()) + ".");
+                throw new IllegalArgumentException("This would go over the 24-hour withdrawal limit of " + money(safety.maxDailyMinor())
+                        + " (already used " + money(usedToday) + "). Try again later.");
+            }
             if (isSuper) {
                 lockPlatform();
                 long held = scalarTx("SELECT COALESCE(SUM(balance_value), 0) FROM admin_wallets");
@@ -817,6 +837,7 @@ public class WalletService {
                 d.holder == null || d.holder.isBlank() ? null : d.holder, "Ref " + refOf(id)
                 + (fee > 0 ? ", service fee " + money(fee) : ", no fee"), null);
         notifyWithdrawal(id, "started");
+        safety.alert("WALLET_WITHDRAWAL", "Wallet withdrawal", me.getFullName() + " started a withdrawal of " + money(minor) + " to " + d.label() + ".");
         if (saveAccount) {
             try {
                 storeSaved(me, d);
@@ -839,6 +860,7 @@ public class WalletService {
         String existingPayout = (String) row[1];
         if (!"PENDING".equals(status) && !"REVIEW".equals(status)) return;
         if (existingPayout != null) return;
+        if (safety.isFrozen()) return;   // frozen: stays PENDING and is sent after a super admin resumes
         long amount = ((Number) row[2]).longValue();
         String method = (String) row[3];
         String providerId = (String) row[4];
@@ -1056,6 +1078,17 @@ public class WalletService {
 
     private void requireSuper(User u) {
         if (!isSuper(u)) throw new IllegalArgumentException("Only a super admin can do this.");
+    }
+
+    /** One withdrawal / transfer may not exceed the single-amount limit set on the server. */
+    private void requireWithinSingleLimit(User me, long minor) {
+        long max = safety.maxSingleMinor();
+        if (minor > max) {
+            safety.alertOnce("single:" + me.getId(), "WALLET_LIMIT", "Withdrawal limit reached",
+                    me.getFullName() + " tried to move " + money(minor) + ", above the single limit of " + money(max) + ".");
+            throw new IllegalArgumentException("That is above the single limit of " + money(max)
+                    + ". Use a smaller amount, or ask the server owner to raise the limit.");
+        }
     }
 
     static long toMinor(BigDecimal amount) {
