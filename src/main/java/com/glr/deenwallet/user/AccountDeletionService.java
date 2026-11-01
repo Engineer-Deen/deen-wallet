@@ -29,7 +29,7 @@ public class AccountDeletionService {
 
     private static final String[] OWNED_BY_USER_ID = {
             "refresh_tokens", "device_tokens", "notifications", "password_reset_tokens",
-            "biometric_credentials", "biometric_challenges", "pin_reset_challenges", "saved_recipients"
+            "biometric_credentials", "biometric_challenges", "pin_reset_challenges", "saved_recipients", "user_photos"
     };
 
     /** Why this account cannot be deleted right now, or null when it can. */

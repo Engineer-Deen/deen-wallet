@@ -8289,6 +8289,95 @@
     })();
 </script>
 
+<script>
+(function () {
+    var KEY = 'deenwallet_my_photo';
+    var cur = null;
+    var st = document.createElement('style');
+    st.textContent = '.has-photo{background-size:cover !important;background-position:center !important;background-repeat:no-repeat !important;color:transparent !important;}' +
+        '.account-avatar{position:relative;cursor:pointer;}' +
+        '#profile-avatar::after{content:"\\270E";position:absolute;right:-4px;bottom:-4px;width:24px;height:24px;border-radius:50%;background:var(--primary);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;}' +
+        '.dw-ph-link{display:inline-block;margin-top:6px;margin-right:12px;padding:0;border:0;background:none;color:#fff;font-size:12px;font-weight:700;text-decoration:underline;cursor:pointer;opacity:.95;}';
+    document.head.appendChild(st);
+    function uid() {
+        try { var t = getAccessToken(); var p = JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))); return p.sub || ''; } catch (e) { return ''; }
+    }
+    function readCache() {
+        try { var o = JSON.parse(localStorage.getItem(KEY) || 'null'); if (o && o.uid && o.uid === uid()) return o.img; } catch (e) { }
+        return null;
+    }
+    function writeCache(img) {
+        try { if (img) localStorage.setItem(KEY, JSON.stringify({ uid: uid(), img: img })); else localStorage.removeItem(KEY); } catch (e) { }
+    }
+    function paint() {
+        [].forEach.call(document.querySelectorAll('.customer-drawer-avatar, #profile-avatar'), function (el) {
+            if (cur) { el.style.backgroundImage = 'url(' + cur + ')'; el.classList.add('has-photo'); }
+            else { el.style.backgroundImage = ''; el.classList.remove('has-photo'); }
+        });
+        var rm = document.getElementById('dw-ph-remove'); if (rm) rm.style.display = cur ? '' : 'none';
+        var copy = document.querySelector('#screen-profile .account-hero-copy');
+        if (copy && !document.getElementById('dw-ph-change')) {
+            var wrap = document.createElement('div');
+            wrap.innerHTML = '<button type="button" class="dw-ph-link" id="dw-ph-change">Change photo</button><button type="button" class="dw-ph-link" id="dw-ph-remove" style="display:none;">Remove</button>';
+            copy.appendChild(wrap);
+            document.getElementById('dw-ph-change').addEventListener('click', pick);
+            document.getElementById('dw-ph-remove').addEventListener('click', remove);
+            document.getElementById('dw-ph-remove').style.display = cur ? '' : 'none';
+        }
+    }
+    var timer = null;
+    function kick() { clearTimeout(timer); timer = setTimeout(paint, 80); }
+    function toJpeg(file) {
+        return new Promise(function (resolve, reject) {
+            var url = URL.createObjectURL(file); var img = new Image();
+            img.onload = function () {
+                try {
+                    var w = img.naturalWidth, h = img.naturalHeight, s = Math.min(w, h);
+                    if (!s) throw new Error('empty');
+                    var c = document.createElement('canvas'); c.width = c.height = 256;
+                    var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, 256, 256);
+                    g.imageSmoothingQuality = 'high';
+                    g.drawImage(img, (w - s) / 2, (h - s) / 2, s, s, 0, 0, 256, 256);
+                    URL.revokeObjectURL(url); resolve(c.toDataURL('image/jpeg', 0.85));
+                } catch (e) { URL.revokeObjectURL(url); reject(e); }
+            };
+            img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('That file is not a photo we can read.')); };
+            img.src = url;
+        });
+    }
+    function toast(m) { try { showToast(m); } catch (e) { } }
+    function pick() {
+        var input = document.createElement('input');
+        input.type = 'file'; input.accept = 'image/*'; input.style.display = 'none';
+        input.addEventListener('change', function () {
+            var f = input.files && input.files[0]; input.remove();
+            if (!f) return;
+            toJpeg(f).then(function (data) {
+                return apiRequest('/api/users/me/photo', { method: 'POST', body: { image: data } }).then(function () { cur = data; writeCache(data); paint(); toast('Photo updated.'); });
+            }).catch(function (e) { toast((e && e.message) || 'Could not upload the photo.'); });
+        });
+        document.body.appendChild(input); input.click();
+    }
+    function remove() {
+        apiRequest('/api/users/me/photo', { method: 'DELETE' }).then(function () { cur = null; writeCache(null); paint(); toast('Photo removed.'); })
+            .catch(function (e) { toast((e && e.message) || 'Could not remove the photo.'); });
+    }
+    document.addEventListener('click', function (e) {
+        var t = e.target && e.target.closest ? e.target.closest('#profile-avatar') : null;
+        if (t) pick();
+    });
+    try { new MutationObserver(kick).observe(document.body, { childList: true, subtree: true }); } catch (e) { }
+    var _clear = window.clearTokens;
+    if (typeof _clear === 'function') window.clearTokens = function () { try { localStorage.removeItem(KEY); } catch (e) { } return _clear.apply(this, arguments); };
+    cur = readCache(); paint();
+    function load() {
+        if (!getAccessToken()) return;
+        apiRequest('/api/users/me/photo').then(function (r) { cur = (r && r.image) || null; writeCache(cur); paint(); }).catch(function () { });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', load); else setTimeout(load, 300);
+})();
+</script>
+
 </body>
 
 </html>

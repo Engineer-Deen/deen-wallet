@@ -71,6 +71,47 @@ public class AdminController {
         return ResponseEntity.ok(AdminUserResponse.from(user));
     }
 
+    /** A super admin edits their own details (name, username, email, phone). Needs the account password. */
+    @PutMapping("/profile")
+    public ResponseEntity<AdminUserResponse> updateOwnProfile(@Valid @RequestBody UpdateOwnProfileRequest request) {
+        User me = getCurrentUser();
+        validateSuperAdmin(me);
+        if (request.getCurrentPassword() == null || request.getCurrentPassword().isBlank()
+                || !passwordEncoder.matches(request.getCurrentPassword(), me.getPasswordHash())) {
+            throw new IllegalArgumentException("Current password is incorrect.");
+        }
+        String email = request.getEmail().trim().toLowerCase(java.util.Locale.ROOT);
+        String phone = request.getPhone().trim();
+        String username = request.getUsername().trim();
+        boolean emailTaken = userRepository.findByEmailAndRole(email, "ADMIN").filter(x -> !x.getId().equals(me.getId())).isPresent()
+                || userRepository.findByEmailAndRole(email, "SUPER_ADMIN").filter(x -> !x.getId().equals(me.getId())).isPresent();
+        if (emailTaken) throw new IllegalArgumentException("Email already registered");
+        boolean phoneTaken = userRepository.findByPhoneAndRole(phone, "ADMIN").filter(x -> !x.getId().equals(me.getId())).isPresent()
+                || userRepository.findByPhoneAndRole(phone, "SUPER_ADMIN").filter(x -> !x.getId().equals(me.getId())).isPresent();
+        if (phoneTaken) throw new IllegalArgumentException("Phone number already registered");
+        if (userRepository.findByUsername(username).filter(x -> !x.getId().equals(me.getId())).isPresent()) {
+            throw new IllegalArgumentException("Username already in use");
+        }
+        boolean emailChanged = !email.equalsIgnoreCase(me.getEmail());
+        boolean phoneChanged = !phone.equals(me.getPhone());
+        me.setFullName(request.getFullName().trim());
+        me.setUsername(username);
+        me.setEmail(email);
+        me.setPhone(phone);
+        if (emailChanged) me.setEmailVerified(false);
+        if (phoneChanged) me.setPhoneVerified(false);
+        userRepository.save(me);
+        if (emailChanged) {
+            try {
+                otpService.generateAndSend(me.getEmail());
+            } catch (Exception e) {
+                log.warn("Super admin {} changed their email but the verification email could not be sent: {}", me.getId(), e.toString());
+            }
+        }
+        log.info("Super admin {} edited their own details", me.getId());
+        return ResponseEntity.ok(AdminUserResponse.from(me));
+    }
+
     // ===== ADMIN IN-APP NOTIFICATIONS =====
     @PostMapping("/notifications")
     public ResponseEntity<List<NotificationResponse>> sendInAppNotification(
@@ -719,6 +760,21 @@ public class AdminController {
         @NotBlank @Pattern(regexp = "^\\+232\\d{8}$", message = "Phone must be in format +232XXXXXXXX") private String phone;
         private String newPin;
         private String newPassword;
+    }
+
+    @Data
+    public static class UpdateOwnProfileRequest {
+        @NotBlank
+        @jakarta.validation.constraints.Size(max = 100, message = "Full name must be at most 100 characters")
+        @Pattern(regexp = "^[^<>]*$", message = "Full name cannot contain '<' or '>'")
+        private String fullName;
+        @NotBlank
+        @jakarta.validation.constraints.Size(max = 40, message = "Username must be at most 40 characters")
+        @Pattern(regexp = "^[^<>]*$", message = "Username cannot contain '<' or '>'")
+        private String username;
+        @NotBlank @Email private String email;
+        @NotBlank @Pattern(regexp = "^\\+232\\d{8}$", message = "Phone must be in format +232XXXXXXXX") private String phone;
+        private String currentPassword;
     }
 
     @Data

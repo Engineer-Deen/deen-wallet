@@ -2872,7 +2872,7 @@
                 <button type="button" class="admin-drawer-item" data-drawer-action="waec-pins"><span class="admin-drawer-icon">▦</span><span class="admin-drawer-label">WAEC Pins</span><span class="admin-drawer-chevron">›</span></button>
                 <div class="admin-drawer-divider"></div>
                 <button type="button" class="admin-drawer-item" data-drawer-action="profile"><span class="admin-drawer-icon">♙</span><span class="admin-drawer-label">Admin Profile</span><span class="admin-drawer-chevron">›</span></button>
-                <button type="button" class="admin-drawer-item" data-drawer-action="pin"><span class="admin-drawer-icon">⚿</span><span class="admin-drawer-label">Change PIN</span><span class="admin-drawer-chevron">›</span></button>
+                <button type="button" class="admin-drawer-item" data-drawer-action="pin"><span class="admin-drawer-icon">⚿</span><span class="admin-drawer-label">Security</span><span class="admin-drawer-chevron">›</span></button>
                 <button type="button" class="admin-drawer-item admin-management-drawer-item" id="admin-management-drawer-item" data-drawer-action="admin-management" style="display:none;"><span class="admin-drawer-icon">♛</span><span class="admin-drawer-label">Admin Management</span><span class="admin-drawer-chevron">›</span></button>
                 <button type="button" class="admin-drawer-item" data-drawer-action="about"><span class="admin-drawer-icon">ⓘ</span><span class="admin-drawer-label">About</span><span class="admin-drawer-chevron">›</span></button>
                 <div class="admin-drawer-divider"></div>
@@ -3434,7 +3434,7 @@
             <div class="subscreen-heading">
                 <div class="subscreen-icon">⚿</div>
                 <div>
-                    <h1 class="greeting-title" style="margin-top:0;">Change PIN</h1>
+                    <h1 class="greeting-title" style="margin-top:0;">Security</h1>
                     <p class="admin-card-sub" style="margin:0;">Update the 4-digit PIN used for session protection.</p>
                 </div>
             </div>
@@ -4760,6 +4760,11 @@
                 document.getElementById('admin-drawer-email').textContent = email;
                 document.getElementById('admin-drawer-role').textContent = role === 'SUPER_ADMIN' ? 'SUPER ADMIN' : 'ADMIN';
                 document.getElementById('admin-drawer-avatar').textContent = String(name).trim().charAt(0).toUpperCase() || 'A';
+                if (saved && saved.id) {
+                    var dAv = document.getElementById('admin-drawer-avatar');
+                    if (dAv.getAttribute('data-photo-uid') !== String(saved.id)) { dAv.setAttribute('data-photo-uid', String(saved.id)); dAv.removeAttribute('data-photo-v'); }
+                    dwPhKick();
+                }
                 var managementItem = document.getElementById('admin-management-drawer-item');
                 if (managementItem) managementItem.style.display = role === 'SUPER_ADMIN' ? 'flex' : 'none';
                 applyRoleNav();
@@ -6900,7 +6905,7 @@
                     }
 
                     card.innerHTML =
-                        '<div class="item-avatar">' + escapeHtml(initial) + '</div>' +
+                        '<div class="item-avatar" data-photo-uid="' + escapeHtml(String(user.id)) + '">' + escapeHtml(initial) + '</div>' +
                         '<div class="item-info">' +
                         '<div class="name">' + escapeHtml(user.fullName || user.username) + '</div>' +
                         '<div class="meta">' +
@@ -7020,7 +7025,7 @@
                 content.innerHTML = `
                     <section class="account-detail-hero">
                         <div class="account-detail-hero-main">
-                            <div class="account-detail-avatar">${escapeHtml(initial)}</div>
+                            <div class="account-detail-avatar" data-photo-uid="${escapeHtml(String(user.id))}">${escapeHtml(initial)}</div>
                             <div style="min-width:0;flex:1;">
                                 <h1 class="account-detail-name">${escapeHtml(name)}</h1>
                                 <p class="account-detail-email">${escapeHtml(user.email || 'No email address')}</p>
@@ -8431,6 +8436,104 @@
                 screenEl.classList.add('active');
             }
 
+            // ---- Profile photos ----
+            var dwPh = { idx: null, idxAt: 0, cache: {}, busy: false, again: false, timer: null };
+            (function () {
+                var st = document.createElement('style');
+                st.textContent = '.has-photo{background-size:cover !important;background-position:center !important;background-repeat:no-repeat !important;color:transparent !important;}' +
+                    '.item-avatar.mini{display:inline-flex;width:26px;height:26px;font-size:12px;margin-right:8px;vertical-align:middle;}' +
+                    '.dw-ph-edit{position:relative;cursor:pointer;}' +
+                    '.dw-ph-cam{position:absolute;right:-3px;bottom:-3px;width:24px;height:24px;border-radius:50%;background:var(--primary);color:#fff !important;font-size:12px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;}' +
+                    '.dw-ph-actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;}';
+                document.head.appendChild(st);
+            })();
+            function dwPhPaint(el, img, v) {
+                if (img) { el.style.backgroundImage = 'url(' + img + ')'; el.classList.add('has-photo'); }
+                else { el.style.backgroundImage = ''; el.classList.remove('has-photo'); }
+                el.setAttribute('data-photo-v', String(v || 0));
+            }
+            async function dwPhApply() {
+                if (dwPh.busy) { dwPh.again = true; return; }
+                dwPh.busy = true;
+                try {
+                    var els = [].slice.call(document.querySelectorAll('[data-photo-uid]')).filter(function (el) { return !el.hasAttribute('data-photo-v'); });
+                    if (!els.length) return;
+                    if (!dwPh.idx || Date.now() - dwPh.idxAt > 15000) {
+                        try { var r0 = await adminApiRequest('/api/admin/photos/index'); dwPh.idx = (r0 && r0.versions) || {}; dwPh.idxAt = Date.now(); } catch (e) { els.forEach(function (el) { el.setAttribute('data-photo-v', '0'); }); return; }
+                    }
+                    var need = [];
+                    els.forEach(function (el) {
+                        var id = el.getAttribute('data-photo-uid'); var v = dwPh.idx[id];
+                        if (!v) { dwPhPaint(el, null, 0); return; }
+                        var c = dwPh.cache[id];
+                        if (c && c.v === v) dwPhPaint(el, c.img, v); else if (need.indexOf(id) < 0) need.push(id);
+                    });
+                    for (var i = 0; i < need.length; i += 20) {
+                        try {
+                            var r = await adminApiRequest('/api/admin/photos', { params: { ids: need.slice(i, i + 20).join(',') } });
+                            var ph = (r && r.photos) || {};
+                            Object.keys(ph).forEach(function (id) { dwPh.cache[id] = { v: ph[id].version, img: ph[id].image }; });
+                        } catch (e) { }
+                    }
+                    els.forEach(function (el) {
+                        if (el.hasAttribute('data-photo-v')) return;
+                        var id = el.getAttribute('data-photo-uid'); var c = dwPh.cache[id];
+                        dwPhPaint(el, c ? c.img : null, c ? c.v : 0);
+                    });
+                } finally {
+                    dwPh.busy = false;
+                    if (dwPh.again) { dwPh.again = false; dwPhKick(); }
+                }
+            }
+            function dwPhKick() {
+                clearTimeout(dwPh.timer);
+                dwPh.timer = setTimeout(dwPhApply, 120);
+            }
+            function dwPhRefresh() {
+                dwPh.idx = null;
+                [].forEach.call(document.querySelectorAll('[data-photo-uid]'), function (el) { el.removeAttribute('data-photo-v'); });
+                dwPhKick();
+            }
+            try { new MutationObserver(function () { if (document.querySelector('[data-photo-uid]:not([data-photo-v])')) dwPhKick(); }).observe(document.body, { childList: true, subtree: true }); } catch (e) { }
+            function dwPhToJpeg(file) {
+                return new Promise(function (resolve, reject) {
+                    var url = URL.createObjectURL(file); var img = new Image();
+                    img.onload = function () {
+                        try {
+                            var w = img.naturalWidth, h = img.naturalHeight, s = Math.min(w, h);
+                            if (!s) throw new Error('empty');
+                            var c = document.createElement('canvas'); c.width = c.height = 256;
+                            var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, 256, 256);
+                            g.imageSmoothingQuality = 'high';
+                            g.drawImage(img, (w - s) / 2, (h - s) / 2, s, s, 0, 0, 256, 256);
+                            URL.revokeObjectURL(url); resolve(c.toDataURL('image/jpeg', 0.85));
+                        } catch (e) { URL.revokeObjectURL(url); reject(e); }
+                    };
+                    img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('That file is not a photo we can read.')); };
+                    img.src = url;
+                });
+            }
+            function dwPhPickOwn() {
+                var input = document.createElement('input');
+                input.type = 'file'; input.accept = 'image/*'; input.style.display = 'none';
+                input.addEventListener('change', function () {
+                    var f = input.files && input.files[0]; input.remove();
+                    if (!f) return;
+                    window.dwPkBusyUntil = Date.now() + 15000;
+                    dwPhToJpeg(f).then(function (data) {
+                        return adminApiRequest('/api/admin/me/photo', { method: 'POST', body: { image: data } });
+                    }).then(function () { showToast('Photo updated.'); dwPhRefresh(); if (document.getElementById('dw-ph-remove')) document.getElementById('dw-ph-remove').classList.remove('hidden'); })
+                      .catch(function (e) { showToast((e && e.message) || 'Could not upload the photo.'); });
+                });
+                document.body.appendChild(input); input.click();
+            }
+            function dwPhRemoveOwn() {
+                adminApiRequest('/api/admin/me/photo', { method: 'DELETE' }).then(function () {
+                    showToast('Photo removed.'); dwPhRefresh();
+                    var b = document.getElementById('dw-ph-remove'); if (b) b.classList.add('hidden');
+                }).catch(function (e) { showToast((e && e.message) || 'Could not remove the photo.'); });
+            }
+
             function openProfile() {
                 openSubScreen(profileScreen);
                 renderProfile();
@@ -8485,6 +8588,58 @@
 
             document.getElementById('account-detail-back-btn').addEventListener('click', returnFromAccountDetail);
 
+            function openOwnProfileEdit(user) {
+                var content = document.getElementById('profile-content');
+                content.innerHTML =
+                    '<div class="admin-card"><p class="admin-card-title">Edit my details</p>' +
+                    '<p class="admin-card-sub">If you change your email or phone number it must be verified again.</p>' +
+                    '<div class="pin-change-form">' +
+                    '<input class="dw-field" id="pe-name" placeholder="Full name" maxlength="100" autocomplete="name" />' +
+                    '<input class="dw-field" id="pe-username" placeholder="Username" maxlength="40" autocomplete="username" style="margin-top:10px;" />' +
+                    '<input class="dw-field" id="pe-email" type="email" placeholder="Email" autocomplete="email" style="margin-top:10px;" />' +
+                    '<input class="dw-field" id="pe-phone" type="tel" placeholder="Phone (+232XXXXXXXX)" autocomplete="tel" style="margin-top:10px;" />' +
+                    '<input class="dw-field" id="pe-pass" type="password" placeholder="Current account password" autocomplete="current-password" style="margin-top:10px;" />' +
+                    '<div id="pe-error" class="pin-error hidden" style="margin-top:8px;"></div>' +
+                    '<div style="display:flex;gap:10px;margin-top:14px;">' +
+                    '<button class="btn-sm success" id="pe-save" type="button">Save</button>' +
+                    '<button class="btn-sm" id="pe-cancel" type="button">Cancel</button></div>' +
+                    '</div></div>';
+                document.getElementById('pe-name').value = user.fullName || '';
+                document.getElementById('pe-username').value = user.username || '';
+                document.getElementById('pe-email').value = user.email || '';
+                document.getElementById('pe-phone').value = user.phone || '';
+                document.getElementById('pe-cancel').addEventListener('click', function () { renderProfile(); });
+                document.getElementById('pe-save').addEventListener('click', function () {
+                    var errEl = document.getElementById('pe-error');
+                    function fail(m) { errEl.textContent = m; show(errEl); }
+                    hide(errEl);
+                    var body = {
+                        fullName: document.getElementById('pe-name').value.trim(),
+                        username: document.getElementById('pe-username').value.trim(),
+                        email: document.getElementById('pe-email').value.trim(),
+                        phone: document.getElementById('pe-phone').value.trim(),
+                        currentPassword: document.getElementById('pe-pass').value
+                    };
+                    if (!body.fullName) return fail('Enter your full name.');
+                    if (!body.username) return fail('Enter a username.');
+                    if (/[<>]/.test(body.fullName + body.username)) return fail("Name and username cannot contain '<' or '>'.");
+                    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) return fail('Enter a valid email address.');
+                    if (!/^\+232\d{8}$/.test(body.phone)) return fail('Phone must be in the format +232XXXXXXXX.');
+                    if (!body.currentPassword) return fail('Enter your current account password to save.');
+                    var btn = this; btn.disabled = true; btn.textContent = 'Saving…';
+                    adminApiRequest('/api/admin/profile', { method: 'PUT', body: body })
+                        .then(function (updated) {
+                            currentAdminUser = Object.assign({}, currentAdminUser || {}, updated);
+                            try { sessionStorage.setItem('deenwallet_admin_profile', JSON.stringify(currentAdminUser)); } catch (e) { }
+                            try { updateAdminDrawerProfile(); } catch (e) { }
+                            showToast(updated.emailVerified === false && body.email.toLowerCase() !== String(user.email || '').toLowerCase()
+                                ? 'Saved. Verify your new email with the code we sent.' : 'Your details were saved.');
+                            renderProfile();
+                        })
+                        .catch(function (e) { btn.disabled = false; btn.textContent = 'Save'; fail(e.message || 'Could not save your details.'); });
+                });
+            }
+
             async function renderProfile() {
                 var content = document.getElementById('profile-content');
                 content.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading profile…</div>';
@@ -8493,19 +8648,21 @@
                     var isSuper = user.role === 'SUPER_ADMIN';
                     content.innerHTML = `
                         <div class="admin-card profile-hero-card">
-                            <div class="profile-avatar-large">${escapeHtml(String(user.fullName || user.username || 'A').trim().charAt(0).toUpperCase() || 'A')}</div>
+                            <div class="profile-avatar-large dw-ph-edit" id="profile-avatar-btn" data-photo-uid="${escapeHtml(String(user.id))}" role="button" tabindex="0" title="Change photo">${escapeHtml(String(user.fullName || user.username || 'A').trim().charAt(0).toUpperCase() || 'A')}<span class="dw-ph-cam">✎</span></div>
                             <div class="profile-hero-info">
                                 <h2>${escapeHtml(user.fullName || user.username || 'Admin')}</h2>
                                 <p>${escapeHtml(user.email || '—')}</p>
                                 <span class="badge ${isSuper ? 'super' : 'active'}">${isSuper ? '👑 Super Admin' : 'Admin'}</span>
+                                <div class="dw-ph-actions"><button type="button" class="btn-sm" id="dw-ph-change">Change photo</button><button type="button" class="btn-sm danger hidden" id="dw-ph-remove">Remove photo</button></div>
                             </div>
                         </div>
                         <div class="admin-card">
-                            <p class="admin-card-title">Account Information</p>
+                            <p class="admin-card-title">Account Information${isSuper ? ' <button type="button" class="btn-sm" id="edit-profile-btn" style="float:right;">✎ Edit</button>' : ''}</p>
                             <div class="profile-row"><span class="label">Email</span><span class="value">${escapeHtml(user.email || '—')}</span></div>
                             <div class="profile-row"><span class="label">Email status</span><span class="value">${user.emailVerified ? '✅ Verified' : '<button class="btn-sm success" id="verify-my-email-btn">Verify my email</button>'}</span></div>
                             <div class="profile-row"><span class="label">Full Name</span><span class="value">${escapeHtml(user.fullName || '—')}</span></div>
                             <div class="profile-row"><span class="label">Username</span><span class="value">${escapeHtml(user.username || '—')}</span></div>
+                            <div class="profile-row"><span class="label">Phone</span><span class="value">${escapeHtml(user.phone || '—')}</span></div>
                             <div class="profile-row"><span class="label">Account Number</span><span class="value">${escapeHtml(user.accountNumber || '—')}</span></div>
                             <div class="profile-row" style="border-bottom:none;"><span class="label">Role</span><span class="value"><span class="badge ${isSuper ? 'super' : 'active'}">${isSuper ? 'SUPER ADMIN' : 'ADMIN'}</span></span></div>
                         </div>`;
@@ -8515,6 +8672,12 @@
                             .then(function(){ showToast('Your admin email is now verified.'); renderProfile(); })
                             .catch(function(e){ showToast(e.message || 'Failed to verify your email.'); });
                     });
+                    var phAv = document.getElementById('profile-avatar-btn'); if (phAv) phAv.addEventListener('click', dwPhPickOwn);
+                    var phCh = document.getElementById('dw-ph-change'); if (phCh) phCh.addEventListener('click', dwPhPickOwn);
+                    var phRm = document.getElementById('dw-ph-remove'); if (phRm) phRm.addEventListener('click', dwPhRemoveOwn);
+                    adminApiRequest('/api/admin/me/photo').then(function (r) { if (r && r.image && phRm) phRm.classList.remove('hidden'); }).catch(function () { });
+                    var editBtn = document.getElementById('edit-profile-btn');
+                    if (editBtn) editBtn.addEventListener('click', function () { openOwnProfileEdit(user); });
                 } catch (e) {
                     content.innerHTML = '<div class="error-state">Failed to load profile: ' + escapeHtml(e.message || 'Unknown error') + '</div>';
                 }
@@ -8916,7 +9079,7 @@
                         var canEdit = controllable;
                         var canAccess = controllable && admin.role === 'ADMIN';
                         card.innerHTML =
-                            '<div class="item-info"><div class="name">' + escapeHtml(admin.fullName || admin.username) + (isSelf ? ' <span style="font-size:11px;color:var(--muted);">(you)</span>' : '') + '</div>' +
+                            '<div class="item-info"><div class="name"><span class="item-avatar mini" data-photo-uid="' + escapeHtml(String(admin.id)) + '">' + escapeHtml(String(admin.fullName || admin.username || 'A').trim().charAt(0).toUpperCase()) + '</span>' + escapeHtml(admin.fullName || admin.username) + (isSelf ? ' <span style="font-size:11px;color:var(--muted);">(you)</span>' : '') + '</div>' +
                             '<div class="meta"><span>' + escapeHtml(admin.email) + '</span>' + badge + limited + '</div></div>' +
                             '<div class="item-actions am-actions">' +
                             '<button class="icon-btn" data-action="view-admin" data-id="' + admin.id + '" title="View details"><span class="am-ico">👁️</span>View</button>' +
