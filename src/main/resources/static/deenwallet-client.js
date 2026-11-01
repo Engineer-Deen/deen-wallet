@@ -207,9 +207,41 @@ function appLeft() {
   touchAppActive();
 }
 
+// A transfer that is on screen (waiting for payment or being sent) must not be interrupted by the PIN when the customer
+// comes back from dialling the USSD code to see the result. The customer already entered the PIN to start this transfer.
+// This only holds for up to 15 minutes away, so an abandoned phone still locks. The page sets
+// window.DEENWALLET_TRANSACTION_ACTIVE; the moment it is cleared is remembered so a transfer that finished while the app
+// was in the background also counts.
+const DEENWALLET_TX_GRACE_MS = 15 * 60 * 1000;
+let deenwalletTxActive = false;
+let deenwalletTxEndedAt = 0;
+try {
+  deenwalletTxActive = !!window.DEENWALLET_TRANSACTION_ACTIVE;
+  Object.defineProperty(window, 'DEENWALLET_TRANSACTION_ACTIVE', {
+    configurable: true,
+    get() { return deenwalletTxActive; },
+    set(v) {
+      v = !!v;
+      if (deenwalletTxActive && !v) deenwalletTxEndedAt = Date.now();
+      deenwalletTxActive = v;
+    }
+  });
+} catch (_) { /* ignore */ }
+
+function transferWasInProgress(leftAt, away) {
+  if (away < 0 || away > DEENWALLET_TX_GRACE_MS) return false;
+  if (deenwalletTxActive) return true;
+  return leftAt !== null && deenwalletTxEndedAt >= leftAt;
+}
+
 function appReturned() {
-  const away = deenwalletLeftAt !== null ? Date.now() - deenwalletLeftAt : msSinceAppActive();
+  const leftAt = deenwalletLeftAt;
+  const away = leftAt !== null ? Date.now() - leftAt : msSinceAppActive();
   deenwalletLeftAt = null;
+  if (getAccessToken() && !isPinLockPending() && transferWasInProgress(leftAt, away)) {
+    touchAppActive();
+    return false;
+  }
   if (getAccessToken() && (away < 0 || away >= DEENWALLET_PIN_GRACE_MS)) setPinLockPending(true);
   return pinRequiredNow();
 }

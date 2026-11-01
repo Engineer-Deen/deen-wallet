@@ -144,10 +144,14 @@ public class TransactionService {
     // ==============================================================
     public String generateTransactionCode() {
         String date = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
-        // 8 chars: with 5 chars (60M/day) the unique constraint would eventually collide
-        // and fail a real user's transaction; 8 chars makes that practically impossible.
-        String random = generateRandomString(8);
-        return "DW-" + date + "-" + random;
+        // Always the same shape and length: DW- + 8 digits (date) + - + 8 random characters = 20 characters.
+        // Each code is checked against the existing ones first, so two transfers can never share a reference.
+        String code = null;
+        for (int attempt = 0; attempt < 12; attempt++) {
+            code = "DW-" + date + "-" + generateRandomString(8);
+            if (transactionRepository.findByTransactionCodeIgnoreCase(code).isEmpty()) return code;
+        }
+        throw new IllegalStateException("Could not create a unique transfer reference. Please try again.");
     }
 
     private String generateRandomString(int length) {
@@ -461,7 +465,41 @@ public class TransactionService {
             throw new IllegalArgumentException("You do not have access to this transaction");
         }
 
+        if (transaction.getStatus() == TransactionStatus.PAYING_OUT && transaction.getMonimePayoutId() != null) {
+            nudgePayoutCheck(transaction.getMonimePayoutId());
+        }
         return transaction;
+    }
+
+    private static final java.util.concurrent.ExecutorService PAYOUT_NUDGE_POOL = java.util.concurrent.Executors.newFixedThreadPool(2, r -> {
+        Thread t = new Thread(r, "payout-quick-check");
+        t.setDaemon(true);
+        return t;
+    });
+    private static final java.util.concurrent.ConcurrentHashMap<String, Long> PAYOUT_NUDGED = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * While the customer is watching a transfer that is being sent out, ask the payment provider about the payout
+     * (at most once every 4 seconds per payout, in the background) so "Delivered" shows within seconds even when the
+     * provider's notice is late. It uses the same safe check as the 2-minute catch-up job.
+     */
+    private void nudgePayoutCheck(String payoutId) {
+        long now = System.currentTimeMillis();
+        if (PAYOUT_NUDGED.size() > 2000) PAYOUT_NUDGED.clear();
+        Long last = PAYOUT_NUDGED.get(payoutId);
+        if (last != null && now - last < 4000) return;
+        PAYOUT_NUDGED.put(payoutId, now);
+        try {
+            PAYOUT_NUDGE_POOL.execute(() -> {
+                try {
+                    reconcilePayout(payoutId);
+                } catch (RuntimeException e) {
+                    log.debug("Quick payout check for {} failed: {}", payoutId, e.toString());
+                }
+            });
+        } catch (RuntimeException e) {
+            log.debug("Quick payout check could not be queued: {}", e.toString());
+        }
     }
 
     private long toMinorUnits(BigDecimal amount) {
