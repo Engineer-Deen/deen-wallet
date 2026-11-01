@@ -590,10 +590,9 @@ final class EmailTemplates {
                     <tr>
                         <td align="center">
                             <table cellpadding="0" cellspacing="0" style="max-width: 540px; width: 100%%; background-color: #FFFFFF; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid #E5E7EB;">
-                                <!-- Header: logo (hosted image, not an attachment) + name -->
+                                <!-- Header: text-only branding to keep the email attachment-free -->
                                 <tr>
                                     <td style="background-color: %2$s; padding: 22px 24px; text-align: center;">
-                                        <img src="https://api.deenwallapp.com/assets/icon-192.png" width="64" height="64" alt="DeenWallet" style="display: block; margin: 0 auto 10px auto; width: 64px; height: 64px; border-radius: 16px; border: 2px solid rgba(255, 255, 255, 0.85);">
                                         <div style="font-size: 22px; line-height: 1.2; font-weight: 800; letter-spacing: 1px; color: #FFFFFF; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
                                             DEENWALLET TRANSFER
                                         </div>
