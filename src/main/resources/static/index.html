@@ -230,7 +230,7 @@
         .bank-picker-option-name { flex:1; min-width:0; font-size:14px; font-weight:700; }
         .bank-picker-option-check { width:22px; height:22px; border-radius:50%; border:1px solid #D5E3E6; display:flex; align-items:center; justify-content:center; color:transparent; flex:0 0 auto; font-size:13px; }
         .bank-picker-option.selected .bank-picker-option-check { background:var(--primary); border-color:var(--primary); color:#fff; }
-        .bank-logo { position:relative; width:38px; height:38px; border-radius:10px; background:#fff; border:1px solid #E2ECEF; display:inline-flex; align-items:center; justify-content:center; flex:0 0 38px; overflow:hidden; box-sizing:border-box; }
+        .bank-logo { position:relative; width:38px; height:38px; border-radius:50%; background:#fff; border:1px solid #E2ECEF; display:inline-flex; align-items:center; justify-content:center; flex:0 0 38px; overflow:hidden; box-sizing:border-box; }
         .bank-logo img { position:absolute; inset:0; width:100%; height:100%; box-sizing:border-box; padding:6px; object-fit:contain; object-position:center; display:block; background:#fff; image-rendering:auto; }
         .bank-logo-placeholder { font-size:11px; font-weight:900; color:var(--primary); background:#F1FAFC; letter-spacing:.02em; }
         .bank-logo.has-img { background:#fff; color:transparent; }
@@ -6694,7 +6694,13 @@
                 el.classList.add('has-img');
                 el.style.background = '#fff';
                 // Small icons (16-32px) are drawn small and centred instead of stretched.
-                img.style.padding = url.startsWith('/assets/') ? '4px' : (img.naturalWidth < 48 ? '9px' : '6px');
+                if (url.startsWith('/assets/')) {
+                    // Our own bank pictures fill the round badge edge to edge.
+                    img.style.padding = '0';
+                    img.style.objectFit = 'cover';
+                } else {
+                    img.style.padding = img.naturalWidth < 48 ? '9px' : '6px';
+                }
                 el.appendChild(img);
             };
             img.onload = show;
