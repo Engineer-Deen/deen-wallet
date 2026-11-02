@@ -69,7 +69,7 @@ app:
     days: ${DATA_RETENTION_DAYS:30}
 
     mailbox:
-        retention-days: 365
+        retention-days: 1
 
   transaction-archive:
     after-days: ${TRANSACTION_ARCHIVE_AFTER_DAYS:180}

@@ -230,6 +230,12 @@ public class EmailService {
     }
 
     @Async("emailTaskExecutor")
+    public void sendPaymentLinkReceivedEmail(String toEmail, String transactionCode, String amount, String payerLabel, String destinationLabel) {
+        send(toEmail, "You received SLE " + amount + " " + transactionCode,
+                EmailTemplates.paymentLinkReceivedEmail(transactionCode, amount, payerLabel, destinationLabel));
+    }
+
+    @Async("emailTaskExecutor")
     public void sendRefundInitiatedEmail(String toEmail, String transactionCode, String totalCharged, String payerPhone) {
         send(toEmail, "Your refund is on its way " + transactionCode,
                 EmailTemplates.refundInitiatedEmail(transactionCode, totalCharged, payerPhone));

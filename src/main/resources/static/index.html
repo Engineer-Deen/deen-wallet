@@ -2274,6 +2274,14 @@
         .pl-pay small { display:block; color:var(--muted); font-size:11px; margin-top:2px; }
         .pl-st { font-size:11px; font-weight:800; }
         .pl-st.received { color:#1B7A3E; } .pl-st.sending, .pl-st.waiting { color:#B9770E; } .pl-st.delayed { color:#B9770E; } .pl-st.refunded, .pl-st.failed { color:var(--error); }
+        .pl-sheet { position:fixed; inset:0; z-index:9000; background:rgba(8,24,30,.55); display:flex; align-items:flex-end; justify-content:center; }
+        .pl-sheet.hidden { display:none; }
+        .pl-sheet-box { width:100%; max-width:520px; background:#fff; border-radius:24px 24px 0 0; padding:18px 18px calc(18px + env(safe-area-inset-bottom)); box-shadow:0 -10px 30px rgba(0,0,0,.2); }
+        .pl-sheet-box h3 { margin:0 0 4px; font-size:17px; }
+        .pl-sheet-box p { margin:0 0 12px; font-size:12.5px; color:var(--muted); }
+        .pl-sheet-opt { display:flex; align-items:center; gap:12px; width:100%; padding:13px 12px; margin-top:8px; border:1px solid var(--border); background:#F9FBFC; border-radius:14px; font:inherit; font-size:15px; font-weight:700; color:var(--text); cursor:pointer; text-align:left; }
+        .pl-sheet-opt i { width:34px; height:34px; border-radius:11px; display:flex; align-items:center; justify-content:center; font-style:normal; font-size:15px; color:#fff; background:var(--primary); flex:0 0 auto; }
+        .pl-sheet-cancel { width:100%; margin-top:12px; padding:13px; border:0; background:transparent; font:inherit; font-weight:700; color:var(--muted); cursor:pointer; }
         .pl-danger { width:100%; margin-top:16px; border:1px solid #F1C9C4; background:#fff; color:var(--error); border-radius:22px; padding:12px; font-size:14px; font-weight:700; cursor:pointer; }
         .waec-product { display:flex; align-items:center; gap:14px; }
         .waec-product-logo { width:56px; height:56px; border-radius:16px; background:#fff; border:1px solid var(--border); padding:6px; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
@@ -2520,7 +2528,8 @@
         .home-card-waec-logo { width:84px; height:56px; border-radius:14px; background:#fff; display:flex; align-items:center; justify-content:center; padding:5px; box-sizing:border-box; flex:0 0 56px; }
         .home-card-waec-logo img { width:100%; height:100%; object-fit:contain; display:block; }
         .home-card-waec .home-card-go { color:#1B2B63; }
-        .home-card-soon { background:transparent; box-shadow:inset 0 0 0 1.5px #2B4753; cursor:default; }
+        .home-card-soon { background:transparent; box-shadow:inset 0 0 0 1.5px #2B4753; cursor:pointer; }
+        .home-card-soon .home-card-go { background:#2E9FB0; color:#fff; }
         .home-card-soon .home-card-icon { background:rgba(255,255,255,.07); }
         .home-card-soon .home-card-text { color:#8FB0B9; }
         .home-dots { display:flex; justify-content:center; gap:7px; margin-top:12px; min-height:7px; }
@@ -2747,11 +2756,12 @@
                     <span class="home-card-go">Buy pin</span>
                 </button>
 
-                <div class="home-card home-card-soon" aria-label="More services coming soon">
-                    <span class="home-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 4v16"/><path d="M4 12h16"/></svg></span>
-                    <strong>More coming soon</strong>
-                    <span class="home-card-text">New services will appear here. Swipe to see them all.</span>
-                </div>
+                <button type="button" class="home-card home-card-soon" data-home-service="MORE">
+                    <span class="home-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg></span>
+                    <strong>More services</strong>
+                    <span class="home-card-text">Payment links and everything else DeenWallet Transfer can do.</span>
+                    <span class="home-card-go">See all</span>
+                </button>
             </div>
             <div class="home-dots" id="home-dots" aria-hidden="true"></div>
 
@@ -3801,6 +3811,15 @@
             </div>
             <div class="pl-help" id="pl-d-dest" style="text-align:center;margin-top:12px;"></div>
             <button type="button" class="pl-danger hidden" id="pl-d-close">Close this link</button>
+        </div>
+    </div>
+
+    <div class="pl-sheet hidden" id="pl-sheet" role="dialog" aria-modal="true" aria-label="Share payment link">
+        <div class="pl-sheet-box">
+            <h3>Share payment link</h3>
+            <p>Choose where to send it.</p>
+            <div id="pl-sheet-list"></div>
+            <button type="button" class="pl-sheet-cancel" id="pl-sheet-cancel">Cancel</button>
         </div>
     </div>
 
@@ -5644,7 +5663,8 @@
                 const card = e.target.closest('[data-home-service]');
                 if (!card || moved) { moved = false; return; }
                 const kind = card.getAttribute('data-home-service');
-                if (kind === 'WAEC') openWaecService();
+                if (kind === 'MORE') showPrimaryScreen('payment');
+                else if (kind === 'WAEC') openWaecService();
                 else openCustomerService(kind);
             }, true);
         })();
@@ -8615,10 +8635,47 @@
             if (!plCurrent) return;
             try { window.open('https://wa.me/?text=' + encodeURIComponent(plShareText(plCurrent)), '_blank'); } catch (_) { plCopy(plCurrent.link); }
         });
-        plEl('pl-d-share').addEventListener('click', () => {
+        function plOpenExt(url) {
+            try { if (/^https?:/i.test(url)) window.open(url, '_blank'); else window.location.href = url; } catch (_) { }
+        }
+        function plCloseSheet() { plEl('pl-sheet').classList.add('hidden'); }
+        function plOpenSheet(l) {
+            const text = plShareText(l);
+            const enc = encodeURIComponent(text);
+            const link = encodeURIComponent(l.link);
+            const opts = [
+                ['WhatsApp', 'W', '#1FA855', () => plOpenExt('https://wa.me/?text=' + enc)],
+                ['Text message (SMS)', 'S', '#2E9FB0', () => plOpenExt('sms:?body=' + enc)],
+                ['Email', '@', '#6B7FD7', () => plOpenExt('mailto:?subject=' + encodeURIComponent(l.title || 'Payment link') + '&body=' + enc)],
+                ['Telegram', 'T', '#2AA3DE', () => plOpenExt('https://t.me/share/url?url=' + link + '&text=' + encodeURIComponent(text.replace(l.link, '').trim()))],
+                ['Facebook', 'f', '#1877F2', () => plOpenExt('https://www.facebook.com/sharer/sharer.php?u=' + link)],
+                ['Copy link', '\u29C9', '#55656C', () => plCopy(l.link)]
+            ];
+            const list = plEl('pl-sheet-list');
+            list.innerHTML = '';
+            opts.forEach((o) => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'pl-sheet-opt';
+                b.innerHTML = '<i style="background:' + o[2] + '">' + escapeHtml(o[1]) + '</i><span>' + escapeHtml(o[0]) + '</span>';
+                b.addEventListener('click', () => { plCloseSheet(); o[3](); });
+                list.appendChild(b);
+            });
+            plEl('pl-sheet').classList.remove('hidden');
+        }
+        plEl('pl-sheet-cancel').addEventListener('click', plCloseSheet);
+        plEl('pl-sheet').addEventListener('click', (e) => { if (e.target === plEl('pl-sheet')) plCloseSheet(); });
+        plEl('pl-d-share').addEventListener('click', async () => {
             if (!plCurrent) return;
-            if (navigator.share) navigator.share({ title: plCurrent.title || 'Payment link', text: plShareText(plCurrent) }).catch(() => { });
-            else plCopy(plShareText(plCurrent));
+            const data = { title: plCurrent.title || 'Payment link', text: plShareText(plCurrent) };
+            try {
+                if (navigator.share) { await navigator.share(data); return; }
+            } catch (e) { if (e && e.name === 'AbortError') return; }
+            try {
+                const cs = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Share;
+                if (cs && cs.share) { await cs.share({ title: data.title, text: data.text, dialogTitle: 'Share payment link' }); return; }
+            } catch (e) { if (e && /cancel/i.test(String((e && e.message) || e))) return; }
+            plOpenSheet(plCurrent);
         });
         plEl('pl-d-close').addEventListener('click', async () => {
             const btn = plEl('pl-d-close');
@@ -8801,6 +8858,7 @@
         plEl('services-links-card').addEventListener('click', plOpenList);
 
         function plHandleBack() {
+            if (!plEl('pl-sheet').classList.contains('hidden')) { plCloseSheet(); return true; }
             if (plEl('screen-link-new').classList.contains('active')) { plEl('pl-new-back').click(); return true; }
             if (plEl('screen-link-detail').classList.contains('active')) { plEl('pl-detail-back').click(); return true; }
             if (plEl('screen-links').classList.contains('active')) { plEl('pl-list-back').click(); return true; }

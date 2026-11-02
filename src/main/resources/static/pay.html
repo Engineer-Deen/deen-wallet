@@ -198,7 +198,7 @@ label.l{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:0 
       <div class="ok"><svg class="okc" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="46"/><path d="M30 52l14 14 27-30"/></svg>
         <h2>Payment sent</h2><p id="ok-sub"></p>
         <div class="rcpt"><div><span>Paid to</span><b id="r-to"></b></div><div><span>Amount</span><b id="r-amt"></b></div><div><span>Service fee</span><b id="r-fee"></b></div><div class="t"><span>Total paid</span><b id="r-total"></b></div><div><span>Reference</span><b id="r-ref"></b></div><div><span>Time</span><b id="r-time"></b></div></div>
-        <button class="btn" id="share" type="button">Share receipt</button>
+        <button class="btn" id="share" type="button">Share receipt (PDF)</button>
         <button class="btn ghost" id="again" type="button">Make another payment</button></div>
     </section>
 
@@ -254,6 +254,7 @@ label.l{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:0 
       view = v; $('loading').classList.add('hidden');
       var name = titleCase(v.payeeName);
       $('payee').textContent = name; $('avatar').textContent = initials(name);
+      if (v.payeePhoto && String(v.payeePhoto).indexOf('data:image/jpeg;base64,') === 0) { var av = $('avatar'); av.textContent = ''; av.style.background = '#fff url(' + v.payeePhoto + ') center/cover no-repeat'; }
       $('payee-acct').textContent = (v.payeeType === 'BANK' ? (v.payeeBank || 'Bank') + ' ' : 'Mobile money ') + (v.payeeAccount || '');
       $('title').textContent = v.title || 'Payment';
       if (v.note) { $('note').textContent = v.note; $('note').classList.remove('hidden'); }
@@ -334,10 +335,84 @@ label.l{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:0 
     $('ok-sub').textContent = name + ' has been paid.'; $('r-to').textContent = name;
     var amt = s.amountMinor, tot = s.totalMinor; $('r-amt').textContent = fmt(amt); $('r-fee').textContent = fmt(tot - amt); $('r-total').textContent = fmt(tot);
     $('r-ref').textContent = s.reference; $('r-time').textContent = new Date().toLocaleString([], { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-    $('share').onclick = function () {
-      var text = 'I paid ' + fmt(amt) + ' to ' + name + ' with DeenWallet Transfer. Reference ' + s.reference + '.';
-      if (navigator.share) navigator.share({ title: 'Payment receipt', text: text }).catch(function () { }); else { try { navigator.clipboard.writeText(text); $('share').textContent = 'Receipt copied ✓'; } catch (e) { } }
-    };
+    $('share').onclick = function () { shareReceipt({ name: name, amt: fmt(amt), fee: fmt(tot - amt), tot: fmt(tot), ref: s.reference, when: $('r-time').textContent }); };
+  }
+  /* ---- receipt as a PDF that looks like the on-screen receipt ---- */
+  function rrect(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+  function fitText(g, t, max) { t = String(t || ''); if (g.measureText(t).width <= max) return t; while (t.length > 1 && g.measureText(t + '…').width > max) t = t.slice(0, -1); return t + '…'; }
+  function loadImg(src) { return new Promise(function (res) { var i = new Image(); i.onload = function () { res(i); }; i.onerror = function () { res(null); }; i.src = src; }); }
+  function drawReceipt(d, logo) {
+    var W = 600, H = 840, S = 2, c = document.createElement('canvas'); c.width = W * S; c.height = H * S;
+    var g = c.getContext('2d'); g.scale(S, S);
+    var F = 'Helvetica, Arial, sans-serif';
+    g.fillStyle = '#EAF2F4'; g.fillRect(0, 0, W, H);
+    g.save(); rrect(g, 24, 24, W - 48, H - 48, 28); g.clip();
+    g.fillStyle = '#FFFFFF'; g.fillRect(0, 0, W, H);
+    var gr = g.createLinearGradient(0, 24, W, 190); gr.addColorStop(0, '#0B3442'); gr.addColorStop(1, '#1C7A91');
+    g.fillStyle = gr; g.fillRect(24, 24, W - 48, 170);
+    if (logo) { g.save(); rrect(g, 52, 52, 56, 56, 14); g.clip(); g.drawImage(logo, 52, 52, 56, 56); g.restore(); }
+    g.fillStyle = '#FFFFFF'; g.font = '800 24px ' + F; g.textBaseline = 'alphabetic'; g.fillText('DeenWallet Transfer', 122, 86);
+    g.fillStyle = 'rgba(255,255,255,.75)'; g.font = '600 14px ' + F; g.fillText('Payment receipt', 122, 108);
+    g.fillStyle = 'rgba(255,255,255,.7)'; g.font = '600 13px ' + F; g.fillText(d.when, 52, 168);
+    g.restore();
+    // check badge
+    g.fillStyle = '#FFFFFF'; g.beginPath(); g.arc(W / 2, 226, 42, 0, 7); g.fill();
+    g.fillStyle = '#E3F6EA'; g.beginPath(); g.arc(W / 2, 226, 36, 0, 7); g.fill();
+    g.strokeStyle = '#1B9A55'; g.lineWidth = 6; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath(); g.moveTo(W / 2 - 15, 227); g.lineTo(W / 2 - 4, 238); g.lineTo(W / 2 + 16, 214); g.stroke();
+    g.textAlign = 'center'; g.fillStyle = '#0C2A33'; g.font = '800 28px ' + F; g.fillText('Payment sent', W / 2, 300);
+    g.fillStyle = '#5B7078'; g.font = '500 15px ' + F; g.fillText(fitText(g, d.name + ' has been paid.', 460), W / 2, 326);
+    g.fillStyle = '#0C2A33'; g.font = '800 40px ' + F; g.fillText(d.tot, W / 2, 384);
+    g.fillStyle = '#7A8E95'; g.font = '600 13px ' + F; g.fillText('TOTAL PAID', W / 2, 408);
+    g.textAlign = 'left';
+    var rows = [['Paid to', d.name], ['Amount', d.amt], ['Service fee', d.fee], ['Total paid', d.tot], ['Reference', d.ref], ['Date & time', d.when]];
+    var y = 440, x0 = 56, x1 = W - 56;
+    g.strokeStyle = '#E4ECEF'; g.lineWidth = 1;
+    rows.forEach(function (r, i) {
+      if (i === 3) { g.fillStyle = '#F2F8F9'; g.fillRect(x0 - 12, y - 1, x1 - x0 + 24, 46); }
+      g.fillStyle = '#5B7078'; g.font = '500 15px ' + F; g.textAlign = 'left'; g.fillText(r[0], x0, y + 29);
+      g.fillStyle = '#0C2A33'; g.font = '800 15px ' + F; g.textAlign = 'right'; g.fillText(fitText(g, r[1], 330), x1, y + 29);
+      g.beginPath(); g.moveTo(x0 - 12, y + 46); g.lineTo(x1 + 12, y + 46); g.stroke(); y += 46;
+    });
+    g.textAlign = 'center'; g.fillStyle = '#5B7078'; g.font = '500 13px ' + F;
+    g.fillText('Keep this receipt as proof of payment.', W / 2, y + 40);
+    g.fillStyle = '#1C7A91'; g.font = '800 13px ' + F; g.fillText('Paid with DeenWallet Transfer', W / 2, y + 62);
+    return c;
+  }
+  function pdfFromJpeg(jpegB64, wPx, hPx, wPt, hPt) {
+    var bin = atob(jpegB64), jpg = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) jpg[i] = bin.charCodeAt(i);
+    var enc = function (s) { var a = new Uint8Array(s.length); for (var k = 0; k < s.length; k++) a[k] = s.charCodeAt(k) & 255; return a; };
+    var parts = [], offs = [], len = 0;
+    var push = function (u) { parts.push(u); len += u.length; };
+    push(enc('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n'));
+    var obj = function (n, head, stream) { offs[n] = len; push(enc(n + ' 0 obj\n' + head)); if (stream) { push(enc('\nstream\n')); push(stream); push(enc('\nendstream')); } push(enc('\nendobj\n')); };
+    var content = enc('q ' + wPt + ' 0 0 ' + hPt + ' 0 0 cm /Im0 Do Q');
+    obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
+    obj(2, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+    obj(3, '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + wPt + ' ' + hPt + '] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>');
+    obj(4, '<< /Type /XObject /Subtype /Image /Width ' + wPx + ' /Height ' + hPx + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + jpg.length + ' >>', jpg);
+    obj(5, '<< /Length ' + content.length + ' >>', content);
+    var xref = len, x = 'xref\n0 6\n0000000000 65535 f \n';
+    for (var n = 1; n <= 5; n++) x += ('0000000000' + offs[n]).slice(-10) + ' 00000 n \n';
+    push(enc(x + 'trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF\n'));
+    return new Blob(parts, { type: 'application/pdf' });
+  }
+  function shareReceipt(d) {
+    var btn = $('share'), label = btn.textContent; btn.disabled = true; btn.textContent = 'Preparing PDF…';
+    loadImg('/assets/icon-192.png').then(function (logo) {
+      var c = drawReceipt(d, logo), b64 = c.toDataURL('image/jpeg', 0.92).split(',')[1];
+      var blob = pdfFromJpeg(b64, c.width, c.height, 450, 630);
+      var file = null, fname = 'DeenWallet-receipt-' + String(d.ref || 'payment').replace(/[^A-Za-z0-9-]/g, '') + '.pdf';
+      try { file = new File([blob], fname, { type: 'application/pdf' }); } catch (e) { }
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        return navigator.share({ files: [file], title: 'Payment receipt', text: 'Payment receipt ' + (d.ref || '') }).catch(function (e) { if (e && e.name === 'AbortError') return; downloadBlob(blob, fname); });
+      }
+      downloadBlob(blob, fname);
+    }).catch(function () { btn.textContent = 'Could not make the PDF'; setTimeout(function () { btn.textContent = label; }, 2200); }).then(function () { btn.disabled = false; if (btn.textContent === 'Preparing PDF…') btn.textContent = label; });
+  }
+  function downloadBlob(blob, name) {
+    var url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = name; a.style.display = 'none'; document.body.appendChild(a); a.click();
+    setTimeout(function () { a.remove(); URL.revokeObjectURL(url); }, 4000);
   }
   function endView(ico, title, text, ref, retry) {
     stop(); store('dwpay_' + slug, null); show('step-end'); $('end-ico').textContent = ico; $('end-title').textContent = title; $('end-text').textContent = text;

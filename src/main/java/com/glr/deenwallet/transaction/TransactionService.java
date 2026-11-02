@@ -542,6 +542,7 @@ public class TransactionService {
                     safety.alertOnce("linklimit:" + p.ownerId() + ":" + java.time.LocalDate.now(), "PAYMENT_LINK_LIMIT",
                             "Payment link at its daily limit", "A payment to one of your links was stopped because it is above your daily limit. "
                                     + e.getMessage());
+                    notifyLinkLimitOwner(p.ownerId(), e.getMessage());
                     throw new IllegalStateException("This payment link has reached its limit for today. Please try again tomorrow.");
                 }
                 if (transactionRepository.countLinkAwaitingSince(p.requestId(), now.minus(Duration.ofMinutes(15))) >= MAX_AWAITING_PER_LINK) {
@@ -621,6 +622,38 @@ public class TransactionService {
         notificationService.create(t.getUserId(), "PAYMENT_LINK_RECEIVED", "Payment received", msg, t.getId(), t.getTransactionCode());
         pushNotificationService.sendToUser(t.getUserId(), "Payment received", msg,
                 Map.of("type", "PAYMENT_LINK_RECEIVED", "transactionId", t.getId().toString()));
+        try {
+            final String payer = from;
+            final String where = t.getServiceType() == TransactionServiceType.BANK_TRANSFER ? "bank account" : "mobile money account";
+            userRepository.findById(t.getUserId()).ifPresent(u ->
+                    emailService.sendPaymentLinkReceivedEmail(u.getEmail(), t.getTransactionCode(), display(t.getAmountValue()), payer, where));
+        } catch (RuntimeException e) {
+            log.warn("Could not queue the payment link email for {}: {}", t.getTransactionCode(), e.getMessage());
+        }
+    }
+
+    private static final java.util.concurrent.ConcurrentHashMap<String, Boolean> LINK_LIMIT_NOTIFIED = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * Tells the link owner, once a day, that a payment to their link was stopped by their daily limit. Runs in the
+     * background so it is saved even though the caller's database transaction is rolled back.
+     */
+    private void notifyLinkLimitOwner(UUID ownerId, String detail) {
+        try {
+            if (LINK_LIMIT_NOTIFIED.size() > 5000) LINK_LIMIT_NOTIFIED.clear();
+            if (LINK_LIMIT_NOTIFIED.putIfAbsent(ownerId + ":" + java.time.LocalDate.now(), Boolean.TRUE) != null) return;
+            final String msg = "A payment to your payment link was stopped because it is above your daily limit. " + (detail == null ? "" : detail);
+            PAYOUT_NUDGE_POOL.execute(() -> {
+                try {
+                    notificationService.create(ownerId, "PAYMENT_LINK_LIMIT", "Payment link limit reached", msg, null, null);
+                    pushNotificationService.sendToUser(ownerId, "Payment link limit reached", msg, Map.of("type", "PAYMENT_LINK_LIMIT"));
+                } catch (RuntimeException e) {
+                    log.warn("Could not tell {} about the payment link limit: {}", ownerId, e.toString());
+                }
+            });
+        } catch (RuntimeException e) {
+            log.warn("Could not queue the payment link limit notice: {}", e.toString());
+        }
     }
 
     private void notifyLinkDelayed(Transaction t) {

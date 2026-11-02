@@ -77,15 +77,12 @@ public class PaymentRequestService {
     private final MonimeClient monime;
     private final MoneySafetyService safety;
     private final TransactionTemplate tx;
+    private final com.glr.deenwallet.kyc.KycLimitService kyc;
 
     @PersistenceContext
     private EntityManager em;
 
-    @Value("${app.paylink.guest-max-minor:200000}")
-    private long guestMaxMinor;
-
-    @Value("${app.paylink.guest-daily-minor:500000}")
-    private long guestDailyMinor;
+    // Payment link limits follow the link owner's KYC limit (see ownerDailyLimit).
 
     @Value("${app.public-base-url:https://api.deenwallapp.com}")
     private String baseUrl;
@@ -93,7 +90,9 @@ public class PaymentRequestService {
     private final Map<String, Deque<Long>> starts = new ConcurrentHashMap<>();
 
     public PaymentRequestService(TransactionService transactions, UserRepository users, BankTransferService banks,
-                                 MonimeClient monime, MoneySafetyService safety, TransactionTemplate tx) {
+                                 MonimeClient monime, MoneySafetyService safety, TransactionTemplate tx,
+                                 com.glr.deenwallet.kyc.KycLimitService kyc) {
+        this.kyc = kyc;
         this.transactions = transactions;
         this.users = users;
         this.banks = banks;
@@ -121,9 +120,6 @@ public class PaymentRequestService {
                 throw new IllegalArgumentException("The amount must be at least 1.00 and have at most 2 decimal places.");
             }
             amountMinor = a.movePointRight(2).longValueExact();
-            if (amountMinor > guestMaxMinor) {
-                throw new IllegalArgumentException("The amount is above the most one payment link can take (SLE " + money(guestMaxMinor) + ").");
-            }
         }
         int days = r.getExpiresInDays() == null ? 0 : r.getExpiresInDays();
         if (days != 0 && days != 1 && days != 7 && days != 30) throw new IllegalArgumentException("Choose how long the link should stay open.");
@@ -133,6 +129,13 @@ public class PaymentRequestService {
         if (active >= MAX_ACTIVE_LINKS) throw new IllegalStateException("You have " + MAX_ACTIVE_LINKS + " active payment links. Close one you no longer need first.");
 
         boolean bank = "BANK".equalsIgnoreCase(r.getDestType());
+        if (amountMinor != null) {
+            long cap = ownerDailyLimit(ownerId, bank);
+            if (amountMinor > cap) {
+                throw new IllegalArgumentException("The amount is above your daily limit of SLE " + money(cap) + "."
+                        + (kyc.isVerified(ownerId) ? "" : " Verify your identity under \"Verify your KYC\" to raise it."));
+            }
+        }
         String destProvider;
         String destAccount;
         String holder;
@@ -248,6 +251,7 @@ public class PaymentRequestService {
         m.put("payeeAccount", "BANK".equals(row[7]) ? maskAccount(String.valueOf(row[9])) : maskPhone(String.valueOf(row[9])));
         m.put("payeeBank", row[11]);
         m.put("payeeType", row[7]);
+        m.put("payeePhoto", ownerPhoto(row[1]));
         if (row[5] != null) {
             long amount = ((Number) row[5]).longValue();
             ConversionFee fee = ConversionFee.calculate(amount);
@@ -257,7 +261,7 @@ public class PaymentRequestService {
         } else {
             m.put("amountMinor", null);
         }
-        m.put("maxMinor", guestMaxMinor);
+        m.put("maxMinor", ownerDailyLimit(UUID.fromString(String.valueOf(row[1])), "BANK".equals(row[7])));
         m.put("reusable", row[6]);
         m.put("providers", List.of(
                 Map.of("id", "m17", "name", "Orange Money"),
@@ -288,7 +292,8 @@ public class PaymentRequestService {
             }
             minor = a.movePointRight(2).longValueExact();
         }
-        if (minor > guestMaxMinor) throw new IllegalArgumentException("The most you can pay on one payment link is SLE " + money(guestMaxMinor) + ".");
+        long cap = ownerDailyLimit(ownerId, "BANK".equals(row[7]));
+        if (minor > cap) throw new IllegalArgumentException("The most you can pay on this payment link is SLE " + money(cap) + ".");
 
         String providerId = b.getProviderId() == null ? "" : b.getProviderId().trim();
         String phone = b.getPhone() == null ? "" : b.getPhone().trim();
@@ -296,11 +301,7 @@ public class PaymentRequestService {
         if (!PHONE.matcher(phone).matches()) throw new IllegalArgumentException("Enter your number as +232XXXXXXXX.");
         String payerName = clean(b.getPayerName(), 40);
 
-        long paid24h = count("SELECT COALESCE(SUM(t.amount_value), 0) FROM transactions t WHERE t.payment_request_id IS NOT NULL AND t.source_phone = :p "
-                + "AND t.created_at > now() - interval '24 hours' AND t.status NOT IN ('CANCELED', 'FAILED', 'REFUNDED', 'REFUND_PENDING')", "p", phone);
-        if (paid24h + minor > guestDailyMinor) {
-            throw new IllegalArgumentException("This number has reached its payment limit for today. Please try again tomorrow.");
-        }
+        // No separate per-payer cap: the owner's KYC daily limit applies, checked when the payment starts.
         if (!Boolean.TRUE.equals(row[6])) {
             long busy = count("SELECT COUNT(*) FROM transactions t WHERE t.payment_request_id = :r AND (t.status IN ('PAID_IN', 'PAYING_OUT', 'COMPLETED') "
                     + "OR (t.status = 'AWAITING_PAYMENT' AND t.created_at > now() - interval '15 minutes' AND t.source_phone <> :p))", "r", requestId, "p", phone);
@@ -411,6 +412,19 @@ public class PaymentRequestService {
         return rows.get(0);
     }
 
+    /** The link owner's profile photo as a data URL, or null when none is set (the page then shows initials). */
+    private String ownerPhoto(Object ownerId) {
+        try {
+            @SuppressWarnings("unchecked")
+            List<Object> rows = em.createNativeQuery("SELECT content FROM user_photos WHERE user_id = :u")
+                    .setParameter("u", UUID.fromString(String.valueOf(ownerId))).getResultList();
+            if (rows.isEmpty() || !(rows.get(0) instanceof byte[] b) || b.length == 0) return null;
+            return "data:image/jpeg;base64," + java.util.Base64.getEncoder().encodeToString(b);
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
     private Object[] loadBySlug(String slug) {
         String s = slug == null ? "" : slug.trim().toLowerCase();
         if (s.length() < 4 || s.length() > 16) throw new IllegalArgumentException("This payment link was not found.");
@@ -476,6 +490,12 @@ public class PaymentRequestService {
         if (v == null) return "";
         String c = v.replaceAll("[\\p{Cntrl}]", " ").trim().replaceAll("\\s+", " ");
         return c.length() > max ? c.substring(0, max).trim() : c;
+    }
+
+    /** The link owner's daily KYC limit for the kind of account the link pays into. */
+    private long ownerDailyLimit(UUID ownerId, boolean bank) {
+        com.glr.deenwallet.kyc.KycLimitService.Snapshot s = kyc.snapshot(ownerId);
+        return bank ? s.bank().dailyLimitMinor() : s.mobileMoney().dailyLimitMinor();
     }
 
     private static String money(long minor) {

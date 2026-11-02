@@ -432,6 +432,41 @@ final class EmailTemplates {
         return wrap("We couldn't deliver your transfer", body);
     }
 
+    static String paymentLinkReceivedEmail(String transactionCode, String amount, String payerLabel, String destinationLabel) {
+        String body = """
+            <div>
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <h2 style="margin: 0; color: %1$s; font-size: 22px; font-weight: 700;">You received a payment ✅</h2>
+                    <p style="margin: 6px 0 0 0; color: %2$s; font-size: 14px;">
+                        Reference: <span style="font-family: monospace; font-weight: 600; background: #F0FDFA; padding: 2px 8px; border-radius: 4px;">%3$s</span>
+                    </p>
+                </div>
+
+                <div style="border: 1px solid %4$s; border-radius: 12px; overflow: hidden; margin-bottom: 24px;">
+                    <table cellpadding="0" cellspacing="0" style="width: 100%%; border-collapse: collapse;">
+                        %5$s
+                        %6$s
+                        %7$s
+                    </table>
+                </div>
+
+                <p style="margin: 0; color: %2$s; font-size: 13px; line-height: 1.5; text-align: center;">
+                    Someone paid you through your DeenWallet payment link and the money has been sent to your account. Thank you for using DeenWallet Transfer.
+                </p>
+            </div>
+            """.formatted(
+                TEXT_COLOR,
+                MUTED_COLOR,
+                escape(transactionCode),
+                BORDER_COLOR,
+                row("Amount received", "SLE " + escape(amount)),
+                row("Paid by", escape(payerLabel)),
+                row("Sent to your", escape(destinationLabel))
+        );
+
+        return wrap("Payment received", body);
+    }
+
     static String refundInitiatedEmail(String transactionCode, String totalCharged, String payerPhone) {
         String body = """
             <div>
