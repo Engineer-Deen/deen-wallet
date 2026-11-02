@@ -502,6 +502,135 @@ public class TransactionService {
         }
     }
 
+    // ==============================================================
+    // PAYMENT LINKS. A guest pays a link; the row is an ordinary transaction owned by the link's owner, so the whole
+    // existing flow (payment confirmation, payout, reconciliation, refunds, failed-payout tools) applies unchanged.
+    // ==============================================================
+    private static final int MAX_AWAITING_PER_LINK = 10;
+    private static final int MAX_AWAITING_PER_PAYER = 3;
+
+    /**
+     * Starts one guest payment: saves the row, asks the payment provider for a one-time USSD code locked to the payer's
+     * phone, and returns the row with the code. Deliberately not @Transactional (the provider call is slow network I/O).
+     */
+    public Transaction initiateForPaymentLink(PaymentLinkPayment p) {
+        requireUsableUser(p.ownerId());
+        requireKnownProvider(p.payerProviderId());
+        final TransactionServiceType type = p.bank() ? TransactionServiceType.BANK_TRANSFER : TransactionServiceType.MOBILE_MONEY;
+        final long minorUnits = p.amountMinor();
+        if (minorUnits < 100) throw new IllegalArgumentException("Amount must be at least 1.00");
+        final ConversionFee fee = ConversionFee.calculate(minorUnits);
+        final Money collectAmount = new Money("SLE", fee.totalChargedValue());
+        final String transactionCode = generateTransactionCode();
+
+        final Transaction saved;
+        synchronized (userLock(p.ownerId())) {
+            saved = transactionTemplate.execute(status -> {
+                Instant now = Instant.now();
+                List<Transaction> dups = transactionRepository.findRecentLinkDuplicates(
+                        p.requestId(), p.payerPhone(), minorUnits, now.minus(DUPLICATE_WINDOW));
+                if (!dups.isEmpty()) {
+                    Transaction existing = dups.get(0);
+                    if (existing.getMonimePaymentCodeId() == null) {
+                        throw new TooManyRequestsException("Your previous attempt is still being set up. Please wait a moment.");
+                    }
+                    return existing;   // double tap: show the same payment code again
+                }
+                try {
+                    kycLimits.enforce(p.ownerId(), type, minorUnits);
+                } catch (com.glr.deenwallet.kyc.KycLimitExceededException e) {
+                    safety.alertOnce("linklimit:" + p.ownerId() + ":" + java.time.LocalDate.now(), "PAYMENT_LINK_LIMIT",
+                            "Payment link at its daily limit", "A payment to one of your links was stopped because it is above your daily limit. "
+                                    + e.getMessage());
+                    throw new IllegalStateException("This payment link has reached its limit for today. Please try again tomorrow.");
+                }
+                if (transactionRepository.countLinkAwaitingSince(p.requestId(), now.minus(Duration.ofMinutes(15))) >= MAX_AWAITING_PER_LINK) {
+                    throw new TooManyRequestsException("This payment link is very busy right now. Please try again in a few minutes.");
+                }
+                if (transactionRepository.countLinkAwaitingForPayerSince(p.payerPhone(), now.minus(Duration.ofMinutes(15))) >= MAX_AWAITING_PER_PAYER) {
+                    throw new TooManyRequestsException("You have too many unpaid payments. Finish them or wait a few minutes.");
+                }
+                return transactionRepository.save(Transaction.builder()
+                        .userId(p.ownerId())
+                        .paymentRequestId(p.requestId())
+                        .payerName(p.payerName())
+                        .amountCurrency("SLE")
+                        .amountValue(minorUnits)
+                        .feeValue(fee.feeValue())
+                        .monimeDepositFeeValue(fee.monimeDepositFeeValue())
+                        .deenWalletFeeValue(fee.deenWalletFeeValue())
+                        .monimeWithdrawalFeeValue(fee.monimeWithdrawalFeeValue())
+                        .totalChargedValue(fee.totalChargedValue())
+                        .sourceProviderId(p.payerProviderId())
+                        .sourcePhone(p.payerPhone())
+                        .serviceType(type)
+                        .destinationProviderId(p.bank() ? null : p.destProviderId())
+                        .destinationPhone(p.bank() ? null : p.destAccount())
+                        .destinationBankProviderId(p.bank() ? p.destProviderId() : null)
+                        .destinationBankName(p.bank() ? p.destBankName() : null)
+                        .destinationBankAccountNumber(p.bank() ? p.destAccount() : null)
+                        .destinationBankHolderName(p.bank() ? p.destHolderName() : null)
+                        .destinationBankKycVerified(p.bank())
+                        .destinationHolderName(p.destHolderName())
+                        .status(TransactionStatus.AWAITING_PAYMENT)
+                        .smsSent(false)
+                        .transactionCode(transactionCode)
+                        .build());
+            });
+        }
+        if (saved.getMonimePaymentCodeId() != null) return saved;   // replay
+        final UUID transactionId = saved.getId();
+
+        final PaymentCodeResult paymentCode;
+        try {
+            paymentCode = monimeClient.createPaymentCode(CreatePaymentCodeRequest.oneTime(
+                    "DeenWallet Transfer payment link",
+                    collectAmount,
+                    p.payerPhone(),
+                    transactionId.toString()), "paycode-" + transactionId);
+        } catch (RuntimeException e) {
+            transactionTemplate.executeWithoutResult(status -> transactionRepository.deleteById(transactionId));
+            throw e;
+        }
+        return transactionTemplate.execute(status -> {
+            Transaction t = transactionRepository.findById(transactionId)
+                    .orElseThrow(() -> new IllegalStateException("Transaction disappeared during initiation"));
+            if (paymentCode == null || paymentCode.id() == null || paymentCode.id().isBlank()) {
+                throw new IllegalStateException("The payment provider did not return a payment code.");
+            }
+            t.setMonimePaymentCodeId(paymentCode.id());
+            t.setMonimeUssdCode(paymentCode.ussdCode());
+            return transactionRepository.save(t);
+        });
+    }
+
+    /** The payer's page asks about one payment; while it is being sent out, also check with the provider in the background. */
+    public void nudgeLinkPayment(UUID transactionId) {
+        Transaction t = transactionRepository.findById(transactionId).orElse(null);
+        if (t == null || t.getPaymentRequestId() == null) return;
+        if (t.getStatus() == TransactionStatus.PAYING_OUT && t.getMonimePayoutId() != null) {
+            nudgePayoutCheck(t.getMonimePayoutId());
+        }
+    }
+
+    private void notifyLinkReceived(Transaction t) {
+        String from = t.getPayerName() != null && !t.getPayerName().isBlank() ? t.getPayerName() : mask(t.getSourcePhone());
+        String msg = "You received SLE " + display(t.getAmountValue()) + " from " + from
+                + " through your payment link. It has been sent to your "
+                + (t.getServiceType() == TransactionServiceType.BANK_TRANSFER ? "bank account." : "mobile money account.");
+        notificationService.create(t.getUserId(), "PAYMENT_LINK_RECEIVED", "Payment received", msg, t.getId(), t.getTransactionCode());
+        pushNotificationService.sendToUser(t.getUserId(), "Payment received", msg,
+                Map.of("type", "PAYMENT_LINK_RECEIVED", "transactionId", t.getId().toString()));
+    }
+
+    private void notifyLinkDelayed(Transaction t) {
+        String msg = "A payment of SLE " + display(t.getAmountValue()) + " through your payment link was received, but we could not "
+                + "send it to your account yet. The money is safe and we are working on it. Reference " + t.getTransactionCode() + ".";
+        notificationService.create(t.getUserId(), "PAYMENT_LINK_DELAYED", "Payment on its way", msg, t.getId(), t.getTransactionCode());
+        pushNotificationService.sendToUser(t.getUserId(), "Payment on its way", msg,
+                Map.of("type", "PAYMENT_LINK_DELAYED", "transactionId", t.getId().toString()));
+    }
+
     private long toMinorUnits(BigDecimal amount) {
         if (amount == null || amount.compareTo(BigDecimal.ONE) < 0 || amount.scale() > 2) throw new IllegalArgumentException("Amount must be at least 1.00 and have at most 2 decimal places");
         try { return amount.movePointRight(2).longValueExact(); } catch (ArithmeticException e) { throw new IllegalArgumentException("Amount must have at most 2 decimal places"); }
@@ -597,6 +726,10 @@ public class TransactionService {
             transactionRepository.save(t);
             if (t.getServiceType() == TransactionServiceType.WAEC_RESULT_PIN) {
                 waecPinService.releaseForTransaction(t.getId());
+            }
+            if (t.getPaymentRequestId() != null) {   // a payer who never paid on a payment link: nothing to tell the owner
+                log.info("Canceled unpaid payment-link transaction {}", t.getTransactionCode());
+                return;
             }
             notificationService.create(t.getUserId(), "TRANSACTION_CANCELED", "Transfer canceled",
                     reason, t.getId(), t.getTransactionCode());
@@ -917,7 +1050,9 @@ public class TransactionService {
             log.warn("Could not alert admins about failed payout {}: {}", transaction.getTransactionCode(), e.toString());
         }
 
-        if (firstFailure) {
+        if (firstFailure && transaction.getPaymentRequestId() != null) {
+            notifyLinkDelayed(transaction);
+        } else if (firstFailure) {
             String msg = "We couldn't deliver transfer " + transaction.getTransactionCode()
                     + ". Your money is safe. Contact support with this number and we will retry or refund it.";
             notificationService.create(transaction.getUserId(), "TRANSACTION_PAYOUT_FAILED",
@@ -1026,6 +1161,11 @@ public class TransactionService {
         BigDecimal displayAmount = BigDecimal.valueOf(transaction.getAmountValue()).movePointLeft(2);
         boolean bankTransfer = transaction.getServiceType() == TransactionServiceType.BANK_TRANSFER;
 
+        if (transaction.getPaymentRequestId() != null) {
+            notifyLinkReceived(transaction);
+            return;
+        }
+
         if (!bankTransfer && transaction.getDestinationPhone() != null) {
             String smsMessage = "You have received " + transaction.getAmountCurrency() + " "
                     + displayAmount + " via DeenWallet Transfer.";
@@ -1077,6 +1217,7 @@ public class TransactionService {
             waecPinService.releaseForTransaction(transaction.getId());
         }
 
+        if (transaction.getPaymentRequestId() != null) return;   // payment link: the payer's page shows this, the owner is not told
         notificationService.create(
                 transaction.getUserId(),
                 "TRANSACTION_FAILED",
@@ -1204,7 +1345,7 @@ public class TransactionService {
                         recordAction(tx.getId(), "REFUND_SENT", null, null, "Refund payout " + tx.getRefundPayoutId() + " completed");
                         notifyUser(tx, "TRANSACTION_REFUNDED", "Refund sent",
                                 "Your money for transfer " + tx.getTransactionCode() + " has been refunded.");
-                        userRepository.findById(tx.getUserId()).ifPresent(u ->
+                        if (tx.getPaymentRequestId() == null) userRepository.findById(tx.getUserId()).ifPresent(u ->
                                 emailService.sendRefundCompletedEmail(u.getEmail(), tx.getTransactionCode(),
                                         display(tx.getTotalChargedValue()), tx.getSourcePhone()));
                     }));
@@ -1230,6 +1371,7 @@ public class TransactionService {
     }
 
     private void notifyUser(Transaction t, String type, String title, String message) {
+        if (t.getPaymentRequestId() != null) return;   // payment link: the refund goes to the payer, not the owner
         notificationService.create(t.getUserId(), type, title, message, t.getId(), t.getTransactionCode());
         pushNotificationService.sendToUser(t.getUserId(), title, message,
                 Map.of("type", type, "transactionId", t.getId().toString()));
@@ -1388,7 +1530,7 @@ public class TransactionService {
         });
 
         Transaction t = transactionRepository.findById(transactionId).orElseThrow();
-        userRepository.findById(t.getUserId()).ifPresent(u ->
+        if (t.getPaymentRequestId() == null) userRepository.findById(t.getUserId()).ifPresent(u ->
                 emailService.sendRefundInitiatedEmail(u.getEmail(), t.getTransactionCode(),
                         display(t.getTotalChargedValue()), t.getSourcePhone()));
         try {

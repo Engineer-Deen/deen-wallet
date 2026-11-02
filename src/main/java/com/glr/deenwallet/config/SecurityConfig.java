@@ -89,6 +89,10 @@ public class SecurityConfig {
                                 "/admin-reset-pin.html",
                                 "/admin.html",
                                 "/transactions.html",
+                                "/pay.html",
+                                "/p/**",
+                                "/qr.js",
+                                "/api/public/pay/**",
                                 "/config.js",
                                 "/deenwallet-client.js",
                                 "/firebase-messaging-sw.js",
@@ -124,6 +128,7 @@ public class SecurityConfig {
                                 "/api/users/**",
                                 "/api/transactions/**",
                                 "/api/recipients/**",
+                                "/api/payment-requests/**",
                                 "/api/accounts/**",
                                 "/api/bank-transfers/**",
                                 "/api/notifications/**"

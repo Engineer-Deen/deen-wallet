@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="robots" content="noindex" />
+<meta name="theme-color" content="#0C2A33" />
+<title>Pay securely · DeenWallet Transfer</title>
+<meta property="og:title" content="Pay securely with DeenWallet Transfer" />
+<meta property="og:description" content="Open the link, enter your mobile money number and pay in under a minute." />
+<meta property="og:image" content="/assets/logo.png" />
+<link rel="icon" href="/assets/logo.png" />
+<style>
+:root{--ink:#0C2A33;--ink2:#46606A;--lagoon:#1C7A91;--lagoon-d:#145A6C;--surf:#2E9FB0;--tint:#E3F2F5;--mist:#F2F7F8;--line:#DAE7EB;--gold:#D9B24E;--ok:#1E8449;--bad:#C0392B;--card:#fff}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;min-height:100dvh;background:var(--mist);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+.hidden{display:none!important}
+.wrap{max-width:460px;margin:0 auto;padding:0 16px calc(28px + env(safe-area-inset-bottom,0px))}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:calc(14px + env(safe-area-inset-top,0px)) 0 12px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.2px}
+.brand img{width:34px;height:34px;border-radius:10px;object-fit:cover}
+.secure{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--lagoon-d);background:var(--tint);border-radius:999px;padding:6px 10px}
+.secure svg{width:13px;height:13px}
+.hero{position:relative;overflow:hidden;border-radius:24px;padding:22px 20px 20px;color:#fff;background:radial-gradient(120% 90% at 100% 0%,rgba(217,178,78,.28),rgba(217,178,78,0) 55%),linear-gradient(160deg,#0C2A33 0%,#134A5A 100%);box-shadow:0 18px 40px -18px rgba(12,42,51,.65)}
+.hero::after{content:"";position:absolute;right:-40px;bottom:-60px;width:180px;height:180px;border-radius:50%;border:26px solid rgba(255,255,255,.05)}
+.payto{display:flex;align-items:center;gap:14px;position:relative;z-index:1}
+.avatar{flex:0 0 auto;width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:21px;color:#0C2A33;background:linear-gradient(140deg,#F3DC9B,#D9B24E);box-shadow:0 0 0 3px rgba(255,255,255,.18)}
+.who{min-width:0}
+.who small{display:block;font-size:12px;letter-spacing:.8px;text-transform:uppercase;color:rgba(255,255,255,.62);font-weight:700}
+.who strong{display:block;font-size:19px;line-height:1.25;overflow-wrap:anywhere}
+.verified{display:inline-flex;align-items:center;gap:5px;margin-top:3px;font-size:12px;color:#BFE9D0;font-weight:700}
+.verified svg{width:14px;height:14px}
+.title{position:relative;z-index:1;margin:16px 0 2px;font-size:22px;font-weight:800;line-height:1.25;overflow-wrap:anywhere}
+.note{position:relative;z-index:1;margin:0;color:rgba(255,255,255,.78);font-size:14.5px;overflow-wrap:anywhere}
+.amountbox{position:relative;z-index:1;margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.14);display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.amountbox span{font-size:13px;color:rgba(255,255,255,.7)}
+.amountbox b{font-size:30px;letter-spacing:-.5px}
+.amountbox b i{font-style:normal;font-size:15px;margin-right:5px;color:#F3DC9B}
+.card{margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px}
+label.l{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:0 0 7px}
+.field{margin-bottom:16px}
+.inp{width:100%;height:52px;border:1.5px solid var(--line);border-radius:14px;padding:0 14px;background:#fff;font-size:17px;outline:none;transition:border-color .15s,box-shadow .15s}
+.inp:focus{border-color:var(--lagoon);box-shadow:0 0 0 4px rgba(28,122,145,.14)}
+.inp.err{border-color:var(--bad)}
+.phone{display:flex;align-items:center;border:1.5px solid var(--line);border-radius:14px;background:#fff;overflow:hidden}
+.phone:focus-within{border-color:var(--lagoon);box-shadow:0 0 0 4px rgba(28,122,145,.14)}
+.phone.err{border-color:var(--bad)}
+.phone span{padding:0 4px 0 14px;font-weight:700;color:var(--ink2)}
+.phone input{flex:1;min-width:0;height:50px;border:0;outline:none;padding:0 14px 0 4px;font-size:17px;background:transparent;letter-spacing:.3px}
+.amt{position:relative}
+.amt span{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-weight:800;color:var(--ink2)}
+.amt .inp{padding-left:56px;font-size:20px;font-weight:700}
+.provs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.prov{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid var(--line);border-radius:14px;background:#fff;cursor:pointer;text-align:left;transition:border-color .15s,background .15s,transform .1s}
+.prov:active{transform:scale(.98)}
+.prov img{width:34px;height:34px;border-radius:50%;object-fit:cover;flex:0 0 auto}
+.prov b{font-size:14px;line-height:1.2}
+.prov[aria-pressed=true]{border-color:var(--lagoon);background:var(--tint);box-shadow:0 0 0 3px rgba(28,122,145,.12)}
+.sum{background:var(--mist);border-radius:14px;padding:12px 14px;margin-bottom:16px}
+.sum div{display:flex;justify-content:space-between;gap:10px;font-size:14.5px;color:var(--ink2);padding:3px 0}
+.sum div.t{margin-top:6px;padding-top:9px;border-top:1px dashed #C6D8DE;color:var(--ink);font-weight:800;font-size:16.5px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:54px;border:0;border-radius:16px;background:linear-gradient(180deg,#22889F,#1C7A91);color:#fff;font-weight:800;font-size:17px;cursor:pointer;box-shadow:0 10px 22px -10px rgba(28,122,145,.9);transition:transform .1s,opacity .15s}
+.btn:active{transform:scale(.985)}
+.btn[disabled]{opacity:.55;cursor:not-allowed;box-shadow:none}
+.btn.ghost{background:#fff;color:var(--lagoon-d);border:1.5px solid var(--line);box-shadow:none;margin-top:10px}
+.msg{margin:0 0 14px;padding:11px 13px;border-radius:12px;font-size:14px;background:#FDECEA;color:#8B1E1E;border:1px solid #F5C2C2}
+.fine{margin:12px 2px 0;font-size:12.5px;color:var(--ink2);text-align:center}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:999px;font-weight:700;font-size:13px;background:#FFF7E6;color:#9A6408}
+.pill i{width:8px;height:8px;border-radius:50%;background:#E0A020;animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(.7);opacity:.6}50%{transform:scale(1.25);opacity:1}}
+.ussd{margin:14px 0 6px;text-align:center}
+.code{display:block;width:100%;margin:12px 0 6px;padding:16px 10px;border:2px dashed var(--lagoon);border-radius:16px;background:var(--tint);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:clamp(20px,6.4vw,27px);font-weight:800;letter-spacing:.4px;color:var(--ink);cursor:pointer;overflow-wrap:anywhere}
+.cd{font-size:13px;color:var(--ink2)}
+.cd b{font-variant-numeric:tabular-nums;color:var(--ink)}
+.steps{margin:14px 0 4px;padding:0;list-style:none;counter-reset:s}
+.steps li{counter-increment:s;display:flex;gap:11px;align-items:flex-start;padding:7px 0;font-size:14.5px;color:var(--ink2)}
+.steps li::before{content:counter(s);flex:0 0 auto;width:24px;height:24px;border-radius:50%;background:var(--ink);color:#fff;font-weight:800;font-size:12.5px;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.scene{text-align:center;padding:6px 0 2px}
+.orb{position:relative;width:116px;height:116px;margin:4px auto 14px}
+.ring{position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,rgba(28,122,145,0) 0%,#1C7A91 55%,#D9B24E 100%);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 7px),#000 calc(100% - 6px));mask:radial-gradient(farthest-side,transparent calc(100% - 7px),#000 calc(100% - 6px));animation:spin 1.4s linear infinite}
+.glow{position:absolute;inset:10px;border-radius:50%;background:radial-gradient(circle,rgba(28,122,145,.22),rgba(28,122,145,0) 70%);animation:breathe 1.8s ease-in-out infinite}
+.orb img{position:absolute;inset:20px;width:76px;height:76px;border-radius:50%;object-fit:cover;box-shadow:0 6px 18px rgba(15,42,51,.35)}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes breathe{0%,100%{transform:scale(.92);opacity:.7}50%{transform:scale(1.08);opacity:1}}
+.scene h2{margin:0 0 4px;font-size:21px}
+.scene p{margin:0 auto;max-width:300px;color:var(--ink2);font-size:14.5px}
+.dots span{display:inline-block;animation:dot 1.2s ease-in-out infinite}.dots span:nth-child(2){animation-delay:.2s}.dots span:nth-child(3){animation-delay:.4s}
+@keyframes dot{0%,80%,100%{transform:translateY(0);opacity:.35}40%{transform:translateY(-4px);opacity:1}}
+.flow{display:flex;align-items:center;gap:8px;max-width:300px;margin:16px auto 4px}
+.flow em{font-style:normal;font-size:11px;font-weight:800;letter-spacing:.4px;color:var(--lagoon);border:1.5px solid var(--lagoon);border-radius:999px;padding:4px 10px}
+.flow u{position:relative;flex:1;height:4px;border-radius:4px;background:var(--line);overflow:hidden}
+.flow u::after{content:"";position:absolute;top:0;bottom:0;width:38%;border-radius:4px;background:linear-gradient(90deg,rgba(28,122,145,0),#1C7A91,#D9B24E);animation:flow 1.3s ease-in-out infinite}
+@keyframes flow{0%{left:-40%}100%{left:102%}}
+.track{display:flex;max-width:330px;margin:18px auto 4px}
+.tk{flex:1 1 0;position:relative;text-align:center;font-size:11.5px;line-height:1.3;color:var(--ink2);padding:0 2px}
+.tk::before{content:"";position:absolute;top:11px;left:-50%;width:100%;height:2px;background:var(--line)}
+.tk:first-child::before{display:none}
+.tk.d::before,.tk.a::before{background:var(--lagoon)}
+.tk i{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;width:24px;height:24px;margin:0 auto 6px;border-radius:50%;background:#fff;border:2px solid var(--line);font-style:normal;font-weight:800;font-size:12px}
+.tk.d i{background:var(--lagoon);border-color:var(--lagoon);color:#fff}
+.tk.a i{border-color:var(--lagoon);color:var(--lagoon);animation:ring 1.4s ease-in-out infinite}
+.tk.d,.tk.a{color:var(--ink);font-weight:700}
+@keyframes ring{0%,100%{box-shadow:0 0 0 0 rgba(28,122,145,.45)}50%{box-shadow:0 0 0 6px rgba(28,122,145,0)}}
+.slow{margin:14px auto 0;max-width:340px;padding:10px 12px;border-radius:12px;background:#FFF7E0;border:1px solid #F0DC9A;color:#6B5300;font-size:13.5px;text-align:left}
+.tm{margin-top:8px;font-size:12px;color:var(--ink2)}
+.ok{text-align:center;padding:4px 0}
+.okc{width:92px;height:92px;margin:6px auto 12px}
+.okc circle{fill:#E7F7EC;stroke:#1E8449;stroke-width:4;stroke-dasharray:289;stroke-dashoffset:289;animation:draw .7s ease-out forwards}
+.okc path{fill:none;stroke:#1E8449;stroke-width:6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:60;stroke-dashoffset:60;animation:draw .5s .55s ease-out forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.ok h2{margin:0 0 4px;font-size:24px}
+.ok p{margin:0;color:var(--ink2)}
+.rcpt{margin:18px 0 6px;text-align:left;border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.rcpt div{display:flex;justify-content:space-between;gap:14px;padding:11px 14px;font-size:14.5px;border-bottom:1px solid var(--line)}
+.rcpt div:last-child{border-bottom:0}
+.rcpt div span{color:var(--ink2)}
+.rcpt div b{text-align:right;overflow-wrap:anywhere}
+.rcpt div.t{background:var(--mist);font-size:16px}
+.bad2{text-align:center;padding:4px 0}
+.bad2 .ico{width:64px;height:64px;margin:6px auto 10px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:30px;background:#FDECEA}
+.bad2 h2{margin:0 0 6px;font-size:21px}
+.bad2 p{margin:0 auto 14px;max-width:320px;color:var(--ink2)}
+.cta{margin-top:16px;display:flex;align-items:center;gap:12px;padding:14px;border-radius:18px;background:#fff;border:1px solid var(--line);text-decoration:none;color:inherit}
+.cta img{width:44px;height:44px;border-radius:12px;object-fit:cover}
+.cta b{display:block;font-size:14.5px}
+.cta span{font-size:12.5px;color:var(--ink2)}
+.cta i{margin-left:auto;font-style:normal;font-weight:800;color:var(--lagoon)}
+.skel{height:200px;border-radius:24px;background:linear-gradient(90deg,#E6EEF0 25%,#F3F8F9 50%,#E6EEF0 75%);background-size:200% 100%;animation:sk 1.2s infinite}
+@keyframes sk{to{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.ring,.glow,.dots span,.flow u::after,.tk.a i,.pill i,.skel{animation:none}.okc circle,.okc path{animation:none;stroke-dashoffset:0}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar">
+    <div class="brand"><img src="/assets/icon-192.png" alt="" /><span>DeenWallet Transfer</span></div>
+    <div class="secure"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Secure payment</div>
+  </div>
+
+  <div id="loading" class="skel" aria-busy="true"></div>
+
+  <!-- unavailable / error -->
+  <div id="gone" class="card hidden"><div class="bad2"><div class="ico" id="gone-ico">&#128683;</div><h2 id="gone-title">Link not available</h2><p id="gone-text"></p></div></div>
+
+  <!-- main -->
+  <div id="main" class="hidden">
+    <section class="hero">
+      <div class="payto">
+        <div class="avatar" id="avatar">D</div>
+        <div class="who"><small>Pay to</small><strong id="payee">—</strong>
+          <div class="verified"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg><span id="payee-acct">Verified account</span></div></div>
+      </div>
+      <h1 class="title" id="title" style="margin-bottom:2px"></h1>
+      <p class="note hidden" id="note"></p>
+      <div class="amountbox"><span id="amt-label">Amount</span><b id="amt-big"><i>SLE</i>—</b></div>
+    </section>
+
+    <!-- step 1: details -->
+    <section class="card" id="step-form">
+      <div id="form-err" class="msg hidden" role="alert"></div>
+      <div class="field hidden" id="amt-field"><label class="l" for="amt">How much do you want to pay?</label><div class="amt"><span>SLE</span><input class="inp" id="amt" inputmode="decimal" autocomplete="off" placeholder="0.00" /></div></div>
+      <div class="field"><label class="l">Pay with</label><div class="provs" id="provs">
+        <button type="button" class="prov" data-p="m17" aria-pressed="false"><img src="/assets/provider-logos/orange-money.png" alt="" /><b>Orange Money</b></button>
+        <button type="button" class="prov" data-p="m18" aria-pressed="false"><img src="/assets/provider-logos/africell.png" alt="" /><b>Africell Money</b></button></div></div>
+      <div class="field"><label class="l" for="phone">Your mobile money number</label><div class="phone" id="phone-box"><span>+232</span><input id="phone" inputmode="numeric" autocomplete="tel-national" placeholder="76 123 456" maxlength="14" /></div></div>
+      <div class="field"><label class="l" for="pname">Your name <small style="font-weight:600;color:#7a8e95">(optional, so they know it was you)</small></label><input class="inp" id="pname" maxlength="40" autocomplete="name" placeholder="e.g. Aminata" /></div>
+      <div class="sum" id="sum"><div><span>Amount</span><b id="s-amt">—</b></div><div><span>Service fee (3%)</span><b id="s-fee">—</b></div><div class="t"><span>You pay</span><b id="s-total">—</b></div></div>
+      <button class="btn" id="pay" type="button">Continue</button>
+      <p class="fine">You will get a one-time code to dial on your phone. Your mobile money PIN is only ever typed on your own phone.</p>
+    </section>
+
+    <!-- step 2: dial -->
+    <section class="card hidden" id="step-dial">
+      <div style="text-align:center"><span class="pill"><i></i>Waiting for your payment</span></div>
+      <div class="ussd"><div class="cd">Dial this code on <b id="d-phone"></b></div>
+        <button class="code" id="code" type="button" aria-label="Copy the USSD code"></button>
+        <div class="cd">Tap the code to copy it &middot; expires in <b id="cd">10:00</b></div></div>
+      <a class="btn" id="dial" href="#">Dial now</a>
+      <button class="btn ghost" id="copy" type="button">Copy code</button>
+      <ol class="steps"><li>Dial the code (or tap <b>Dial now</b>).</li><li>Check the amount and the name, then enter your mobile money PIN on the phone.</li><li>Come back here. This page updates by itself.</li></ol>
+    </section>
+
+    <!-- step 3: sending -->
+    <section class="card hidden" id="step-send">
+      <div class="scene"><div class="orb"><div class="glow"></div><div class="ring"></div><img src="/assets/icon-192.png" alt="" /></div>
+        <h2><span id="sc-title">Sending the money</span><span class="dots" aria-hidden="true"><span>.</span><span>.</span><span>.</span></span></h2>
+        <p id="sc-sub">Payment received. Sending it to the receiver now.</p>
+        <div class="flow" aria-hidden="true"><em>YOU</em><u></u><em id="sc-end">THEM</em></div>
+        <div class="track"><div class="tk d"><i>&#10003;</i>Payment received</div><div class="tk a" id="tk2"><i>2</i>Sending</div><div class="tk" id="tk3"><i>3</i>Delivered</div></div>
+        <div class="tm" id="sc-time"></div>
+        <div class="slow hidden" id="sc-slow">This is taking a little longer than usual. Your money is safe. You can close this page; the receiver is paid as soon as it goes through.</div></div>
+    </section>
+
+    <!-- step 4: done -->
+    <section class="card hidden" id="step-done">
+      <div class="ok"><svg class="okc" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="46"/><path d="M30 52l14 14 27-30"/></svg>
+        <h2>Payment sent</h2><p id="ok-sub"></p>
+        <div class="rcpt"><div><span>Paid to</span><b id="r-to"></b></div><div><span>Amount</span><b id="r-amt"></b></div><div><span>Service fee</span><b id="r-fee"></b></div><div class="t"><span>Total paid</span><b id="r-total"></b></div><div><span>Reference</span><b id="r-ref"></b></div><div><span>Time</span><b id="r-time"></b></div></div>
+        <button class="btn" id="share" type="button">Share receipt</button>
+        <button class="btn ghost" id="again" type="button">Make another payment</button></div>
+    </section>
+
+    <!-- other end states -->
+    <section class="card hidden" id="step-end"><div class="bad2"><div class="ico" id="end-ico">&#9888;&#65039;</div><h2 id="end-title"></h2><p id="end-text"></p><div class="rcpt" id="end-ref-box"><div><span>Reference</span><b id="end-ref"></b></div></div><button class="btn ghost" id="end-btn" type="button">Back</button></div></section>
+
+    <a class="cta" href="/welcome.html"><img src="/assets/icon-192.png" alt="" /><div><b>Send money the easy way</b><span>Move money between mobile money and banks with DeenWallet Transfer.</span></div><i>&rsaquo;</i></a>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var slug = (location.pathname.match(/\/p\/([A-Za-z0-9]+)/) || [])[1] || new URLSearchParams(location.search).get('c') || '';
+  var $ = function (id) { return document.getElementById(id); };
+  var view = null, pay = null, poll = null, tick = null, sendStart = 0, prefixes = null;
+
+  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { } return null; }
+  function show(id) { ['step-form', 'step-dial', 'step-send', 'step-done', 'step-end'].forEach(function (s) { $(s).classList.toggle('hidden', s !== id); }); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  function fmt(minor) { return 'SLE ' + (Number(minor) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function feeOf(minor) { return 3 * Math.floor((minor + 50) / 100); }
+  function esc(s) { return String(s == null ? '' : s); }
+  function api(path, opts) {
+    opts = opts || {};
+    return fetch(path, { method: opts.method || 'GET', headers: opts.body ? { 'Content-Type': 'application/json' } : undefined, body: opts.body ? JSON.stringify(opts.body) : undefined, cache: 'no-store' })
+      .then(function (r) { return r.text().then(function (t) { var j = {}; try { j = t ? JSON.parse(t) : {}; } catch (e) { } if (!r.ok) { var e = new Error(j.message || 'Something went wrong. Please try again.'); e.status = r.status; throw e; } return j; }); });
+  }
+  function initials(n) { var p = String(n || '').trim().split(/\s+/).filter(Boolean); if (!p.length) return 'D'; return (p[0][0] + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase(); }
+  function titleCase(n) { return String(n || '').toLowerCase().replace(/(^|\s|-)([a-z])/g, function (m, a, b) { return a + b.toUpperCase(); }); }
+  function localDigits(v) { var d = String(v || '').replace(/\D/g, ''); if (d.indexOf('232') === 0 && d.length > 8) d = d.slice(3); if (d.charAt(0) === '0') d = d.slice(1); return d.slice(0, 8); }
+  function fullPhone() { var d = localDigits($('phone').value); return d.length === 8 ? '+232' + d : ''; }
+  function selected() { var b = document.querySelector('.prov[aria-pressed=true]'); return b ? b.getAttribute('data-p') : ''; }
+  function setProv(p) { document.querySelectorAll('.prov').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-p') === p ? 'true' : 'false'); }); }
+  function amountMinor() {
+    if (view && view.amountMinor != null) return view.amountMinor;
+    var v = String($('amt').value || '').replace(/,/g, '').trim();
+    if (!/^\d+(\.\d{1,2})?$/.test(v)) return 0;
+    return Math.round(parseFloat(v) * 100);
+  }
+  function formErr(t) { var e = $('form-err'); if (t) { e.textContent = t; e.classList.remove('hidden'); } else e.classList.add('hidden'); }
+
+  function renderSum() {
+    var m = amountMinor();
+    if (m >= 100) { $('s-amt').textContent = fmt(m); $('s-fee').textContent = fmt(feeOf(m)); $('s-total').textContent = fmt(m + feeOf(m)); $('pay').textContent = 'Continue to pay ' + fmt(m + feeOf(m)); }
+    else { $('s-amt').textContent = '—'; $('s-fee').textContent = '—'; $('s-total').textContent = '—'; $('pay').textContent = 'Continue'; }
+  }
+
+  function gone(icon, title, text) { $('loading').classList.add('hidden'); $('main').classList.add('hidden'); $('gone').classList.remove('hidden'); $('gone-ico').textContent = icon; $('gone-title').textContent = title; $('gone-text').textContent = text; }
+
+  function load() {
+    if (!slug) { gone('🔍', 'Link not found', 'Check the link you were sent and try again.'); return; }
+    api('/api/public/pay/' + encodeURIComponent(slug)).then(function (v) {
+      view = v; $('loading').classList.add('hidden');
+      var name = titleCase(v.payeeName);
+      $('payee').textContent = name; $('avatar').textContent = initials(name);
+      $('payee-acct').textContent = (v.payeeType === 'BANK' ? (v.payeeBank || 'Bank') + ' ' : 'Mobile money ') + (v.payeeAccount || '');
+      $('title').textContent = v.title || 'Payment';
+      if (v.note) { $('note').textContent = v.note; $('note').classList.remove('hidden'); }
+      if (v.amountMinor != null) { $('amt-big').innerHTML = '<i>SLE</i>' + (v.amountMinor / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+      else { $('amt-label').textContent = 'You choose the amount'; $('amt-big').innerHTML = '<i>SLE</i>Any'; $('amt-field').classList.remove('hidden'); }
+      document.title = 'Pay ' + name + ' · DeenWallet Transfer';
+      $('main').classList.remove('hidden');
+      if (v.status !== 'ACTIVE') {
+        var m = { PAID: ['This link has been paid', 'Thank you. This payment link has already been paid.'], EXPIRED: ['This link has expired', 'Ask the person to send you a new payment link.'], CLOSED: ['This link is closed', 'The person has stopped taking payments on this link.'] }[v.status] || ['Link not available', 'This link is not taking payments.'];
+        show('step-end'); $('end-ico').textContent = '🔒'; $('end-title').textContent = m[0]; $('end-text').textContent = m[1]; $('end-ref-box').classList.add('hidden'); $('end-btn').classList.add('hidden'); return;
+      }
+      var lastP = store('dwpay_phone'), lastN = store('dwpay_name'), lastPr = store('dwpay_prov');
+      if (lastP) $('phone').value = lastP; if (lastN) $('pname').value = lastN; if (lastPr) setProv(lastPr);
+      renderSum(); resume();
+    }).catch(function (e) { gone('🔍', e.status === 429 ? 'Please wait a moment' : 'Link not available', e.message); });
+    api('/api/providers/prefixes').then(function (p) { prefixes = p; detect(); }).catch(function () { });
+  }
+
+  function detect() {
+    if (!prefixes) return; var d = localDigits($('phone').value); if (d.length < 2) return;
+    for (var len = 2; len >= 1; len--) { var pre = d.slice(0, len); for (var k in prefixes) { if (prefixes[k] && prefixes[k].indexOf(pre) >= 0 && (k === 'm17' || k === 'm18')) { setProv(k); return; } } }
+  }
+
+  document.querySelectorAll('.prov').forEach(function (b) { b.addEventListener('click', function () { setProv(b.getAttribute('data-p')); formErr(''); }); });
+  $('phone').addEventListener('input', function () { var d = localDigits(this.value); this.value = d.replace(/(\d{2})(\d{3})?(\d{0,3})/, function (m, a, b, c) { return [a, b, c].filter(Boolean).join(' '); }); $('phone-box').classList.remove('err'); detect(); formErr(''); });
+  $('amt').addEventListener('input', function () { this.classList.remove('err'); renderSum(); formErr(''); });
+
+  $('pay').addEventListener('click', function () {
+    formErr(''); var m = amountMinor(), p = selected(), ph = fullPhone();
+    if (m < 100) { $('amt').classList.add('err'); formErr('Enter an amount of at least SLE 1.00.'); $('amt').focus(); return; }
+    if (view && m > view.maxMinor) { formErr('The most you can pay on one link is ' + fmt(view.maxMinor) + '.'); return; }
+    if (!p) { formErr('Choose Orange Money or Africell Money.'); return; }
+    if (!ph) { $('phone-box').classList.add('err'); formErr('Enter your 8-digit mobile money number.'); $('phone').focus(); return; }
+    var btn = $('pay'); btn.disabled = true; btn.textContent = 'Setting up your payment…';
+    store('dwpay_phone', $('phone').value); store('dwpay_name', $('pname').value); store('dwpay_prov', p);
+    var body = { providerId: p, phone: ph, payerName: $('pname').value.trim() };
+    if (view.amountMinor == null) body.amount = (m / 100).toFixed(2);
+    api('/api/public/pay/' + encodeURIComponent(slug) + '/start', { method: 'POST', body: body }).then(function (r) {
+      pay = { id: r.paymentId, ussd: r.ussdCode, total: r.totalMinor, amount: r.amountMinor, fee: r.feeMinor, ref: r.reference, phone: ph, to: r.payeeName, exp: Date.now() + (r.expiresInSeconds || 600) * 1000 };
+      store('dwpay_' + slug, JSON.stringify(pay)); startDial();
+    }).catch(function (e) { formErr(e.message); }).then(function () { btn.disabled = false; renderSum(); });
+  });
+
+  function startDial() {
+    show('step-dial'); $('d-phone').textContent = pay.phone.replace(/^\+232(\d{2})(\d{3})(\d{3})$/, '+232 $1 $2 $3');
+    $('code').textContent = pay.ussd || ''; $('dial').setAttribute('href', 'tel:' + encodeURIComponent(pay.ussd || ''));
+    if (tick) clearInterval(tick);
+    var run = function () { var s = Math.max(0, Math.round((pay.exp - Date.now()) / 1000)); $('cd').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); if (s <= 0) { $('cd').textContent = 'expired'; } };
+    run(); tick = setInterval(run, 1000); startPoll();
+  }
+  function copyCode() { var t = pay && pay.ussd || ''; if (!t) return; var done = function () { $('copy').textContent = 'Copied ✓'; setTimeout(function () { $('copy').textContent = 'Copy code'; }, 1800); }; try { navigator.clipboard.writeText(t).then(done, done); } catch (e) { done(); } }
+  $('code').addEventListener('click', copyCode); $('copy').addEventListener('click', copyCode);
+
+  function startPoll() { if (poll) clearInterval(poll); check(); poll = setInterval(check, 2500); }
+  function check() {
+    if (!pay) return;
+    api('/api/public/pay/' + encodeURIComponent(slug) + '/status/' + encodeURIComponent(pay.id)).then(function (s) {
+      if (s.phase === 'waiting') { if (!$('step-dial').classList.contains('hidden')) { if (pay.exp + 5 * 60 * 1000 < Date.now()) { stop(); endView('⏱️', 'Payment not completed', 'The code expired before it was paid. No money was taken. You can start again.', s.reference, true); } } return; }
+      if (s.phase === 'sending') { if (!sendStart) sendStart = Date.now(); showSend(); return; }
+      stop();
+      if (s.phase === 'done') return done(s);
+      if (s.phase === 'delayed') return endView('⏳', 'Payment received, delivery delayed', s.message, s.reference, false);
+      if (s.phase === 'refund') return endView('↩️', 'Money is coming back to you', s.message, s.reference, false);
+      endView('⚠️', 'Payment not completed', s.message, s.reference, true);
+    }).catch(function (e) { if (e.status === 400) { stop(); store('dwpay_' + slug, null); pay = null; show('step-form'); } });
+  }
+  function stop() { if (poll) clearInterval(poll); poll = null; if (tick) clearInterval(tick); tick = null; if (sendTick) clearInterval(sendTick); sendTick = null; }
+  var sendTick = null;
+  function showSend() {
+    if (!$('step-send').classList.contains('hidden')) return;
+    show('step-send'); $('sc-end').textContent = view && view.payeeType === 'BANK' ? 'BANK' : 'THEM';
+    var t = function () { var s = Math.max(0, Math.floor((Date.now() - sendStart) / 1000)); $('sc-time').textContent = 'Elapsed ' + Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); $('sc-slow').classList.toggle('hidden', s < 30); };
+    t(); if (sendTick) clearInterval(sendTick); sendTick = setInterval(t, 1000);
+  }
+  function done(s) {
+    store('dwpay_' + slug, null);
+    show('step-done'); var name = titleCase((pay && pay.to) || (view && view.payeeName) || '');
+    $('ok-sub').textContent = name + ' has been paid.'; $('r-to').textContent = name;
+    var amt = s.amountMinor, tot = s.totalMinor; $('r-amt').textContent = fmt(amt); $('r-fee').textContent = fmt(tot - amt); $('r-total').textContent = fmt(tot);
+    $('r-ref').textContent = s.reference; $('r-time').textContent = new Date().toLocaleString([], { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    $('share').onclick = function () {
+      var text = 'I paid ' + fmt(amt) + ' to ' + name + ' with DeenWallet Transfer. Reference ' + s.reference + '.';
+      if (navigator.share) navigator.share({ title: 'Payment receipt', text: text }).catch(function () { }); else { try { navigator.clipboard.writeText(text); $('share').textContent = 'Receipt copied ✓'; } catch (e) { } }
+    };
+  }
+  function endView(ico, title, text, ref, retry) {
+    stop(); store('dwpay_' + slug, null); show('step-end'); $('end-ico').textContent = ico; $('end-title').textContent = title; $('end-text').textContent = text;
+    $('end-ref-box').classList.toggle('hidden', !ref); $('end-ref').textContent = ref || ''; var b = $('end-btn'); b.classList.toggle('hidden', !retry); b.textContent = 'Try again'; b.onclick = function () { pay = null; sendStart = 0; show('step-form'); };
+  }
+  $('again').addEventListener('click', function () { pay = null; sendStart = 0; $('share').textContent = 'Share receipt'; show('step-form'); });
+
+  function resume() {
+    var saved = store('dwpay_' + slug); if (!saved) return;
+    try { var p = JSON.parse(saved); if (p && p.id && p.exp && p.exp + 20 * 60 * 1000 > Date.now()) { pay = p; startDial(); return; } } catch (e) { }
+    store('dwpay_' + slug, null);
+  }
+  load();
+})();
+</script>
+</body>
+</html>

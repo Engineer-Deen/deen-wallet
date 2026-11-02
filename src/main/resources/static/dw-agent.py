@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """DeenWallet monitoring agent.
 
-Runs on an extra server (for example your database machine) and reports to the DeenWallet Metrics tab every minute:
+Runs on an extra server (for example my database machine) and reports to the DeenWallet Metrics tab every minute:
 processor, memory, storage, load, what needs updating (with the command to run), SSH guessing and weak spots.
 It only READS the machine and sends a small report. It never changes anything except its own two small systemd files.
 

@@ -2233,6 +2233,48 @@
         .service-card-icon.has-logo { background:#fff; border:1px solid var(--border); padding:5px; }
         .service-card-icon.has-logo img { width:100%; height:100%; object-fit:contain; border-radius:10px; display:block; }
         .waec-logo-fallback { font-weight:800; font-size:13px; color:var(--primary); letter-spacing:.3px; }
+        .pl-head { display:flex; align-items:center; gap:12px; margin-bottom:4px; }
+        .pl-new { width:100%; margin-top:16px; padding:14px; min-height:48px; font-size:15px; }
+        .pl-list { margin-top:16px; display:flex; flex-direction:column; gap:10px; }
+        .pl-item { display:block; width:100%; text-align:left; background:#fff; border:1px solid var(--border); border-radius:16px; padding:14px 15px; cursor:pointer; box-shadow:0 6px 18px rgba(18,36,43,.05); font:inherit; color:var(--text); }
+        .pl-item:active { transform:scale(.995); }
+        .pl-row { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+        .pl-name { font-size:15px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+        .pl-amt { font-size:14px; font-weight:800; color:var(--primary); white-space:nowrap; }
+        .pl-meta { margin-top:6px; font-size:12px; color:var(--muted); display:flex; flex-wrap:wrap; gap:4px 10px; }
+        .pl-chip { display:inline-block; padding:2px 8px; border-radius:999px; font-size:10px; font-weight:800; letter-spacing:.2px; }
+        .pl-chip.active { background:#E3F6EA; color:#1B7A3E; }
+        .pl-chip.paid { background:#E4F1F5; color:#1C7A91; }
+        .pl-chip.closed, .pl-chip.expired { background:#EEF1F2; color:#6E7C82; }
+        .pl-empty { margin-top:16px; padding:26px 16px; border-radius:16px; background:#F7FAFB; border:1px dashed #CFE0E5; text-align:center; color:var(--muted); font-size:13px; line-height:1.5; }
+        .pl-empty b { display:block; font-size:15px; color:var(--text); margin-bottom:4px; }
+        .pl-seg { display:flex; background:#EAF1F3; border-radius:14px; padding:4px; gap:4px; }
+        .pl-seg button { flex:1; border:0; background:transparent; border-radius:11px; padding:10px 6px; font:inherit; font-size:13px; font-weight:700; color:var(--muted); cursor:pointer; }
+        .pl-seg button[aria-pressed="true"] { background:#fff; color:var(--primary); box-shadow:0 2px 8px rgba(18,36,43,.1); }
+        .pl-inp { width:100%; min-height:50px; border:1px solid #DCE7EA; border-radius:14px; background:#fff; color:var(--text); padding:0 14px; font:inherit; font-size:16px; outline:none; }
+        .pl-inp:focus { border-color:#8CCFD9; }
+        textarea.pl-inp { min-height:70px; padding:12px 14px; resize:none; }
+        .pl-help { font-size:12px; color:var(--muted); margin-top:6px; line-height:1.45; }
+        .pl-who { margin-top:8px; padding:10px 12px; border-radius:12px; background:#EAF6F8; color:#0F5E70; font-size:13px; font-weight:700; }
+        .pl-who.bad { background:#FDECEA; color:var(--error); }
+        .pl-fee { margin-top:16px; padding:12px 14px; border-radius:14px; background:#F2FAFB; border:1px solid #D6ECF0; font-size:12.5px; color:#2A4A54; line-height:1.5; }
+        .pl-share { text-align:center; padding:6px 0 2px; }
+        .pl-share h2 { margin:0 0 2px; font-size:19px; }
+        .pl-link { margin:14px 0 10px; padding:12px; border:1.5px dashed #8CCFD9; border-radius:14px; background:#F2FAFB; font-size:12.5px; font-weight:700; color:var(--primary); overflow-wrap:anywhere; cursor:pointer; text-align:center; }
+        .pl-acts { display:flex; gap:8px; flex-wrap:wrap; }
+        .pl-acts > button { flex:1 1 30%; min-width:92px; }
+        .pl-qr { margin:16px auto 4px; width:170px; padding:10px; background:#fff; border:1px solid var(--border); border-radius:16px; }
+        .pl-qr svg { display:block; width:100%; height:auto; }
+        .pl-stats { display:flex; gap:8px; margin-top:16px; }
+        .pl-stat { flex:1; background:#fff; border:1px solid var(--border); border-radius:14px; padding:11px 8px; text-align:center; }
+        .pl-stat b { display:block; font-size:15px; }
+        .pl-stat span { font-size:11px; color:var(--muted); }
+        .pl-pay { display:flex; justify-content:space-between; gap:10px; padding:11px 0; border-bottom:1px solid #EEF3F5; font-size:13px; }
+        .pl-pay:last-child { border-bottom:0; }
+        .pl-pay small { display:block; color:var(--muted); font-size:11px; margin-top:2px; }
+        .pl-st { font-size:11px; font-weight:800; }
+        .pl-st.received { color:#1B7A3E; } .pl-st.sending, .pl-st.waiting { color:#B9770E; } .pl-st.delayed { color:#B9770E; } .pl-st.refunded, .pl-st.failed { color:var(--error); }
+        .pl-danger { width:100%; margin-top:16px; border:1px solid #F1C9C4; background:#fff; color:var(--error); border-radius:22px; padding:12px; font-size:14px; font-weight:700; cursor:pointer; }
         .waec-product { display:flex; align-items:center; gap:14px; }
         .waec-product-logo { width:56px; height:56px; border-radius:16px; background:#fff; border:1px solid var(--border); padding:6px; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
         .waec-product-logo img { width:100%; height:100%; object-fit:contain; display:block; }
@@ -3640,6 +3682,20 @@
                 <span class="service-card-arrow" aria-hidden="true">›</span>
             </button>
 
+            <button type="button" class="service-card" id="services-links-card">
+                <div class="service-card-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/>
+                        <path d="M14 10a4 4 0 0 0-5.7 0l-3 3A4 4 0 0 0 11 18.7l1-1"/>
+                    </svg>
+                </div>
+                <div class="service-card-content">
+                    <strong>Payment Links</strong>
+                    <span>Send a link and get paid by anyone, even without an account.</span>
+                </div>
+                <span class="service-card-arrow" aria-hidden="true">›</span>
+            </button>
+
             <div class="services-coming-card">
                 <div class="services-coming-icon" aria-hidden="true">✦</div>
                 <div>
@@ -3647,6 +3703,104 @@
                     <p>New DeenWallet Transfer services will appear here when available.</p>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- ===================== PAYMENT LINKS SCREENS ===================== -->
+    <div class="screen" id="screen-links">
+        <div class="scroll">
+            <button class="ussd-back" id="pl-list-back" style="padding-left:0;">&#8592; Back</button>
+            <div class="subscreen-heading">
+                <div class="subscreen-heading-icon" aria-hidden="true">&#128279;</div>
+                <div class="subscreen-heading-copy">
+                    <h1 class="greeting-title">Payment links</h1>
+                    <p class="greeting-sub">Send a link. Anyone can pay you, even without an account.</p>
+                </div>
+            </div>
+            <button type="button" class="btn-fill pl-new" id="pl-new-btn">+ New payment link</button>
+            <div id="pl-list-error" class="inline-error hidden"><span>&#9888;</span><span id="pl-list-error-text"></span></div>
+            <div id="pl-list" class="pl-list"></div>
+            <div id="pl-empty" class="pl-empty hidden"><b>No payment links yet</b>Create one, share it on WhatsApp, and get paid straight to your mobile money or bank account.</div>
+        </div>
+    </div>
+
+    <div class="screen" id="screen-link-new">
+        <div class="scroll">
+            <button class="ussd-back" id="pl-new-back" style="padding-left:0;">&#8592; Back</button>
+            <div class="subscreen-heading" id="pl-new-head">
+                <div class="subscreen-heading-icon" aria-hidden="true">&#128279;</div>
+                <div class="subscreen-heading-copy">
+                    <h1 class="greeting-title">New payment link</h1>
+                    <p class="greeting-sub">Fill it in once, share it anywhere.</p>
+                </div>
+            </div>
+            <div class="convert-card">
+                <div class="section-label" style="margin-top:0;">What is it for?</div>
+                <input class="pl-inp" id="pl-title" maxlength="80" placeholder="e.g. Rent, School fees, Order 12" autocomplete="off" />
+                <div class="section-label">Note <span style="font-weight:500;color:var(--muted);">(optional)</span></div>
+                <textarea class="pl-inp" id="pl-note" maxlength="300" placeholder="Anything the payer should know"></textarea>
+
+                <div class="section-label">Amount</div>
+                <div class="pl-seg" id="pl-amount-seg"><button type="button" data-v="fixed" aria-pressed="true">Fixed amount</button><button type="button" data-v="any" aria-pressed="false">Payer chooses</button></div>
+                <div id="pl-amount-wrap" style="margin-top:10px;"><input class="pl-inp" id="pl-amount" inputmode="decimal" autocomplete="off" placeholder="Amount in SLE, e.g. 500" /></div>
+                <div class="pl-help" id="pl-amount-help"></div>
+
+                <div class="section-label">Link type</div>
+                <div class="pl-seg" id="pl-reuse-seg"><button type="button" data-v="one" aria-pressed="true">One payment</button><button type="button" data-v="many" aria-pressed="false">Many payments</button></div>
+                <div class="pl-help">One payment closes the link after it is paid. Many payments keeps it open, good for a shop or donations.</div>
+
+                <div class="section-label">Stays open for</div>
+                <div class="pl-seg" id="pl-exp-seg"><button type="button" data-v="1" aria-pressed="false">1 day</button><button type="button" data-v="7" aria-pressed="true">7 days</button><button type="button" data-v="30" aria-pressed="false">30 days</button><button type="button" data-v="0" aria-pressed="false">No end</button></div>
+
+                <div class="section-label">Money goes to</div>
+                <div class="pl-seg" id="pl-dest-seg"><button type="button" data-v="MOMO" aria-pressed="true">Mobile money</button><button type="button" data-v="BANK" aria-pressed="false">Bank account</button></div>
+                <div id="pl-momo-wrap" style="margin-top:10px;">
+                    <div class="phone-card"><div class="phone-prefix"><div class="flag-badge"><div style="background:#1EB53A"></div><div style="background:#fff"></div><div style="background:#0072C6"></div></div><span>+232</span></div>
+                        <input id="pl-phone" type="tel" inputmode="numeric" maxlength="9" placeholder="Orange Money or Africell number" autocomplete="off" /></div>
+                    <div id="pl-phone-who" class="pl-who hidden"></div>
+                </div>
+                <div id="pl-bank-wrap" class="hidden" style="margin-top:10px;">
+                    <select class="bank-select" id="pl-bank"><option value="">Choose bank</option></select>
+                    <input class="bank-account-input" id="pl-account" type="text" inputmode="numeric" maxlength="20" placeholder="Account number" autocomplete="off" style="margin-top:10px;" />
+                    <div id="pl-bank-who" class="pl-who hidden"></div>
+                </div>
+
+                <div class="pl-fee">The person who pays adds a <b>3% service fee</b> on top, so you receive the full amount you ask for. They do not need an account.</div>
+                <div id="pl-new-error" class="inline-error hidden"><span>&#9888;</span><span id="pl-new-error-text"></span></div>
+                <button type="button" class="btn-fill" id="pl-create" style="width:100%;margin-top:16px;padding:14px;font-size:15px;">Create link</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="screen" id="screen-link-detail">
+        <div class="scroll">
+            <button class="ussd-back" id="pl-detail-back" style="padding-left:0;">&#8592; Back</button>
+            <div class="convert-card">
+                <div class="pl-share">
+                    <h2 id="pl-d-title"></h2>
+                    <div><span class="pl-chip" id="pl-d-chip"></span></div>
+                    <div class="pl-help" id="pl-d-sub" style="margin-top:8px;"></div>
+                </div>
+                <div class="pl-link" id="pl-d-link" role="button" aria-label="Copy the link"></div>
+                <div class="pl-acts">
+                    <button type="button" class="btn-fill" id="pl-d-copy">Copy link</button>
+                    <button type="button" class="btn-fill" id="pl-d-wa" style="background:#1FA855;">WhatsApp</button>
+                    <button type="button" class="btn-outline" id="pl-d-share">Share</button>
+                </div>
+                <div class="pl-qr" id="pl-d-qr"></div>
+                <div class="pl-help" style="text-align:center;">Scan to pay</div>
+            </div>
+            <div class="pl-stats">
+                <div class="pl-stat"><b id="pl-d-recv">0</b><span>Received</span></div>
+                <div class="pl-stat"><b id="pl-d-count">0</b><span>Payments</span></div>
+                <div class="pl-stat"><b id="pl-d-prog">0</b><span>In progress</span></div>
+            </div>
+            <div class="convert-card" id="pl-d-paycard" style="margin-top:14px;">
+                <div class="convert-card-title">Payments</div>
+                <div id="pl-d-pays"></div>
+            </div>
+            <div class="pl-help" id="pl-d-dest" style="text-align:center;margin-top:12px;"></div>
+            <button type="button" class="pl-danger hidden" id="pl-d-close">Close this link</button>
         </div>
     </div>
 
@@ -3812,6 +3966,7 @@
 <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-messaging-compat.js"></script>
 
 <script src="deenwallet-client.js"></script>
+<script src="qr.js"></script>
 <script>
     // SECURITY: escape any server-supplied string (holder names, error
     // messages, recipient labels, etc.) before it is placed into innerHTML.
@@ -8281,6 +8436,377 @@
         // ==============================================================
         // ANDROID BACK BUTTON HOOK (see deenwallet-client.js)
         // ==============================================================
+        // ==============================================================
+        // PAYMENT LINKS: create a link, share it, see who paid
+        // ==============================================================
+        const plScreens = ['screen-links', 'screen-link-new', 'screen-link-detail'];
+        const plEl = (id) => document.getElementById(id);
+        let plBanks = null;
+        let plDetailId = null;
+        let plPoll = null;
+        let plListReq = 0;
+        let plMomo = null;      // { local, holderName, providerId } once the number is verified
+        let plBankVer = null;   // verified bank account result
+        let plVerifyTimer = null;
+        let plVerifyReq = 0;
+        let plCloseArmed = null;
+
+        function plMoney(minor) {
+            return 'SLE ' + (Number(minor || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+        function plShowScreen(id) {
+            document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
+            plEl(id).classList.add('active');
+            hidePrimaryNav();
+            const sc = plEl(id).querySelector('.scroll');
+            if (sc) sc.scrollTop = 0;
+            if (id !== 'screen-link-detail') plStopPoll();
+        }
+        function plStopPoll() { if (plPoll) { clearInterval(plPoll); plPoll = null; } }
+        function plAuthFail(error) {
+            if (error && (error.status === 401 || error.status === 403)) {
+                showAuthRequiredModal((error && error.message) || 'Your session has expired. Please log in again.');
+                return true;
+            }
+            return false;
+        }
+        function plSeg(id, onChange) {
+            const seg = plEl(id);
+            seg.addEventListener('click', (e) => {
+                const b = e.target.closest('button[data-v]');
+                if (!b) return;
+                seg.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+                if (onChange) onChange(b.dataset.v);
+            });
+        }
+        function plSegVal(id) {
+            const b = plEl(id).querySelector('button[aria-pressed="true"]');
+            return b ? b.dataset.v : '';
+        }
+        function plSegSet(id, v) {
+            plEl(id).querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x.dataset.v === v ? 'true' : 'false'));
+        }
+        function plExpiryText(l) {
+            if (l.status === 'CLOSED') return 'Closed';
+            if (l.status === 'PAID') return 'Paid';
+            if (l.status === 'EXPIRED') return 'Expired';
+            if (!l.expiresAt) return 'No end date';
+            return 'Open until ' + new Date(l.expiresAt).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+        function plChip(status) {
+            const label = { ACTIVE: 'Active', PAID: 'Paid', CLOSED: 'Closed', EXPIRED: 'Expired' }[status] || status;
+            return '<span class="pl-chip ' + escapeHtml(String(status || '').toLowerCase()) + '">' + escapeHtml(label) + '</span>';
+        }
+
+        // ---------- list ----------
+        async function plOpenList() {
+            plShowScreen('screen-links');
+            await plLoadList();
+        }
+        async function plLoadList() {
+            const req = ++plListReq;
+            hide(plEl('pl-list-error'));
+            try {
+                const rows = await apiRequest('/api/payment-requests');
+                if (req !== plListReq) return;
+                const list = plEl('pl-list');
+                list.innerHTML = '';
+                (rows || []).forEach((l) => {
+                    const b = document.createElement('button');
+                    b.type = 'button';
+                    b.className = 'pl-item';
+                    b.innerHTML = '<div class="pl-row"><span class="pl-name">' + escapeHtml(l.title) + '</span>' +
+                        '<span class="pl-amt">' + (l.amountMinor == null ? 'Any amount' : escapeHtml(plMoney(l.amountMinor))) + '</span></div>' +
+                        '<div class="pl-meta">' + plChip(l.status) +
+                        '<span>Received ' + escapeHtml(plMoney(l.receivedMinor)) + '</span>' +
+                        '<span>' + Number(l.paidCount || 0) + ' payment' + (Number(l.paidCount || 0) === 1 ? '' : 's') + '</span>' +
+                        (Number(l.inProgress || 0) > 0 ? '<span>' + Number(l.inProgress) + ' in progress</span>' : '') + '</div>';
+                    b.addEventListener('click', () => plOpenDetail(l.id, l));
+                    list.appendChild(b);
+                });
+                plEl('pl-empty').classList.toggle('hidden', !!(rows && rows.length));
+            } catch (error) {
+                if (req !== plListReq) return;
+                if (plAuthFail(error)) return;
+                plEl('pl-list-error-text').textContent = error.message || 'Could not load your payment links.';
+                show(plEl('pl-list-error'));
+            }
+        }
+
+        // ---------- detail ----------
+        function plRenderDetail(l) {
+            plEl('pl-d-title').textContent = l.title || '';
+            plEl('pl-d-chip').outerHTML = plChip(l.status).replace('<span ', '<span id="pl-d-chip" ');
+            plEl('pl-d-sub').textContent = (l.amountMinor == null ? 'Payer chooses the amount' : plMoney(l.amountMinor)) +
+                ' · ' + (l.reusable ? 'Many payments' : 'One payment') + ' · ' + plExpiryText(l);
+            plEl('pl-d-link').textContent = l.link || '';
+            plEl('pl-d-recv').textContent = plMoney(l.receivedMinor);
+            plEl('pl-d-count').textContent = String(Number(l.paidCount || 0));
+            plEl('pl-d-prog').textContent = String(Number(l.inProgress || 0));
+            plEl('pl-d-dest').textContent = 'Money goes to ' + (l.destHolderName || '') + ' · ' +
+                (l.destType === 'BANK' ? (l.destBankName || 'Bank') + ' ' : 'Mobile money ') + (l.destAccount || '');
+            let svg = '';
+            try { if (window.DWQR && l.link) svg = window.DWQR.svg(l.link, {}); } catch (_) { svg = ''; }
+            plEl('pl-d-qr').innerHTML = svg || '';
+            plEl('pl-d-qr').classList.toggle('hidden', !svg);
+            const closeBtn = plEl('pl-d-close');
+            closeBtn.classList.toggle('hidden', l.status !== 'ACTIVE');
+            closeBtn.textContent = 'Close this link';
+            plCloseArmed = null;
+            const pays = plEl('pl-d-pays');
+            pays.innerHTML = '';
+            const rows = l.payments || [];
+            if (!rows.length) {
+                pays.innerHTML = '<div class="pl-help" style="margin:4px 0 0;">No payments yet. They will show up here as soon as someone pays.</div>';
+            } else {
+                const label = { received: 'Received', sending: 'Sending to you', waiting: 'Waiting for payer', delayed: 'Delayed, we are on it', refunded: 'Returned to payer', failed: 'Not completed' };
+                rows.forEach((p) => {
+                    const d = document.createElement('div');
+                    d.className = 'pl-pay';
+                    d.innerHTML = '<div><b>' + escapeHtml(p.payerName || 'Someone') + '</b><small>' + escapeHtml(p.payerPhone || '') + ' · ' +
+                        escapeHtml(new Date(p.createdAt).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })) + '</small></div>' +
+                        '<div style="text-align:right;"><b>' + escapeHtml(plMoney(p.amountMinor)) + '</b><br><span class="pl-st ' + escapeHtml(p.state) + '">' + escapeHtml(label[p.state] || p.state) + '</span></div>';
+                    pays.appendChild(d);
+                });
+            }
+        }
+        async function plOpenDetail(id, preview) {
+            plDetailId = id;
+            plShowScreen('screen-link-detail');
+            if (preview) { try { plRenderDetail(preview); } catch (_) { } }
+            await plRefreshDetail();
+            plStopPoll();
+            plPoll = setInterval(() => {
+                if (!plEl('screen-link-detail').classList.contains('active')) { plStopPoll(); return; }
+                plRefreshDetail();
+            }, 8000);
+        }
+        async function plRefreshDetail() {
+            const id = plDetailId;
+            if (!id) return;
+            try {
+                const l = await apiRequest('/api/payment-requests/' + encodeURIComponent(id));
+                if (id !== plDetailId) return;
+                plCurrent = l;
+                plRenderDetail(l);
+            } catch (error) {
+                if (plAuthFail(error)) return;
+            }
+        }
+        let plCurrent = null;
+        function plShareText(l) {
+            return (l.title ? l.title + ': ' : '') + 'pay ' + (l.amountMinor == null ? '' : plMoney(l.amountMinor) + ' ') + 'to ' + (l.destHolderName || 'me') + ' here (no account needed): ' + l.link;
+        }
+        function plCopy(text) {
+            const ok = () => showToast('Link copied');
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(ok, ok); return; }
+            } catch (_) { }
+            try {
+                const t = document.createElement('textarea');
+                t.value = text; t.style.position = 'fixed'; t.style.opacity = '0';
+                document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove();
+            } catch (_) { }
+            ok();
+        }
+        plEl('pl-d-copy').addEventListener('click', () => { if (plCurrent) plCopy(plCurrent.link); });
+        plEl('pl-d-link').addEventListener('click', () => { if (plCurrent) plCopy(plCurrent.link); });
+        plEl('pl-d-wa').addEventListener('click', () => {
+            if (!plCurrent) return;
+            try { window.open('https://wa.me/?text=' + encodeURIComponent(plShareText(plCurrent)), '_blank'); } catch (_) { plCopy(plCurrent.link); }
+        });
+        plEl('pl-d-share').addEventListener('click', () => {
+            if (!plCurrent) return;
+            if (navigator.share) navigator.share({ title: plCurrent.title || 'Payment link', text: plShareText(plCurrent) }).catch(() => { });
+            else plCopy(plShareText(plCurrent));
+        });
+        plEl('pl-d-close').addEventListener('click', async () => {
+            const btn = plEl('pl-d-close');
+            if (!plCloseArmed) {
+                plCloseArmed = setTimeout(() => { plCloseArmed = null; btn.textContent = 'Close this link'; }, 4000);
+                btn.textContent = 'Tap again to close it for good';
+                return;
+            }
+            clearTimeout(plCloseArmed); plCloseArmed = null;
+            btn.disabled = true;
+            try {
+                await apiRequest('/api/payment-requests/' + encodeURIComponent(plDetailId) + '/close', { method: 'POST', body: {} });
+                showToast('Link closed');
+                await plRefreshDetail();
+            } catch (error) {
+                if (!plAuthFail(error)) showToast(error.message || 'Could not close the link.');
+            } finally { btn.disabled = false; }
+        });
+
+        // ---------- create ----------
+        function plNewError(msg) {
+            if (!msg) { hide(plEl('pl-new-error')); return; }
+            plEl('pl-new-error-text').textContent = msg;
+            show(plEl('pl-new-error'));
+        }
+        function plOpenNew() {
+            plEl('pl-title').value = '';
+            plEl('pl-note').value = '';
+            plEl('pl-amount').value = '';
+            plEl('pl-phone').value = '';
+            plEl('pl-account').value = '';
+            plSegSet('pl-amount-seg', 'fixed'); plSegSet('pl-reuse-seg', 'one'); plSegSet('pl-exp-seg', '7'); plSegSet('pl-dest-seg', 'MOMO');
+            plApplyAmountMode(); plApplyDest();
+            plMomo = null; plBankVer = null; plVerifyReq++;
+            hide(plEl('pl-phone-who')); hide(plEl('pl-bank-who')); plNewError('');
+            plEl('pl-create').disabled = false;
+            plEl('pl-create').textContent = 'Create link';
+            plShowScreen('screen-link-new');
+        }
+        function plApplyAmountMode() {
+            const fixed = plSegVal('pl-amount-seg') === 'fixed';
+            plEl('pl-amount-wrap').classList.toggle('hidden', !fixed);
+            plEl('pl-amount-help').textContent = fixed ? '' : 'The payer types how much to pay. Good for donations or a shop.';
+        }
+        function plApplyDest() {
+            const momo = plSegVal('pl-dest-seg') === 'MOMO';
+            plEl('pl-momo-wrap').classList.toggle('hidden', !momo);
+            plEl('pl-bank-wrap').classList.toggle('hidden', momo);
+            if (!momo) plLoadBanks();
+        }
+        plSeg('pl-amount-seg', plApplyAmountMode);
+        plSeg('pl-reuse-seg');
+        plSeg('pl-exp-seg');
+        plSeg('pl-dest-seg', plApplyDest);
+
+        function plLocal(v) {
+            let d = String(v || '').replace(/\D/g, '');
+            if (d.indexOf('232') === 0 && d.length > 8) d = d.slice(3);
+            if (d.charAt(0) === '0') d = d.slice(1);
+            return d.slice(0, 8);
+        }
+        plEl('pl-phone').addEventListener('input', async () => {
+            const local = plLocal(plEl('pl-phone').value);
+            const who = plEl('pl-phone-who');
+            plMomo = null; plNewError('');
+            if (local.length < 8) { hide(who); return; }
+            who.className = 'pl-who'; who.textContent = 'Checking the number…'; show(who);
+            const req = ++plVerifyReq;
+            const r = await detectProviderAndName(local);
+            if (req !== plVerifyReq) return;
+            if (r && r.status === 'ok' && r.holderName && (r.providerId === 'm17' || r.providerId === 'm18')) {
+                plMomo = { local, holderName: r.holderName, providerId: r.providerId };
+                who.className = 'pl-who'; who.textContent = '✓ ' + r.holderName + ' · ' + (r.providerId === 'm17' ? 'Orange Money' : 'Africell Money');
+            } else {
+                who.className = 'pl-who bad';
+                who.textContent = (r && r.message) || 'We could not find a mobile money account for this number.';
+            }
+        });
+
+        async function plLoadBanks() {
+            if (plBanks) return;
+            const sel = plEl('pl-bank');
+            try {
+                const banks = (await apiRequest('/api/bank-transfers/banks')) || [];
+                plBanks = banks;
+                banks.forEach((b) => {
+                    const o = document.createElement('option');
+                    o.value = b.providerId;
+                    o.textContent = b.name + (b.available === false ? ' (unavailable)' : '');
+                    if (b.available === false) o.disabled = true;
+                    sel.appendChild(o);
+                });
+            } catch (error) {
+                if (!plAuthFail(error)) plNewError(error.message || 'Could not load the banks.');
+            }
+        }
+        function plScheduleVerify() {
+            clearTimeout(plVerifyTimer);
+            plBankVer = null; plVerifyReq++;
+            hide(plEl('pl-bank-who'));
+            const provider = plEl('pl-bank').value;
+            const acct = plEl('pl-account').value.replace(/\D/g, '');
+            if (!provider || acct.length < ACCOUNT_MIN_DIGITS) return;
+            plVerifyTimer = setTimeout(async () => {
+                const req = ++plVerifyReq;
+                const who = plEl('pl-bank-who');
+                who.className = 'pl-who'; who.textContent = 'Checking the account…'; show(who);
+                try {
+                    const r = await apiRequest('/api/bank-transfers/verify-account', { params: { providerId: provider, accountNumber: acct }, timeoutMs: 12000 });
+                    if (req !== plVerifyReq) return;
+                    if (r && r.verified) {
+                        plBankVer = r;
+                        who.className = 'pl-who'; who.textContent = '✓ ' + (r.holderName || '') + ' · ' + (r.bankName || '');
+                    } else {
+                        who.className = 'pl-who bad'; who.textContent = (r && r.message) || 'The bank account could not be verified.';
+                    }
+                } catch (error) {
+                    if (req !== plVerifyReq) return;
+                    if (plAuthFail(error)) return;
+                    who.className = 'pl-who bad'; who.textContent = error.message || 'Could not verify this bank account.';
+                }
+            }, 450);
+        }
+        plEl('pl-bank').addEventListener('change', plScheduleVerify);
+        plEl('pl-account').addEventListener('input', () => { plNewError(''); plScheduleVerify(); });
+        plEl('pl-title').addEventListener('input', () => plNewError(''));
+        plEl('pl-amount').addEventListener('input', () => plNewError(''));
+
+        function plBuildBody() {
+            const title = plEl('pl-title').value.trim();
+            if (!title) { plNewError('Give your link a title, for example "Rent" or "Order 12".'); return null; }
+            const body = { title, note: plEl('pl-note').value.trim() || undefined, reusable: plSegVal('pl-reuse-seg') === 'many', expiresInDays: Number(plSegVal('pl-exp-seg')) };
+            if (plSegVal('pl-amount-seg') === 'fixed') {
+                const raw = plEl('pl-amount').value.replace(/,/g, '').trim();
+                if (!/^\d+(\.\d{1,2})?$/.test(raw) || parseFloat(raw) < 1) { plNewError('Enter the amount you want to receive, at least SLE 1.'); return null; }
+                body.amount = raw;
+            }
+            if (plSegVal('pl-dest-seg') === 'MOMO') {
+                if (!plMomo) { plNewError('Enter the mobile money number that will receive the money and wait for the name to show.'); return null; }
+                body.destType = 'MOMO'; body.providerId = plMomo.providerId; body.phone = '+232' + plMomo.local;
+            } else {
+                if (!plBankVer || !plBankVer.verified) { plNewError('Choose the bank and enter the account number. Wait for the account name to show.'); return null; }
+                body.destType = 'BANK'; body.bankProviderId = plBankVer.providerId || plEl('pl-bank').value;
+                body.accountNumber = plBankVer.accountNumber || plEl('pl-account').value.replace(/\D/g, '');
+                body.verificationToken = plBankVer.verificationToken;
+            }
+            return body;
+        }
+        let plPendingBody = null;
+        async function plSubmitCreate() {
+            const body = plPendingBody;
+            plPendingBody = null;
+            if (!body) return;
+            const btn = plEl('pl-create');
+            btn.disabled = true; btn.textContent = 'Creating…';
+            try {
+                const view = await apiRequest('/api/payment-requests', { method: 'POST', body, timeoutMs: 20000 });
+                showToast('Payment link created');
+                await plOpenDetail(view.id, view);
+            } catch (error) {
+                btn.disabled = false; btn.textContent = 'Create link';
+                if (plAuthFail(error)) return;
+                plNewError(error.message || 'Could not create the link. Please try again.');
+            }
+        }
+        plEl('pl-create').addEventListener('click', () => {
+            plNewError('');
+            const body = plBuildBody();
+            if (!body) return;
+            plPendingBody = body;
+            showPinModal('Enter your PIN to create this payment link.', plSubmitCreate);
+            const t = document.querySelector('#pin-modal-overlay .modal-title');
+            if (t) t.textContent = 'Confirm Payment Link';
+        });
+
+        plEl('pl-new-btn').addEventListener('click', plOpenNew);
+        plEl('pl-list-back').addEventListener('click', () => { plListReq++; showPrimaryScreen('payment'); });
+        plEl('pl-new-back').addEventListener('click', () => plOpenList());
+        plEl('pl-detail-back').addEventListener('click', () => plOpenList());
+        plEl('services-links-card').addEventListener('click', plOpenList);
+
+        function plHandleBack() {
+            if (plEl('screen-link-new').classList.contains('active')) { plEl('pl-new-back').click(); return true; }
+            if (plEl('screen-link-detail').classList.contains('active')) { plEl('pl-detail-back').click(); return true; }
+            if (plEl('screen-links').classList.contains('active')) { plEl('pl-list-back').click(); return true; }
+            return false;
+        }
+
         window.dwOnBackButton = function () {
             // 1. Never bypass a security lock or account-locked screen.
             if (pinModalOverlay && pinModalOverlay.classList.contains('active')) {
@@ -8301,6 +8827,9 @@
                 modalOverlay.classList.remove('active');
                 return true;
             }
+
+            // 3b. Payment links screens step back one level.
+            if (plHandleBack()) return true;
 
             // 4. Secondary customer screens use the same action as their visible
             //    in-app Back button: return to the customer home screen.
@@ -8380,6 +8909,10 @@
                 try { if (typeof loadNotifications === 'function') await loadNotifications(true); } catch (_) { }
             } else if (document.getElementById('screen-step1').classList.contains('active')) {
                 await loadRecipients();
+            } else if (document.getElementById('screen-links').classList.contains('active')) {
+                await plLoadList();
+            } else if (document.getElementById('screen-link-detail').classList.contains('active')) {
+                await plRefreshDetail();
             } else if (screenProfile.classList.contains('active')) {
                 await openProfile();
             } else if (screenWallet.classList.contains('active') ||

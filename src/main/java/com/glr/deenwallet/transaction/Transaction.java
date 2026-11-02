@@ -124,6 +124,14 @@ public class Transaction {
     @Column(name = "sms_sent", nullable = false)
     private boolean smsSent;
 
+    /** Set when this payment was made through a payment link (the id of the link). The owner of the link is userId. */
+    @Column(name = "payment_request_id")
+    private UUID paymentRequestId;
+
+    /** Optional name the payer typed on the payment link page. */
+    @Column(name = "payer_name", length = 80)
+    private String payerName;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

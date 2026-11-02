@@ -65,6 +65,8 @@ public class AccountDeletionService {
             em.createNativeQuery("DELETE FROM " + table + " WHERE user_id = :id").setParameter("id", id).executeUpdate();
         }
         em.createNativeQuery("DELETE FROM admin_saved_accounts WHERE owner_user_id = :id").setParameter("id", id).executeUpdate();
+        em.createNativeQuery("UPDATE payment_requests SET status = 'CLOSED', closed_at = now(), updated_at = now() "
+                + "WHERE owner_user_id = :id AND status = 'ACTIVE'").setParameter("id", id).executeUpdate();
         if (oldEmail != null) {
             em.createNativeQuery("DELETE FROM email_otps WHERE email = :e").setParameter("e", oldEmail).executeUpdate();
         }

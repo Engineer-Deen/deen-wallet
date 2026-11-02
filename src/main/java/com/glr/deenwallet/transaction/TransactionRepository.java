@@ -15,7 +15,7 @@ import java.util.UUID;
 
 public interface TransactionRepository extends JpaRepository<Transaction, UUID> {
     /** Newest-first, bounded. Uses idx_transactions_user_id_created_at (no sort, no DISTINCT). */
-    @Query("SELECT t FROM Transaction t WHERE t.userId = :userId ORDER BY t.createdAt DESC")
+    @Query("SELECT t FROM Transaction t WHERE t.userId = :userId AND t.paymentRequestId IS NULL ORDER BY t.createdAt DESC")
     List<Transaction> findRecentByUserId(@Param("userId") UUID userId, Pageable pageable);
 
     /** Unbounded - kept only for callers that truly need everything. Do not use on request paths. */
@@ -54,6 +54,21 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     List<Transaction> findQueue(@Param("statuses") List<TransactionStatus> statuses, Pageable pageable);
 
     long countByUserIdAndStatus(UUID userId, TransactionStatus status);
+
+    /** Payment links: the same payer starting the same payment again within moments. */
+    @Query("SELECT t FROM Transaction t WHERE t.paymentRequestId = :requestId AND t.sourcePhone = :phone AND t.amountValue = :amount "
+            + "AND t.status = com.glr.deenwallet.transaction.TransactionStatus.AWAITING_PAYMENT AND t.createdAt > :since "
+            + "ORDER BY t.createdAt DESC")
+    List<Transaction> findRecentLinkDuplicates(@Param("requestId") UUID requestId, @Param("phone") String phone,
+                                               @Param("amount") long amount, @Param("since") Instant since);
+
+    @Query("SELECT COUNT(t) FROM Transaction t WHERE t.paymentRequestId = :requestId "
+            + "AND t.status = com.glr.deenwallet.transaction.TransactionStatus.AWAITING_PAYMENT AND t.createdAt > :since")
+    long countLinkAwaitingSince(@Param("requestId") UUID requestId, @Param("since") Instant since);
+
+    @Query("SELECT COUNT(t) FROM Transaction t WHERE t.paymentRequestId IS NOT NULL AND t.sourcePhone = :phone "
+            + "AND t.status = com.glr.deenwallet.transaction.TransactionStatus.AWAITING_PAYMENT AND t.createdAt > :since")
+    long countLinkAwaitingForPayerSince(@Param("phone") String phone, @Param("since") Instant since);
 
     @Query("SELECT COUNT(t) FROM Transaction t WHERE t.userId = :userId AND t.createdAt > :since")
     long countByUserIdSince(@Param("userId") UUID userId, @Param("since") Instant since);

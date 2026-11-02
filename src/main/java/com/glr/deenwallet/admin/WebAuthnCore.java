@@ -25,9 +25,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Minimal WebAuthn (passkey) verification that uses only the JDK and Jackson, so it needs no extra library.
- * Supports ES256 (-7) and RS256 (-257), attestation is not checked ("none"): the proof is the signature at every login.
+/*
+ Minimal WebAuthn (passkey) verification that uses only the JDK and Jackson, so it needs no extra library.
+ Supports ES256 (-7) and RS256 (-257), attestation is not checked ("none"): the proof is the signature at every login.
  */
 final class WebAuthnCore {
 
