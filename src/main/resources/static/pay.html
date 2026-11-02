@@ -266,8 +266,7 @@ label.l{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:0 
         var m = { PAID: ['This link has been paid', 'Thank you. This payment link has already been paid.'], EXPIRED: ['This link has expired', 'Ask the person to send you a new payment link.'], CLOSED: ['This link is closed', 'The person has stopped taking payments on this link.'] }[v.status] || ['Link not available', 'This link is not taking payments.'];
         show('step-end'); $('end-ico').textContent = '🔒'; $('end-title').textContent = m[0]; $('end-text').textContent = m[1]; $('end-ref-box').classList.add('hidden'); $('end-btn').classList.add('hidden'); return;
       }
-      var lastP = store('dwpay_phone'), lastN = store('dwpay_name'), lastPr = store('dwpay_prov');
-      if (lastP) $('phone').value = lastP; if (lastN) $('pname').value = lastN; if (lastPr) setProv(lastPr);
+      store('dwpay_phone', null); store('dwpay_name', null); store('dwpay_prov', null);   // older versions remembered these: forget them, the form always starts empty
       renderSum(); resume();
     }).catch(function (e) { gone('🔍', e.status === 429 ? 'Please wait a moment' : 'Link not available', e.message); });
     api('/api/providers/prefixes').then(function (p) { prefixes = p; detect(); }).catch(function () { });
@@ -289,7 +288,7 @@ label.l{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:0 
     if (!p) { formErr('Choose Orange Money or Africell Money.'); return; }
     if (!ph) { $('phone-box').classList.add('err'); formErr('Enter your 8-digit mobile money number.'); $('phone').focus(); return; }
     var btn = $('pay'); btn.disabled = true; btn.textContent = 'Setting up your payment…';
-    store('dwpay_phone', $('phone').value); store('dwpay_name', $('pname').value); store('dwpay_prov', p);
+    // The number and name are deliberately not remembered: the form always starts empty.
     var body = { providerId: p, phone: ph, payerName: $('pname').value.trim() };
     if (view.amountMinor == null) body.amount = (m / 100).toFixed(2);
     api('/api/public/pay/' + encodeURIComponent(slug) + '/start', { method: 'POST', body: body }).then(function (r) {
@@ -418,7 +417,7 @@ label.l{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:0 
     stop(); store('dwpay_' + slug, null); show('step-end'); $('end-ico').textContent = ico; $('end-title').textContent = title; $('end-text').textContent = text;
     $('end-ref-box').classList.toggle('hidden', !ref); $('end-ref').textContent = ref || ''; var b = $('end-btn'); b.classList.toggle('hidden', !retry); b.textContent = 'Try again'; b.onclick = function () { pay = null; sendStart = 0; show('step-form'); };
   }
-  $('again').addEventListener('click', function () { pay = null; sendStart = 0; $('share').textContent = 'Share receipt'; show('step-form'); });
+  $('again').addEventListener('click', function () { pay = null; sendStart = 0; $('share').textContent = 'Share receipt (PDF)'; $('phone').value = ''; $('pname').value = ''; if (view && view.amountMinor == null) $('amt').value = ''; setProv(''); formErr(''); renderSum(); show('step-form'); });
 
   function resume() {
     var saved = store('dwpay_' + slug); if (!saved) return;
