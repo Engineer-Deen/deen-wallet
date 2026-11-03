@@ -2717,6 +2717,8 @@
         .fp-status { font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; background:#FBEAEA; color:var(--error); }
         .fp-status.refund { background:var(--warning-bg); color:var(--warning-text); }
         .fp-status.done { background:#E7F7EC; color:#1E8449; }
+        .fp-status.muted { background:#EEF1F2; color:#6E7C82; }
+        .fp-card.muted { border-left-color:#9AA9AE; }
         .fp-section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); margin:14px 0 4px; }
         .fp-row { display:flex; justify-content:space-between; gap:12px; padding:6px 0; border-bottom:1px solid var(--border); font-size:13px; }
         .fp-row .l { color:var(--muted); flex:0 0 38%; }
@@ -2868,6 +2870,7 @@
                 <button type="button" class="admin-drawer-item" data-drawer-action="errors"><span class="admin-drawer-icon">▤</span><span class="admin-drawer-label">Error Logs</span><span class="admin-drawer-chevron">›</span></button>
                 <button type="button" class="admin-drawer-item" data-drawer-action="support"><span class="admin-drawer-icon">◉</span><span class="admin-drawer-label">Support</span><span class="admin-drawer-chevron">›</span></button>
                 <button type="button" class="admin-drawer-item" data-drawer-action="failed-payouts"><span class="admin-drawer-icon">⚠</span><span class="admin-drawer-label">Failed Payouts</span><span class="admin-drawer-chevron">›</span></button>
+                <button type="button" class="admin-drawer-item" data-drawer-action="payment-links"><span class="admin-drawer-icon">&#128279;</span><span class="admin-drawer-label">Payment Links</span><span class="admin-drawer-chevron">›</span></button>
                 <button type="button" class="admin-drawer-item" data-drawer-action="kyc"><span class="admin-drawer-icon">✔</span><span class="admin-drawer-label">KYC Verification</span><span class="admin-drawer-chevron">›</span></button>
                 <button type="button" class="admin-drawer-item" id="metrics-drawer-item" data-drawer-action="metrics" style="display:none;"><span class="admin-drawer-icon">◔</span><span class="admin-drawer-label">Server Metrics</span><span class="admin-drawer-chevron">›</span></button>
                 <button type="button" class="admin-drawer-item" data-drawer-action="waec-pins"><span class="admin-drawer-icon">▦</span><span class="admin-drawer-label">WAEC Pins</span><span class="admin-drawer-chevron">›</span></button>
@@ -3236,6 +3239,8 @@
                                                                                       id="support-txn-user">—</span></div>
                         <div class="support-row" style="border-bottom:none;"><span class="label">Created</span><span
                                 class="value" id="support-txn-created">—</span></div>
+                        <div class="support-row" id="support-txn-link-row" style="display:none;"><span class="label">Payment link</span><span
+                                class="value" id="support-txn-link">—</span></div>
                         <div class="support-row" id="support-txn-reason-row" style="display:none;border-bottom:none;"><span class="label">Failure Reason</span><span
                                 class="value" id="support-txn-reason">—</span></div>
                     </div>
@@ -3270,6 +3275,29 @@
                 <div id="fp-loading" class="loading-state hidden"><div class="spinner"></div>Loading failed payouts…</div>
                 <div id="fp-error" class="error-state hidden"></div>
                 <div id="fp-list"></div>
+            </div>
+        </div>
+
+        <!-- ===== PAYMENT LINKS ===== -->
+        <div class="scroll hidden" id="tab-payment-links">
+            <div class="admin-card">
+                <p class="admin-card-title">Payment Links</p>
+                <p class="admin-card-sub">Every link customers created and the payments made through it. Search by link code, payment reference, link title, or the owner's name, email or account number.</p>
+                <div class="kc-chips" id="plk-chips">
+                    <button type="button" class="kc-chip on" data-plk-filter="ALL">All</button>
+                    <button type="button" class="kc-chip" data-plk-filter="ACTIVE">Active</button>
+                    <button type="button" class="kc-chip" data-plk-filter="PROBLEMS">Problems</button>
+                    <button type="button" class="kc-chip" data-plk-filter="PAID">Paid</button>
+                    <button type="button" class="kc-chip" data-plk-filter="CLOSED">Closed</button>
+                    <button type="button" class="kc-chip" data-plk-filter="EXPIRED">Expired</button>
+                </div>
+                <div class="fp-toolbar">
+                    <div class="search-bar"><input id="plk-search" placeholder="Link code, payment reference, title or owner" autocomplete="off" /></div>
+                    <button class="btn-sm refresh" id="plk-refresh">Refresh</button>
+                </div>
+                <div id="plk-loading" class="loading-state hidden"><div class="spinner"></div>Loading payment links…</div>
+                <div id="plk-error" class="error-state hidden"></div>
+                <div id="plk-list"></div>
             </div>
         </div>
 
@@ -3570,6 +3598,11 @@
     <!-- Failed payout detail -->
     <div class="modal-overlay" id="fp-modal-overlay">
         <div class="fp-modal" id="fp-modal"></div>
+    </div>
+
+    <!-- Payment link detail -->
+    <div class="modal-overlay" id="plk-modal-overlay">
+        <div class="fp-modal" id="plk-modal"></div>
     </div>
 
     <div class="modal-overlay" id="kc-modal-overlay">
@@ -4673,13 +4706,14 @@
                 audit: document.getElementById('tab-audit'),
                 messaging: document.getElementById('tab-admin-messaging'),
                 'failed-payouts': document.getElementById('tab-failed-payouts'),
+                'payment-links': document.getElementById('tab-payment-links'),
                 'kyc': document.getElementById('tab-kyc'),
                 'waec-pins': document.getElementById('tab-waec-pins')
             };
 
             function showMainSection(section) {
                 if ((section === 'audit' || section === 'metrics') && !isSuperAdmin()) section = 'dashboard';
-                var amKey = { 'kyc': 'kyc', 'failed-payouts': 'failed-payouts', 'waec-pins': 'waec', 'users': 'users', 'errors': 'errors', 'wallet': 'wallet', 'messaging': 'messaging' }[section];
+                var amKey = { 'kyc': 'kyc', 'failed-payouts': 'failed-payouts', 'payment-links': 'payment-links', 'waec-pins': 'waec', 'users': 'users', 'errors': 'errors', 'wallet': 'wallet', 'messaging': 'messaging' }[section];
                 if (amKey && adminDeniedSections().indexOf(amKey) >= 0) { showToast('You do not have access to that section. Ask a super admin.'); section = 'dashboard'; }
                 applyRoleNav();
                 Object.keys(tabContents).forEach(function (key) {
@@ -4697,6 +4731,7 @@
                 if (section === 'metrics') { mxView = null; if (mxLast) mxRender(mxLast); loadMetrics(); startMetricsRefresh(); } else { stopMetricsRefresh(); }
                 if (section === 'messaging') { showMessagingView('hub'); updateMessagingRecipientCount(); loadMailSummary(); }
                 if (section === 'failed-payouts') loadFailedPayouts();
+                if (section === 'payment-links') loadPaymentLinks();
                 if (section === 'kyc') loadKyc();
                 if (section === 'waec-pins') loadWaecPins();
             }
@@ -4778,7 +4813,7 @@
                 return r === 'SUPER_ADMIN';
             }
             // Sections a super admin switched off for this admin are hidden (the server blocks them too).
-            var AM_NAV = [['kyc', '[data-drawer-action="kyc"]'], ['failed-payouts', '[data-drawer-action="failed-payouts"]'], ['failed-payouts', '#card-failed-payouts'],
+            var AM_NAV = [['kyc', '[data-drawer-action="kyc"]'], ['failed-payouts', '[data-drawer-action="failed-payouts"]'], ['failed-payouts', '#card-failed-payouts'], ['payment-links', '[data-drawer-action="payment-links"]'],
                 ['waec', '[data-drawer-action="waec-pins"]'], ['users', '[data-drawer-action="users"]'], ['errors', '[data-drawer-action="errors"]'],
                 ['wallet', '[data-bottom-tab="wallet"]'], ['messaging', '[data-bottom-tab="messaging"]']];
             function adminDeniedSections() {
@@ -5393,6 +5428,107 @@
 
             function fpMoney(v) { return 'SLE ' + Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
             function fpTime(v) { return v ? new Date(v).toLocaleString() : '—'; }
+            // ==============================================================
+            // PAYMENT LINKS (customers' payment links and the payments made through them)
+            // ==============================================================
+            var plkFilter = 'ALL', plkTimer = null, plkCurrent = null, plkReq = 0;
+            function plkStatusInfo(s, problems) {
+                if (problems > 0) return { label: 'Needs attention', cls: '' };
+                if (s === 'ACTIVE') return { label: 'Active', cls: 'done' };
+                if (s === 'PAID') return { label: 'Paid', cls: 'done' };
+                if (s === 'CLOSED') return { label: 'Closed', cls: 'muted' };
+                if (s === 'EXPIRED') return { label: 'Expired', cls: 'muted' };
+                return { label: s, cls: 'muted' };
+            }
+            function plkPayState(s) {
+                var m = { COMPLETED: 'Received by owner', PAID_IN: 'Paid in, sending', PAYING_OUT: 'Sending to owner', PAYOUT_FAILED: 'Payout failed', REFUND_PENDING: 'Refund in progress',
+                    REFUNDED: 'Refunded to payer', NEEDS_REVIEW: 'Needs manual review', AWAITING_PAYMENT: 'Waiting for payer', CANCELED: 'Not paid (expired)', FAILED: 'Failed' };
+                return m[s] || s;
+            }
+            function plkDest(l) {
+                return l.destType === 'BANK' ? ((l.destBankName || 'Bank') + ' ' + (l.destAccount || '')) : ('Mobile money ' + (l.destAccount || ''));
+            }
+            function loadPaymentLinks() {
+                var loading = document.getElementById('plk-loading'), error = document.getElementById('plk-error'), list = document.getElementById('plk-list');
+                var q = (document.getElementById('plk-search').value || '').trim();
+                var req = ++plkReq;
+                show(loading); hide(error); list.innerHTML = '';
+                adminApiRequest('/api/admin/payment-links', { params: { q: q || undefined, status: plkFilter === 'ALL' ? undefined : plkFilter } })
+                    .then(function (rows) {
+                        if (req !== plkReq) return;
+                        hide(loading);
+                        if (!rows || rows.length === 0) { list.innerHTML = '<div class="empty-state">' + (q || plkFilter !== 'ALL' ? 'No payment link matches.' : 'No payment links yet.') + '</div>'; return; }
+                        rows.forEach(function (l) {
+                            var info = plkStatusInfo(l.status, l.problems);
+                            var card = document.createElement('div');
+                            card.className = 'fp-card' + (info.cls ? ' ' + info.cls : '');
+                            card.innerHTML =
+                                '<div class="fp-card-top"><span class="fp-code">' + escapeHtml(l.slug) + '</span><span class="fp-status ' + info.cls + '">' + escapeHtml(info.label) + '</span></div>' +
+                                '<div class="fp-card-top" style="margin-top:6px;"><span class="fp-amount">' + escapeHtml(l.title) + '</span><span class="fp-sub">' + escapeHtml(l.amountMinor == null ? 'Any amount' : fpMoney(l.amountMinor / 100)) + '</span></div>' +
+                                '<div class="fp-sub">Owner: ' + escapeHtml(l.ownerName || '—') + ' · ' + escapeHtml(l.ownerEmail || '') + '</div>' +
+                                '<div class="fp-sub">' + l.paidCount + ' paid · received ' + escapeHtml(fpMoney(l.receivedMinor / 100)) + (l.inProgress > 0 ? ' · ' + l.inProgress + ' in progress' : '') + (l.problems > 0 ? ' · ' + l.problems + ' with a problem' : '') + ' · ' + escapeHtml(fpTime(l.createdAt)) + '</div>';
+                            card.addEventListener('click', function () { openPaymentLink(l.id); });
+                            list.appendChild(card);
+                        });
+                    })
+                    .catch(function (e) { if (req !== plkReq) return; hide(loading); error.textContent = e.message || 'Could not load payment links.'; show(error); });
+            }
+            function closePaymentLinkModal() { document.getElementById('plk-modal-overlay').classList.remove('active'); }
+            function openPaymentLink(id) {
+                var overlay = document.getElementById('plk-modal-overlay'), box = document.getElementById('plk-modal');
+                box.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading…</div>';
+                overlay.classList.add('active');
+                adminApiRequest('/api/admin/payment-links/' + encodeURIComponent(id)).then(renderPaymentLink).catch(function (e) {
+                    box.innerHTML = '<div class="error-state">' + escapeHtml(e.message || 'Could not load.') + '</div><div class="fp-actions"><button class="btn-outline" id="plk-x">Close</button></div>';
+                    document.getElementById('plk-x').addEventListener('click', closePaymentLinkModal);
+                });
+            }
+            function renderPaymentLink(l) {
+                plkCurrent = l;
+                var info = plkStatusInfo(l.status, l.problems);
+                var h = '<div class="fp-card-top"><h3 style="margin:0;font-size:17px;">Payment link</h3><span class="fp-status ' + info.cls + '">' + escapeHtml(info.label) + '</span></div>';
+                h += '<div class="fp-code" style="margin-top:6px;">' + escapeHtml(l.slug) + '</div>';
+                h += '<div class="fp-section-title">The link</div>' + fpRow('Title', l.title) + (l.note ? fpRow('Note', l.note) : '') +
+                    fpRow('Amount', l.amountMinor == null ? 'Payer chooses' : fpMoney(l.amountMinor / 100)) + fpRow('Type', l.reusable ? 'Many payments' : 'One payment') +
+                    fpRow('Status', l.status) + fpRow('Created', fpTime(l.createdAt)) + fpRow('Ends', l.expiresAt ? fpTime(l.expiresAt) : 'No end date') + (l.closedAt ? fpRow('Closed', fpTime(l.closedAt)) : '');
+                h += '<div class="fp-section-title">Owner (receives the money)</div>' + fpRow('Name', l.ownerName) + fpRow('Email', l.ownerEmail) + fpRow('Account number', l.ownerAccount) +
+                    fpRow('Pays out to', plkDest(l)) + fpRow('Account holder', l.destHolderName);
+                h += '<div class="fp-section-title">Totals</div>' + fpRow('Paid', String(l.paidCount)) + fpRow('Received by owner', fpMoney(l.receivedMinor / 100)) +
+                    fpRow('In progress', String(l.inProgress)) + fpRow('With a problem', String(l.problems));
+                h += '<div class="fp-section-title">Payments (' + (l.payments || []).length + ')</div>';
+                if (!l.payments || !l.payments.length) h += '<div class="fp-sub">No payment has been started on this link.</div>';
+                else l.payments.forEach(function (p) {
+                    h += '<div class="fp-card muted" style="cursor:default;border-left-color:' + (/FAILED|REVIEW|REFUND/.test(p.status) ? 'var(--error)' : '#9AA9AE') + ';">' +
+                        '<div class="fp-card-top"><span class="fp-code">' + escapeHtml(p.reference) + '</span><span class="fp-sub" style="margin:0;">' + escapeHtml(plkPayState(p.status)) + '</span></div>' +
+                        '<div class="fp-card-top" style="margin-top:4px;"><span class="fp-amount">' + escapeHtml(fpMoney(p.totalMinor / 100)) + '</span><span class="fp-sub" style="margin:0;">' + escapeHtml(fpTime(p.createdAt)) + '</span></div>' +
+                        '<div class="fp-sub">Payer: ' + escapeHtml(p.payerName || 'no name given') + ' · ' + escapeHtml((p.payerProvider || '') + ' ' + (p.payerPhone || '')) + '</div>' +
+                        (p.failureReason ? '<div class="fp-reason">' + escapeHtml(p.failureReason) + '</div>' : '') + '</div>';
+                });
+                h += '<div class="fp-sub" style="margin-top:8px;">To resend a failed payout or refund a payer, open Failed Payouts and search the payment reference.</div>';
+                h += '<div class="fp-actions">' + (l.status === 'ACTIVE' ? '<button class="btn-danger" id="plk-close-link" style="padding:11px;border-radius:12px;border:0;background:var(--error);color:#fff;font-weight:700;cursor:pointer;">Close this link</button>' : '') +
+                    '<button class="btn-outline" id="plk-x">Close window</button></div>';
+                document.getElementById('plk-modal').innerHTML = h;
+                document.getElementById('plk-x').addEventListener('click', closePaymentLinkModal);
+                var cb = document.getElementById('plk-close-link');
+                if (cb) cb.addEventListener('click', function () {
+                    if (!window.confirm('Close this payment link? Nobody will be able to pay it any more. Payments already made are not affected, and the owner is told it was closed.')) return;
+                    cb.disabled = true;
+                    adminApiRequest('/api/admin/payment-links/' + encodeURIComponent(l.id) + '/close', { method: 'POST', body: {} })
+                        .then(function (v) { showToast('Link closed.'); return adminApiRequest('/api/admin/payment-links/' + encodeURIComponent(l.id)); })
+                        .then(function (v) { renderPaymentLink(v); loadPaymentLinks(); })
+                        .catch(function (e) { cb.disabled = false; showToast(e.message || 'Could not close the link.'); });
+                });
+            }
+            document.getElementById('plk-search').addEventListener('input', function () { clearTimeout(plkTimer); plkTimer = setTimeout(loadPaymentLinks, 350); });
+            document.getElementById('plk-refresh').addEventListener('click', loadPaymentLinks);
+            document.getElementById('plk-chips').addEventListener('click', function (e) {
+                var b = e.target.closest('[data-plk-filter]'); if (!b) return;
+                plkFilter = b.getAttribute('data-plk-filter');
+                document.querySelectorAll('#plk-chips .kc-chip').forEach(function (x) { x.classList.toggle('on', x === b); });
+                loadPaymentLinks();
+            });
+            document.getElementById('plk-modal-overlay').addEventListener('click', function (e) { if (e.target === this) closePaymentLinkModal(); });
+
             function fpStatusInfo(s) {
                 if (s === 'PAYOUT_FAILED') return { label: 'Needs action', cls: '' };
                 if (s === 'REFUND_PENDING') return { label: 'Refund in progress', cls: 'refund' };
@@ -6395,7 +6531,7 @@
             // ==============================================================
             // AUDIT (what every admin did; an admin only sees their own lines)
             // ==============================================================
-            var AUDIT_CATS = [['', 'All'], ['USERS', 'Users'], ['KYC', 'KYC'], ['WAEC', 'WAEC'], ['ADMINS', 'Admins'], ['WALLET', 'Wallet'],
+            var AUDIT_CATS = [['', 'All'], ['USERS', 'Users'], ['KYC', 'KYC'], ['WAEC', 'WAEC'], ['ADMINS', 'Admins'], ['WALLET', 'Wallet'], ['LINKS', 'Payment links'],
                 ['MESSAGING', 'Messaging'], ['PAYOUTS', 'Payouts'], ['SECURITY', 'Security'], ['SYSTEM', 'System']];
             var auditState = { cat: '', q: '', rows: [], more: false, seq: 0, loading: false, timer: null, built: false };
 
@@ -6500,7 +6636,7 @@
             // plain description of where an error happened (no raw endpoints)
             function errPlainWhere(method, path) {
                 var p = String(path || '').split('?')[0].toLowerCase();
-                var areas = [[/\/kyc/, 'ID verification'], [/\/failed-payouts/, 'Failed payouts'], [/\/wallet/, 'Wallet'], [/\/waec/, 'WAEC pins'],
+                var areas = [[/\/kyc/, 'ID verification'], [/\/failed-payouts/, 'Failed payouts'], [/\/payment-links/, 'Payment links'], [/\/wallet/, 'Wallet'], [/\/waec/, 'WAEC pins'],
                     [/\/mail/, 'Email'], [/\/audit/, 'Activity log'], [/\/errors/, 'Error logs'], [/notification|device-token/, 'Notifications'],
                     [/\/users|\/support/, 'User accounts'], [/\/admins|\/pin|\/profile/, 'Admin account'], [/\/transactions|\/transfer|\/recipient/, 'Transfers'],
                     [/\/auth|login|refresh/, 'Signing in'], [/\/home/, 'Home overview']];
@@ -8157,6 +8293,15 @@
                         document.getElementById('support-txn-recipient').textContent = data.serviceType === 'BANK_TRANSFER' ? ((data.bankName || 'Bank') + ' · ' + (data.bankAccountHolderName || data.destinationHolderName || data.bankAccountNumber || '—')) : (data.destinationPhone || data.destinationHolderName || '—');
                         document.getElementById('support-txn-user').textContent = data.accountHolderAccountNumber ? data.accountHolderAccountNumber + (data.accountHolderName ? ' — ' + data.accountHolderName : '') : (data.accountHolderEmail || data.accountHolderName || '—');
                         document.getElementById('support-txn-created').textContent = data.createdAt ? new Date(data.createdAt).toLocaleString() : '—';
+                        var linkRow = document.getElementById('support-txn-link-row');
+                        if (linkRow) {
+                            linkRow.style.display = data.paymentRequestId ? 'flex' : 'none';
+                            var linkEl = document.getElementById('support-txn-link');
+                            if (data.paymentRequestId && linkEl) {
+                                linkEl.innerHTML = escapeHtml(data.payerName ? 'Paid by ' + data.payerName : 'Made through a payment link') + ' · <a href="#" id="support-txn-link-open">Open link</a>';
+                                document.getElementById('support-txn-link-open').addEventListener('click', function (ev) { ev.preventDefault(); openPaymentLink(data.paymentRequestId); });
+                            }
+                        }
                         var reasonRow = document.getElementById('support-txn-reason-row');
                         var reasonEl = document.getElementById('support-txn-reason');
                         if (reasonRow && reasonEl) {
@@ -8911,6 +9056,7 @@
                 { key: 'users', label: 'Users', sub: 'See and manage customer accounts' },
                 { key: 'kyc', label: 'KYC Verification', sub: 'Review customer ID documents' },
                 { key: 'failed-payouts', label: 'Failed Payouts', sub: 'Resend or refund failed transfers' },
+                { key: 'payment-links', label: 'Payment Links', sub: 'See customers\' payment links and close one' },
                 { key: 'waec', label: 'WAEC Pins', sub: 'WAEC pin stock and sales' },
                 { key: 'wallet', label: 'Wallet', sub: 'Balance, payments in and out' },
                 { key: 'messaging', label: 'Messaging', sub: 'Email and in-app messages to customers' },

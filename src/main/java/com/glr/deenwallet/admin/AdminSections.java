@@ -20,6 +20,7 @@ public final class AdminSections {
         LABELS.put("wallet", "Wallet");
         LABELS.put("messaging", "Messaging");
         LABELS.put("errors", "Error Logs");
+        LABELS.put("payment-links", "Payment Links");
     }
 
     /** Which section a request belongs to, or null when it is open to every admin. */
@@ -27,6 +28,7 @@ public final class AdminSections {
         if (path == null) return null;
         if (path.startsWith("/api/admin/kyc")) return "kyc";
         if (path.startsWith("/api/admin/failed-payouts")) return "failed-payouts";
+        if (path.startsWith("/api/admin/payment-links")) return "payment-links";
         if (path.startsWith("/api/admin/waec")) return "waec";
         if (path.startsWith("/api/admin/wallet")) return "wallet";
         if (path.startsWith("/api/admin/mail") || path.equals("/api/admin/notifications")) return "messaging";

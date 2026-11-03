@@ -38,7 +38,9 @@ public record AdminTransactionResponse(
         String bankName,
         String bankAccountNumber,
         String bankAccountHolderName,
-        boolean bankAccountKycVerified
+        boolean bankAccountKycVerified,
+        UUID paymentRequestId,
+        String payerName
 ) {
     public static AdminTransactionResponse from(Transaction t) {
         return from(t, null);
@@ -76,7 +78,9 @@ public record AdminTransactionResponse(
                 t.getDestinationBankName(),
                 t.getDestinationBankAccountNumber(),
                 t.getDestinationBankHolderName(),
-                t.isDestinationBankKycVerified()
+                t.isDestinationBankKycVerified(),
+                t.getPaymentRequestId(),
+                t.getPayerName()
         );
     }
 
@@ -113,7 +117,9 @@ public record AdminTransactionResponse(
                 t.getDestinationBankName(),
                 t.getDestinationBankAccountNumber(),
                 t.getDestinationBankHolderName(),
-                t.isDestinationBankKycVerified()
+                t.isDestinationBankKycVerified(),
+                null,
+                null
         );
     }
 
