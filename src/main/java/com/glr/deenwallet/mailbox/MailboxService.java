@@ -49,12 +49,17 @@ public class MailboxService {
 
     private final TransactionTemplate tx;
     private final QueenSmtpClient smtp;
+    private final MailboxSmtp gmail;
     private final AuditService audit;
     private final AdminAlertService alerts;
 
-    public MailboxService(TransactionTemplate tx, QueenSmtpClient smtp, AuditService audit, AdminAlertService alerts) {
+    @Value("${INBOX_SMTP_DAILY_LIMIT:400}")
+    private int gmailDailyLimit;
+
+    public MailboxService(TransactionTemplate tx, QueenSmtpClient smtp, MailboxSmtp gmail, AuditService audit, AdminAlertService alerts) {
         this.tx = tx;
         this.smtp = smtp;
+        this.gmail = gmail;
         this.audit = audit;
         this.alerts = alerts;
     }
@@ -86,7 +91,7 @@ public class MailboxService {
         Instant poll = instant(st[0]);
         // one hiccup from the mail server is normal; only a problem that lasted a few checks in a row is shown
         boolean lasting = st[2] != null && ((Number) st[2]).intValue() >= FAILS_BEFORE_WARNING;
-        return new Summary(smtp.configured(), canReceive(), unread(), poll == null ? null : poll.toString(),
+        return new Summary(gmail.configured() || smtp.configured(), canReceive(), unread(), poll == null ? null : poll.toString(),
                 lasting && st[1] != null ? (String) st[1] : "", supportEmail);
     }
 
@@ -387,7 +392,7 @@ public class MailboxService {
                     } catch (RuntimeException e) {
                         bad++;
                     }
-                    try { Thread.sleep(150); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
+                    try { Thread.sleep(gmail.configured() ? 1500 : 150); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
                 }
                 alerts.notifyAdmins(me.getId(), "EMAIL_SENT", "Emails sent",
                         who(me) + " emailed " + (ok + bad) + " customers: " + cut(fSubj, 120) + (bad > 0 ? " (" + bad + " could not be sent)" : ""));
@@ -438,13 +443,29 @@ public class MailboxService {
     }
 
     /**
+     * Mailbox emails (replies and hand-written emails) go through the Gmail account that receives the support mail, so
+     * QueenSMTP stays for the automatic emails only. If Gmail is not set up (or switched off) it uses QueenSMTP as before.
+     */
+    private QueenSmtpClient.Sent outbound(String to, String subject, Draft d, String inReplyTo) {
+        if (gmail.configured()) {
+            Number last24h = (Number) em.createNativeQuery("SELECT COUNT(*) FROM mail_messages WHERE direction = 'OUT' "
+                    + "AND created_at > now() - interval '24 hours' AND status IN ('SENT', 'QUEUED', 'UNSURE')").getSingleResult();
+            if (last24h.intValue() >= gmailDailyLimit) {
+                throw new IllegalStateException("The daily limit of " + gmailDailyLimit + " emails was reached to keep the Gmail account safe. Try again tomorrow.");
+            }
+            return gmail.send(SIGNATURE_NAME, supportEmail, to, subject, d.html(), d.full(), inReplyTo);
+        }
+        return smtp.send(supportEmail, SIGNATURE_NAME, supportEmail, to, subject, d.html(), d.full(), inReplyTo);
+    }
+
+    /**
      * Sends a claimed row. A single send removes the row when it certainly did not go out; a bulk send keeps it as
      * "Failed" so the admin can see which customer did not get the email. An unclear outcome is always "Not confirmed".
      */
     private Msg transmit(Claim c, String subject, Draft d, String inReplyTo, boolean keepFailed) {
         QueenSmtpClient.Sent sent;
         try {
-            sent = smtp.send(supportEmail, SIGNATURE_NAME, supportEmail, c.toEmail(), subject, d.html(), d.full(), inReplyTo);
+            sent = outbound(c.toEmail(), subject, d, inReplyTo);
         } catch (QueenSmtpClient.Uncertain e) {
             // it may have been sent: keep the row (listed as "Not confirmed") and never resend on our own
             setStatus(c.id(), "UNSURE", "The connection dropped while sending, so it is not known whether this email was sent.");
