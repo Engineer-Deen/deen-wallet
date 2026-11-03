@@ -212,7 +212,7 @@ label.l{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:0 
 <script>
 (function () {
   'use strict';
-  var slug = (location.pathname.match(/\/p\/([A-Za-z0-9]+)/) || [])[1] || new URLSearchParams(location.search).get('c') || '';
+  var slug = (location.pathname.match(/^\/(?:p\/)?([A-Za-z0-9]{4,32})\/?$/) || [])[1] || new URLSearchParams(location.search).get('c') || '';
   var $ = function (id) { return document.getElementById(id); };
   var view = null, pay = null, poll = null, tick = null, sendStart = 0, prefixes = null;
 

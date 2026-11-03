@@ -87,6 +87,10 @@ public class PaymentRequestService {
     @Value("${app.public-base-url:https://api.deenwallapp.com}")
     private String baseUrl;
 
+    /** Shareable links look like https://pay.deenwallapp.com/76dk5jzy (PAY_LINK_BASE_URL). Old /p/ links on the app address keep working. */
+    @Value("${app.pay-link-base-url:https://pay.deenwallapp.com}")
+    private String payLinkBase;
+
     private final Map<String, Deque<Long>> starts = new ConcurrentHashMap<>();
 
     public PaymentRequestService(TransactionService transactions, UserRepository users, BankTransferService banks,
@@ -385,7 +389,7 @@ public class PaymentRequestService {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", String.valueOf(row[0]));
         m.put("slug", row[2]);
-        m.put("link", baseUrl + "/p/" + row[2]);
+        m.put("link", payLinkBase.replaceAll("/+$", "") + "/" + row[2]);
         m.put("title", row[3]);
         m.put("note", row[4]);
         m.put("amountMinor", row[5] == null ? null : ((Number) row[5]).longValue());
