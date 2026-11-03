@@ -58,6 +58,12 @@ label.l{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:0 
 .prov img{width:34px;height:34px;border-radius:50%;object-fit:cover;flex:0 0 auto}
 .prov b{font-size:14px;line-height:1.2}
 .prov[aria-pressed=true]{border-color:var(--lagoon);background:var(--tint);box-shadow:0 0 0 3px rgba(28,122,145,.12)}
+/* pay-card-soon: card payments are shown but not available yet */
+.prov.soon{grid-column:1/-1;opacity:.72;background:#f6f9fa}
+.prov.soon .ic{width:34px;height:34px;border-radius:50%;background:#e3edf0;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.prov.soon .ic svg{width:19px;height:19px;stroke:#1c7a91;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.prov.soon .tag{margin-left:auto;font-size:11px;font-weight:700;color:#8a5a00;background:#FFF1CC;border-radius:999px;padding:3px 9px;white-space:nowrap}
+.soonmsg{margin:8px 2px 0;font-size:13px;color:#5b6f76}
 .sum{background:var(--mist);border-radius:14px;padding:12px 14px;margin-bottom:16px}
 .sum div{display:flex;justify-content:space-between;gap:10px;font-size:14.5px;color:var(--ink2);padding:3px 0}
 .sum div.t{margin-top:6px;padding-top:9px;border-top:1px dashed #C6D8DE;color:var(--ink);font-weight:800;font-size:16.5px}
@@ -163,7 +169,9 @@ label.l{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:0 
       <div class="field hidden" id="amt-field"><label class="l" for="amt">How much do you want to pay?</label><div class="amt"><span>SLE</span><input class="inp" id="amt" inputmode="decimal" autocomplete="off" placeholder="0.00" /></div></div>
       <div class="field"><label class="l">Pay with</label><div class="provs" id="provs">
         <button type="button" class="prov" data-p="m17" aria-pressed="false"><img src="/assets/provider-logos/orange-money.png" alt="" /><b>Orange Money</b></button>
-        <button type="button" class="prov" data-p="m18" aria-pressed="false"><img src="/assets/provider-logos/africell.png" alt="" /><b>Africell Money</b></button></div></div>
+        <button type="button" class="prov" data-p="m18" aria-pressed="false"><img src="/assets/provider-logos/africell.png" alt="" /><b>Africell Money</b></button>
+        <button type="button" class="prov soon" data-soon="1" aria-disabled="true"><span class="ic"><svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/></svg></span><b>Debit / credit card</b><span class="tag">Coming soon</span></button></div>
+        <p class="soonmsg hidden" id="card-soon">Card payments are coming soon. For now, please pay with Orange Money or Africell Money.</p></div>
       <div class="field"><label class="l" for="phone">Your mobile money number</label><div class="phone" id="phone-box"><span>+232</span><input id="phone" inputmode="numeric" autocomplete="tel-national" placeholder="76 123 456" maxlength="14" /></div></div>
       <div class="field"><label class="l" for="pname">Your name <small style="font-weight:600;color:#7a8e95">(optional, so they know it was you)</small></label><input class="inp" id="pname" maxlength="40" autocomplete="name" placeholder="e.g. Aminata" /></div>
       <div class="sum" id="sum"><div><span>Amount</span><b id="s-amt">—</b></div><div><span>Service fee (3%)</span><b id="s-fee">—</b></div><div class="t"><span>You pay</span><b id="s-total">—</b></div></div>
@@ -277,7 +285,7 @@ label.l{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:0 
     for (var len = 2; len >= 1; len--) { var pre = d.slice(0, len); for (var k in prefixes) { if (prefixes[k] && prefixes[k].indexOf(pre) >= 0 && (k === 'm17' || k === 'm18')) { setProv(k); return; } } }
   }
 
-  document.querySelectorAll('.prov').forEach(function (b) { b.addEventListener('click', function () { setProv(b.getAttribute('data-p')); formErr(''); }); });
+  document.querySelectorAll('.prov').forEach(function (b) { b.addEventListener('click', function () { if (b.getAttribute('data-soon')) { var cs = document.getElementById('card-soon'); if (cs) cs.classList.toggle('hidden'); return; } var cs2 = document.getElementById('card-soon'); if (cs2) cs2.classList.add('hidden'); setProv(b.getAttribute('data-p')); formErr(''); }); });
   $('phone').addEventListener('input', function () { var d = localDigits(this.value); this.value = d.replace(/(\d{2})(\d{3})?(\d{0,3})/, function (m, a, b, c) { return [a, b, c].filter(Boolean).join(' '); }); $('phone-box').classList.remove('err'); detect(); formErr(''); });
   $('amt').addEventListener('input', function () { this.classList.remove('err'); renderSum(); formErr(''); });
 
