@@ -78,10 +78,44 @@ public class MonimeClient {
      * status value "processed" match your account before go-live.
      */
     public PaymentCodeResult getPaymentCode(String paymentCodeId) {
+        if (paymentCodeId != null && paymentCodeId.startsWith(CHECKOUT_PREFIX)) {
+            // A card payment: the id saved on the transfer is "cs:" + the checkout session id. Report the session in the
+            // same shape as a payment code so the confirmation, payout and reconciliation code is shared.
+            CheckoutSessionResult s = getCheckoutSession(paymentCodeId.substring(CHECKOUT_PREFIX.length()));
+            if (s == null) return null;
+            String st = s.status() == null ? "" : s.status().toLowerCase();
+            return new PaymentCodeResult(paymentCodeId, st, "checkout", s.name(),
+                    st.equals("completed") ? s.total() : null, null, s.reference(), null, null, null);
+        }
         MonimeEnvelope<PaymentCodeResult> response = monimeRestClient.get()
                 .uri("/v1/payment-codes/{id}", paymentCodeId)
                 .retrieve()
                 .body(new ParameterizedTypeReference<MonimeEnvelope<PaymentCodeResult>>() {});
+        return response != null ? response.result() : null;
+    }
+
+    /** Prefix saved before a checkout session id in the transfer's payment code column (marks a card payment). */
+    public static final String CHECKOUT_PREFIX = "cs:";
+
+    /** Creates a hosted checkout page. The payer is sent to redirectUrl. A fixed idempotency key makes a retry safe. */
+    public CheckoutSessionResult createCheckoutSession(CreateCheckoutSessionRequest request, String idempotencyKey) {
+        MonimeEnvelope<CheckoutSessionResult> response = monimeRestClient.post()
+                .uri("/v1/checkout-sessions")
+                .header("Idempotency-Key", idempotencyKey)
+                .body(request)
+                .retrieve()
+                .body(new ParameterizedTypeReference<MonimeEnvelope<CheckoutSessionResult>>() {
+                });
+        return response != null ? response.result() : null;
+    }
+
+    /** Authoritative checkout session state (pending, completed, cancelled, expired). */
+    public CheckoutSessionResult getCheckoutSession(String sessionId) {
+        MonimeEnvelope<CheckoutSessionResult> response = monimeRestClient.get()
+                .uri("/v1/checkout-sessions/{id}", sessionId)
+                .retrieve()
+                .body(new ParameterizedTypeReference<MonimeEnvelope<CheckoutSessionResult>>() {
+                });
         return response != null ? response.result() : null;
     }
 

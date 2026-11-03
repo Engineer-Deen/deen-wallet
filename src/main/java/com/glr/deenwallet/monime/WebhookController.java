@@ -63,6 +63,7 @@ public class WebhookController {
         switch (name) {
             case "payment_code.processed" -> tx.handlePaymentCodeProcessed(resource);
             case "payment_code.completed" -> tx.handlePaymentCodeCompleted(resource);
+            case "checkout_session.completed" -> tx.handlePaymentCodeCompleted(MonimeClient.CHECKOUT_PREFIX + resource);
             case "payment_code.failed", "payment_code.expired", "payment_code.canceled" ->
                     tx.handlePaymentCodeFailed(resource, reason);
             case "payout.completed" -> tx.handlePayoutCompleted(resource);

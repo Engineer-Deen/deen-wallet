@@ -88,8 +88,12 @@ public class PaymentRequestService {
     private String baseUrl;
 
     /** Shareable links look like https://pay.deenwallapp.com/76dk5jzy (PAY_LINK_BASE_URL). Old /p/ links on the app address keep working. */
-    @Value("${app.pay-link-base-url:https://pay.deenwallapp.com}")
+    @Value("${PAY_LINK_BASE_URL:https://pay.deenwallapp.com}")
     private String payLinkBase;
+
+    /** Card payments on payment links. Off until Monime has activated cards for the account: set CARD_PAYMENTS_ENABLED=true. */
+    @Value("${CARD_PAYMENTS_ENABLED:false}")
+    private boolean cardEnabled;
 
     private final Map<String, Deque<Long>> starts = new ConcurrentHashMap<>();
 
@@ -256,6 +260,7 @@ public class PaymentRequestService {
         m.put("payeeBank", row[11]);
         m.put("payeeType", row[7]);
         m.put("payeePhoto", ownerPhoto(row[1]));
+        m.put("cardEnabled", cardEnabled);
         if (row[5] != null) {
             long amount = ((Number) row[5]).longValue();
             ConversionFee fee = ConversionFee.calculate(amount);
@@ -301,8 +306,14 @@ public class PaymentRequestService {
 
         String providerId = b.getProviderId() == null ? "" : b.getProviderId().trim();
         String phone = b.getPhone() == null ? "" : b.getPhone().trim();
-        if (!MOMO_PROVIDER.matcher(providerId).matches()) throw new IllegalArgumentException("Choose Orange Money or Africell Money.");
-        if (!PHONE.matcher(phone).matches()) throw new IllegalArgumentException("Enter your number as +232XXXXXXXX.");
+        final boolean card = "card".equals(providerId);
+        if (card) {
+            if (!cardEnabled) throw new IllegalStateException("Card payments are coming soon. Please pay with Orange Money or Africell Money.");
+            phone = TransactionService.CARD_MARKER;
+        } else {
+            if (!MOMO_PROVIDER.matcher(providerId).matches()) throw new IllegalArgumentException("Choose Orange Money, Africell Money or card.");
+            if (!PHONE.matcher(phone).matches()) throw new IllegalArgumentException("Enter your number as +232XXXXXXXX.");
+        }
         String payerName = clean(b.getPayerName(), 40);
 
         // No separate per-payer cap: the owner's KYC daily limit applies, checked when the payment starts.
@@ -313,14 +324,27 @@ public class PaymentRequestService {
         }
 
         boolean bank = "BANK".equals(row[7]);
-        Transaction t = transactions.initiateForPaymentLink(new PaymentLinkPayment(
+        PaymentLinkPayment linkPayment = new PaymentLinkPayment(
                 ownerId, requestId, bank, String.valueOf(row[8]), String.valueOf(row[9]), String.valueOf(row[10]),
-                row[11] == null ? null : String.valueOf(row[11]), minor, providerId, phone, payerName.isEmpty() ? null : payerName));
+                row[11] == null ? null : String.valueOf(row[11]), minor, providerId, phone, payerName.isEmpty() ? null : payerName);
+        Transaction t;
+        String redirectUrl = null;
+        if (card) {
+            String sessionName = row[3] == null || String.valueOf(row[3]).isBlank() ? "Payment to " + row[10] : String.valueOf(row[3]);
+            if (sessionName.length() > 140) sessionName = sessionName.substring(0, 140);
+            TransactionService.CardStart started = transactions.initiateCardForPaymentLink(
+                    linkPayment, payLinkBase.replaceAll("/+$", "") + "/" + row[2], sessionName);
+            t = started.transaction();
+            redirectUrl = started.redirectUrl();
+        } else {
+            t = transactions.initiateForPaymentLink(linkPayment);
+        }
 
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("paymentId", t.getId().toString());
         m.put("reference", t.getTransactionCode());
         m.put("ussdCode", t.getMonimeUssdCode());
+        m.put("redirectUrl", redirectUrl);
         m.put("amountMinor", t.getAmountValue());
         m.put("feeMinor", t.getFeeValue());
         m.put("totalMinor", t.getTotalChargedValue());

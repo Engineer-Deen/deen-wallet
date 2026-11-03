@@ -59,10 +59,13 @@ label.l{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:0 
 .prov b{font-size:14px;line-height:1.2}
 .prov[aria-pressed=true]{border-color:var(--lagoon);background:var(--tint);box-shadow:0 0 0 3px rgba(28,122,145,.12)}
 /* pay-card-soon: card payments are shown but not available yet */
-.prov.soon{grid-column:1/-1;opacity:.72;background:#f6f9fa}
-.prov.soon .ic{width:34px;height:34px;border-radius:50%;background:#e3edf0;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
-.prov.soon .ic svg{width:19px;height:19px;stroke:#1c7a91;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.prov.soon .tag{margin-left:auto;font-size:11px;font-weight:700;color:#8a5a00;background:#FFF1CC;border-radius:999px;padding:3px 9px;white-space:nowrap}
+.prov.wide{grid-column:1/-1}
+/* card-style: the card option looks like the Orange Money and Africell Money buttons (same size, border and round icon) */
+.prov .ic{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#0B3442,#1C7A91);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.prov .ic svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.prov .pt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.prov .pt small{font-size:11.5px;font-weight:600;color:#6b7f87;line-height:1.2}
+.prov .tag{margin-left:auto;font-size:11px;font-weight:700;color:#8a5a00;background:#FFF1CC;border-radius:999px;padding:4px 10px;white-space:nowrap;flex:0 0 auto}
 .soonmsg{margin:8px 2px 0;font-size:13px;color:#5b6f76}
 .sum{background:var(--mist);border-radius:14px;padding:12px 14px;margin-bottom:16px}
 .sum div{display:flex;justify-content:space-between;gap:10px;font-size:14.5px;color:var(--ink2);padding:3px 0}
@@ -170,7 +173,7 @@ label.l{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:0 
       <div class="field"><label class="l">Pay with</label><div class="provs" id="provs">
         <button type="button" class="prov" data-p="m17" aria-pressed="false"><img src="/assets/provider-logos/orange-money.png" alt="" /><b>Orange Money</b></button>
         <button type="button" class="prov" data-p="m18" aria-pressed="false"><img src="/assets/provider-logos/africell.png" alt="" /><b>Africell Money</b></button>
-        <button type="button" class="prov soon" data-soon="1" aria-disabled="true"><span class="ic"><svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/></svg></span><b>Debit / credit card</b><span class="tag">Coming soon</span></button></div>
+        <button type="button" class="prov wide soon" data-soon="1" aria-disabled="true"><span class="ic"><svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/></svg></span><span class="pt"><b>Debit / credit card</b><small>Pay with your bank card</small></span><span class="tag">Coming soon</span></button></div>
         <p class="soonmsg hidden" id="card-soon">Card payments are coming soon. For now, please pay with Orange Money or Africell Money.</p></div>
       <div class="field"><label class="l" for="phone">Your mobile money number</label><div class="phone" id="phone-box"><span>+232</span><input id="phone" inputmode="numeric" autocomplete="tel-national" placeholder="76 123 456" maxlength="14" /></div></div>
       <div class="field"><label class="l" for="pname">Your name <small style="font-weight:600;color:#7a8e95">(optional, so they know it was you)</small></label><input class="inp" id="pname" maxlength="40" autocomplete="name" placeholder="e.g. Aminata" /></div>
@@ -239,7 +242,27 @@ label.l{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:0 
   function localDigits(v) { var d = String(v || '').replace(/\D/g, ''); if (d.indexOf('232') === 0 && d.length > 8) d = d.slice(3); if (d.charAt(0) === '0') d = d.slice(1); return d.slice(0, 8); }
   function fullPhone() { var d = localDigits($('phone').value); return d.length === 8 ? '+232' + d : ''; }
   function selected() { var b = document.querySelector('.prov[aria-pressed=true]'); return b ? b.getAttribute('data-p') : ''; }
-  function setProv(p) { document.querySelectorAll('.prov').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-p') === p ? 'true' : 'false'); }); }
+  function setProv(p) { document.querySelectorAll('.prov').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-p') === p ? 'true' : 'false'); }); syncCard(); }
+  /* card-pay: the card option is live only when the server says so (view.cardEnabled); choosing it hides the phone field */
+  function enableCard(v) {
+    if (!v || !v.cardEnabled) return;
+    var cb = document.querySelector('.prov.soon'); if (!cb) return;
+    cb.classList.remove('soon'); cb.removeAttribute('data-soon'); cb.removeAttribute('aria-disabled'); cb.setAttribute('data-p', 'card'); cb.setAttribute('aria-pressed', 'false');
+    var tg = cb.querySelector('.tag'); if (tg) tg.remove();
+  }
+  function syncCard() {
+    var c = selected() === 'card', ph = $('phone'), f = ph && ph.closest ? ph.closest('.field') : null; if (f) f.classList.toggle('hidden', c);
+    var fn = document.querySelector('.fine'); if (!fn) return; if (!fn.getAttribute('data-def')) fn.setAttribute('data-def', fn.textContent);
+    fn.textContent = c ? 'You will be taken to a secure card payment page to finish paying.' : fn.getAttribute('data-def');
+  }
+  function cardReturn() {
+    var q = new URLSearchParams(location.search), id = q.get('paid');
+    if (q.get('cancel') === '1') { try { history.replaceState(null, '', location.pathname); } catch (e) { } if (view && view.status === 'ACTIVE') formErr('The card payment was cancelled. No money was taken.'); return false; }
+    if (!id || !/^[0-9a-fA-F-]{36}$/.test(id)) return false;
+    try { history.replaceState(null, '', location.pathname); } catch (e) { }
+    pay = { id: id, card: true, t0: Date.now(), to: view.payeeName };
+    show('step-send'); $('sc-title').textContent = 'Confirming your card payment'; $('sc-sub').textContent = 'Please keep this page open while we confirm your payment.'; startPoll(); return true;
+  }
   function amountMinor() {
     if (view && view.amountMinor != null) return view.amountMinor;
     var v = String($('amt').value || '').replace(/,/g, '').trim();
@@ -270,6 +293,7 @@ label.l{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:0 
       else { $('amt-label').textContent = 'You choose the amount'; $('amt-big').innerHTML = '<i>SLE</i>Any'; $('amt-field').classList.remove('hidden'); }
       document.title = 'Pay ' + name + ' · DeenWallet Transfer';
       $('main').classList.remove('hidden');
+      enableCard(v); if (cardReturn()) return;
       if (v.status !== 'ACTIVE') {
         var m = { PAID: ['This link has been paid', 'Thank you. This payment link has already been paid.'], EXPIRED: ['This link has expired', 'Ask the person to send you a new payment link.'], CLOSED: ['This link is closed', 'The person has stopped taking payments on this link.'] }[v.status] || ['Link not available', 'This link is not taking payments.'];
         show('step-end'); $('end-ico').textContent = '🔒'; $('end-title').textContent = m[0]; $('end-text').textContent = m[1]; $('end-ref-box').classList.add('hidden'); $('end-btn').classList.add('hidden'); return;
@@ -293,13 +317,14 @@ label.l{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:0 
     formErr(''); var m = amountMinor(), p = selected(), ph = fullPhone();
     if (m < 100) { $('amt').classList.add('err'); formErr('Enter an amount of at least SLE 1.00.'); $('amt').focus(); return; }
     if (view && m > view.maxMinor) { formErr('The most you can pay on one link is ' + fmt(view.maxMinor) + '.'); return; }
-    if (!p) { formErr('Choose Orange Money or Africell Money.'); return; }
-    if (!ph) { $('phone-box').classList.add('err'); formErr('Enter your 8-digit mobile money number.'); $('phone').focus(); return; }
+    if (!p) { formErr('Choose how you want to pay.'); return; }
+    if (p !== 'card' && !ph) { $('phone-box').classList.add('err'); formErr('Enter your 8-digit mobile money number.'); $('phone').focus(); return; }
     var btn = $('pay'); btn.disabled = true; btn.textContent = 'Setting up your payment…';
     // The number and name are deliberately not remembered: the form always starts empty.
     var body = { providerId: p, phone: ph, payerName: $('pname').value.trim() };
     if (view.amountMinor == null) body.amount = (m / 100).toFixed(2);
     api('/api/public/pay/' + encodeURIComponent(slug) + '/start', { method: 'POST', body: body }).then(function (r) {
+      if (r.redirectUrl) { btn.textContent = 'Opening the card page…'; window.location.href = r.redirectUrl; return; }
       pay = { id: r.paymentId, ussd: r.ussdCode, total: r.totalMinor, amount: r.amountMinor, fee: r.feeMinor, ref: r.reference, phone: ph, to: r.payeeName, exp: Date.now() + (r.expiresInSeconds || 600) * 1000 };
       store('dwpay_' + slug, JSON.stringify(pay)); startDial();
     }).catch(function (e) { formErr(e.message); }).then(function () { btn.disabled = false; renderSum(); });
@@ -319,8 +344,8 @@ label.l{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:0 
   function check() {
     if (!pay) return;
     api('/api/public/pay/' + encodeURIComponent(slug) + '/status/' + encodeURIComponent(pay.id)).then(function (s) {
-      if (s.phase === 'waiting') { if (!$('step-dial').classList.contains('hidden')) { if (pay.exp + 5 * 60 * 1000 < Date.now()) { stop(); endView('⏱️', 'Payment not completed', 'The code expired before it was paid. No money was taken. You can start again.', s.reference, true); } } return; }
-      if (s.phase === 'sending') { if (!sendStart) sendStart = Date.now(); showSend(); return; }
+      if (s.phase === 'waiting') { if (pay.card) { if (Date.now() - pay.t0 > 15 * 60 * 1000) { stop(); endView('⏳', 'We could not confirm your payment yet', 'If money left your card, your payment will still go through. Keep this reference and contact support if it does not.', s.reference, false); } return; } if (!$('step-dial').classList.contains('hidden')) { if (pay.exp + 5 * 60 * 1000 < Date.now()) { stop(); endView('⏱️', 'Payment not completed', 'The code expired before it was paid. No money was taken. You can start again.', s.reference, true); } } return; }
+      if (s.phase === 'sending') { if (!sendStart) sendStart = Date.now(); if (pay.card) { $('sc-title').textContent = 'Sending the money'; $('sc-sub').textContent = 'Payment received. Sending it to the receiver now.'; } showSend(); return; }
       stop();
       if (s.phase === 'done') return done(s);
       if (s.phase === 'delayed') return endView('⏳', 'Payment received, delivery delayed', s.message, s.reference, false);

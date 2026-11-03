@@ -605,6 +605,99 @@ public class TransactionService {
         });
     }
 
+    /** Where a card payer's money came from: there is no phone number, so the transfer stores this marker. */
+    public static final String CARD_MARKER = "CARD";
+
+    /** A started card payment: the saved transfer and the provider's checkout page the payer must be sent to. */
+    public record CardStart(Transaction transaction, String redirectUrl) {}
+
+    /**
+     * Starts a card payment on a payment link (the payment link page only offers it when CARD_PAYMENTS_ENABLED is on).
+     * The row is an ordinary link payment owned by the link's owner. The provider's checkout session id is saved as
+     * "cs:" + id in the payment code column, so confirmation, payout, retry and reconciliation reuse the existing flow.
+     * Not @Transactional on purpose: the provider call is slow network I/O.
+     */
+    public CardStart initiateCardForPaymentLink(PaymentLinkPayment p, String returnUrl, String sessionName) {
+        requireUsableUser(p.ownerId());
+        final TransactionServiceType type = p.bank() ? TransactionServiceType.BANK_TRANSFER : TransactionServiceType.MOBILE_MONEY;
+        final long minorUnits = p.amountMinor();
+        if (minorUnits < 100) throw new IllegalArgumentException("Amount must be at least 1.00");
+        final ConversionFee fee = ConversionFee.calculate(minorUnits);
+        final String transactionCode = generateTransactionCode();
+
+        final Transaction saved;
+        synchronized (userLock(p.ownerId())) {
+            saved = transactionTemplate.execute(status -> {
+                Instant now = Instant.now();
+                try {
+                    kycLimits.enforce(p.ownerId(), type, minorUnits);
+                } catch (com.glr.deenwallet.kyc.KycLimitExceededException e) {
+                    safety.alertOnce("linklimit:" + p.ownerId() + ":" + java.time.LocalDate.now(), "PAYMENT_LINK_LIMIT",
+                            "Payment link at its daily limit", "A payment to one of your links was stopped because it is above your daily limit. "
+                                    + e.getMessage());
+                    notifyLinkLimitOwner(p.ownerId(), e.getMessage());
+                    throw new IllegalStateException("This payment link has reached its limit for today. Please try again tomorrow.");
+                }
+                if (transactionRepository.countLinkAwaitingSince(p.requestId(), now.minus(Duration.ofMinutes(15))) >= MAX_AWAITING_PER_LINK) {
+                    throw new TooManyRequestsException("This payment link is very busy right now. Please try again in a few minutes.");
+                }
+                // No per-phone checks here: card payers have no phone number (they all share the CARD marker).
+                return transactionRepository.save(Transaction.builder()
+                        .userId(p.ownerId())
+                        .paymentRequestId(p.requestId())
+                        .payerName(p.payerName())
+                        .amountCurrency("SLE")
+                        .amountValue(minorUnits)
+                        .feeValue(fee.feeValue())
+                        .monimeDepositFeeValue(fee.monimeDepositFeeValue())
+                        .deenWalletFeeValue(fee.deenWalletFeeValue())
+                        .monimeWithdrawalFeeValue(fee.monimeWithdrawalFeeValue())
+                        .totalChargedValue(fee.totalChargedValue())
+                        .sourceProviderId("card")
+                        .sourcePhone("CARD")
+                        .serviceType(type)
+                        .destinationProviderId(p.bank() ? null : p.destProviderId())
+                        .destinationPhone(p.bank() ? null : p.destAccount())
+                        .destinationBankProviderId(p.bank() ? p.destProviderId() : null)
+                        .destinationBankName(p.bank() ? p.destBankName() : null)
+                        .destinationBankAccountNumber(p.bank() ? p.destAccount() : null)
+                        .destinationBankHolderName(p.bank() ? p.destHolderName() : null)
+                        .destinationBankKycVerified(p.bank())
+                        .destinationHolderName(p.destHolderName())
+                        .status(TransactionStatus.AWAITING_PAYMENT)
+                        .smsSent(false)
+                        .transactionCode(transactionCode)
+                        .build());
+            });
+        }
+        final UUID transactionId = saved.getId();
+
+        final com.glr.deenwallet.monime.CheckoutSessionResult session;
+        try {
+            session = monimeClient.createCheckoutSession(com.glr.deenwallet.monime.CreateCheckoutSessionRequest.cardOnly(
+                    sessionName, returnUrl + "?paid=" + transactionId, returnUrl + "?cancel=1", transactionId.toString(),
+                    minorUnits, fee.totalChargedValue() - minorUnits), "checkout-" + transactionId);
+        } catch (org.springframework.web.client.RestClientResponseException | org.springframework.web.client.ResourceAccessException e) {
+            log.warn("Card checkout could not be created for link payment {}: {}", transactionCode, e.getMessage());
+            transactionTemplate.executeWithoutResult(status -> transactionRepository.deleteById(transactionId));
+            throw new IllegalStateException("Card payments are not available right now. Please pay with Orange Money or Africell Money.");
+        } catch (RuntimeException e) {
+            transactionTemplate.executeWithoutResult(status -> transactionRepository.deleteById(transactionId));
+            throw e;
+        }
+        if (session == null || session.id() == null || session.id().isBlank() || session.redirectUrl() == null || session.redirectUrl().isBlank()) {
+            transactionTemplate.executeWithoutResult(status -> transactionRepository.deleteById(transactionId));
+            throw new IllegalStateException("Card payments are not available right now. Please pay with Orange Money or Africell Money.");
+        }
+        Transaction done = transactionTemplate.execute(status -> {
+            Transaction t = transactionRepository.findById(transactionId)
+                    .orElseThrow(() -> new IllegalStateException("Transaction disappeared during initiation"));
+            t.setMonimePaymentCodeId(com.glr.deenwallet.monime.MonimeClient.CHECKOUT_PREFIX + session.id());
+            return transactionRepository.save(t);
+        });
+        return new CardStart(done, session.redirectUrl());
+    }
+
     /** The payer's page asks about one payment; while it is being sent out, also check with the provider in the background. */
     public void nudgeLinkPayment(UUID transactionId) {
         Transaction t = transactionRepository.findById(transactionId).orElse(null);
@@ -612,10 +705,34 @@ public class TransactionService {
         if (t.getStatus() == TransactionStatus.PAYING_OUT && t.getMonimePayoutId() != null) {
             nudgePayoutCheck(t.getMonimePayoutId());
         }
+        // A card payment has no payment webhook we can rely on yet: while the payer's page is open, ask the provider
+        // (at most every 4 seconds per payment) and carry on as soon as it says the card was charged.
+        String cardRef = t.getMonimePaymentCodeId();
+        if (t.getStatus() == TransactionStatus.AWAITING_PAYMENT && cardRef != null
+                && cardRef.startsWith(com.glr.deenwallet.monime.MonimeClient.CHECKOUT_PREFIX)) {
+            long nowMs = System.currentTimeMillis();
+            if (CARD_NUDGED.size() > 2000) CARD_NUDGED.clear();
+            Long last = CARD_NUDGED.get(transactionId);
+            if (last != null && nowMs - last < 4000) return;
+            CARD_NUDGED.put(transactionId, nowMs);
+            PAYOUT_NUDGE_POOL.execute(() -> {
+                try {
+                    PaymentCodeResult c = monimeClient.getPaymentCode(cardRef);
+                    String st = c == null || c.status() == null ? "" : c.status().toLowerCase();
+                    if (st.equals("completed") || st.equals("processed")) {
+                        handlePaymentCodeProcessed(cardRef);
+                    } else if (st.equals("cancelled") || st.equals("canceled") || st.equals("expired")) {
+                        cancelIfStillAwaiting(transactionId, "The card payment was cancelled or not completed. No money was taken.");
+                    }
+                } catch (RuntimeException e) {
+                    log.debug("Card payment check for {} will be retried: {}", transactionId, e.toString());
+                }
+            });
+        }
     }
 
     private void notifyLinkReceived(Transaction t) {
-        String from = t.getPayerName() != null && !t.getPayerName().isBlank() ? t.getPayerName() : mask(t.getSourcePhone());
+        String from = t.getPayerName() != null && !t.getPayerName().isBlank() ? t.getPayerName() : (CARD_MARKER.equals(t.getSourcePhone()) ? "a card payer" : mask(t.getSourcePhone()));
         String msg = "You received SLE " + display(t.getAmountValue()) + " from " + from
                 + " through your payment link. It has been sent to your "
                 + (t.getServiceType() == TransactionServiceType.BANK_TRANSFER ? "bank account." : "mobile money account.");
@@ -631,6 +748,8 @@ public class TransactionService {
             log.warn("Could not queue the payment link email for {}: {}", t.getTransactionCode(), e.getMessage());
         }
     }
+
+    private static final java.util.concurrent.ConcurrentHashMap<UUID, Long> CARD_NUDGED = new java.util.concurrent.ConcurrentHashMap<>();
 
     private static final java.util.concurrent.ConcurrentHashMap<String, Boolean> LINK_LIMIT_NOTIFIED = new java.util.concurrent.ConcurrentHashMap<>();
 
@@ -744,7 +863,8 @@ public class TransactionService {
             handlePaymentCodeProcessed(paymentCodeId);
         } else if (status.equals("expired") || status.equals("cancelled") || status.equals("canceled") || status.equals("failed")) {
             cancelIfStillAwaiting(transactionId, "Payment was not received before the payment window expired.");
-        } else if (createdAt != null && createdAt.isBefore(Instant.now().minus(Duration.ofMinutes(60)))) {
+        } else if (createdAt != null && !paymentCodeId.startsWith(com.glr.deenwallet.monime.MonimeClient.CHECKOUT_PREFIX)   // a card session is only closed by the provider saying so
+                && createdAt.isBefore(Instant.now().minus(Duration.ofMinutes(60)))) {
             // Still not paid an hour after a 10-minute code was issued: it can no longer be paid.
             cancelIfStillAwaiting(transactionId, "Payment was not received before the payment window expired.");
         }
@@ -1546,6 +1666,9 @@ public class TransactionService {
                 .orElseThrow(() -> new IllegalArgumentException("Transaction not found"));
         if (current.getStatus() != TransactionStatus.PAYOUT_FAILED) {
             throw new IllegalStateException("Only a failed payout can be refunded (current status: " + current.getStatus() + ").");
+        }
+        if (CARD_MARKER.equals(current.getSourcePhone())) {
+            throw new IllegalStateException("This was paid by card, so it cannot be refunded to a phone number. Retry the payout, or refund the card from the Monime dashboard.");
         }
         assertPreviousPayoutFailed(current);
 
