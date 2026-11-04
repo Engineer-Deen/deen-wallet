@@ -106,6 +106,7 @@ public class SecurityConfig {
                                 "/api/auth/**",
                                 "/api/admin/auth/**",
                                 "/api/v1/webhooks/monime",
+                                "/api/v1/webhooks/honeycoin",
                                 "/api/errors",
                                 "/api/app/version",
                                 "/api/app/android-update",
@@ -129,6 +130,7 @@ public class SecurityConfig {
                                 "/api/transactions/**",
                                 "/api/recipients/**",
                                 "/api/payment-requests/**",
+                                "/api/crypto/**",
                                 "/api/accounts/**",
                                 "/api/bank-transfers/**",
                                 "/api/notifications/**"

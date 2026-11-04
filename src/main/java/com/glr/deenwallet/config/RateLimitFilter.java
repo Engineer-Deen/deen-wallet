@@ -69,6 +69,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
             new Rule("waecquote", "GET", "/api/waec/quote", 60, 60, true),
             new Rule("lookup", "GET", "/api/accounts/detect-provider", 20, 60, true),
             new Rule("verifyacc", "GET", "/api/bank-transfers/verify-account", 20, 60, true),
+            new Rule("cryptopay", "POST", "/api/crypto/orders", 6, 60, true),
+            new Rule("cryptoquote", "GET", "/api/crypto/quote", 30, 60, true),
             new Rule("fee", "GET", "/api/transactions/preview-fee", 60, 60, true)
     );
 

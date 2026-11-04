@@ -3706,12 +3706,69 @@
                 <span class="service-card-arrow" aria-hidden="true">›</span>
             </button>
 
+            <button type="button" class="service-card" id="services-crypto-card">
+                <div class="service-card-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 8.5h3.8a1.8 1.8 0 0 1 0 3.6H9.5m0 0h4.2a1.8 1.8 0 0 1 0 3.6H9.5M9.5 7v10M11.5 6v2M11.5 16v2"/></svg>
+                </div>
+                <div class="service-card-content">
+                    <strong>Send to a crypto wallet</strong>
+                    <span>Pay with Orange Money or Africell Money and receive USDT in Binance or any wallet.</span>
+                </div>
+                <span class="service-card-arrow" aria-hidden="true">›</span>
+            </button>
+
             <div class="services-coming-card">
                 <div class="services-coming-icon" aria-hidden="true">✦</div>
                 <div>
                     <strong>More services are coming soon</strong>
                     <p>New DeenWallet Transfer services will appear here when available.</p>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== CRYPTO WALLET SCREEN ===================== -->
+    <div class="screen" id="screen-crypto">
+        <div class="scroll">
+            <button class="ussd-back" id="cx-back" style="padding-left:0;">&#8592; Back</button>
+            <div class="subscreen-heading">
+                <div class="subscreen-heading-icon" aria-hidden="true">&#8383;</div>
+                <div class="subscreen-heading-copy">
+                    <h1 class="greeting-title">Send to a crypto wallet</h1>
+                    <p class="greeting-sub">Pay with mobile money, receive USDT in your wallet.</p>
+                </div>
+            </div>
+            <div id="cx-off" class="pl-empty hidden"><b>Coming soon</b>This service is not available yet. We will tell you when it is ready.</div>
+            <div id="cx-kyc" class="pl-fee hidden">Please verify your identity first. This service is only for verified accounts. <a href="#" id="cx-kyc-go" style="font-weight:700;">Verify now</a></div>
+            <div id="cx-form" class="convert-card hidden">
+                <div class="pl-fee hidden" id="cx-test">Test mode. No real money is used.</div>
+                <div class="section-label" style="margin-top:0;">Amount to pay (SLE)</div>
+                <input class="pl-inp" id="cx-amount" inputmode="decimal" autocomplete="off" placeholder="e.g. 500" />
+                <div class="pl-help" id="cx-limits"></div>
+                <div class="pl-help" id="cx-quote"></div>
+
+                <div class="section-label">Pay with</div>
+                <div class="pl-seg" id="cx-op-seg"></div>
+                <div class="pl-help" id="cx-phone"></div>
+
+                <div class="section-label">Network</div>
+                <select class="bank-select" id="cx-chain"></select>
+                <div class="pl-help">Choose the same network you pick when you deposit USDT in your wallet. For Binance, use BNB Smart Chain (BEP20).</div>
+
+                <div class="section-label">Wallet address</div>
+                <input class="pl-inp" id="cx-address" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="0x..." />
+                <div class="pl-fee"><b>Crypto transfers cannot be undone.</b> Check the address and network carefully. Funds sent to a wrong address or network are lost.</div>
+                <div id="cx-error" class="inline-error hidden"><span>&#9888;</span><span id="cx-error-text"></span></div>
+                <button type="button" class="btn-fill" id="cx-go" style="width:100%;margin-top:16px;padding:14px;font-size:15px;">Continue</button>
+            </div>
+            <div id="cx-status" class="convert-card hidden">
+                <div class="pl-share"><h2 id="cx-s-title"></h2><div class="pl-help" id="cx-s-msg" style="margin-top:8px;"></div></div>
+                <div class="pl-help" id="cx-s-det"></div>
+                <button type="button" class="btn-outline hidden" id="cx-s-new" style="width:100%;margin-top:14px;">Send another</button>
+            </div>
+            <div id="cx-hist-wrap" class="hidden">
+                <div class="section-label">Recent</div>
+                <div id="cx-hist" class="pl-list"></div>
             </div>
         </div>
     </div>
@@ -8865,6 +8922,135 @@
             return false;
         }
 
+        // ---- Send to a crypto wallet ----
+        let cxCfg = null, cxPoll = null, cxQuoteT = null, cxBusy = false;
+        function cxStop() { if (cxPoll) { clearInterval(cxPoll); cxPoll = null; } }
+        function cxShow(id, on) { plEl(id).classList.toggle('hidden', !on); }
+        function cxErr(msg) { plEl('cx-error-text').textContent = msg || ''; cxShow('cx-error', !!msg); }
+        function cxOpAdd(list) {
+            const seg = plEl('cx-op-seg');
+            seg.innerHTML = list.map((o, i) => '<button type="button" data-v="' + escapeHtml(o.id) + '" aria-pressed="' + (i === 0) + '">' + escapeHtml(o.name) + '</button>').join('');
+        }
+        function cxOp() { const b = plEl('cx-op-seg').querySelector('button[aria-pressed="true"]'); return b ? b.getAttribute('data-v') : ''; }
+        async function cxOpen() {
+            plShowScreen('screen-crypto');
+            cxStop();
+            ['cx-off', 'cx-kyc', 'cx-form', 'cx-status', 'cx-hist-wrap'].forEach((i) => cxShow(i, false));
+            cxErr('');
+            try {
+                cxCfg = await apiRequest('/api/crypto/config');
+            } catch (e) {
+                if (plAuthFail(e)) return;
+                cxShow('cx-off', true); return;
+            }
+            if (!cxCfg.enabled) { cxShow('cx-off', true); return; }
+            if (cxCfg.needsVerification) { cxShow('cx-kyc', true); return; }
+            plEl('cx-test').classList.toggle('hidden', !cxCfg.sandbox);
+            cxOpAdd(cxCfg.operators || []);
+            plEl('cx-chain').innerHTML = (cxCfg.chains || []).map((c) => '<option value="' + escapeHtml(c.id) + '">' + escapeHtml(c.name) + '</option>').join('');
+            plEl('cx-limits').textContent = 'From ' + plMoney(cxCfg.minMinor) + ' to ' + plMoney(cxCfg.maxMinor) + ' each time. Left today: ' + plMoney(cxCfg.dailyLeftMinor) + '.';
+            plEl('cx-phone').textContent = cxCfg.phone ? 'We will send the payment request to ' + cxCfg.phone + ' (your registered number).' : '';
+            plEl('cx-quote').textContent = '';
+            cxShow('cx-form', true);
+            cxHistory();
+        }
+        async function cxHistory() {
+            try {
+                const rows = await apiRequest('/api/crypto/orders');
+                const el = plEl('cx-hist');
+                el.innerHTML = (rows || []).slice(0, 10).map((r) =>
+                    '<div class="pl-item" data-id="' + escapeHtml(r.id) + '"><b>' + escapeHtml(plMoney(r.amountMinor)) + ' &rarr; USDT</b><br><span class="pl-help">' +
+                    escapeHtml(r.phase === 'done' ? 'Sent' : r.phase === 'failed' ? 'Not completed' : 'Waiting') + ' &middot; ' + escapeHtml(new Date(r.createdAt).toLocaleString()) + '</span></div>').join('');
+                cxShow('cx-hist-wrap', !!(rows && rows.length));
+                el.querySelectorAll('.pl-item').forEach((n) => n.addEventListener('click', () => cxTrack(n.getAttribute('data-id'))));
+            } catch (_) { }
+        }
+        function cxQuote() {
+            clearTimeout(cxQuoteT);
+            const v = parseFloat(plEl('cx-amount').value);
+            if (!(v > 0)) { plEl('cx-quote').textContent = ''; return; }
+            cxQuoteT = setTimeout(async () => {
+                try {
+                    const q = await apiRequest('/api/crypto/quote', { params: { amount: v } });
+                    plEl('cx-quote').textContent = q && q.estimatedCrypto ? 'About ' + q.estimatedCrypto + ' USDT. The final amount depends on the rate and fee when you pay.' : '';
+                } catch (_) { plEl('cx-quote').textContent = ''; }
+            }, 500);
+        }
+        function cxValidate() {
+            const v = parseFloat(plEl('cx-amount').value);
+            if (!(v > 0)) return 'Enter the amount you want to pay.';
+            const minor = Math.round(v * 100);
+            if (minor < cxCfg.minMinor) return 'The smallest amount is ' + plMoney(cxCfg.minMinor) + '.';
+            if (minor > cxCfg.maxMinor) return 'The largest amount is ' + plMoney(cxCfg.maxMinor) + '.';
+            if (minor > cxCfg.dailyLeftMinor) return 'This is more than your daily limit left (' + plMoney(cxCfg.dailyLeftMinor) + ').';
+            if (!/^0x[0-9a-fA-F]{40}$/.test(plEl('cx-address').value.trim())) return 'Enter a valid wallet address. It starts with 0x and is 42 characters long.';
+            return '';
+        }
+        function cxAsk() {
+            cxErr('');
+            const bad = cxValidate();
+            if (bad) { cxErr(bad); return; }
+            const v = parseFloat(plEl('cx-amount').value);
+            const msg = 'Enter your PIN to pay ' + plMoney(Math.round(v * 100)) + ' and send USDT. This cannot be undone.';
+            showPinModal(msg, cxSubmit);
+        }
+        async function cxSubmit() {
+            if (cxBusy) return;
+            cxBusy = true;
+            const btn = plEl('cx-go'); btn.disabled = true; btn.textContent = 'Starting…';
+            try {
+                const o = await apiRequest('/api/crypto/orders', { method: 'POST', timeoutMs: 30000, body: {
+                    amount: plEl('cx-amount').value.trim(), operator: cxOp(), chain: plEl('cx-chain').value, address: plEl('cx-address').value.trim() } });
+                cxShowStatus(o); cxWatch(o.id);
+            } catch (e) {
+                if (plAuthFail(e)) return;
+                cxErr(e.message || 'Could not start the payment. Please try again.');
+            } finally { cxBusy = false; btn.disabled = false; btn.textContent = 'Continue'; }
+        }
+        function cxShowStatus(o) {
+            cxShow('cx-form', false); cxShow('cx-status', true);
+            plEl('cx-s-title').textContent = o.phase === 'done' ? 'Done' : o.phase === 'failed' ? 'Not completed' : 'Waiting for your approval';
+            plEl('cx-s-msg').textContent = o.message || '';
+            let d = plMoney(o.amountMinor) + ' via ' + o.operator + '. Network: ' + o.chainName + '.';
+            if (o.cryptoAmount) d += ' You receive about ' + o.cryptoAmount + ' ' + o.asset + '.';
+            if (o.chainTxId) d += ' Transaction: ' + o.chainTxId;
+            plEl('cx-s-det').textContent = d;
+            cxShow('cx-s-new', o.phase !== 'waiting');
+        }
+        function cxWatch(id) {
+            cxStop();
+            cxPoll = setInterval(async () => {
+                if (!plEl('screen-crypto').classList.contains('active')) { cxStop(); return; }
+                try {
+                    const o = await apiRequest('/api/crypto/orders/' + encodeURIComponent(id));
+                    cxShowStatus(o);
+                    if (o.phase !== 'waiting') { cxStop(); cxHistory(); }
+                } catch (e) { if (e && (e.status === 401 || e.status === 403)) cxStop(); }
+            }, 3000);
+        }
+        async function cxTrack(id) {
+            try {
+                const o = await apiRequest('/api/crypto/orders/' + encodeURIComponent(id));
+                cxShowStatus(o);
+                if (o.phase === 'waiting') cxWatch(id);
+            } catch (e) { plAuthFail(e); }
+        }
+        function cxHandleBack() {
+            if (plEl('screen-crypto').classList.contains('active')) { plEl('cx-back').click(); return true; }
+            return false;
+        }
+        plEl('services-crypto-card').addEventListener('click', cxOpen);
+        plEl('cx-back').addEventListener('click', () => {
+            cxStop();
+            if (!plEl('cx-status').classList.contains('hidden') && cxCfg && cxCfg.enabled && !cxCfg.needsVerification) { cxOpen(); return; }
+            showPrimaryScreen('payment');
+        });
+        plSeg('cx-op-seg');
+        plEl('cx-amount').addEventListener('input', cxQuote);
+        plEl('cx-go').addEventListener('click', cxAsk);
+        plEl('cx-s-new').addEventListener('click', cxOpen);
+        plEl('cx-kyc-go').addEventListener('click', (e) => { e.preventDefault(); openCustomerSubScreen('screen-kyc'); loadKycScreen(); });
+
         window.dwOnBackButton = function () {
             // 1. Never bypass a security lock or account-locked screen.
             if (pinModalOverlay && pinModalOverlay.classList.contains('active')) {
@@ -8888,6 +9074,7 @@
 
             // 3b. Payment links screens step back one level.
             if (plHandleBack()) return true;
+            if (cxHandleBack()) return true;
 
             // 4. Secondary customer screens use the same action as their visible
             //    in-app Back button: return to the customer home screen.
@@ -8967,6 +9154,8 @@
                 try { if (typeof loadNotifications === 'function') await loadNotifications(true); } catch (_) { }
             } else if (document.getElementById('screen-step1').classList.contains('active')) {
                 await loadRecipients();
+            } else if (document.getElementById('screen-crypto').classList.contains('active')) {
+                if (cxCfg && !plEl('cx-form').classList.contains('hidden')) await cxHistory();
             } else if (document.getElementById('screen-links').classList.contains('active')) {
                 await plLoadList();
             } else if (document.getElementById('screen-link-detail').classList.contains('active')) {

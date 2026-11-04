@@ -41,6 +41,9 @@ public class AccountDeletionService {
                                 + "OR (status = 'AWAITING_PAYMENT' AND created_at > now() - interval '2 hours'))")
                 .setParameter("id", u.getId()).getSingleResult()).longValue();
         if (open > 0) return "A transfer is still in progress on this account. Try again when it has finished.";
+        long crypto = ((Number) em.createNativeQuery("SELECT COUNT(*) FROM crypto_orders WHERE user_id = :id AND status IN ('CREATED','PENDING') "
+                + "AND created_at > now() - interval '6 hours'").setParameter("id", u.getId()).getSingleResult()).longValue();
+        if (crypto > 0) return "A crypto payment is still in progress on this account. Try again when it has finished.";
         if ("ADMIN".equals(u.getRole()) || "SUPER_ADMIN".equals(u.getRole())) {
             long wd = ((Number) em.createNativeQuery(
                             "SELECT COUNT(*) FROM wallet_withdrawals WHERE owner_user_id = :id AND status IN ('PENDING','REVIEW')")
