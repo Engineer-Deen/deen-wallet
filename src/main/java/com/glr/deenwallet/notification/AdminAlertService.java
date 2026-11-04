@@ -1,5 +1,6 @@
 package com.glr.deenwallet.notification;
 
+import com.glr.deenwallet.admin.AdminSections;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.slf4j.Logger;
@@ -40,21 +41,33 @@ public class AdminAlertService {
 
     /** Notifies every active admin and super admin, except {@code exceptUserId} (the person who did it) when given. */
     public void notifyAdmins(UUID exceptUserId, String type, String title, String message) {
+        notifyAdmins(exceptUserId, null, type, title, message);
+    }
+
+    /**
+     * Like the one above, but only admins who have the admin-app section {@code section} switched ON get it
+     * (an admin a super admin has denied that section never hears about it). Super admins always get it.
+     * A null section means every admin.
+     */
+    public void notifyAdmins(UUID exceptUserId, String section, String type, String title, String message) {
         try {
-            POOL.execute(() -> run(exceptUserId, type, title, message));
+            POOL.execute(() -> run(exceptUserId, section, type, title, message));
         } catch (RuntimeException e) {
             log.warn("Admin alert could not be queued: {}", e.toString());
         }
     }
 
     @SuppressWarnings("unchecked")
-    private void run(UUID exceptUserId, String type, String title, String message) {
+    private void run(UUID exceptUserId, String section, String type, String title, String message) {
         try {
-            List<Object> ids = em.createNativeQuery(
-                    "SELECT id FROM users WHERE role IN ('ADMIN', 'SUPER_ADMIN') AND active = TRUE").getResultList();
-            for (Object o : ids) {
+            List<Object[]> rows = em.createNativeQuery(
+                    "SELECT id, role, denied_sections FROM users WHERE role IN ('ADMIN', 'SUPER_ADMIN') AND active = TRUE").getResultList();
+            for (Object[] row : rows) {
+                Object o = row[0];
                 UUID adminId = o instanceof UUID u ? u : UUID.fromString(String.valueOf(o));
                 if (adminId.equals(exceptUserId)) continue;
+                if (section != null && !"SUPER_ADMIN".equals(String.valueOf(row[1]))
+                        && AdminSections.parse(row[2] == null ? "" : String.valueOf(row[2])).contains(section)) continue;
                 try {
                     NotificationResponse n = notifications.create(adminId, type, title, message, null, null);
                     push.sendToUser(adminId, title, message, Map.of("type", type, "notificationId", n.id().toString()));

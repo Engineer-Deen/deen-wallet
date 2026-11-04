@@ -1,5 +1,6 @@
 package com.glr.deenwallet.waec;
 
+import com.glr.deenwallet.notification.AdminAlertService;
 import com.glr.deenwallet.notification.NotificationService;
 import com.glr.deenwallet.notification.PushNotificationService;
 import com.glr.deenwallet.transaction.Transaction;
@@ -34,6 +35,7 @@ public class WaecFulfillmentService {
     private final WaecDeliveryService deliveryService;
     private final NotificationService notificationService;
     private final PushNotificationService pushNotificationService;
+    private final AdminAlertService adminAlerts;
 
     @Transactional
     public Outcome fulfill(Transaction transaction) {
@@ -48,6 +50,8 @@ public class WaecFulfillmentService {
             List<WaecPin> more = pinRepository.lockAvailable(missing);
             if (more.size() < missing) {
                 log.error("ALERT WAEC out of stock while fulfilling paid transaction {}", transaction.getTransactionCode());
+                adminAlerts.notifyAdmins(null, "waec", "WAEC_OUT_OF_STOCK", "WAEC pins ran out",
+                        "A customer paid for WAEC pins (" + transaction.getTransactionCode() + ") but there are no pins left. Upload more pins in WAEC Pins.");
                 return Outcome.OUT_OF_STOCK;
             }
             pins.addAll(more);

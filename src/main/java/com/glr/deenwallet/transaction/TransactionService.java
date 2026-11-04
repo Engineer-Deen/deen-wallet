@@ -1196,7 +1196,7 @@ public class TransactionService {
                 transaction.getTransactionCode(), transaction.getId(), clean);
 
         try {
-            adminAlerts.notifyAdmins(null, "PAYOUT_FAILED", "Payout failed",
+            adminAlerts.notifyAdmins(null, "failed-payouts", "PAYOUT_FAILED", "Payout failed",
                     (firstFailure ? "A customer transfer could not be delivered: " : "A resend failed again: ")
                             + transaction.getTransactionCode() + ". Open Failed Payouts to resend or refund it.");
         } catch (RuntimeException e) {
@@ -1515,6 +1515,8 @@ public class TransactionService {
                     tx.setFailureReason("Your refund is being reviewed by our support team. Your money is safe.");
                     transactionRepository.save(tx);
                     recordAction(tx.getId(), "REFUND_FAILED", null, null, detail);
+                    adminAlerts.notifyAdmins(null, "failed-payouts", "REFUND_REVIEW", "Refund needs review",
+                            "A refund could not be completed for " + tx.getTransactionCode() + ". Open Failed Payouts to handle it.");
                     log.error("ALERT MANUAL REFUND REQUIRED for transaction {} ({}): {}",
                             tx.getTransactionCode(), tx.getId(), detail);
                     notifyUser(tx, "TRANSACTION_REFUND_REVIEW", "Refund under review",

@@ -8193,9 +8193,12 @@
                 if (r.type === 'KYC_SUBMITTED') {
                     var k = document.querySelector('[data-drawer-action="kyc"]');
                     if (k) k.click();
-                } else if (r.type === 'PAYOUT_FAILED') {
+                } else if (r.type === 'PAYOUT_FAILED' || r.type === 'REFUND_REVIEW') {
                     var fpb = document.querySelector('[data-drawer-action="failed-payouts"]');
                     if (fpb) fpb.click();
+                } else if (r.type === 'WAEC_EMAIL_FAILED' || r.type === 'WAEC_OUT_OF_STOCK') {
+                    var wp = document.querySelector('[data-drawer-action="waec-pins"]');
+                    if (wp) wp.click();
                 } else if (r.type === 'EMAIL_SENT' || r.type === 'EMAIL_RECEIVED') {
                     var m = document.querySelector('[data-bottom-tab="messaging"]');
                     if (m) m.click();

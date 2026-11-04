@@ -1,6 +1,7 @@
 package com.glr.deenwallet.waec;
 
 import com.glr.deenwallet.email.EmailService;
+import com.glr.deenwallet.notification.AdminAlertService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -26,6 +27,7 @@ public class WaecDeliveryService {
     private final WaecPinService pinService;
     private final EmailService emailService;
     private final TransactionTemplate transactionTemplate;
+    private final AdminAlertService adminAlerts;
 
     @Async("emailTaskExecutor")
     public void deliverAsync(UUID orderId) {
@@ -67,11 +69,13 @@ public class WaecDeliveryService {
         }
 
         final boolean sent = ok;
+        final int[] attempts = new int[1];
         final String failure = error;
         final String newEmail = (sent && overrideEmail != null && !overrideEmail.isBlank()) ? overrideEmail : null;
         transactionTemplate.executeWithoutResult(st -> {
             WaecOrder o = orderRepository.findById(orderId).orElseThrow();
             o.setDeliveryAttempts(o.getDeliveryAttempts() + 1);
+            attempts[0] = o.getDeliveryAttempts();
             if (sent) {
                 o.setDeliveryStatus(WaecDeliveryStatus.SENT);
                 o.setDeliveredAt(Instant.now());
@@ -83,7 +87,16 @@ public class WaecDeliveryService {
             }
             orderRepository.save(o);
         });
-        if (!sent) log.warn("WAEC pin email not delivered for {} ({})", order.getTransactionCode(), failure);
+        if (!sent) {
+            log.warn("WAEC pin email not delivered for {} ({})", order.getTransactionCode(), failure);
+            // Tell the admins on the first failure and again when the automatic retries have run out (not on every retry).
+            if (attempts[0] == 1 || attempts[0] == 5) {
+                adminAlerts.notifyAdmins(null, "waec", "WAEC_EMAIL_FAILED", "WAEC pin email not delivered",
+                        "The WAEC pin email for " + order.getTransactionCode() + " could not be sent to " + (to == null || to.isBlank() ? "(no email)" : to)
+                                + (attempts[0] >= 5 ? " after several tries." : ".")
+                                + " The customer still has the pin in their app. Open WAEC Pins to resend it to a correct address.");
+            }
+        }
         return sent;
     }
 }

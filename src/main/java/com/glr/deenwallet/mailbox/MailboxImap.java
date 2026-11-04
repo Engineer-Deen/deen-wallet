@@ -177,9 +177,9 @@ public class MailboxImap {
                 service.saveState(validity, maxUid);
                 try {
                     if (arrived.size() == 1) {
-                        alerts.notifyAdmins(null, "EMAIL_RECEIVED", "New customer email", arrived.get(0));
+                        alerts.notifyAdmins(null, "messaging", "EMAIL_RECEIVED", "New customer email", arrived.get(0));
                     } else if (arrived.size() > 1) {
-                        alerts.notifyAdmins(null, "EMAIL_RECEIVED", "New customer emails", arrived.size() + " new emails in the support inbox, latest from " + arrived.get(arrived.size() - 1));
+                        alerts.notifyAdmins(null, "messaging", "EMAIL_RECEIVED", "New customer emails", arrived.size() + " new emails in the support inbox, latest from " + arrived.get(arrived.size() - 1));
                     }
                 } catch (RuntimeException e) {
                     log.warn("Mailbox: could not announce new emails: {}", e.toString());

@@ -394,7 +394,7 @@ public class MailboxService {
                     }
                     try { Thread.sleep(gmail.configured() ? 1500 : 150); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
                 }
-                alerts.notifyAdmins(me.getId(), "EMAIL_SENT", "Emails sent",
+                alerts.notifyAdmins(me.getId(), "messaging", "EMAIL_SENT", "Emails sent",
                         who(me) + " emailed " + (ok + bad) + " customers: " + cut(fSubj, 120) + (bad > 0 ? " (" + bad + " could not be sent)" : ""));
             });
         }
@@ -504,7 +504,7 @@ public class MailboxService {
         // a reply means the customer's messages were dealt with
         markRead(threadId);
         audit.record(me, "MESSAGING", action, summary, null, toName == null || toName.isBlank() ? toEmail : toName, cut(subject, 200), null);
-        alerts.notifyAdmins(me.getId(), "EMAIL_SENT", "EMAIL_REPLY".equals(action) ? "Email reply sent" : "Email sent",
+        alerts.notifyAdmins(me.getId(), "messaging", "EMAIL_SENT", "EMAIL_REPLY".equals(action) ? "Email reply sent" : "Email sent",
                 who(me) + ("EMAIL_REPLY".equals(action) ? " replied to " : " emailed ")
                         + (toName == null || toName.isBlank() ? toEmail : toName) + ": " + cut(subject, 120));
         return m;

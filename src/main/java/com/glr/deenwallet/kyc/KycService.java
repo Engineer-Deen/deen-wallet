@@ -186,7 +186,7 @@ public class KycService {
         runAfterCommit(() -> {
             User submitter = users.findById(userId).orElse(null);
             String who = submitter == null || submitter.getFullName() == null || submitter.getFullName().isBlank() ? "A customer" : submitter.getFullName().trim();
-            adminAlerts.notifyAdmins(null, "KYC_SUBMITTED", "New KYC submission", who + " submitted ID documents for verification. Open KYC Verification to review.");
+            adminAlerts.notifyAdmins(null, "kyc", "KYC_SUBMITTED", "New KYC submission", who + " submitted ID documents for verification. Open KYC Verification to review.");
         });
         return buildStatus(userId);
     }
