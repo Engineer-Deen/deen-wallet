@@ -2871,6 +2871,7 @@
                 <button type="button" class="admin-drawer-item" data-drawer-action="support"><span class="admin-drawer-icon">◉</span><span class="admin-drawer-label">Support</span><span class="admin-drawer-chevron">›</span></button>
                 <button type="button" class="admin-drawer-item" data-drawer-action="failed-payouts"><span class="admin-drawer-icon">⚠</span><span class="admin-drawer-label">Failed Payouts</span><span class="admin-drawer-chevron">›</span></button>
                 <button type="button" class="admin-drawer-item" data-drawer-action="payment-links"><span class="admin-drawer-icon">&#128279;</span><span class="admin-drawer-label">Payment Links</span><span class="admin-drawer-chevron">›</span></button>
+                <button type="button" class="admin-drawer-item" data-drawer-action="crypto"><span class="admin-drawer-icon">&#8383;</span><span class="admin-drawer-label">Crypto Orders</span><span class="admin-drawer-chevron">›</span></button>
                 <button type="button" class="admin-drawer-item" data-drawer-action="kyc"><span class="admin-drawer-icon">✔</span><span class="admin-drawer-label">KYC Verification</span><span class="admin-drawer-chevron">›</span></button>
                 <button type="button" class="admin-drawer-item" id="metrics-drawer-item" data-drawer-action="metrics" style="display:none;"><span class="admin-drawer-icon">◔</span><span class="admin-drawer-label">Server Metrics</span><span class="admin-drawer-chevron">›</span></button>
                 <button type="button" class="admin-drawer-item" data-drawer-action="waec-pins"><span class="admin-drawer-icon">▦</span><span class="admin-drawer-label">WAEC Pins</span><span class="admin-drawer-chevron">›</span></button>
@@ -3301,6 +3302,27 @@
             </div>
         </div>
 
+        <!-- ===== CRYPTO ORDERS ===== -->
+        <div class="scroll hidden" id="tab-crypto">
+            <div class="admin-card">
+                <p class="admin-card-title">Crypto Orders</p>
+                <p class="admin-card-sub">Every "send to a crypto wallet" request. Search by reference, wallet address, transaction id, or the customer's name, email, account number or phone.</p>
+                <div class="kc-chips" id="cxo-chips">
+                    <button type="button" class="kc-chip on" data-cxo-filter="ALL">All</button>
+                    <button type="button" class="kc-chip" data-cxo-filter="OPEN">Waiting</button>
+                    <button type="button" class="kc-chip" data-cxo-filter="SUCCESSFUL">Sent</button>
+                    <button type="button" class="kc-chip" data-cxo-filter="FAILED">Failed</button>
+                </div>
+                <div class="fp-toolbar">
+                    <div class="search-bar"><input id="cxo-search" placeholder="Reference, wallet address or customer" autocomplete="off" /></div>
+                    <button class="btn-sm refresh" id="cxo-refresh">Refresh</button>
+                </div>
+                <div id="cxo-loading" class="loading-state hidden"><div class="spinner"></div>Loading crypto orders…</div>
+                <div id="cxo-error" class="error-state hidden"></div>
+                <div id="cxo-list"></div>
+            </div>
+        </div>
+
         <!-- ===== KYC ===== -->
         <div class="scroll hidden" id="tab-kyc">
             <div class="stats-grid">
@@ -3598,6 +3620,11 @@
     <!-- Failed payout detail -->
     <div class="modal-overlay" id="fp-modal-overlay">
         <div class="fp-modal" id="fp-modal"></div>
+    </div>
+
+    <!-- Crypto order detail -->
+    <div class="modal-overlay" id="cxo-modal-overlay">
+        <div class="fp-modal" id="cxo-modal"></div>
     </div>
 
     <!-- Payment link detail -->
@@ -4707,13 +4734,14 @@
                 messaging: document.getElementById('tab-admin-messaging'),
                 'failed-payouts': document.getElementById('tab-failed-payouts'),
                 'payment-links': document.getElementById('tab-payment-links'),
+                'crypto': document.getElementById('tab-crypto'),
                 'kyc': document.getElementById('tab-kyc'),
                 'waec-pins': document.getElementById('tab-waec-pins')
             };
 
             function showMainSection(section) {
                 if ((section === 'audit' || section === 'metrics') && !isSuperAdmin()) section = 'dashboard';
-                var amKey = { 'kyc': 'kyc', 'failed-payouts': 'failed-payouts', 'payment-links': 'payment-links', 'waec-pins': 'waec', 'users': 'users', 'errors': 'errors', 'wallet': 'wallet', 'messaging': 'messaging' }[section];
+                var amKey = { 'kyc': 'kyc', 'failed-payouts': 'failed-payouts', 'payment-links': 'payment-links', 'crypto': 'crypto', 'waec-pins': 'waec', 'users': 'users', 'errors': 'errors', 'wallet': 'wallet', 'messaging': 'messaging' }[section];
                 if (amKey && adminDeniedSections().indexOf(amKey) >= 0) { showToast('You do not have access to that section. Ask a super admin.'); section = 'dashboard'; }
                 applyRoleNav();
                 Object.keys(tabContents).forEach(function (key) {
@@ -4732,6 +4760,7 @@
                 if (section === 'messaging') { showMessagingView('hub'); updateMessagingRecipientCount(); loadMailSummary(); }
                 if (section === 'failed-payouts') loadFailedPayouts();
                 if (section === 'payment-links') loadPaymentLinks();
+                if (section === 'crypto') loadCryptoOrders();
                 if (section === 'kyc') loadKyc();
                 if (section === 'waec-pins') loadWaecPins();
             }
@@ -4813,7 +4842,7 @@
                 return r === 'SUPER_ADMIN';
             }
             // Sections a super admin switched off for this admin are hidden (the server blocks them too).
-            var AM_NAV = [['kyc', '[data-drawer-action="kyc"]'], ['failed-payouts', '[data-drawer-action="failed-payouts"]'], ['failed-payouts', '#card-failed-payouts'], ['payment-links', '[data-drawer-action="payment-links"]'],
+            var AM_NAV = [['kyc', '[data-drawer-action="kyc"]'], ['failed-payouts', '[data-drawer-action="failed-payouts"]'], ['failed-payouts', '#card-failed-payouts'], ['payment-links', '[data-drawer-action="payment-links"]'], ['crypto', '[data-drawer-action="crypto"]'],
                 ['waec', '[data-drawer-action="waec-pins"]'], ['users', '[data-drawer-action="users"]'], ['errors', '[data-drawer-action="errors"]'],
                 ['wallet', '[data-bottom-tab="wallet"]'], ['messaging', '[data-bottom-tab="messaging"]']];
             function adminDeniedSections() {
@@ -5528,6 +5557,86 @@
                 loadPaymentLinks();
             });
             document.getElementById('plk-modal-overlay').addEventListener('click', function (e) { if (e.target === this) closePaymentLinkModal(); });
+
+            // ==============================================================
+            // CRYPTO ORDERS (send to a crypto wallet)
+            // ==============================================================
+            var cxoFilter = 'ALL', cxoTimer = null, cxoReq = 0;
+            function cxoStatusInfo(s) {
+                if (s === 'SUCCESSFUL') return { label: 'Sent', cls: 'done' };
+                if (s === 'FAILED') return { label: 'Failed', cls: '' };
+                return { label: 'Waiting', cls: 'muted' };
+            }
+            function cxoOp(o) { return o === 'orange' ? 'Orange Money' : (o === 'africell' ? 'Africell Money' : o); }
+            function loadCryptoOrders() {
+                var loading = document.getElementById('cxo-loading'), error = document.getElementById('cxo-error'), list = document.getElementById('cxo-list');
+                var q = (document.getElementById('cxo-search').value || '').trim();
+                var req = ++cxoReq;
+                show(loading); hide(error); list.innerHTML = '';
+                adminApiRequest('/api/admin/crypto', { params: { q: q || undefined, status: cxoFilter === 'ALL' ? undefined : cxoFilter } })
+                    .then(function (rows) {
+                        if (req !== cxoReq) return;
+                        hide(loading);
+                        if (!rows || rows.length === 0) { list.innerHTML = '<div class="empty-state">' + (q || cxoFilter !== 'ALL' ? 'No crypto order matches.' : 'No crypto orders yet.') + '</div>'; return; }
+                        rows.forEach(function (o) {
+                            var info = cxoStatusInfo(o.status);
+                            var card = document.createElement('div');
+                            card.className = 'fp-card' + (info.cls ? ' ' + info.cls : '');
+                            card.innerHTML =
+                                '<div class="fp-card-top"><span class="fp-code">' + escapeHtml(o.reference) + '</span><span class="fp-status ' + info.cls + '">' + escapeHtml(info.label) + '</span></div>' +
+                                '<div class="fp-card-top" style="margin-top:6px;"><span class="fp-amount">' + escapeHtml(fpMoney(o.amountMinor / 100)) + '</span><span class="fp-sub" style="margin:0;">' + escapeHtml(o.asset + ' · ' + o.chain) + '</span></div>' +
+                                '<div class="fp-sub">Customer: ' + escapeHtml(o.ownerName || '—') + ' · ' + escapeHtml(o.ownerEmail || '') + '</div>' +
+                                '<div class="fp-sub">' + escapeHtml(cxoOp(o.operator)) + ' · ' + escapeHtml(fpTime(o.createdAt)) + '</div>' +
+                                (o.failureReason ? '<div class="fp-reason">' + escapeHtml(o.failureReason) + '</div>' : '');
+                            card.addEventListener('click', function () { openCryptoOrder(o.id); });
+                            list.appendChild(card);
+                        });
+                    })
+                    .catch(function (e) { if (req !== cxoReq) return; hide(loading); error.textContent = e.message || 'Could not load crypto orders.'; show(error); });
+            }
+            function closeCryptoModal() { document.getElementById('cxo-modal-overlay').classList.remove('active'); }
+            function openCryptoOrder(id) {
+                var overlay = document.getElementById('cxo-modal-overlay'), box = document.getElementById('cxo-modal');
+                box.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading…</div>';
+                overlay.classList.add('active');
+                adminApiRequest('/api/admin/crypto/' + encodeURIComponent(id)).then(renderCryptoOrder).catch(function (e) {
+                    box.innerHTML = '<div class="error-state">' + escapeHtml(e.message || 'Could not load.') + '</div><div class="fp-actions"><button class="btn-outline" id="cxo-x">Close</button></div>';
+                    document.getElementById('cxo-x').addEventListener('click', closeCryptoModal);
+                });
+            }
+            function renderCryptoOrder(o) {
+                var info = cxoStatusInfo(o.status);
+                var h = '<div class="fp-card-top"><h3 style="margin:0;font-size:17px;">Crypto order</h3><span class="fp-status ' + info.cls + '">' + escapeHtml(info.label) + '</span></div>';
+                h += '<div class="fp-code" style="margin-top:6px;">' + escapeHtml(o.reference) + '</div>';
+                h += '<div class="fp-section-title">The order</div>' + fpRow('Amount paid', fpMoney(o.amountMinor / 100)) + fpRow('Paid with', cxoOp(o.operator) + ' ' + (o.phone || '')) +
+                    fpRow('Asset', o.asset) + fpRow('Network', o.chain) + fpRow('Wallet address', o.address) +
+                    fpRow('Crypto received', o.cryptoAmount ? o.cryptoAmount + ' ' + o.asset : '—') + fpRow('Status', o.status) +
+                    fpRow('Created', fpTime(o.createdAt)) + fpRow('Updated', fpTime(o.updatedAt)) + (o.completedAt ? fpRow('Finished', fpTime(o.completedAt)) : '');
+                h += '<div class="fp-section-title">Provider</div>' + fpRow('Provider transaction id', o.providerTxId || '—') + fpRow('Blockchain transaction', o.chainTxId || '—') +
+                    (o.failureReason ? fpRow('Reason', o.failureReason) : '');
+                h += '<div class="fp-section-title">Customer</div>' + fpRow('Name', o.ownerName) + fpRow('Email', o.ownerEmail) + fpRow('Account number', o.ownerAccount);
+                h += '<div class="fp-sub" style="margin-top:8px;">DeenWallet never holds the money or the crypto. The provider decides the final result, so a failed or stuck order is sorted out with the provider, using the provider transaction id.</div>';
+                h += '<div class="fp-actions">' + (o.status === 'SUCCESSFUL' ? '' : '<button class="btn-outline" id="cxo-check">Check with provider</button>') +
+                    '<button class="btn-outline" id="cxo-x">Close window</button></div>';
+                document.getElementById('cxo-modal').innerHTML = h;
+                document.getElementById('cxo-x').addEventListener('click', closeCryptoModal);
+                var cb = document.getElementById('cxo-check');
+                if (cb) cb.addEventListener('click', function () {
+                    cb.disabled = true; cb.textContent = 'Checking…';
+                    adminApiRequest('/api/admin/crypto/' + encodeURIComponent(o.id) + '/check', { method: 'POST', body: {} })
+                        .then(function (v) { showToast('Checked with the provider.'); renderCryptoOrder(v); loadCryptoOrders(); })
+                        .catch(function (e) { cb.disabled = false; cb.textContent = 'Check with provider'; showToast(e.message || 'Could not check.'); });
+                });
+            }
+            document.getElementById('cxo-search').addEventListener('input', function () { clearTimeout(cxoTimer); cxoTimer = setTimeout(loadCryptoOrders, 350); });
+            document.getElementById('cxo-refresh').addEventListener('click', loadCryptoOrders);
+            document.getElementById('cxo-chips').addEventListener('click', function (e) {
+                var b = e.target.closest('[data-cxo-filter]'); if (!b) return;
+                cxoFilter = b.getAttribute('data-cxo-filter');
+                document.querySelectorAll('#cxo-chips .kc-chip').forEach(function (x) { x.classList.toggle('on', x === b); });
+                loadCryptoOrders();
+            });
+            document.getElementById('cxo-modal-overlay').addEventListener('click', function (e) { if (e.target === this) closeCryptoModal(); });
 
             function fpStatusInfo(s) {
                 if (s === 'PAYOUT_FAILED') return { label: 'Needs action', cls: '' };
@@ -6531,7 +6640,7 @@
             // ==============================================================
             // AUDIT (what every admin did; an admin only sees their own lines)
             // ==============================================================
-            var AUDIT_CATS = [['', 'All'], ['USERS', 'Users'], ['KYC', 'KYC'], ['WAEC', 'WAEC'], ['ADMINS', 'Admins'], ['WALLET', 'Wallet'], ['LINKS', 'Payment links'],
+            var AUDIT_CATS = [['', 'All'], ['USERS', 'Users'], ['KYC', 'KYC'], ['WAEC', 'WAEC'], ['ADMINS', 'Admins'], ['WALLET', 'Wallet'], ['LINKS', 'Payment links'], ['CRYPTO', 'Crypto orders'],
                 ['MESSAGING', 'Messaging'], ['PAYOUTS', 'Payouts'], ['SECURITY', 'Security'], ['SYSTEM', 'System']];
             var auditState = { cat: '', q: '', rows: [], more: false, seq: 0, loading: false, timer: null, built: false };
 
@@ -6636,7 +6745,7 @@
             // plain description of where an error happened (no raw endpoints)
             function errPlainWhere(method, path) {
                 var p = String(path || '').split('?')[0].toLowerCase();
-                var areas = [[/\/kyc/, 'ID verification'], [/\/failed-payouts/, 'Failed payouts'], [/\/payment-links/, 'Payment links'], [/\/wallet/, 'Wallet'], [/\/waec/, 'WAEC pins'],
+                var areas = [[/\/kyc/, 'ID verification'], [/\/failed-payouts/, 'Failed payouts'], [/\/payment-links/, 'Payment links'], [/\/crypto/, 'Crypto orders'], [/\/wallet/, 'Wallet'], [/\/waec/, 'WAEC pins'],
                     [/\/mail/, 'Email'], [/\/audit/, 'Activity log'], [/\/errors/, 'Error logs'], [/notification|device-token/, 'Notifications'],
                     [/\/users|\/support/, 'User accounts'], [/\/admins|\/pin|\/profile/, 'Admin account'], [/\/transactions|\/transfer|\/recipient/, 'Transfers'],
                     [/\/auth|login|refresh/, 'Signing in'], [/\/home/, 'Home overview']];
@@ -9057,6 +9166,7 @@
                 { key: 'kyc', label: 'KYC Verification', sub: 'Review customer ID documents' },
                 { key: 'failed-payouts', label: 'Failed Payouts', sub: 'Resend or refund failed transfers' },
                 { key: 'payment-links', label: 'Payment Links', sub: 'See customers\' payment links and close one' },
+                { key: 'crypto', label: 'Crypto Orders', sub: 'See crypto wallet requests and check their status' },
                 { key: 'waec', label: 'WAEC Pins', sub: 'WAEC pin stock and sales' },
                 { key: 'wallet', label: 'Wallet', sub: 'Balance, payments in and out' },
                 { key: 'messaging', label: 'Messaging', sub: 'Email and in-app messages to customers' },
