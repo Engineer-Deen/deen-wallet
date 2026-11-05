@@ -1,5 +1,6 @@
 package com.glr.deenwallet.monitoring;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -43,13 +44,19 @@ public class SecurityScanService {
     @Value("${app.public-host:api.deenwallapp.com}")
     private String publicHost;
 
+    @Autowired(required = false)
+    private com.glr.deenwallet.notification.AdminAlertService alerts;
+
+    /** Last security-update count an alert was sent for (-1 = none yet). Used to alert on a change, not every scan. */
+    private volatile int lastSecAlerted = -1;
+
     private volatile Map<String, Object> scan = new LinkedHashMap<>();
     private volatile Map<String, Object> ssh = new LinkedHashMap<>();
 
     public Map<String, Object> vulnerabilities() { return scan; }
     public Map<String, Object> sshAttempts() { return ssh; }
 
-    @Scheduled(fixedDelay = 300_000, initialDelay = 8_000)
+    @Scheduled(fixedDelay = 120_000, initialDelay = 8_000)
     public void refresh() {
         try { scan = runChecks(); } catch (RuntimeException e) { Map<String, Object> m = new LinkedHashMap<>(); m.put("items", List.of()); m.put("error", "The check could not run."); scan = m; }
         try { ssh = readSsh(); } catch (RuntimeException e) { Map<String, Object> m = new LinkedHashMap<>(); m.put("available", false); m.put("hint", "The SSH log could not be read."); ssh = m; }
@@ -64,23 +71,42 @@ public class SecurityScanService {
         return m;
     }
 
+    /** Tells the admins at once when security updates appear, change, or are all installed. Never throws. */
+    private void updateAlert(int sec, int total) {
+        try {
+            if (alerts == null) return;
+            int prev = lastSecAlerted;
+            if (sec > 0 && sec != prev) {
+                lastSecAlerted = sec;
+                alerts.notifyAdmins(null, "errors", "SERVER_UPDATES", "Security updates are waiting",
+                        sec + " security update(s) are waiting on the app server (" + total + " in total). Open Server Metrics for the command to run.");
+            } else if (sec == 0 && prev > 0) {
+                lastSecAlerted = 0;
+                alerts.notifyAdmins(null, "errors", "SERVER_UPDATES_OK", "Server is up to date", "The app server has no security updates waiting now.");
+            } else if (sec == 0 && prev < 0) {
+                lastSecAlerted = 0;
+            }
+        } catch (RuntimeException e) { /* an alert problem must never break the scan */ }
+    }
+
     private Map<String, Object> runChecks() {
         List<Map<String, Object>> items = new ArrayList<>();
 
         // 1) waiting system updates
         try {
-            Process pr = new ProcessBuilder("apt", "list", "--upgradable").redirectErrorStream(false).start();
+            Process pr = new ProcessBuilder("apt-get", "-s", "upgrade").redirectErrorStream(false).start();
             boolean done = pr.waitFor(20, TimeUnit.SECONDS);
             if (!done) { pr.destroyForcibly(); throw new IllegalStateException("timeout"); }
             int total = 0, sec = 0;
             try (var br = new java.io.BufferedReader(new java.io.InputStreamReader(pr.getInputStream(), StandardCharsets.UTF_8))) {
                 String line;
                 while ((line = br.readLine()) != null) {
-                    if (!line.contains("/") || line.startsWith("Listing")) continue;
+                    if (!line.startsWith("Inst ")) continue;   // simulated upgrade: only what "apt upgrade" would really install (held-back / phased ones are not counted)
                     total++;
                     if (line.contains("-security")) sec++;
                 }
             }
+            updateAlert(sec, total);
             if (sec > 0) items.add(item("bad", sec + " security update(s) are waiting", total + " package update(s) are waiting in total. Security updates close holes attackers already know about.",
                     "Run on the server: sudo apt update && sudo apt upgrade -y   (then restart the app if it asks)"));
             else if (total > 0) items.add(item("warn", total + " system update(s) are waiting", "None of them is marked as a security update.", "Run on the server: sudo apt update && sudo apt upgrade -y"));

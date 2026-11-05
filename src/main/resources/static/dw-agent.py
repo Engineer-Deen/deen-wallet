@@ -26,7 +26,7 @@ import time
 import urllib.error
 import urllib.request
 
-VERSION = "1"
+VERSION = "2"
 CONF = "/etc/dw-agent.json"
 BIN = "/usr/local/bin/dw-agent.py"
 CACHE = "/var/tmp/dw-agent-apt.json"
@@ -118,17 +118,22 @@ EOL = {"18.04": "2023-05-31", "20.04": "2025-05-31", "22.04": "2027-06-01", "24.
 
 
 def apt_state():
-    """Waiting updates are checked at most every 30 minutes (apt is slowish)."""
+    """Waiting updates: re-checked at most every 5 minutes, and at once when a package was installed or removed
+    (so the notice disappears right after you run the upgrade). Counts only what "apt upgrade" would really install."""
+    try:
+        mt = os.path.getmtime("/var/lib/dpkg/status")
+    except Exception:
+        mt = 0
     try:
         c = json.loads(read(CACHE) or "{}")
-        if time.time() - c.get("at", 0) < 1800:
+        if time.time() - c.get("at", 0) < 300 and c.get("dpkg", 0) == mt:
             return c
     except Exception:
         pass
-    c = {"at": time.time(), "total": None, "security": 0, "autoremove": 0}
-    out = run(["apt", "list", "--upgradable"], 25)
+    c = {"at": time.time(), "dpkg": mt, "total": None, "security": 0, "autoremove": 0}
+    out = run(["apt-get", "-s", "upgrade"], 25)
     if out is not None:
-        lines = [l for l in out.split("\n") if "/" in l and not l.startswith("Listing")]
+        lines = [l for l in out.split("\n") if l.startswith("Inst ")]
         c["total"] = len(lines)
         c["security"] = len([l for l in lines if "-security" in l])
     out = run(["apt-get", "-s", "autoremove"], 20)

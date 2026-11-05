@@ -1,5 +1,6 @@
 package com.glr.deenwallet.monitoring;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -32,6 +33,44 @@ public class AgentReportService {
 
     private final ConcurrentHashMap<String, Entry> machines = new ConcurrentHashMap<>();
 
+    @Autowired(required = false)
+    private com.glr.deenwallet.notification.AdminAlertService alerts;
+
+    /** Security-update count last alerted for each machine (absent = nothing sent yet). */
+    private final ConcurrentHashMap<String, Integer> secAlerted = new ConcurrentHashMap<>();
+
+    private static int securityCount(Object tasks) {
+        try {
+            if (tasks instanceof List<?> l) {
+                for (Object o : l) {
+                    if (o instanceof Map<?, ?> m && String.valueOf(m.get("title")).contains("security update")) {
+                        java.util.regex.Matcher x = Pattern.compile("^(\\d+)").matcher(String.valueOf(m.get("title")));
+                        if (x.find()) return Integer.parseInt(x.group(1));
+                    }
+                }
+            }
+        } catch (RuntimeException e) { /* ignore */ }
+        return 0;
+    }
+
+    private void updateAlert(String name, Object tasks) {
+        try {
+            if (alerts == null) return;
+            int sec = securityCount(tasks);
+            Integer prev = secAlerted.get(name);
+            if (sec > 0 && (prev == null || prev != sec)) {
+                secAlerted.put(name, sec);
+                alerts.notifyAdmins(null, "errors", "SERVER_UPDATES", "Security updates are waiting",
+                        sec + " security update(s) are waiting on " + name + ". Open Server Metrics for the command to run.");
+            } else if (sec == 0 && prev != null && prev > 0) {
+                secAlerted.put(name, 0);
+                alerts.notifyAdmins(null, "errors", "SERVER_UPDATES_OK", "Server is up to date", name + " has no security updates waiting now.");
+            } else if (sec == 0 && prev == null) {
+                secAlerted.put(name, 0);
+            }
+        } catch (RuntimeException e) { /* an alert problem must never break reporting */ }
+    }
+
     /** Receiving is only on when a long secret token is set in the server's environment file. */
     public boolean enabled() {
         return token != null && token.trim().length() >= 16;
@@ -52,6 +91,7 @@ public class AgentReportService {
         e.at = System.currentTimeMillis();
         e.ip = ip;
         machines.put(name, e);
+        updateAlert(name, report.get("tasks"));
         long cutoff = System.currentTimeMillis() - 30L * 24 * 3600 * 1000;
         machines.values().removeIf(x -> x.at < cutoff);
         return null;
