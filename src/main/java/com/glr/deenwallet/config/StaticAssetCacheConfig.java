@@ -29,6 +29,15 @@ public class StaticAssetCacheConfig implements WebMvcConfigurer {
                 .addResourceLocations("classpath:/static/assets/")
                 .setCacheControl(sevenDays);
 
+        // Pages, scripts and styles at the top level (index.html, admin.html, *.js, *.css).
+        // Phones and the apps still check for a newer copy on every open (max-age=0 + must-revalidate), so updates
+        // arrive at once. Cloudflare may keep one copy for 5 minutes (s-maxage), so most opens never reach the server.
+        // After a deploy, use Cloudflare > Caching > Purge Everything to make the new version appear immediately.
+        CacheControl edgeFiveMinutes = CacheControl.maxAge(Duration.ZERO).mustRevalidate().cachePublic().sMaxAge(Duration.ofMinutes(5));
+        registry.addResourceHandler("/*.html", "/*.js", "/*.css")
+                .addResourceLocations("classpath:/static/")
+                .setCacheControl(edgeFiveMinutes);
+
         // The DeenWallet logo shown on the login, app and website pages.
         registry.addResourceHandler("/deenwallet-logo.png", "/deenwallet-logo-sm.png", "/deenwallet-logo-md.png")
                 .addResourceLocations("classpath:/static/")
