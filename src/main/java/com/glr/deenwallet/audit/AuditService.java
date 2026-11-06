@@ -26,7 +26,7 @@ public class AuditService {
     private static final Logger log = LoggerFactory.getLogger(AuditService.class);
 
     public static final List<String> CATEGORIES =
-            List.of("USERS", "KYC", "WAEC", "ADMINS", "WALLET", "MESSAGING", "PAYOUTS", "SECURITY", "SYSTEM");
+            List.of("USERS", "KYC", "WAEC", "ADMINS", "WALLET", "LINKS", "CRYPTO", "MESSAGING", "PAYOUTS", "SECURITY", "SYSTEM");
 
     @PersistenceContext
     private EntityManager em;
@@ -116,7 +116,7 @@ public class AuditService {
                         + "k.actor_id, au.full_name, k.actor_email, uu.full_name, k.detail, CAST(NULL AS varchar) "
                         + "FROM kyc_audit k LEFT JOIN users uu ON uu.id = k.user_id LEFT JOIN users au ON au.id = k.actor_id "
                         + "WHERE k.actor_id IS NOT NULL AND k.action <> 'SUBMITTED'"
-                        + ") x WHERE 1 = 1 ");
+                        + ") x WHERE x.action <> 'OTHER' ");   // old vague "Made a change" lines are hidden
         Map<String, Object> params = new LinkedHashMap<>();
         if (!superAdmin) {
             sql.append("AND x.actor_id = :me ");

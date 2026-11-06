@@ -67,14 +67,24 @@ public class AdminAuditFilter extends OncePerRequestFilter {
             rule("DELETE", "^/api/admin/errors(/old)?$", "SYSTEM", "ERRORS_CLEARED", "Cleared error logs"),
             rule("PUT", "^/api/admin/support/whatsapp$", "SYSTEM", "WHATSAPP", "Changed the support WhatsApp number"),
             rule("POST", "^/api/admin/auth/login$", "SECURITY", "LOGIN", "Signed in"),
-            rule("POST", "^/api/admin/auth/recovery/verify-otp$", "SECURITY", "RECOVERY", "Recovered access with an email code")
+            rule("POST", "^/api/admin/auth/recovery/verify-otp$", "SECURITY", "RECOVERY", "Recovered access with an email code"),
+            rule("POST", "^/api/admin/metrics/clear$", "SECURITY", "IP_CLEAR", "Cleared attack records for addresses"),
+            rule("POST", "^/api/admin/passcodes$", "SECURITY", "PASSCODE_ADD", "Added a sign-in passcode"),
+            rule("POST", "^/api/admin/passcodes/" + UUID_RE + "/delete$", "SECURITY", "PASSCODE_DELETE", "Removed a sign-in passcode"),
+            rule("POST", "^/api/admin/passkeys/register/finish$", "SECURITY", "PASSKEY_ADD", "Added a passkey"),
+            rule("POST", "^/api/admin/passkeys/" + UUID_RE + "/delete$", "SECURITY", "PASSKEY_DELETE", "Removed a passkey"),
+            rule("PUT", "^/api/admin/profile$", "SECURITY", "PROFILE_EDIT", "Edited their own details"),
+            rule("POST", "^/api/admin/me/photo$", "SECURITY", "PHOTO_SET", "Changed their profile photo"),
+            rule("DELETE", "^/api/admin/me/photo$", "SECURITY", "PHOTO_REMOVE", "Removed their profile photo")
     );
 
     private static final List<String> SKIP_PREFIXES = List.of(
             "/api/admin/kyc", "/api/admin/waec", "/api/admin/wallet", "/api/admin/audit", "/api/admin/failed-payouts", "/api/admin/payment-links", "/api/admin/crypto",
             "/api/admin/auth/refresh", "/api/admin/auth/recovery/send-otp", "/api/admin/auth/forgot",
             "/api/admin/auth/reset", "/api/admin/verify-pin", "/api/admin/mail",
-            "/api/admin/my-notifications", "/api/admin/device-token", "/api/admin/notifications/read");
+            "/api/admin/my-notifications", "/api/admin/device-token", "/api/admin/notifications/read",
+            // opening the app lock screen is not a change; money-safety logs itself with the amounts
+            "/api/admin/passkeys/unlock", "/api/admin/passkeys/register/options", "/api/admin/safety");
 
     private final AuditService audit;
     private final UserRepository users;
@@ -130,6 +140,7 @@ public class AdminAuditFilter extends OncePerRequestFilter {
             actor = userByEmail(text(body, "email"));
         }
         if (actor == null) return;                       // nobody to attribute it to
+        if (matched == null) return;                     // only actions with a clear rule are written, never a vague "Made a change"
         if (!"ADMIN".equals(actor.getRole()) && !"SUPER_ADMIN".equals(actor.getRole())) return;
 
         String category = "SYSTEM";
