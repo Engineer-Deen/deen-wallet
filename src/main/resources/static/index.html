@@ -8470,7 +8470,7 @@
         });
 
         pinForgotBtn.addEventListener('click', function () {
-            window.location.href = 'reset-pin.html';
+            var go = function () { window.location.href = 'reset-pin.html'; }; apiRequest('/api/users/me').then(function (me) { try { if (me && me.email) sessionStorage.setItem('dw_pin_reset_email', JSON.stringify({ email: me.email, at: Date.now() })); } catch (e) { } go(); }).catch(go);
         });
 
         pinCancelBtn.addEventListener('click', function () {

@@ -4396,11 +4396,11 @@
             // "Forgot PIN?" lives on the lock screen only; "Forgot password?" on the login screen.
             // They open the same kind of pages the customer app uses, in their admin versions.
             var pinForgotBtn = document.getElementById('pin-forgot-btn');
-            if (pinForgotBtn) pinForgotBtn.addEventListener('click', function () {
+            if (pinForgotBtn) pinForgotBtn.addEventListener('click', function () { var adminForgotGo = function () {
                 pinDisabledForSession = false;
                 clearToken();
                 hideAdminPinModal();
-                window.location.href = 'admin-reset-pin.html';
+                window.location.href = 'admin-reset-pin.html'; }; adminApiRequest('/api/admin/me').then(function (me) { try { if (me && me.email) sessionStorage.setItem('dw_pin_reset_email', JSON.stringify({ email: me.email, at: Date.now() })); } catch (e) { } adminForgotGo(); }).catch(adminForgotGo);
             });
             var adminForgotPasswordBtn = document.getElementById('admin-forgot-password-btn');
             if (adminForgotPasswordBtn) adminForgotPasswordBtn.addEventListener('click', function () {

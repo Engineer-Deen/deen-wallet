@@ -59,7 +59,7 @@
         .message.show{display:block}
         .message.error{background:#FFF2F0;color:var(--error);border:1px solid #F4D0CA}
         .message.success{background:#EFFAF5;color:var(--success);border:1px solid #CBEBDD}
-        .hint{font-size:12px;color:var(--muted);line-height:1.5;margin-top:8px}
+        .hint{font-size:12px;color:var(--muted);line-height:1.5;margin-top:8px} .email-box{border:1px solid var(--border);background:var(--bg);border-radius:12px;padding:12px 14px;margin:0 0 18px;word-break:break-all} .email-box-label{display:block;font-size:12px;color:var(--muted);margin-bottom:3px} .email-box strong{font-size:15px}
         .resend{border:0;background:none;color:var(--primary);font:inherit;font-size:13px;font-weight:700;cursor:pointer;padding:0}
         .resend:disabled{color:#9AA7AC;cursor:not-allowed}
         .hidden{display:none!important}
@@ -89,7 +89,7 @@
             <div id="email-view">
                 <div class="eyebrow">PIN recovery</div>
                 <h2>Forgot your PIN?</h2>
-                <p class="subtitle">Enter the email address registered to your DeenWallet admin account. We will send you a six-digit verification code.</p>
+                <p class="subtitle" id="email-subtitle">Enter the email address registered to your DeenWallet admin account. We will send you a six-digit verification code.</p><div class="email-box hidden" id="email-box"><span class="email-box-label">Your account email</span><strong id="email-box-text"></strong></div>
                 <form id="email-form" novalidate>
                     <div class="field">
                         <label for="email">Email address</label>
@@ -350,7 +350,7 @@
             sessionStorage.removeItem('deenwallet_admin_profile');
             window.location.replace('admin.html');
         }
-        document.getElementById('email-form').addEventListener('submit', function (e) {
+        (function () { try { var raw = sessionStorage.getItem('dw_pin_reset_email'); sessionStorage.removeItem('dw_pin_reset_email'); if (!raw) return; var o = JSON.parse(raw); if (!o || !o.email || Date.now() - o.at > 120000) return; emailInput.value = String(o.email).trim().toLowerCase(); var f = emailInput.closest('.field'); if (f) f.classList.add('hidden'); document.getElementById('email-box-text').textContent = emailInput.value; document.getElementById('email-box').classList.remove('hidden'); document.getElementById('email-subtitle').textContent = 'We will send a six-digit verification code to the email on your account. Tap the button below to confirm.'; emailBtn.textContent = 'Send code to this email'; } catch (e) { } })(); document.getElementById('email-form').addEventListener('submit', function (e) {
             e.preventDefault();
             requestCode();
         });
