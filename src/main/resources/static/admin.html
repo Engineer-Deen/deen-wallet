@@ -2806,6 +2806,7 @@
             </div>
             <div id="login-error" class="inline-error hidden"><span>&#9888;</span><span
                     id="login-error-text"></span></div>
+            <div id="login-turnstile" style="display:none;justify-content:center;margin:12px 0 4px;"></div>
             <button class="btn-primary" id="login-btn">Sign in</button>
             <div id="admin-recovery-panel" class="hidden" style="margin-top:12px;padding:14px;border:1px solid #E4ECEF;border-radius:12px;background:#F7FAFB;">
                 <div style="font-weight:700;margin-bottom:5px;">Verify your account</div>
@@ -4677,16 +4678,16 @@
             if (adminSendOtpBtn) adminSendOtpBtn.addEventListener('click', sendAdminRecoveryOtp);
             if (adminVerifyOtpBtn) adminVerifyOtpBtn.addEventListener('click', verifyAdminRecoveryOtp);
 
-            loginBtn.addEventListener('click', function () {
+            var dwTs = { on: false, id: null }; function dwTurnstileInit() { try { var box = document.getElementById('login-turnstile'); if (!box) return; fetch(API_BASE_URL + '/api/auth/turnstile').then(function (r) { return r.json(); }).then(function (c) { if (!c || !c.enabled || !c.siteKey) return; dwTs.on = true; box.style.display = 'flex'; var s = document.createElement('script'); s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'; s.async = true; s.onload = function () { try { dwTs.id = window.turnstile.render(box, { sitekey: c.siteKey, theme: 'light' }); } catch (e) { } }; document.head.appendChild(s); }).catch(function () { }); } catch (e) { } } function dwTurnstileToken() { if (!dwTs.on) return ''; var t = ''; try { t = window.turnstile.getResponse(dwTs.id) || ''; } catch (e) { } if (!t) throw new Error('Please tick the "Verify you are human" box first.'); setTimeout(function () { try { window.turnstile.reset(dwTs.id); } catch (e) { } }, 0); return t; } dwTurnstileInit(); loginBtn.addEventListener('click', function () {
                 var email = document.getElementById('admin-email').value.trim();
                 var password = document.getElementById('admin-password').value;
                 hide(loginError);
                 if (!email || !password) {
                     loginErrorText.textContent = 'Enter your email and password.'; show(loginError); return;
                 }
-                loginBtn.disabled = true; loginBtn.textContent = 'Signing in…';
+                var tsTok = ''; try { tsTok = dwTurnstileToken(); } catch (tsErr) { loginErrorText.textContent = tsErr.message; show(loginError); return; } loginBtn.disabled = true; loginBtn.textContent = 'Signing in…';
                 fetch(API_BASE_URL + '/api/admin/auth/login', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email, password: password })
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email, password: password, turnstileToken: tsTok })
                 }).then(async function (response) {
                     var data = {}; try { data = await response.json(); } catch (_) {}
                     if (!response.ok) {

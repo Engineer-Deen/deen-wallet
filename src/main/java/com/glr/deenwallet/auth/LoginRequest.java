@@ -13,4 +13,7 @@ public class LoginRequest {
 
     @NotBlank(message = "Password is required")
     private String password;
+
+    /** Cloudflare "Verify you are human" result; only checked when Turnstile is switched on. */
+    private String turnstileToken;
 }

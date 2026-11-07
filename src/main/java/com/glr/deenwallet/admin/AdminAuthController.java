@@ -40,11 +40,13 @@ public class AdminAuthController {
     private final EmailService emailService;
     private final AdminPasscodeService passcodes;
     private final AdminPasskeyService passkeys;
+    private final com.glr.deenwallet.auth.TurnstileService turnstile;
 
     @PostMapping("/login")
     public ResponseEntity<AdminLoginResponse> login(
             @Valid @RequestBody AdminLoginRequest r
     ) {
+        turnstile.verify(r.getTurnstileToken());
         String email = r.email.trim().toLowerCase(Locale.ROOT);
 
         /*
@@ -352,6 +354,8 @@ public class AdminAuthController {
 
         @NotBlank
         String password;
+
+        String turnstileToken;
     }
 
     @Getter

@@ -18,6 +18,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final BiometricService biometricService;
+    private final TurnstileService turnstile;
 
     @PostMapping("/register")
     public ResponseEntity<Void> register(
@@ -47,6 +48,7 @@ public class AuthController {
     public ResponseEntity<LoginResponse> login(
             @Valid @RequestBody LoginRequest r
     ) {
+        turnstile.verify(r.getTurnstileToken());
         return ResponseEntity.ok(authService.login(r));
     }
 

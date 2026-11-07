@@ -1078,6 +1078,7 @@
               <a id="login-support-whatsapp" class="support-chip whatsapp-chip" style="display:flex;text-align:center;text-decoration:none;justify-content:center;align-items:center;" target="_blank" rel="noopener">◉ Contact support on WhatsApp</a>
             </div>
 
+            <div id="login-turnstile" style="display:none;justify-content:center;margin:12px 0 4px;"></div>
             <button class="btn-primary" id="login-btn">Log in</button>
           </div>
 
@@ -1169,7 +1170,7 @@
       const confirmFallback = document.getElementById('confirm-email-fallback');
       const confirmFallbackInput = document.getElementById('confirm-email-fallback-input');
 
-      const loginBtn = document.getElementById('login-btn');
+      const loginBtn = document.getElementById('login-btn'); var dwTs = { on: false, id: null }; function dwTurnstileInit() { try { var box = document.getElementById('login-turnstile'); if (!box) return; fetch(DEENWALLET_CONFIG.API_BASE_URL + '/api/auth/turnstile').then(function (r) { return r.json(); }).then(function (c) { if (!c || !c.enabled || !c.siteKey) return; dwTs.on = true; box.style.display = 'flex'; var s = document.createElement('script'); s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'; s.async = true; s.onload = function () { try { dwTs.id = window.turnstile.render(box, { sitekey: c.siteKey, theme: 'light' }); } catch (e) { } }; document.head.appendChild(s); }).catch(function () { }); } catch (e) { } } function dwTurnstileToken() { if (!dwTs.on) return ''; var t = ''; try { t = window.turnstile.getResponse(dwTs.id) || ''; } catch (e) { } if (!t) throw new Error('Please tick the "Verify you are human" box first.'); setTimeout(function () { try { window.turnstile.reset(dwTs.id); } catch (e) { } }, 0); return t; } dwTurnstileInit();
       const loginError = document.getElementById('login-error');
       const loginErrorText = document.getElementById('login-error-text');
       const loginEmail = document.getElementById('login-email');
@@ -1474,7 +1475,7 @@
         try {
           const data = await apiRequest('/api/auth/login', {
             method: 'POST',
-            body: { email, password }
+            body: { email, password, turnstileToken: dwTurnstileToken() }
           });
 
           const accessToken = data.accessToken || data.token;
