@@ -7,6 +7,7 @@ import com.glr.deenwallet.transaction.TooManyRequestsException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -74,7 +75,7 @@ public class UssdPayLinkController {
         log.info("USSD payment-link flow: {}", keys.isEmpty() ? "off (no key loaded)" : "on (" + keys.size() + " key(s))");
     }
 
-    @PostMapping(value = "/api/ussd/paylink", produces = "text/plain")
+    @PostMapping("/api/ussd/paylink")
     public ResponseEntity<String> handle(@RequestBody Map<String, String> body) {
         if (keys.isEmpty()) return ResponseEntity.notFound().build();
         byte[] aesKey;
@@ -97,7 +98,7 @@ public class UssdPayLinkController {
             reply = stop("Sorry, we could not complete this right now. Please try again in a few minutes.");
         }
         try {
-            return ResponseEntity.ok(encrypt(JSON.writeValueAsString(reply), aesKey));
+            return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(encrypt(JSON.writeValueAsString(reply), aesKey));
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Error");
         }
