@@ -93,6 +93,7 @@ public class SecurityConfig {
                                 "/p/**",
                                 "/qr.js",
                                 "/api/public/pay/**",
+                                "/api/ussd/**",
                                 "/config.js",
                                 "/deenwallet-client.js",
                                 "/firebase-messaging-sw.js",
