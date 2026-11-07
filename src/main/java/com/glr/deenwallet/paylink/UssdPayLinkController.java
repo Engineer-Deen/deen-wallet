@@ -109,7 +109,7 @@ public class UssdPayLinkController {
         JsonNode flow = p.path("flowData");
         String subscriber = text(p.path("global").path("subscriberId"));
         if (subscriber.isEmpty()) subscriber = text(p.path("global").path("sessionId"));
-        String slug = text(flow.path("enter_code")).toLowerCase();
+        String slug = text(flow.path("enter_code")).toLowerCase(); boolean inflow = "inflow".equals(text(p.path("exportedData").path("mode"))); String next = inflow ? "share_number" : "pick_provider";
 
         if ("enter_code".equals(page) || "ask_amount".equals(page)) {
             limit(lookups, subscriber, 30, "Too many attempts. Please wait a few minutes and try again.");
@@ -121,10 +121,12 @@ public class UssdPayLinkController {
                     return navigate("ask_amount", Map.of("payee", clip(payee, 24)));
                 }
                 long minor = amountMinor(text(flow.path("ask_amount")));
-                return navigate("pick_provider", Map.of("summary", summary(payee, minor)));
+                return navigate(next, Map.of("summary", summary(payee, minor, inflow)));
             }
-            return navigate("pick_provider", Map.of("summary", summary(payee, ((Number) v.get("amountMinor")).longValue())));
+            return navigate(next, Map.of("summary", summary(payee, ((Number) v.get("amountMinor")).longValue(), inflow)));
         }
+
+        if ("share_number".equals(page)) return payInFlow(p, flow, slug, subscriber);
 
         if ("confirm".equals(page)) {
             String session = text(p.path("global").path("sessionId"));
@@ -159,6 +161,44 @@ public class UssdPayLinkController {
         return stop("Sorry, this option is not available.");
     }
 
+    /** Pay inside the USSD session: create the one-time payment code as usual, then hand it to Monime's collect_payment page. */
+    private Map<String, Object> payInFlow(JsonNode p, JsonNode flow, String slug, String subscriber) {
+        String session = text(p.path("global").path("sessionId"));
+        Object[] prev = session.isEmpty() ? null : done.get(session);
+        if (prev != null) {
+            @SuppressWarnings("unchecked") Map<String, Object> again = (Map<String, Object>) prev[1];
+            return again;
+        }
+        String phone = phone(text(p.path("exportedData").path("phone")));
+        if (phone == null) return stop("Cancelled. We need your phone number to start the payment. Nothing was charged.");
+        String provider = provider(text(p.path("global").path("networkProviderName")));
+        if (provider == null) provider = provider(text(flow.path("pick_provider")));
+        if (provider == null) return stop("We could not tell your mobile money network. Please try again.");
+        limit(starts, subscriber, 6, "Too many payment attempts. Please wait a few minutes and try again.");
+        PaymentRequestService.StartRequest r = new PaymentRequestService.StartRequest();
+        r.setProviderId(provider);
+        r.setPhone(phone);
+        String amt = text(flow.path("ask_amount"));
+        if (!amt.isEmpty()) r.setAmount(new BigDecimal(amt.replace(",", "")));
+        Map<String, Object> res = service.startPayment(slug, "ussd-" + subscriber, r);
+        String target = String.valueOf(res.get("ussdCode")).replaceAll("\\D", "");
+        if (res.get("ussdCode") == null || target.length() < 6) {
+            return stop("Payment started but could not be completed here. Please open the DeenWallet link to pay.");
+        }
+        long total = ((Number) res.get("totalMinor")).longValue();
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("target", target);
+        data.put("amount", BigDecimal.valueOf(total, 2).stripTrailingZeros().toPlainString());
+        data.put("ref", String.valueOf(res.get("reference")));
+        data.put("payee", clip(String.valueOf(res.get("payeeName")), 24));
+        Map<String, Object> out = navigate("pay", data);
+        if (!session.isEmpty()) {
+            if (done.size() > 2000) done.clear();
+            done.put(session, new Object[]{System.currentTimeMillis(), out});
+        }
+        return out;
+    }
+
     private static long amountMinor(String raw) {
         BigDecimal a;
         try { a = new BigDecimal(raw.replace(",", "").trim()); } catch (Exception e) { a = null; }
@@ -168,8 +208,9 @@ public class UssdPayLinkController {
         return a.movePointRight(2).longValueExact();
     }
 
-    private static String summary(String payee, long minor) {
+    private static String summary(String payee, long minor, boolean compact) {
         ConversionFee fee = ConversionFee.calculate(minor);
+        if (compact) return "Pay " + clip(payee, 20) + "\nSLE " + money(minor) + " + fee " + money(fee.feeValue()) + " = SLE " + money(fee.totalChargedValue());
         return "Pay " + clip(payee, 24) + "\nSLE " + money(minor) + " + fee SLE " + money(fee.feeValue()) + "\nTotal SLE " + money(fee.totalChargedValue());
     }
 
@@ -189,7 +230,7 @@ public class UssdPayLinkController {
     static String provider(String v) {
         String s = v == null ? "" : v.trim().toLowerCase();
         if (s.equals("m17") || s.equals("1") || s.startsWith("orange")) return "m17";
-        if (s.equals("m18") || s.equals("2") || s.startsWith("africell")) return "m18";
+        if (s.equals("m18") || s.equals("2") || s.startsWith("afri")) return "m18";
         return null;
     }
 

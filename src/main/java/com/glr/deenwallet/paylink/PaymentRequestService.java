@@ -69,7 +69,7 @@ public class PaymentRequestService {
                     + "CAST(EXTRACT(EPOCH FROM r.expires_at) * 1000 AS bigint), CAST(EXTRACT(EPOCH FROM r.created_at) * 1000 AS bigint), "
                     + "(SELECT COUNT(*) FROM transactions t WHERE t.payment_request_id = r.id AND t.status = 'COMPLETED'), "
                     + "(SELECT COALESCE(SUM(t.amount_value), 0) FROM transactions t WHERE t.payment_request_id = r.id AND t.status = 'COMPLETED'), "
-                    + "(SELECT COUNT(*) FROM transactions t WHERE t.payment_request_id = r.id AND t.status IN ('PAID_IN', 'PAYING_OUT', 'PAYOUT_FAILED'))";
+                    + "(SELECT COUNT(*) FROM transactions t WHERE t.payment_request_id = r.id AND t.status IN ('PAID_IN', 'PAYING_OUT', 'PAYOUT_FAILED')), r.short_code";
 
     private final TransactionService transactions;
     private final UserRepository users;
@@ -171,7 +171,7 @@ public class PaymentRequestService {
         }
 
         final UUID id = UUID.randomUUID();
-        final String slug = newSlug();
+        final String slug = newSlug(); final String fShort = newShortCode();
         final Long fAmount = amountMinor;
         final String fNote = note.isEmpty() ? null : note;
         final String fTitle = title;
@@ -188,9 +188,9 @@ public class PaymentRequestService {
         tx.executeWithoutResult(st -> {
             jakarta.persistence.Query q = em.createNativeQuery(
                     "INSERT INTO payment_requests (id, owner_user_id, slug, title, note, amount_value, reusable, dest_type, dest_provider_id, "
-                            + "dest_account, dest_holder_name, dest_bank_name, status, expires_at) "
-                            + "VALUES (:id, :o, :s, :t, " + noteSql + ", " + amountSql + ", :ru, :dt, :dp, :da, :dh, " + bankSql + ", 'ACTIVE', " + expiresSql + ")");
-            q.setParameter("id", id).setParameter("o", ownerId).setParameter("s", slug).setParameter("t", fTitle)
+                            + "dest_account, dest_holder_name, dest_bank_name, status, expires_at, short_code) "
+                            + "VALUES (:id, :o, :s, :t, " + noteSql + ", " + amountSql + ", :ru, :dt, :dp, :da, :dh, " + bankSql + ", 'ACTIVE', " + expiresSql + ", :sc)");
+            q.setParameter("id", id).setParameter("o", ownerId).setParameter("s", slug).setParameter("sc", fShort).setParameter("t", fTitle)
                     .setParameter("ru", fReusable).setParameter("dt", bank ? "BANK" : "MOMO").setParameter("dp", fDestProvider)
                     .setParameter("da", fDestAccount).setParameter("dh", fHolder);
             if (fAmount != null) q.setParameter("a", fAmount);
@@ -429,6 +429,7 @@ public class PaymentRequestService {
         m.put("paidCount", ((Number) row[15]).longValue());
         m.put("receivedMinor", ((Number) row[16]).longValue());
         m.put("inProgress", ((Number) row[17]).longValue());
+        m.put("shortCode", row.length > 18 ? row[18] : null);
         return m;
     }
 
@@ -457,7 +458,7 @@ public class PaymentRequestService {
         String s = slug == null ? "" : slug.trim().toLowerCase();
         if (s.length() < 4 || s.length() > 16) throw new IllegalArgumentException("This payment link was not found.");
         @SuppressWarnings("unchecked")
-        List<Object[]> rows = em.createNativeQuery("SELECT " + COLUMNS + " FROM payment_requests r WHERE r.slug = :s")
+        List<Object[]> rows = em.createNativeQuery("SELECT " + COLUMNS + " FROM payment_requests r WHERE r.slug = :s OR r.short_code = :s")
                 .setParameter("s", s).getResultList();
         if (rows.isEmpty()) throw new IllegalArgumentException("This payment link was not found.");
         return rows.get(0);
@@ -467,6 +468,14 @@ public class PaymentRequestService {
         jakarta.persistence.Query q = em.createNativeQuery(sql);
         for (int i = 0; i + 1 < kv.length; i += 2) q.setParameter(String.valueOf(kv[i]), kv[i + 1]);
         return ((Number) q.getSingleResult()).longValue();
+    }
+
+    private String newShortCode() {
+        for (int attempt = 0; attempt < 30; attempt++) {
+            String c = String.valueOf(100000 + RANDOM.nextInt(900000));
+            if (count("SELECT COUNT(*) FROM payment_requests WHERE short_code = :s", "s", c) == 0) return c;
+        }
+        throw new IllegalStateException("Could not create a payment link right now. Please try again.");
     }
 
     private String newSlug() {

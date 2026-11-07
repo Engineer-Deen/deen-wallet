@@ -8615,7 +8615,7 @@
             plEl('pl-d-title').textContent = l.title || '';
             plEl('pl-d-chip').outerHTML = plChip(l.status).replace('<span ', '<span id="pl-d-chip" ');
             plEl('pl-d-sub').textContent = (l.amountMinor == null ? 'Payer chooses the amount' : plMoney(l.amountMinor)) +
-                ' · ' + (l.reusable ? 'Many payments' : 'One payment') + ' · ' + plExpiryText(l);
+                ' · ' + (l.reusable ? 'Many payments' : 'One payment') + ' · ' + plExpiryText(l) + (l.shortCode ? ' · USSD number ' + l.shortCode : '');
             plEl('pl-d-link').textContent = l.link || '';
             plEl('pl-d-recv').textContent = plMoney(l.receivedMinor);
             plEl('pl-d-count').textContent = String(Number(l.paidCount || 0));
