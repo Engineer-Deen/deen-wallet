@@ -181,7 +181,7 @@ public class UssdPayLinkController {
         String amt = text(flow.path("ask_amount"));
         if (!amt.isEmpty()) r.setAmount(new BigDecimal(amt.replace(",", "")));
         Map<String, Object> res = service.startPayment(slug, "ussd-" + subscriber, r);
-        String target = String.valueOf(res.get("ussdCode")).replaceAll("\\D", "");
+        String target = targetOf(String.valueOf(res.get("ussdCode")));
         if (res.get("ussdCode") == null || target.length() < 6) {
             return stop("Payment started but could not be completed here. Please open the DeenWallet link to pay.");
         }
@@ -197,6 +197,18 @@ public class UssdPayLinkController {
             done.put(session, new Object[]{System.currentTimeMillis(), out});
         }
         return out;
+    }
+
+    /**
+     * What Monime's PIN page is given as the payment target. Default: the number after the *715* prefix
+     * (*715*5560859965# -> 5560859965). Set USSD_TARGET_MODE=full in the env file for every digit (7155560859965).
+     */
+    public static String targetOf(String code) {
+        String c = code == null ? "" : code.trim();
+        if ("full".equalsIgnoreCase(System.getenv("USSD_TARGET_MODE"))) return c.replaceAll("\\D", "");
+        String[] parts = c.replace("#", "").split("\\*");
+        String last = parts.length == 0 ? "" : parts[parts.length - 1];
+        return last.replaceAll("\\D", "");
     }
 
     private static long amountMinor(String raw) {
