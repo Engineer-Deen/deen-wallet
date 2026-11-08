@@ -171,7 +171,7 @@ public class UssdPayLinkController {
             Object code = res.get("ussdCode");
             long total = ((Number) res.get("totalMinor")).longValue();
             Map<String, Object> out = code == null || String.valueOf(code).isBlank()
-                    ? stop("Payment started. Please open the DeenWallet link to finish. Ref " + res.get("reference"))
+                    ? stop("Payment started. Please open the DeenWallet Transfer link to finish. Ref " + res.get("reference"))
                     : stop("Dial " + code + " within 10 minutes to pay SLE " + money(total) + " to " + clip(String.valueOf(res.get("payeeName")), 24) + ". Ref " + res.get("reference"));
             if (!session.isEmpty()) {
                 if (done.size() > 2000) done.clear();
@@ -206,7 +206,7 @@ public class UssdPayLinkController {
         Map<String, Object> res = service.startPayment(slug, "ussd-" + subscriber, r);
         String target = targetOf(String.valueOf(res.get("ussdCode")));
         if (res.get("ussdCode") == null || target.length() < 6) {
-            return stop("Payment started but could not be completed here. Please open the DeenWallet link to pay.");
+            return stop("Payment started but could not be completed here. Please open the DeenWallet Transfer link to pay.");
         }
         long total = ((Number) res.get("totalMinor")).longValue();
         Map<String, Object> data = new LinkedHashMap<>();

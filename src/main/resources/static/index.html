@@ -8707,7 +8707,7 @@
         plEl('pl-d-link').addEventListener('click', () => { if (plCurrent) plCopy(plCurrent.link); });
         plEl('pl-d-ussdcopy').addEventListener('click', () => {
             if (!plCurrent || !plCurrent.shortCode) return;
-            plCopy((plCurrent.ussdDial ? '1. Dial ' + plCurrent.ussdDial + '\n2. Enter link number ' : 'DeenWallet link number: ') + plCurrent.shortCode, 'Copied');
+            plCopy((plCurrent.ussdDial ? '1. Dial ' + plCurrent.ussdDial + '\n2. Enter link number ' : 'DeenWallet Transfer link number: ') + plCurrent.shortCode, 'Copied');
         });
         plEl('pl-d-wa').addEventListener('click', () => {
             if (!plCurrent) return;
