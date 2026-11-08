@@ -2270,6 +2270,8 @@
         .pl-ussd-h { font-size:13px; font-weight:800; color:#0F5E70; margin-bottom:8px; text-align:center; }
         .pl-ussd-row { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:9px 0; border-top:1px solid #DCEEF2; font-size:13px; color:#2A4A54; }
         .pl-ussd-row b { font-size:19px; letter-spacing:1px; color:var(--primary); }
+        .pl-ussd-row.one { flex-direction:column; align-items:center; text-align:center; gap:6px; }
+        .pl-ussd-row.one b { font-size:21px; user-select:all; }
         .pl-stats { display:flex; gap:8px; margin-top:16px; }
         .pl-stat { flex:1; background:#fff; border:1px solid var(--border); border-radius:14px; padding:11px 8px; text-align:center; }
         .pl-stat b { display:block; font-size:15px; }
@@ -8629,11 +8631,16 @@
             plEl('pl-d-sub').textContent = (l.amountMinor == null ? 'Payer chooses the amount' : plMoney(l.amountMinor)) +
                 ' · ' + (l.reusable ? 'Many payments' : 'One payment') + ' · ' + plExpiryText(l);
             plEl('pl-d-link').textContent = l.link || '';
+            const full = l.ussdDialFull || '';
             plEl('pl-d-ussd').classList.toggle('hidden', !l.shortCode);
-            plEl('pl-d-dialrow').classList.toggle('hidden', !l.ussdDial);
+            plEl('pl-d-dialrow').classList.toggle('hidden', !(full || l.ussdDial));
+            plEl('pl-d-dialrow').querySelector('span').textContent = full ? 'Dial this code' : '1. Dial';
+            plEl('pl-d-dialrow').classList.toggle('one', !!full);
+            plEl('pl-d-num').parentElement.classList.toggle('hidden', !!full);
             plEl('pl-d-numlbl').textContent = l.ussdDial ? '2. Enter link number' : 'Link number';
-            plEl('pl-d-dial').textContent = l.ussdDial || '';
+            plEl('pl-d-dial').textContent = full || l.ussdDial || '';
             plEl('pl-d-num').textContent = l.shortCode || '';
+            plEl('pl-d-ussdcopy').textContent = full ? 'Copy code' : 'Copy these steps';
             plEl('pl-d-recv').textContent = plMoney(l.receivedMinor);
             plEl('pl-d-count').textContent = String(Number(l.paidCount || 0));
             plEl('pl-d-prog').textContent = String(Number(l.inProgress || 0));
@@ -8689,7 +8696,7 @@
         }
         let plCurrent = null;
         function plShareText(l) {
-            return (l.title ? l.title + ': ' : '') + 'pay ' + (l.amountMinor == null ? '' : plMoney(l.amountMinor) + ' ') + 'to ' + (l.destHolderName || 'me') + ' here (no account needed): ' + l.link + (l.shortCode && l.ussdDial ? '\n\nOr dial ' + l.ussdDial + ' and enter link number ' + l.shortCode + '.' : '');
+            return (l.title ? l.title + ': ' : '') + 'pay ' + (l.amountMinor == null ? '' : plMoney(l.amountMinor) + ' ') + 'to ' + (l.destHolderName || 'me') + ' here (no account needed): ' + l.link + (l.ussdDialFull ? '\n\nOr dial ' + l.ussdDialFull : (l.shortCode && l.ussdDial ? '\n\nOr dial ' + l.ussdDial + ' and enter link number ' + l.shortCode + '.' : ''));
         }
         function plCopy(text, msg) {
             const ok = () => showToast(msg || 'Link copied');
@@ -8707,6 +8714,7 @@
         plEl('pl-d-link').addEventListener('click', () => { if (plCurrent) plCopy(plCurrent.link); });
         plEl('pl-d-ussdcopy').addEventListener('click', () => {
             if (!plCurrent || !plCurrent.shortCode) return;
+            if (plCurrent.ussdDialFull) { plCopy(plCurrent.ussdDialFull, 'Code copied'); return; }
             plCopy((plCurrent.ussdDial ? '1. Dial ' + plCurrent.ussdDial + '\n2. Enter link number ' : 'DeenWallet Transfer link number: ') + plCurrent.shortCode, 'Copied');
         });
         plEl('pl-d-wa').addEventListener('click', () => {

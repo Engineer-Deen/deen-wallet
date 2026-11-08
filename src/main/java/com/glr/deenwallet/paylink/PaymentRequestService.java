@@ -263,6 +263,7 @@ public class PaymentRequestService {
         m.put("cardEnabled", cardEnabled);
         m.put("shortCode", row.length > 18 ? row[18] : null);
         m.put("ussdDial", ussdDial == null ? "" : ussdDial.trim());
+        m.put("ussdDialFull", dialFull(row.length > 18 ? row[18] : null));
         if (row[5] != null) {
             long amount = ((Number) row[5]).longValue();
             ConversionFee fee = ConversionFee.calculate(amount);
@@ -415,6 +416,16 @@ public class PaymentRequestService {
     @Value("${USSD_DIAL_CODE:}")
     private String ussdDial = "";
 
+    /** When true (USSD_COMBINED_DIAL=true), the link shows ONE string to dial: the flow code plus the link number, e.g. *715*2077842*572135#. */
+    @Value("${USSD_COMBINED_DIAL:false}")
+    private boolean ussdCombined;
+
+    private String dialFull(Object shortCode) {
+        String d = ussdDial == null ? "" : ussdDial.trim();
+        if (!ussdCombined || shortCode == null || !d.endsWith("#") || d.length() < 3) return "";
+        return d.substring(0, d.length() - 1) + "*" + shortCode + "#";
+    }
+
     private Map<String, Object> ownerView(Object[] row) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", String.valueOf(row[0]));
@@ -437,6 +448,7 @@ public class PaymentRequestService {
         m.put("inProgress", ((Number) row[17]).longValue());
         m.put("shortCode", row.length > 18 ? row[18] : null);
         m.put("ussdDial", ussdDial == null ? "" : ussdDial.trim());
+        m.put("ussdDialFull", dialFull(row.length > 18 ? row[18] : null));
         return m;
     }
 

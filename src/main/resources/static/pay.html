@@ -294,7 +294,7 @@ label.l{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:0 
       if (v.note) { $('note').textContent = v.note; $('note').classList.remove('hidden'); }
       if (v.amountMinor != null) { $('amt-big').innerHTML = '<i>SLE</i>' + (v.amountMinor / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
       else { $('amt-label').textContent = 'You choose the amount'; $('amt-big').innerHTML = '<i>SLE</i>Any'; $('amt-field').classList.remove('hidden'); }
-      if (v.shortCode && v.ussdDial) { $('uh-dial').textContent = v.ussdDial; $('uh-num').textContent = v.shortCode; $('ussdhint').classList.remove('hidden'); }
+      if (v.shortCode && v.ussdDial) { if (v.ussdDialFull) { $('ussdhint').innerHTML = '<b>No internet?</b> Dial <strong id="uh-full"></strong>'; $('uh-full').textContent = v.ussdDialFull; } else { $('uh-dial').textContent = v.ussdDial; $('uh-num').textContent = v.shortCode; } $('ussdhint').classList.remove('hidden'); }
       document.title = 'Pay ' + name + ' · DeenWallet Transfer';
       $('main').classList.remove('hidden');
       enableCard(v); if (cardReturn()) return;
@@ -437,7 +437,7 @@ label.l{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:0 
     loadImg('/assets/icon-192.png').then(function (logo) {
       var c = drawReceipt(d, logo), b64 = c.toDataURL('image/jpeg', 0.92).split(',')[1];
       var blob = pdfFromJpeg(b64, c.width, c.height, 450, 630);
-      var file = null, fname = 'DeenWallet-receipt-' + String(d.ref || 'payment').replace(/[^A-Za-z0-9-]/g, '') + '.pdf';
+      var file = null, fname = 'DeenWallet-Transfer-receipt-' + String(d.ref || 'payment').replace(/[^A-Za-z0-9-]/g, '') + '.pdf';
       try { file = new File([blob], fname, { type: 'application/pdf' }); } catch (e) { }
       if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
         return navigator.share({ files: [file], title: 'Payment receipt', text: 'Payment receipt ' + (d.ref || '') }).catch(function (e) { if (e && e.name === 'AbortError') return; downloadBlob(blob, fname); });
