@@ -109,18 +109,37 @@ public class UssdPayLinkController {
         JsonNode flow = p.path("flowData");
         String subscriber = text(p.path("global").path("subscriberId"));
         if (subscriber.isEmpty()) subscriber = text(p.path("global").path("sessionId"));
-        String slug = text(flow.path("enter_code")).toLowerCase(); boolean inflow = "inflow".equals(text(p.path("exportedData").path("mode"))); String next = inflow ? "share_number" : "pick_provider";
+        String slug = latest(flow, "code_retry", "enter_code").toLowerCase(); boolean inflow = "inflow".equals(text(p.path("exportedData").path("mode"))); String next = inflow ? "share_number" : "pick_provider";
 
-        if ("enter_code".equals(page) || "ask_amount".equals(page)) {
+        if ("enter_code".equals(page) || "code_retry".equals(page) || "ask_amount".equals(page) || "amount_retry".equals(page)) {
+            boolean codePage = "enter_code".equals(page) || "code_retry".equals(page);
+            String amountIn = latest(flow, "amount_retry", "ask_amount");
+            // 0 = go back / cancel (in-session flow only). Going back always uses the *_retry pages so the newest answer is easy to find.
+            if (inflow && codePage && "0".equals(slug)) return stop("Cancelled. Nothing was charged.");
+            if (inflow && !codePage && "0".equals(amountIn)) return navigate("code_retry", Map.of("error", "Back. Enter the link number (0 to cancel):"));
             limit(lookups, subscriber, 30, "Too many attempts. Please wait a few minutes and try again.");
-            Map<String, Object> v = service.publicView(slug);
+            Map<String, Object> v;
+            try {
+                v = service.publicView(slug);
+            } catch (IllegalArgumentException e) {
+                if (!inflow) throw e;
+                return navigate("code_retry", Map.of("error", clip(e.getMessage(), 50) + " Try again (0 to cancel):"));
+            }
             if (!"ACTIVE".equals(String.valueOf(v.get("status")))) throw new IllegalStateException("This payment link is not accepting payments.");
             String payee = String.valueOf(v.get("payeeName"));
             if (v.get("amountMinor") == null) {
-                if ("enter_code".equals(page)) {
-                    return navigate("ask_amount", Map.of("payee", clip(payee, 24)));
+                if (codePage) {
+                    if (!inflow) return navigate("ask_amount", Map.of("payee", clip(payee, 24)));
+                    boolean again = !text(flow.path("amount_retry")).isEmpty();
+                    return navigate(again ? "amount_retry" : "ask_amount", Map.of("payee", clip(payee, 24), "error", "Pay " + clip(payee, 24) + ". Enter amount in SLE (0 = back):"));
                 }
-                long minor = amountMinor(text(flow.path("ask_amount")));
+                long minor;
+                try {
+                    minor = amountMinor(amountIn);
+                } catch (IllegalArgumentException e) {
+                    if (!inflow) throw e;
+                    return navigate("amount_retry", Map.of("payee", clip(payee, 24), "error", "Amount must be 1 or more, max 2 decimals. Enter amount in SLE (0 = back):"));
+                }
                 return navigate(next, Map.of("summary", summary(payee, minor, inflow)));
             }
             return navigate(next, Map.of("summary", summary(payee, ((Number) v.get("amountMinor")).longValue(), inflow)));
@@ -144,8 +163,10 @@ public class UssdPayLinkController {
             PaymentRequestService.StartRequest r = new PaymentRequestService.StartRequest();
             r.setProviderId(provider);
             r.setPhone(phone);
-            String amt = text(flow.path("ask_amount"));
-            if (!amt.isEmpty()) r.setAmount(new BigDecimal(amt.replace(",", "")));
+            String amt = latest(flow, "amount_retry", "ask_amount");
+            if (!amt.isEmpty()) {
+                try { r.setAmount(BigDecimal.valueOf(amountMinor(amt), 2)); } catch (IllegalArgumentException ignored) { }
+            }
             Map<String, Object> res = service.startPayment(slug, "ussd-" + subscriber, r);
             Object code = res.get("ussdCode");
             long total = ((Number) res.get("totalMinor")).longValue();
@@ -178,8 +199,10 @@ public class UssdPayLinkController {
         PaymentRequestService.StartRequest r = new PaymentRequestService.StartRequest();
         r.setProviderId(provider);
         r.setPhone(phone);
-        String amt = text(flow.path("ask_amount"));
-        if (!amt.isEmpty()) r.setAmount(new BigDecimal(amt.replace(",", "")));
+        String amt = latest(flow, "amount_retry", "ask_amount");
+        if (!amt.isEmpty()) {
+            try { r.setAmount(BigDecimal.valueOf(amountMinor(amt), 2)); } catch (IllegalArgumentException ignored) { }
+        }
         Map<String, Object> res = service.startPayment(slug, "ussd-" + subscriber, r);
         String target = targetOf(String.valueOf(res.get("ussdCode")));
         if (res.get("ussdCode") == null || target.length() < 6) {
@@ -211,11 +234,17 @@ public class UssdPayLinkController {
         return last.replaceAll("\\D", "");
     }
 
+    /** The newest answer: the "retry" page when it has one, otherwise the first page. */
+    private static String latest(JsonNode flow, String retryPage, String firstPage) {
+        String r = text(flow.path(retryPage));
+        return r.isEmpty() ? text(flow.path(firstPage)) : r;
+    }
+
     private static long amountMinor(String raw) {
         BigDecimal a;
         try { a = new BigDecimal(raw.replace(",", "").trim()); } catch (Exception e) { a = null; }
         if (a == null || a.compareTo(BigDecimal.ONE) < 0 || a.scale() > 2 || a.compareTo(new BigDecimal("100000000")) > 0) {
-            throw new IllegalArgumentException("That amount is not valid. Dial again and enter an amount of at least 1.");
+            throw new IllegalArgumentException("Enter an amount of 1 or more, up to 2 decimals.");
         }
         return a.movePointRight(2).longValueExact();
     }

@@ -67,6 +67,8 @@ label.l{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:0 
 .prov .pt small{font-size:11.5px;font-weight:600;color:#6b7f87;line-height:1.2}
 .prov .tag{margin-left:auto;font-size:11px;font-weight:700;color:#8a5a00;background:#FFF1CC;border-radius:999px;padding:4px 10px;white-space:nowrap;flex:0 0 auto}
 .soonmsg{margin:8px 2px 0;font-size:13px;color:#5b6f76}
+.ussdhint{margin-top:14px;padding:12px 14px;border-radius:14px;background:var(--mist);font-size:13px;line-height:1.5;text-align:center}
+.ussdhint strong{letter-spacing:.5px}
 .sum{background:var(--mist);border-radius:14px;padding:12px 14px;margin-bottom:16px}
 .sum div{display:flex;justify-content:space-between;gap:10px;font-size:14.5px;color:var(--ink2);padding:3px 0}
 .sum div.t{margin-top:6px;padding-top:9px;border-top:1px dashed #C6D8DE;color:var(--ink);font-weight:800;font-size:16.5px}
@@ -180,6 +182,7 @@ label.l{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:0 
       <div class="sum" id="sum"><div><span>Amount</span><b id="s-amt">—</b></div><div><span>Service fee (3%)</span><b id="s-fee">—</b></div><div class="t"><span>You pay</span><b id="s-total">—</b></div></div>
       <button class="btn" id="pay" type="button">Continue</button>
       <p class="fine">You will get a one-time code to dial on your phone. Your mobile money PIN is only ever typed on your own phone.</p>
+      <div class="ussdhint hidden" id="ussdhint"><b>No internet?</b> Dial <strong id="uh-dial"></strong> and enter link number <strong id="uh-num"></strong>.</div>
     </section>
 
     <!-- step 2: dial -->
@@ -291,6 +294,7 @@ label.l{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:0 
       if (v.note) { $('note').textContent = v.note; $('note').classList.remove('hidden'); }
       if (v.amountMinor != null) { $('amt-big').innerHTML = '<i>SLE</i>' + (v.amountMinor / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
       else { $('amt-label').textContent = 'You choose the amount'; $('amt-big').innerHTML = '<i>SLE</i>Any'; $('amt-field').classList.remove('hidden'); }
+      if (v.shortCode && v.ussdDial) { $('uh-dial').textContent = v.ussdDial; $('uh-num').textContent = v.shortCode; $('ussdhint').classList.remove('hidden'); }
       document.title = 'Pay ' + name + ' · DeenWallet Transfer';
       $('main').classList.remove('hidden');
       enableCard(v); if (cardReturn()) return;

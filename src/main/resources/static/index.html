@@ -2265,6 +2265,11 @@
         .pl-acts > button { flex:1 1 30%; min-width:92px; }
         .pl-qr { margin:16px auto 4px; width:170px; padding:10px; background:#fff; border:1px solid var(--border); border-radius:16px; }
         .pl-qr svg { display:block; width:100%; height:auto; }
+        .pl-lbl { margin:14px 0 -6px; font-size:12px; font-weight:800; color:var(--muted); text-align:center; letter-spacing:.2px; }
+        .pl-ussd { margin-top:14px; padding:14px; border-radius:16px; background:#F2FAFB; border:1px solid #D6ECF0; }
+        .pl-ussd-h { font-size:13px; font-weight:800; color:#0F5E70; margin-bottom:8px; text-align:center; }
+        .pl-ussd-row { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:9px 0; border-top:1px solid #DCEEF2; font-size:13px; color:#2A4A54; }
+        .pl-ussd-row b { font-size:19px; letter-spacing:1px; color:var(--primary); }
         .pl-stats { display:flex; gap:8px; margin-top:16px; }
         .pl-stat { flex:1; background:#fff; border:1px solid var(--border); border-radius:14px; padding:11px 8px; text-align:center; }
         .pl-stat b { display:block; font-size:15px; }
@@ -3848,11 +3853,18 @@
                     <div><span class="pl-chip" id="pl-d-chip"></span></div>
                     <div class="pl-help" id="pl-d-sub" style="margin-top:8px;"></div>
                 </div>
+                <div class="pl-lbl">Your payment link &middot; tap it to copy</div>
                 <div class="pl-link" id="pl-d-link" role="button" aria-label="Copy the link"></div>
                 <div class="pl-acts">
                     <button type="button" class="btn-fill" id="pl-d-copy">Copy link</button>
                     <button type="button" class="btn-fill" id="pl-d-wa" style="background:#1FA855;">WhatsApp</button>
                     <button type="button" class="btn-outline" id="pl-d-share">Share</button>
+                </div>
+                <div class="pl-ussd hidden" id="pl-d-ussd">
+                    <div class="pl-ussd-h">Pay by phone code &middot; no internet needed</div>
+                    <div class="pl-ussd-row" id="pl-d-dialrow"><span>1. Dial</span><b id="pl-d-dial"></b></div>
+                    <div class="pl-ussd-row"><span id="pl-d-numlbl">2. Enter link number</span><b id="pl-d-num"></b></div>
+                    <button type="button" class="btn-outline" id="pl-d-ussdcopy" style="margin-top:10px;">Copy these steps</button>
                 </div>
                 <div class="pl-qr" id="pl-d-qr"></div>
                 <div class="pl-help" style="text-align:center;">Scan to pay</div>
@@ -8615,8 +8627,13 @@
             plEl('pl-d-title').textContent = l.title || '';
             plEl('pl-d-chip').outerHTML = plChip(l.status).replace('<span ', '<span id="pl-d-chip" ');
             plEl('pl-d-sub').textContent = (l.amountMinor == null ? 'Payer chooses the amount' : plMoney(l.amountMinor)) +
-                ' · ' + (l.reusable ? 'Many payments' : 'One payment') + ' · ' + plExpiryText(l) + (l.shortCode ? ' · USSD number ' + l.shortCode : '');
+                ' · ' + (l.reusable ? 'Many payments' : 'One payment') + ' · ' + plExpiryText(l);
             plEl('pl-d-link').textContent = l.link || '';
+            plEl('pl-d-ussd').classList.toggle('hidden', !l.shortCode);
+            plEl('pl-d-dialrow').classList.toggle('hidden', !l.ussdDial);
+            plEl('pl-d-numlbl').textContent = l.ussdDial ? '2. Enter link number' : 'Link number';
+            plEl('pl-d-dial').textContent = l.ussdDial || '';
+            plEl('pl-d-num').textContent = l.shortCode || '';
             plEl('pl-d-recv').textContent = plMoney(l.receivedMinor);
             plEl('pl-d-count').textContent = String(Number(l.paidCount || 0));
             plEl('pl-d-prog').textContent = String(Number(l.inProgress || 0));
@@ -8672,10 +8689,10 @@
         }
         let plCurrent = null;
         function plShareText(l) {
-            return (l.title ? l.title + ': ' : '') + 'pay ' + (l.amountMinor == null ? '' : plMoney(l.amountMinor) + ' ') + 'to ' + (l.destHolderName || 'me') + ' here (no account needed): ' + l.link;
+            return (l.title ? l.title + ': ' : '') + 'pay ' + (l.amountMinor == null ? '' : plMoney(l.amountMinor) + ' ') + 'to ' + (l.destHolderName || 'me') + ' here (no account needed): ' + l.link + (l.shortCode && l.ussdDial ? '\n\nOr dial ' + l.ussdDial + ' and enter link number ' + l.shortCode + '.' : '');
         }
-        function plCopy(text) {
-            const ok = () => showToast('Link copied');
+        function plCopy(text, msg) {
+            const ok = () => showToast(msg || 'Link copied');
             try {
                 if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(ok, ok); return; }
             } catch (_) { }
@@ -8688,6 +8705,10 @@
         }
         plEl('pl-d-copy').addEventListener('click', () => { if (plCurrent) plCopy(plCurrent.link); });
         plEl('pl-d-link').addEventListener('click', () => { if (plCurrent) plCopy(plCurrent.link); });
+        plEl('pl-d-ussdcopy').addEventListener('click', () => {
+            if (!plCurrent || !plCurrent.shortCode) return;
+            plCopy((plCurrent.ussdDial ? '1. Dial ' + plCurrent.ussdDial + '\n2. Enter link number ' : 'DeenWallet link number: ') + plCurrent.shortCode, 'Copied');
+        });
         plEl('pl-d-wa').addEventListener('click', () => {
             if (!plCurrent) return;
             try { window.open('https://wa.me/?text=' + encodeURIComponent(plShareText(plCurrent)), '_blank'); } catch (_) { plCopy(plCurrent.link); }

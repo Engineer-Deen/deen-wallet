@@ -261,6 +261,8 @@ public class PaymentRequestService {
         m.put("payeeType", row[7]);
         m.put("payeePhoto", ownerPhoto(row[1]));
         m.put("cardEnabled", cardEnabled);
+        m.put("shortCode", row.length > 18 ? row[18] : null);
+        m.put("ussdDial", ussdDial == null ? "" : ussdDial.trim());
         if (row[5] != null) {
             long amount = ((Number) row[5]).longValue();
             ConversionFee fee = ConversionFee.calculate(amount);
@@ -409,6 +411,10 @@ public class PaymentRequestService {
 
     // ------------------------------------------------------------------ helpers
 
+    /** The code a payer dials for the USSD flow, e.g. *715*1234#. Set USSD_DIAL_CODE in the env file; empty hides the USSD hints. */
+    @Value("${USSD_DIAL_CODE:}")
+    private String ussdDial = "";
+
     private Map<String, Object> ownerView(Object[] row) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", String.valueOf(row[0]));
@@ -430,6 +436,7 @@ public class PaymentRequestService {
         m.put("receivedMinor", ((Number) row[16]).longValue());
         m.put("inProgress", ((Number) row[17]).longValue());
         m.put("shortCode", row.length > 18 ? row[18] : null);
+        m.put("ussdDial", ussdDial == null ? "" : ussdDial.trim());
         return m;
     }
 
