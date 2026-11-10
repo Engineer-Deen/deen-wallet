@@ -1063,6 +1063,7 @@ public class WalletService {
             users.clearFailedPinAttempts(me.getId());
             return;
         }
+        com.glr.deenwallet.monitoring.SecurityTag.tag("PIN_FAILED");
         users.recordFailedPinAttempt(me.getId(), Instant.now());
         audit.record(me, "SECURITY", "WRONG_PIN", "Entered a wrong PIN in Wallet", null, null, null, null);
         User state = users.findById(me.getId()).orElse(fresh);

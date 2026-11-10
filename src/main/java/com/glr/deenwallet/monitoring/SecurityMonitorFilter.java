@@ -31,11 +31,13 @@ public class SecurityMonitorFilter extends OncePerRequestFilter {
     private final SecurityEventService events;
     private final ServerMetricsService metrics;
     private final BlockedIpService blockedIps;
+    private final LoginAbuseGuard abuse;
 
-    public SecurityMonitorFilter(SecurityEventService events, ServerMetricsService metrics, BlockedIpService blockedIps) {
+    public SecurityMonitorFilter(SecurityEventService events, ServerMetricsService metrics, BlockedIpService blockedIps, LoginAbuseGuard abuse) {
         this.events = events;
         this.metrics = metrics;
         this.blockedIps = blockedIps;
+        this.abuse = abuse;
     }
 
     @Override
@@ -65,6 +67,7 @@ public class SecurityMonitorFilter extends OncePerRequestFilter {
             try {
                 String body = cached == null ? null : new String(cached.getContentAsByteArray(), StandardCharsets.UTF_8);
                 observe(request, response.getStatus(), (System.nanoTime() - start) / 1_000_000L, body);
+                if (response.getStatus() < 400 && SecurityTag.isGood(request)) abuse.markGood(ip);
             } catch (RuntimeException ignored) {
                 // monitoring must never break a request
             }
@@ -103,18 +106,12 @@ public class SecurityMonitorFilter extends OncePerRequestFilter {
             kind = "RATE_LIMIT";
         } else if (status >= 400) {
             String lower = path.toLowerCase();
-            if (SCAN.matcher(q == null ? path : path + "?" + q).find()) {
-                kind = "SCAN";
-            } else if ("POST".equals(method) && lower.contains("/login") && status != 404) {
-                kind = "LOGIN_FAILED";
-            } else if ("POST".equals(method) && lower.contains("pin") && (status == 400 || status == 401 || status == 403 || status == 423)) {
-                kind = "PIN_FAILED";
-            } else if ((status == 401 || status == 403) && lower.startsWith("/api/admin/") && req.getHeader("Authorization") == null) {
-                kind = "ADMIN_PROBE";
-            }
+            kind = SecurityTag.kind(SCAN.matcher(q == null ? path : path + "?" + q).find(), method, lower, status, SecurityTag.of(req),
+                    (status == 401 || status == 403) && lower.startsWith("/api/admin/") && req.getHeader("Authorization") == null);
         }
         if (kind != null) {
             events.record(req.getRemoteAddr(), kind, method, path, status, req.getHeader("User-Agent"), detail);
+            abuse.onFailure(req.getRemoteAddr(), method, path, kind, SecurityTag.accountOf(req), status, req.getHeader("User-Agent"));
         }
     }
 }

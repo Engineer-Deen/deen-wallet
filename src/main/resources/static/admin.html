@@ -4967,7 +4967,9 @@
                 return '<div class="mx-spark"><div class="mx-s-l">Attacks per hour (left = 24 hours ago, right = now)</div><svg viewBox="0 0 100 30" preserveAspectRatio="none">' + bars + '</svg></div>';
             }
             var MX_KIND = {
-                RATE_LIMIT: 'Too many requests (blocked)', LOGIN_FAILED: 'Wrong password', PIN_FAILED: 'Wrong PIN',
+                RATE_LIMIT: 'Too many requests (blocked)', LOGIN_FAILED: 'Wrong password (real check)', PIN_FAILED: 'Wrong PIN (real check)',
+                LOGIN_UNKNOWN: 'Login with an unknown account', HUMAN_FAILED: 'Human check failed', REJECTED: 'Rejected before the password / PIN check', AUTO_BAN: 'Blocked automatically (bot behaviour)',
+                AUTO_BAN_WATCH: 'Would be blocked automatically (watch mode, not blocked)', AUTO_BAN_SKIPPED: 'Looked like a bot, but a real customer uses this address (not blocked)',
                 SCAN: 'Probing for weak files', ADMIN_PROBE: 'Tried the admin area without signing in', SQLI: 'SQL injection attempt'
             };
             function mxKinds(obj) {

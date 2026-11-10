@@ -51,6 +51,9 @@ public class AuthService {
     private static final Duration PIN_RESET_OTP_LIFETIME = Duration.ofMinutes(10);
     private static final Duration PIN_RESET_TOKEN_LIFETIME = Duration.ofMinutes(10);
     private final ConcurrentHashMap<String, Object> pinResetLocks = new ConcurrentHashMap<>();
+    private final UnknownLoginGuard unknownLogins = new UnknownLoginGuard();
+    private final ConcurrentHashMap<UUID, Long> pauseMailAt = new ConcurrentHashMap<>();
+    private volatile String dummyHash;
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -193,12 +196,15 @@ public class AuthService {
          * address. Therefore normal user authentication must explicitly query
          * for the USER role instead of using findByEmail().
          */
-        User user = userRepository.findByEmailAndRole(email, "USER")
-                .orElseThrow(() -> new InvalidUserLoginException("Invalid email or password."));
+        User user = userRepository.findByEmailAndRole(email, "USER").orElse(null);
+        if (user == null) {
+            throw unknownAccountFailure(email, request.getPassword());
+        }
 
         checkUserLoginRateLimit(user);
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+            com.glr.deenwallet.monitoring.SecurityTag.tag("LOGIN_FAILED", email);
             registerFailedUserLogin(user);
 
             User state = userRepository.findById(user.getId()).orElse(user);
@@ -206,6 +212,9 @@ public class AuthService {
             if (state.getLoginLockedUntil() != null
                     && state.getLoginLockedUntil().isAfter(Instant.now())) {
 
+                if (state.getLoginFailedAttempts() == USER_LOGIN_MAX_FAILURES) {
+                    notifyPasswordPause(state); // this very try started the pause: tell the owner
+                }
                 throw new UserLoginRateLimitedException(
                         "Too many incorrect login attempts. Login is temporarily paused until "
                                 + state.getLoginLockedUntil()
@@ -229,6 +238,7 @@ public class AuthService {
 
         clearUserLoginFailures(user);
 
+        com.glr.deenwallet.monitoring.SecurityTag.good();
         return issueLoginResponse(user);
     }
 
@@ -748,6 +758,7 @@ public class AuthService {
 
         Instant now = Instant.now();
 
+        com.glr.deenwallet.monitoring.SecurityTag.tag("PIN_FAILED");
         int changed = userRepository.recordFailedPinAttempt(
                 userId,
                 now
@@ -835,10 +846,22 @@ public class AuthService {
         );
     }
 
+    /** Tells the account owner that sign-in was paused (at most one email per hour per account, so nobody can mail-bomb them). */
+    private void notifyPasswordPause(User state) {
+        try {
+            long now = System.currentTimeMillis();
+            if (pauseMailAt.size() > 5000) pauseMailAt.clear();
+            Long before = pauseMailAt.get(state.getId());
+            if (before != null && now - before < 3_600_000L) return;
+            pauseMailAt.put(state.getId(), now);
+            emailService.sendAccountLockedEmail(state, "password");
+        } catch (RuntimeException e) {
+            log.warn("Could not queue the sign-in pause email: {}", e.toString());
+        }
+    }
+
     private String buildLoginFailureMessage(User user) {
         User state = userRepository.findById(user.getId()).orElse(user);
-
-        int failures = state.getLoginFailedAttempts();
 
         if (state.getLoginLockedUntil() != null
                 && state.getLoginLockedUntil().isAfter(Instant.now())) {
@@ -848,14 +871,45 @@ public class AuthService {
                     + ". Please try again later or contact support.";
         }
 
-        int remaining = Math.max(
-                0,
-                USER_LOGIN_MAX_FAILURES - failures
-        );
+        // Same words as for an email that is not registered: a bot must not learn which emails have an account.
+        return "Invalid email or password.";
+    }
 
-        return "Invalid password. "
-                + remaining
-                + " login attempt(s) remaining before a temporary security pause.";
+    /**
+     * An email that is not registered gets exactly what a registered one gets with a wrong password: the same
+     * words, the same time (a password check is still run) and the same pause after 5 tries.
+     */
+    private RuntimeException unknownAccountFailure(String email, String password) {
+        com.glr.deenwallet.monitoring.SecurityTag.tag("LOGIN_UNKNOWN", email);
+        Instant now = Instant.now();
+        Instant until = unknownLogins.lockedUntil(email, now);
+        if (until == null) {
+            burnPasswordTime(password);
+            until = unknownLogins.fail(email, now);
+        }
+        if (until != null) {
+            return new UserLoginRateLimitedException(
+                    "Too many incorrect login attempts. Login is temporarily paused until "
+                            + until
+                            + ". Please try again later or contact support.",
+                    until
+            );
+        }
+        return new InvalidUserLoginException("Invalid email or password.");
+    }
+
+    /** Spends the same time a real password check would, so the reply time does not give an unknown email away. */
+    private void burnPasswordTime(String password) {
+        try {
+            String h = dummyHash;
+            if (h == null) {
+                h = passwordEncoder.encode("dw-unused-" + UUID.randomUUID());
+                dummyHash = h;
+            }
+            passwordEncoder.matches(password == null ? "" : password, h);
+        } catch (RuntimeException ignored) {
+            // timing hint only
+        }
     }
 
     private void clearUserLoginFailures(User user) {

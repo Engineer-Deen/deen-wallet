@@ -200,6 +200,7 @@ public class WaecAdminController {
             userRepository.clearFailedPinAttempts(fresh.getId());
             return null;
         }
+        com.glr.deenwallet.monitoring.SecurityTag.tag("PIN_FAILED");
         userRepository.recordFailedPinAttempt(fresh.getId(), Instant.now());
         User state = userRepository.findById(fresh.getId()).orElse(fresh);
         if (state.getPinAttempts() >= 2) {

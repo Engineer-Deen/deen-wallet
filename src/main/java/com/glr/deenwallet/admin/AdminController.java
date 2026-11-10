@@ -538,6 +538,7 @@ public class AdminController {
             return ResponseEntity.ok().build();
         }
 
+        com.glr.deenwallet.monitoring.SecurityTag.tag("PIN_FAILED");
         userRepository.recordFailedPinAttempt(currentUser.getId(), Instant.now());
         User state = userRepository.findById(currentUser.getId()).orElse(currentUser);
         int attempts = state.getPinAttempts();

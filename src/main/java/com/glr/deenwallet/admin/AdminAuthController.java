@@ -44,10 +44,17 @@ public class AdminAuthController {
 
     @PostMapping("/login")
     public ResponseEntity<AdminLoginResponse> login(
-            @Valid @RequestBody AdminLoginRequest r
+            @Valid @RequestBody AdminLoginRequest r,
+            jakarta.servlet.http.HttpServletRequest http
     ) {
         turnstile.verify(r.getTurnstileToken());
         String email = r.email.trim().toLowerCase(Locale.ROOT);
+
+        String ip = http.getRemoteAddr();
+        Instant paused = adminGuard.pausedUntil(email, ip, Instant.now());
+        if (paused != null) {
+            throw new AdminLockedException(adminPauseMessage(paused));
+        }
 
         /*
          USER and ADMIN/SUPER_ADMIN accounts may share the same email.
@@ -56,7 +63,20 @@ public class AdminAuthController {
          SUPER_ADMIN is checked first so that an administrator email
          cannot accidentally resolve to a normal USER account.
          */
-        User u = findAdminByEmail(email);
+        User u = findAdminByEmailOrNull(email);
+        if (u == null) {
+            com.glr.deenwallet.monitoring.SecurityTag.tag("LOGIN_UNKNOWN", email);
+            burnPasswordTime(r.password);
+            throw adminFailure(null, email, ip, Instant.now());
+        }
+
+        // The password is checked FIRST. Only someone who knows it is told about the state of the account
+        // (inactive / unverified / disabled), so those messages cannot be used to find out who is an administrator.
+        if (!encoder.matches(r.password, u.getPasswordHash())) {
+            com.glr.deenwallet.monitoring.SecurityTag.tag("LOGIN_FAILED", email);
+            throw adminFailure(u, email, ip, Instant.now());
+        }
+        adminGuard.success(email, ip);
 
         if (!u.isActive()) {
             throw new IllegalStateException(
@@ -84,79 +104,12 @@ public class AdminAuthController {
             );
         }
 
-        if (!encoder.matches(r.password, u.getPasswordHash())) {
-
-            Instant now = Instant.now();
-
-            int changed = repo.recordAdminPasswordFailure(
-                    u.getId(),
-                    now
-            );
-
-            User state = repo.findById(u.getId()).orElse(u);
-
-            int failures = state.getLoginFailedAttempts();
-
-            if (failures >= MAX_ADMIN_PASSWORD_FAILURES) {
-
-                if (changed == 1
-                        && failures == MAX_ADMIN_PASSWORD_FAILURES) {
-
-                    if ("SUPER_ADMIN".equals(state.getRole())) {
-                        state.setAdminRecoveryRequired(true);
-                        repo.save(state);
-
-                        emailService.sendAdminLoginBlockedEmail(
-                                state,
-                                true
-                        );
-
-                        throw new AdminRecoveryRequiredException(
-                                "Two incorrect password attempts were detected. Your super admin account was not locked. Request the email OTP to verify ownership and continue."
-                        );
-                    }
-
-                    state.setLocked(true);
-                    state.setLockedAt(now);
-
-                    repo.save(state);
-
-                    emailService.sendAdminLoginBlockedEmail(
-                            state,
-                            false
-                    );
-
-                    throw new AdminLockedException(
-                            "Admin account disabled after 2 incorrect password attempts. Request an OTP to restore access or contact the super admin."
-                    );
-                }
-
-                if ("SUPER_ADMIN".equals(state.getRole())) {
-                    throw new AdminRecoveryRequiredException(
-                            "Additional verification is required. Request the recovery OTP to continue."
-                    );
-                }
-
-                throw new AdminLockedException(
-                        "Admin account disabled after 2 incorrect password attempts. Request an OTP to restore access or contact the super admin."
-                );
-            }
-
-            int remaining =
-                    MAX_ADMIN_PASSWORD_FAILURES - failures;
-
-            throw new AdminPasswordException(
-                    "Incorrect admin password. "
-                            + remaining
-                            + " warning(s) remaining before admin protection is activated."
-            );
-        }
-
         repo.clearLoginFailures(u.getId());
 
         u.setPinAttempts(0);
         repo.save(u);
 
+        com.glr.deenwallet.monitoring.SecurityTag.good();
         return ResponseEntity.ok(issue(u));
     }
 
@@ -430,6 +383,45 @@ public class AdminAuthController {
             String role
     ) {}
 
+
+    private final AdminLoginGuard adminGuard = new AdminLoginGuard();
+
+    private static String adminPauseMessage(Instant until) {
+        return "Too many incorrect attempts. Admin sign-in is temporarily paused until " + until
+                + ". Please try again later, or use the restore-access options.";
+    }
+
+    /** The reply to a wrong password or an unknown email: the same words, and the same pauses, for both. */
+    private RuntimeException adminFailure(User admin, String email, String ip, Instant now) {
+        AdminLoginGuard.Outcome o = adminGuard.fail(email, ip, now);
+        if (o.accountJustPaused() && admin != null) {
+            try {
+                emailService.sendAdminLoginBlockedEmail(admin, "SUPER_ADMIN".equals(admin.getRole()));
+            } catch (RuntimeException ignored) {
+                // the notice is best effort; the pause already protects the account
+            }
+        }
+        if (o.until() != null) {
+            return new AdminLockedException(adminPauseMessage(o.until()));
+        }
+        return new AdminPasswordException("Invalid admin credentials");
+    }
+
+    private volatile String dummyHash;
+
+    /** Spends the same time a real password check would, so the reply time does not give an unknown email away. */
+    private void burnPasswordTime(String password) {
+        try {
+            String h = dummyHash;
+            if (h == null) {
+                h = encoder.encode("dw-unused-" + UUID.randomUUID());
+                dummyHash = h;
+            }
+            encoder.matches(password == null ? "" : password, h);
+        } catch (RuntimeException ignored) {
+            // timing hint only
+        }
+    }
 
     private User findAdminByEmail(String email) {
         return repo.findByEmailAndRole(email, "SUPER_ADMIN")

@@ -56,6 +56,7 @@ public class MoneySafetyController {
             users.clearFailedPinAttempts(me.getId());
             return;
         }
+        com.glr.deenwallet.monitoring.SecurityTag.tag("PIN_FAILED");
         users.recordFailedPinAttempt(me.getId(), Instant.now());
         User state = users.findById(me.getId()).orElse(fresh);
         if (state.getPinAttempts() >= 2) {

@@ -123,7 +123,8 @@ public class SecurityEventService {
                 long n = num(r[1]);
                 Map<String, Long> kinds = kindsByIp.getOrDefault(ip, Map.of());
                 long scans = kinds.getOrDefault("SCAN", 0L) + kinds.getOrDefault("ADMIN_PROBE", 0L);
-                long logins = kinds.getOrDefault("LOGIN_FAILED", 0L) + kinds.getOrDefault("PIN_FAILED", 0L);
+                long logins = kinds.getOrDefault("LOGIN_FAILED", 0L) + kinds.getOrDefault("PIN_FAILED", 0L) + kinds.getOrDefault("LOGIN_UNKNOWN", 0L)
+                        + kinds.getOrDefault("HUMAN_FAILED", 0L) + kinds.getOrDefault("REJECTED", 0L);
                 long sqli = kinds.getOrDefault("SQLI", 0L);
                 String level = (n >= 100 || scans >= 10 || logins >= 15 || sqli >= 3) ? "high" : (n >= 20 || scans >= 3 || logins >= 6 || sqli >= 1) ? "medium" : "low";
                 Map<String, Object> m = new LinkedHashMap<>();

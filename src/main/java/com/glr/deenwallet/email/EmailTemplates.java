@@ -296,7 +296,7 @@ final class EmailTemplates {
 
                 <div style="background-color: #F9FAFB; border-left: 4px solid %5$s; padding: 16px; border-radius: 4px; margin: 20px 0 24px 0;">
                     <p style="margin: 0; color: %2$s; font-size: 14px; line-height: 1.5;">
-                        To restore access, please contact support at <strong style="color: %1$s;">%6$s</strong>.
+                        This pause ends by itself in about 30 minutes, and you can also restore access sooner from the admin sign-in page. If this was not you, please contact support at <strong style="color: %1$s;">%6$s</strong>.
                     </p>
                 </div>
             </div>

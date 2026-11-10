@@ -90,6 +90,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                             List.of(new SimpleGrantedAuthority("ROLE_" + role))
                     );
                     SecurityContextHolder.getContext().setAuthentication(authToken);
+                    com.glr.deenwallet.monitoring.SecurityTag.good(req);
                 }
             } catch (IllegalArgumentException e) {
                 SecurityContextHolder.clearContext();
