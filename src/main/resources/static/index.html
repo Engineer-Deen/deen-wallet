@@ -271,6 +271,15 @@
         #screen-waec-confirm .top-bar > div { grid-column:1 / -1; min-width:0; }
         #screen-waec-start .greeting-title,
         #screen-waec-confirm .greeting-title { white-space:nowrap; font-size:clamp(24px, 6.2vw, 30px); line-height:1.12; }
+        /* Withdraw from Bank headers: same full-width heading as the WAEC screens. */
+        #screen-bankin-start .top-bar > div,
+        #screen-bankin-confirm .top-bar > div,
+        #screen-bankin-wait .top-bar > div { grid-column:1 / -1; min-width:0; }
+        #screen-bankin-start .greeting-title,
+        #screen-bankin-confirm .greeting-title,
+        #screen-bankin-wait .greeting-title { font-size:clamp(24px, 6.2vw, 30px); line-height:1.12; }
+        #screen-bankin-start .greeting-title,
+        #screen-bankin-confirm .greeting-title { white-space:nowrap; }
 
         /* ============================================================ */
         /* TOP BAR */
@@ -3208,7 +3217,7 @@
         <div class="scroll">
             <div class="top-bar">
                 <div>
-                    <h1 class="greeting-title" style="font-size:clamp(24px, 6.2vw, 30px);">Withdraw from Bank</h1>
+                    <h1 class="greeting-title">Withdraw from Bank</h1>
                     <p class="greeting-sub">Pay from your bank account and receive the money on your mobile money number.</p>
                 </div>
             </div>
@@ -3265,7 +3274,7 @@
         <div class="scroll">
             <div class="top-bar">
                 <div>
-                    <h1 class="greeting-title" style="font-size:clamp(24px, 6.2vw, 30px);">Confirm Withdrawal</h1>
+                    <h1 class="greeting-title">Confirm Withdrawal</h1>
                     <p class="greeting-sub">Check the details before you continue.</p>
                 </div>
             </div>
@@ -3304,7 +3313,7 @@
         <div class="scroll">
             <div class="top-bar">
                 <div>
-                    <h1 class="greeting-title" style="font-size:clamp(24px, 6.2vw, 30px);" id="bankin-wait-title">Waiting for your bank payment</h1>
+                    <h1 class="greeting-title" id="bankin-wait-title">Waiting for your bank payment</h1>
                     <p class="greeting-sub" id="bankin-wait-sub">Finish the payment on the bank page. This screen updates by itself.</p>
                 </div>
             </div>
@@ -3329,7 +3338,7 @@
         </div>
     </div>
 
-    <!-- ===================== STEP 3: USSD CONFIRMATION =====================
+    <!-- ===================== STEP 3: USSD CONFIRMATION ===================== -->
     <div class="screen" id="screen-step3">
         <button class="ussd-back" id="step3-back-btn">&#8592;</button>
         <div class="ussd-body">
