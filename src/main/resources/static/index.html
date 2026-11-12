@@ -8443,9 +8443,29 @@
         });
 
         function biOpenBankPage(url) {
+            const cap = window.Capacitor;
+            const native = !!(cap && typeof cap.isNativePlatform === 'function' && cap.isNativePlatform());
+            const B = cap && cap.Plugins && cap.Plugins.Browser;
+            if (native && B && typeof B.open === 'function') {
+                // Inside the app: open the bank page in an in-app browser tab on top of DeenWallet Transfer.
+                // Closing it (X or Back) returns to this screen, which then checks the payment straight away.
+                try {
+                    if (!window.__biBrowserHooked && typeof B.addListener === 'function') {
+                        window.__biBrowserHooked = true;
+                        B.addListener('browserFinished', () => {
+                            if (biTx && biEl('screen-bankin-wait').classList.contains('active')) {
+                                biStopPoll(); biPollCount = 0; biPoll();
+                            }
+                        });
+                    }
+                    B.open({ url: url, presentationStyle: 'fullscreen', toolbarColor: '#0C2A33' });
+                    return;
+                } catch (_) { /* fall through to the normal way */ }
+            }
             let w = null;
             try { w = window.open(url, '_blank'); } catch (_) { w = null; }
-            if (!w) window.location.href = url;
+            // On the website a blocked pop-up falls back to this tab; inside the app never navigate the app itself away.
+            if (!w && !native) window.location.href = url;
         }
 
         async function biSubmit() {
