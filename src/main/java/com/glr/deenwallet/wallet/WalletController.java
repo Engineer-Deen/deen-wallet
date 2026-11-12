@@ -29,9 +29,11 @@ public class WalletController {
 
     public record TransferRequest(UUID adminId, BigDecimal amount, String note, String pin) { }
 
-    public record WithdrawRequest(String method, String providerId, String destination, BigDecimal amount, String pin, Boolean save) { }
+    public record WithdrawRequest(String method, String providerId, String destination, BigDecimal amount, String pin, Boolean save, String account) { }
 
     public record SavedRequest(String method, String providerId, String destination) { }
+
+    public record AccountMoveRequest(String from, BigDecimal amount, String pin) { }
 
     private final WalletService wallet;
     private final UserRepository users;
@@ -46,14 +48,16 @@ public class WalletController {
         return ResponseEntity.ok(wallet.summary(admin()));
     }
 
-    /** Live payments in / payouts out of the DeenWallet account. type = credit (payments in) or debit (payouts out). Super admin only. */
+    /** Live payments in / payouts out of the DeenWallet account (account=waec: the separate WAEC pin account). type = credit (payments in) or debit (payouts out). Super admin only. */
     @GetMapping("/transactions")
     public ResponseEntity<WalletService.TxPage> transactions(@RequestParam(required = false) String type,
                                                              @RequestParam(required = false) String after,
-                                                             @RequestParam(required = false) String q) {
+                                                             @RequestParam(required = false) String q,
+                                                             @RequestParam(required = false) String account) {
         requireSuper(admin());
-        if (q != null && !q.isBlank()) return ResponseEntity.ok(wallet.search(type, q));
-        return ResponseEntity.ok(wallet.transactions(type, after));
+        boolean waec = "waec".equalsIgnoreCase(account);
+        if (q != null && !q.isBlank()) return ResponseEntity.ok(wallet.search(type, q, waec));
+        return ResponseEntity.ok(wallet.transactions(type, after, waec));
     }
 
     @GetMapping("/activity")
@@ -90,7 +94,15 @@ public class WalletController {
     @PostMapping("/withdraw")
     public ResponseEntity<WalletService.Summary> withdraw(@RequestBody WithdrawRequest r) {
         return ResponseEntity.ok(wallet.withdraw(admin(), r.method(), r.providerId(), r.destination(), r.amount(), r.pin(),
-                Boolean.TRUE.equals(r.save())));
+                Boolean.TRUE.equals(r.save()), r.account()));
+    }
+
+    /** Super admin: move money between the main account and the WAEC pin account (from = main or waec). */
+    @PostMapping("/account-transfer")
+    public ResponseEntity<WalletService.Summary> accountTransfer(@RequestBody AccountMoveRequest r) {
+        User me = admin();
+        requireSuper(me);
+        return ResponseEntity.ok(wallet.moveBetweenAccounts(me, r.from(), r.amount(), r.pin()));
     }
 
     /** Mobile money number (8 digits after +232) -> network and name on the number. */

@@ -48,11 +48,31 @@ public class WalletMonimeApi {
         return props.defaultFinancialAccountId();
     }
 
+    /** The separate WAEC pin payments account (read-only here: balance and lists). */
+    public boolean waecConfigured() {
+        String id = props.waecFinancialAccountId();
+        return id != null && !id.isBlank();
+    }
+
+    public String waecAccountId() {
+        String id = props.waecFinancialAccountId();
+        return id == null ? null : id.trim();
+    }
+
     /** Available balance in minor units. Throws IllegalStateException with a readable message when Monime cannot answer. */
     public long availableBalance(boolean fresh) {
-        requireConfigured();
-        String body = get("balance", fresh, () -> monime.get()
-                .uri(b -> b.path("/v1/financial-accounts/{id}").queryParam("withBalance", true).build(accountId()))
+        return balance(false, fresh);
+    }
+
+    /** Available balance of the WAEC account in minor units. */
+    public long waecAvailableBalance(boolean fresh) {
+        return balance(true, fresh);
+    }
+
+    private long balance(boolean waec, boolean fresh) {
+        final String acct = accountFor(waec);
+        String body = get(waec ? "balance-waec" : "balance", fresh, () -> monime.get()
+                .uri(b -> b.path("/v1/financial-accounts/{id}").queryParam("withBalance", true).build(acct))
                 .retrieve().body(String.class));
         try {
             JsonNode value = mapper.readTree(body).path("result").path("balance").path("available").path("value");
@@ -67,14 +87,18 @@ public class WalletMonimeApi {
 
     /** One page of the account's financial transactions. type is "credit", "debit" or null for both. */
     public JsonNode transactions(String type, String after, int limit) {
-        requireConfigured();
+        return transactions(type, after, limit, false);
+    }
+
+    public JsonNode transactions(String type, String after, int limit, boolean waec) {
+        final String acct = accountFor(waec);
         String t = "credit".equals(type) || "debit".equals(type) ? type : null;
         int size = Math.max(1, Math.min(limit, 50));
-        String key = "tx|" + t + "|" + (after == null ? "" : after) + "|" + size;
+        String key = "tx|" + (waec ? "w" : "m") + "|" + t + "|" + (after == null ? "" : after) + "|" + size;
         String body = get(key, false, () -> monime.get()
                 .uri(b -> {
                     b.path("/v1/financial-transactions")
-                            .queryParam("financialAccountId", accountId())
+                            .queryParam("financialAccountId", acct)
                             .queryParam("limit", size);
                     if (t != null) b.queryParam("type", t);
                     if (after != null && !after.isBlank()) b.queryParam("after", after);
@@ -108,6 +132,16 @@ public class WalletMonimeApi {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /** The account id to read; throws a readable message when that account is not set up. */
+    private String accountFor(boolean waec) {
+        if (waec) {
+            if (!waecConfigured()) throw new IllegalStateException("The WAEC payment account is not set up on the server.");
+            return waecAccountId();
+        }
+        requireConfigured();
+        return accountId();
     }
 
     private void requireConfigured() {

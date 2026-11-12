@@ -405,11 +405,13 @@ public class TransactionService {
 
         final PaymentCodeResult paymentCode;
         try {
+            // WAEC pin money is collected into its own Monime account (when one is configured).
             paymentCode = monimeClient.createPaymentCode(CreatePaymentCodeRequest.oneTime(
                     "DeenWallet Transfer WAEC result pin",
                     collectAmount,
                     request.getSourcePhone(),
-                    transactionId.toString()), "paycode-" + transactionId);
+                    transactionId.toString()).withFinancialAccount(monimeProperties.waecFinancialAccountId()),
+                    "paycode-" + transactionId);
         } catch (RuntimeException e) {
             transactionTemplate.executeWithoutResult(st -> {
                 Transaction current = transactionRepository.findById(transactionId).orElse(null);
@@ -1250,6 +1252,25 @@ public class TransactionService {
         return t.getPayoutAttempt() == 0 ? "payout-" + t.getId() : "payout-" + t.getId() + "-" + t.getPayoutAttempt();
     }
 
+    /**
+     * A refund is paid from the account the customer's money went into: WAEC pin orders from the WAEC account
+     * (unless they were created before it existed, see waecAccountSince), everything else from the main account.
+     */
+    private String refundSourceAccount(Transaction t) {
+        String main = monimeProperties.defaultFinancialAccountId();
+        String waec = monimeProperties.waecFinancialAccountId();
+        if (t.getServiceType() != TransactionServiceType.WAEC_RESULT_PIN || waec == null || waec.isBlank()) return main;
+        String since = monimeProperties.waecAccountSince();
+        if (since != null && !since.isBlank() && t.getCreatedAt() != null) {
+            try {
+                if (t.getCreatedAt().isBefore(java.time.Instant.parse(since.trim()))) return main;
+            } catch (java.time.format.DateTimeParseException e) {
+                log.warn("MONIME_WAEC_ACCOUNT_SINCE is not a valid time ({}); ignoring it", since);
+            }
+        }
+        return waec.trim();
+    }
+
     private CreatePayoutRequest buildPayoutRequest(Transaction t) {
         Money amount = new Money(t.getAmountCurrency(), t.getAmountValue());
         if (t.getServiceType() == TransactionServiceType.BANK_TRANSFER) {
@@ -1446,7 +1467,7 @@ public class TransactionService {
         CreatePayoutRequest request = CreatePayoutRequest.toMobileMoney(
                 new Money(t.getAmountCurrency(), t.getTotalChargedValue()),
                 t.getSourceProviderId(), t.getSourcePhone(),
-                monimeProperties.defaultFinancialAccountId());
+                refundSourceAccount(t));
         PayoutResult payout;
         try {
             payout = monimeClient.createPayout(request, "refund-" + t.getId());

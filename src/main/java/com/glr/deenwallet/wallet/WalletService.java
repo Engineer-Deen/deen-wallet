@@ -61,6 +61,15 @@ public class WalletService {
     private static final Logger log = LoggerFactory.getLogger(WalletService.class);
 
     static final String CURRENCY = "SLE";
+
+    /** Money already promised out of the MAIN account: open main withdrawals plus main-to-WAEC moves still being sent. */
+    private static final String MAIN_PENDING_SQL =
+            "SELECT COALESCE((SELECT SUM(amount_value + fee_value) FROM wallet_withdrawals WHERE status IN ('PENDING', 'REVIEW') AND account = 'MAIN'), 0) "
+                    + "+ COALESCE((SELECT SUM(amount_value) FROM wallet_account_transfers WHERE status IN ('PENDING', 'REVIEW') AND from_account = 'MAIN'), 0)";
+    /** Same for the WAEC pin account. */
+    private static final String WAEC_PENDING_SQL =
+            "SELECT COALESCE((SELECT SUM(amount_value + fee_value) FROM wallet_withdrawals WHERE status IN ('PENDING', 'REVIEW') AND account = 'WAEC'), 0) "
+                    + "+ COALESCE((SELECT SUM(amount_value) FROM wallet_account_transfers WHERE status IN ('PENDING', 'REVIEW') AND from_account = 'WAEC'), 0)";
     private static final long MIN_MINOR = 100;                    // SLE 1.00
     private static final long MAX_MINOR = 10_000_000_000L;        // SLE 100,000,000.00
     private static final long ADVISORY_LOCK = 7_340_035L;
@@ -117,7 +126,8 @@ public class WalletService {
 
     public record Summary(String role, boolean superAdmin, boolean configured, String error,
                           Long monimeAvailable, long heldForAdmins, long pendingOut, Long withdrawable,
-                          long myBalance, long myPending, String currency) { }
+                          long myBalance, long myPending, String currency,
+                          boolean waecConfigured, Long waecAvailable, String waecError, Long waecWithdrawable) { }
 
     public record AdminRow(UUID id, String name, String email, long balance) { }
 
@@ -154,9 +164,23 @@ public class WalletService {
                 }
             }
         }
+        boolean waecConfigured = isSuper && monimeApi.waecConfigured();
+        Long waecAvailable = null;
+        String waecError = null;
+        if (waecConfigured) {
+            try {
+                waecAvailable = monimeApi.waecAvailableBalance(false);
+            } catch (IllegalStateException e) {
+                waecError = e.getMessage();
+            }
+        }
         long held = scalar("SELECT COALESCE(SUM(balance_value), 0) FROM admin_wallets");
-        long pending = scalar("SELECT COALESCE(SUM(amount_value + fee_value), 0) FROM wallet_withdrawals WHERE status IN ('PENDING', 'REVIEW')");
+        long pending = scalar(MAIN_PENDING_SQL);
         Long withdrawable = monime == null ? null : Math.max(0, monime - held - pending);
+        Long waecWithdrawable = null;
+        if (waecConfigured && waecAvailable != null) {
+            waecWithdrawable = Math.max(0, waecAvailable - scalar(WAEC_PENDING_SQL));
+        }
         long mine = 0;
         long minePending = 0;
         if (!isSuper) {
@@ -165,27 +189,29 @@ public class WalletService {
                     + "WHERE owner_user_id = :u AND status IN ('PENDING', 'REVIEW')", me.getId());
         }
         return new Summary(me.getRole(), isSuper, configured, error, monime, isSuper ? held : 0, isSuper ? pending : 0,
-                withdrawable, mine, minePending, CURRENCY);
+                withdrawable, mine, minePending, CURRENCY,
+                waecConfigured, waecAvailable, waecError, waecWithdrawable);
     }
 
     // ------------------------------------------------------------------ live Monime lists (super admin)
 
-    public TxPage transactions(String type, String after) {
-        return transactions(type, after, 20);
+    /** waec = false: the main account; true: the separate WAEC pin account. */
+    public TxPage transactions(String type, String after, boolean waec) {
+        return transactions(type, after, 20, waec);
     }
 
     /**
      * Searches the latest payments or payouts (up to 600) for a DeenWallet reference, a payment-service reference,
      * a customer name, phone or email.
      */
-    public TxPage search(String type, String q) {
+    public TxPage search(String type, String q, boolean waec) {
         String needle = q == null ? "" : q.trim().toLowerCase();
-        if (needle.isEmpty()) return transactions(type, null, 20);
+        if (needle.isEmpty()) return transactions(type, null, 20, waec);
         List<TxRow> found = new ArrayList<>();
         String cursor = null;
         String error = null;
         for (int page = 0; page < 12; page++) {
-            TxPage p = transactions(type, cursor, 50);
+            TxPage p = transactions(type, cursor, 50, waec);
             if (p.error() != null) { error = p.error(); break; }
             for (TxRow r : p.rows()) {
                 if (rowMatches(r, needle)) found.add(r);
@@ -226,10 +252,10 @@ public class WalletService {
         while (m.find()) out.add(m.group().toLowerCase());
     }
 
-    private TxPage transactions(String type, String after, int limit) {
+    private TxPage transactions(String type, String after, int limit, boolean waec) {
         JsonNode root;
         try {
-            root = monimeApi.transactions(type, after, limit);
+            root = monimeApi.transactions(type, after, limit, waec);
         } catch (IllegalStateException e) {
             return new TxPage(List.of(), null, e.getMessage());
         }
@@ -552,12 +578,13 @@ public class WalletService {
         String scopeW = isSuper ? "" : "WHERE w.owner_user_id = :u ";
         var wq = em.createNativeQuery(
                 "SELECT w.id, w.created_at, w.amount_value, w.status, u.full_name, w.method, w.provider_id, w.destination, "
-                        + "w.holder_name, w.failure_reason, w.scope FROM wallet_withdrawals w "
+                        + "w.holder_name, w.failure_reason, w.scope, w.account FROM wallet_withdrawals w "
                         + "LEFT JOIN users u ON u.id = w.owner_user_id " + scopeW + "ORDER BY w.created_at DESC LIMIT 50");
         if (!isSuper) wq.setParameter("u", me.getId());
         for (Object[] r : (List<Object[]>) wq.getResultList()) {
             String detail = ("momo".equals(r[5]) ? MOMO_PROVIDERS.getOrDefault((String) r[6], "Mobile money") : "Bank")
-                    + " " + r[7] + (r[8] == null ? "" : " (" + r[8] + ")");
+                    + " " + r[7] + (r[8] == null ? "" : " (" + r[8] + ")")
+                    + ("WAEC".equals(r[11]) ? " | from the WAEC pin account" : "");
             out.add(new Activity("withdrawal", String.valueOf(r[0]), instant(r[1]), ((Number) r[2]).longValue(),
                     (String) r[3], r[4] == null ? "Admin" : (String) r[4], detail, (String) r[9]));
         }
@@ -574,6 +601,16 @@ public class WalletService {
             if (r[5] != null && !String.valueOf(r[5]).isBlank()) detail += " - " + r[5];
             out.add(new Activity("transfer", String.valueOf(r[0]), instant(r[1]), ((Number) r[2]).longValue(),
                     "COMPLETED", r[3] == null ? "Admin" : (String) r[3], detail, null));
+        }
+        if (isSuper) {
+            for (Object[] r : (List<Object[]>) em.createNativeQuery(
+                    "SELECT t.id, t.created_at, t.amount_value, t.status, u.full_name, t.from_account, t.failure_reason "
+                            + "FROM wallet_account_transfers t LEFT JOIN users u ON u.id = t.created_by "
+                            + "ORDER BY t.created_at DESC LIMIT 30").getResultList()) {
+                String detail = "WAEC".equals(r[5]) ? "WAEC pin account to main account" : "Main account to WAEC pin account";
+                out.add(new Activity("account_transfer", String.valueOf(r[0]), instant(r[1]), ((Number) r[2]).longValue(),
+                        (String) r[3], r[4] == null ? "Super admin" : (String) r[4], detail, (String) r[6]));
+            }
         }
         out.sort(Comparator.comparing(Activity::at, Comparator.nullsLast(Comparator.reverseOrder())));
         return out.size() > 60 ? new ArrayList<>(out.subList(0, 60)) : out;
@@ -739,7 +776,7 @@ public class WalletService {
         tx.executeWithoutResult(st -> {
             lockPlatform();
             long held = scalarTx("SELECT COALESCE(SUM(balance_value), 0) FROM admin_wallets");
-            long pending = scalarTx("SELECT COALESCE(SUM(amount_value + fee_value), 0) FROM wallet_withdrawals WHERE status IN ('PENDING', 'REVIEW')");
+            long pending = scalarTx(MAIN_PENDING_SQL);
             long free = monime - held - pending;
             if (minor > free) {
                 throw new IllegalArgumentException("Not enough free money in the DeenWallet balance. Available to send: "
@@ -762,18 +799,193 @@ public class WalletService {
         return summary(me);
     }
 
+    // ------------------------------------------------------------------ move money between the main and WAEC accounts (super admin)
+
+    private static String accountName(String key) {
+        return "WAEC".equals(key) ? "WAEC pin account" : "main account";
+    }
+
+    /**
+     * Moves money inside Monime between the main account and the WAEC pin account. A PENDING row is written first
+     * (and counted as money already promised out of the source account), then Monime is called with the fixed
+     * idempotency key "acct-xfer-{id}". WalletReconcileJob finishes any move whose first answer was not final.
+     */
+    public Summary moveBetweenAccounts(User me, String from, BigDecimal amount, String pin) {
+        requireSuper(me);
+        safety.requireOpenForAdmins();
+        verifyPin(me, pin);
+        long minor = toMinor(amount);
+        final boolean fromWaec = "waec".equalsIgnoreCase(from);
+        if (!fromWaec && !"main".equalsIgnoreCase(from)) throw new IllegalArgumentException("Choose which account to move money from.");
+        if (!monimeApi.configured() || !monimeApi.waecConfigured()) {
+            throw new IllegalStateException("Both payment accounts must be set up on the server first.");
+        }
+        if (monimeApi.accountId().trim().equals(monimeApi.waecAccountId())) {
+            throw new IllegalStateException("The main account and the WAEC account are the same account. Check the server settings.");
+        }
+        final String fromKey = fromWaec ? "WAEC" : "MAIN";
+        final String toKey = fromWaec ? "MAIN" : "WAEC";
+        final long source = fromWaec ? monimeApi.waecAvailableBalance(true) : monimeApi.availableBalance(true);
+        final UUID id = UUID.randomUUID();
+
+        tx.executeWithoutResult(st -> {
+            lockPlatform();
+            long held = fromWaec ? 0L : scalarTx("SELECT COALESCE(SUM(balance_value), 0) FROM admin_wallets");
+            long pending = scalarTx(fromWaec ? WAEC_PENDING_SQL : MAIN_PENDING_SQL);
+            long free = source - held - pending;
+            if (minor > free) {
+                throw new IllegalArgumentException("Not enough free money in the " + accountName(fromKey) + ". Available to move: "
+                        + money(Math.max(0, free)) + (fromWaec ? "." : " (the rest is held for admin wallets or already on its way out)."));
+            }
+            Map<String, Object> t = new LinkedHashMap<>();
+            t.put("id", id);
+            t.put("from_account", fromKey);
+            t.put("to_account", toKey);
+            t.put("amount_value", minor);
+            t.put("created_by", me.getId());
+            insertRow("wallet_account_transfers", t);
+        });
+        log.info("Wallet: {} moves {} from the {} to the {} (ref {})", me.getEmail(), money(minor), accountName(fromKey), accountName(toKey), id);
+        audit.record(me, "WALLET", "WALLET_ACCOUNT_MOVE", "Moved " + money(minor) + " from the " + accountName(fromKey) + " to the " + accountName(toKey),
+                null, null, "Ref " + refOf(id), null);
+        safety.alert("WALLET_ACCOUNT_MOVE", "Money moved between accounts", me.getFullName() + " moved " + money(minor)
+                + " from the " + accountName(fromKey) + " to the " + accountName(toKey) + ".");
+        sendAccountTransfer(id);
+        return summary(me);
+    }
+
+    /** Sends one PENDING account move to Monime (idempotent). Safe to call again for the same id. */
+    void sendAccountTransfer(UUID id) {
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = em.createNativeQuery(
+                "SELECT status, from_account, amount_value, monime_transfer_id FROM wallet_account_transfers WHERE id = :id")
+                .setParameter("id", id).getResultList();
+        if (rows.isEmpty()) return;
+        Object[] r = rows.get(0);
+        if (!"PENDING".equals(r[0]) || r[3] != null) return;
+        if (safety.isFrozen()) return;   // frozen: stays PENDING and is sent after a super admin resumes
+        if (!monimeApi.configured() || !monimeApi.waecConfigured()) {
+            log.warn("Wallet: account move {} cannot be sent because an account is not set up; it stays pending", id);
+            return;
+        }
+        final boolean fromWaec = "WAEC".equals(r[1]);
+        final String src = fromWaec ? monimeApi.waecAccountId() : monimeApi.accountId().trim();
+        final String dst = fromWaec ? monimeApi.accountId().trim() : monimeApi.waecAccountId();
+        final long amount = ((Number) r[2]).longValue();
+        tx.executeWithoutResult(st -> em.createNativeQuery(
+                "UPDATE wallet_account_transfers SET attempts = attempts + 1, updated_at = now() WHERE id = :id")
+                .setParameter("id", id).executeUpdate());
+        try {
+            com.glr.deenwallet.monime.InternalTransferResult t = monimeClient.createInternalTransfer(
+                    com.glr.deenwallet.monime.CreateInternalTransferRequest.of(new Money(CURRENCY, amount), src, dst,
+                            "DeenWallet Transfer move " + refOf(id)), "acct-xfer-" + id);
+            if (t == null || t.id() == null || t.id().isBlank()) {
+                log.warn("Wallet: Monime returned no transfer id for account move {}; will retry with the same key", id);
+                return;
+            }
+            applyAccountTransferStatus(id, t);
+        } catch (ResourceAccessException e) {
+            log.warn("Wallet: account move {} timed out; will retry with the same key", id);
+        } catch (RestClientResponseException e) {
+            int s = e.getStatusCode().value();
+            if (s == 429 || s == 408 || s == 409 || s >= 500) {
+                log.warn("Wallet: account move {} got HTTP {} from Monime; will retry with the same key", id, s);
+                return;
+            }
+            String body = e.getResponseBodyAsString();
+            if (body != null && body.length() > 200) body = body.substring(0, 200);
+            log.error("Wallet: Monime rejected account move {} (HTTP {}): {}", id, s, body);
+            finishAccountTransfer(id, "FAILED", "The payment provider rejected this move (HTTP " + s + ").");
+        }
+    }
+
+    private void applyAccountTransferStatus(UUID id, com.glr.deenwallet.monime.InternalTransferResult t) {
+        tx.executeWithoutResult(st -> em.createNativeQuery(
+                "UPDATE wallet_account_transfers SET monime_transfer_id = :m, updated_at = now() WHERE id = :id AND monime_transfer_id IS NULL")
+                .setParameter("m", t.id()).setParameter("id", id).executeUpdate());
+        String s = t.status() == null ? "" : t.status();
+        if ("completed".equalsIgnoreCase(s)) {
+            finishAccountTransfer(id, "COMPLETED", null);
+        } else if ("failed".equalsIgnoreCase(s)) {
+            String reason = t.failureDetail() != null && t.failureDetail().message() != null
+                    ? t.failureDetail().message() : "The payment provider could not complete this move.";
+            finishAccountTransfer(id, "FAILED", reason.length() > 450 ? reason.substring(0, 450) : reason);
+        }
+    }
+
+    /** Final state of an account move. Only a PENDING or REVIEW row changes, so running it twice is harmless. */
+    private void finishAccountTransfer(UUID id, String status, String reason) {
+        final String sql = "UPDATE wallet_account_transfers SET status = :s, failure_reason = " + (reason == null ? "NULL" : ":r")
+                + ", updated_at = now()" + ("COMPLETED".equals(status) ? ", completed_at = now()" : "")
+                + " WHERE id = :id AND status IN ('PENDING', 'REVIEW')";
+        Integer changed = tx.execute(st -> {
+            var q = em.createNativeQuery(sql).setParameter("s", status).setParameter("id", id);
+            if (reason != null) q.setParameter("r", reason);
+            return q.executeUpdate();
+        });
+        if (changed != null && changed > 0 && "FAILED".equals(status)) {
+            safety.alert("WALLET_ACCOUNT_MOVE_FAILED", "Account move failed", "A move of money between the main and WAEC accounts failed ("
+                    + refOf(id) + "). Nothing was moved. " + (reason == null ? "" : reason));
+        }
+    }
+
+    /** Checks Monime for the real outcome of one open account move. Called by WalletReconcileJob. */
+    void reconcileAccountTransfer(UUID id) {
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = em.createNativeQuery(
+                "SELECT status, monime_transfer_id, attempts, created_at FROM wallet_account_transfers WHERE id = :id")
+                .setParameter("id", id).getResultList();
+        if (rows.isEmpty()) return;
+        Object[] r = rows.get(0);
+        if (!"PENDING".equals(r[0])) return;
+        String transferId = (String) r[1];
+        if (transferId == null) {
+            Instant created = instant(r[3]);
+            if (created != null && created.plusSeconds(45).isAfter(Instant.now())) return;
+            if (((Number) r[2]).intValue() >= 12) {
+                finishAccountTransfer(id, "REVIEW", "The payment service did not confirm this move after several tries. Check the Monime dashboard before trying again.");
+                safety.alertOnce("acct-xfer:" + id, "WALLET_ACCOUNT_MOVE_REVIEW", "Account move needs a check",
+                        "A move between the main and WAEC accounts (" + refOf(id) + ") was not confirmed by Monime. Look in the Monime dashboard to see whether it happened.");
+                return;
+            }
+            sendAccountTransfer(id);
+            return;
+        }
+        try {
+            com.glr.deenwallet.monime.InternalTransferResult t = monimeClient.getInternalTransfer(transferId);
+            if (t != null) applyAccountTransferStatus(id, t);
+        } catch (RuntimeException e) {
+            log.warn("Wallet: could not read internal transfer {} for account move {}: {}", transferId, id, e.toString());
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    List<UUID> openAccountTransferIds() {
+        List<Object> rows = em.createNativeQuery(
+                "SELECT id FROM wallet_account_transfers WHERE status = 'PENDING' ORDER BY created_at LIMIT 50").getResultList();
+        List<UUID> out = new ArrayList<>();
+        for (Object r : rows) out.add((UUID) r);
+        return out;
+    }
+
     // ------------------------------------------------------------------ withdraw (both roles)
 
     public Summary withdraw(User me, String method, String providerId, String destination, BigDecimal amount, String pin,
-                            boolean saveAccount) {
+                            boolean saveAccount, String account) {
         if (!isSuper(me) && !"ADMIN".equals(me.getRole())) throw new IllegalArgumentException("Only admins can use the wallet.");
         safety.requireOpenForAdmins();
         verifyPin(me, pin);
         long minor = toMinor(amount);
         requireWithinSingleLimit(me, minor);
         Dest d = resolveDestination(me, method, providerId, destination);
-        if (!monimeApi.configured()) throw new IllegalStateException("The payment account is not set up on the server.");
-        long monime = monimeApi.availableBalance(true);
+        // account = "waec": a super admin withdraws from the separate WAEC pin account instead of the main one.
+        final boolean waec = "waec".equalsIgnoreCase(account);
+        if (waec && !isSuper(me)) throw new IllegalArgumentException("Only a super admin can withdraw from the WAEC pin account.");
+        if (waec ? !monimeApi.waecConfigured() : !monimeApi.configured()) {
+            throw new IllegalStateException(waec ? "The WAEC payment account is not set up on the server."
+                    : "The payment account is not set up on the server.");
+        }
+        long monime = waec ? monimeApi.waecAvailableBalance(true) : monimeApi.availableBalance(true);
         boolean isSuper = isSuper(me);
         UUID id = UUID.randomUUID();
         // Admin withdrawals are free; only the super admin pays the service fee.
@@ -794,13 +1006,14 @@ public class WalletService {
             }
             if (isSuper) {
                 lockPlatform();
-                long held = scalarTx("SELECT COALESCE(SUM(balance_value), 0) FROM admin_wallets");
-                long pending = scalarTx("SELECT COALESCE(SUM(amount_value + fee_value), 0) FROM wallet_withdrawals WHERE status IN ('PENDING', 'REVIEW')");
+                // Admin wallets are held inside the MAIN account only, so nothing is held back on the WAEC account.
+                long held = waec ? 0L : scalarTx("SELECT COALESCE(SUM(balance_value), 0) FROM admin_wallets");
+                long pending = scalarTx(waec ? WAEC_PENDING_SQL : MAIN_PENDING_SQL);
                 long free = monime - held - pending;
                 if (minor + fee > free) {
                     throw new IllegalArgumentException("Not enough free money to withdraw " + money(minor) + " plus the service fee of "
                             + money(fee) + ". Available: " + money(Math.max(0, free))
-                            + " (the rest is held for admin wallets or already on its way out).");
+                            + (waec ? " (the rest is already on its way out)." : " (the rest is held for admin wallets or already on its way out)."));
                 }
             } else {
                 // Same platform lock as the super admin path and transfers (always taken BEFORE a wallet row lock),
@@ -811,7 +1024,7 @@ public class WalletService {
                 if (minor > balance) {
                     throw new IllegalArgumentException("Your wallet balance is " + money(balance) + ".");
                 }
-                long pendingNow = scalarTx("SELECT COALESCE(SUM(amount_value + fee_value), 0) FROM wallet_withdrawals WHERE status IN ('PENDING', 'REVIEW')");
+                long pendingNow = scalarTx(MAIN_PENDING_SQL);
                 if (minor + fee > monime - pendingNow) {
                     throw new IllegalStateException("The payment account is busy or short right now. Please try again in a minute, or contact the super admin.");
                 }
@@ -824,6 +1037,7 @@ public class WalletService {
             w.put("id", id);
             w.put("owner_user_id", me.getId());
             w.put("scope", isSuper ? "PLATFORM" : "ADMIN");
+            w.put("account", waec ? "WAEC" : "MAIN");
             w.put("amount_value", minor);
             w.put("fee_value", fee);
             w.put("method", d.method);
@@ -833,11 +1047,11 @@ public class WalletService {
             insertRow("wallet_withdrawals", w);
         });
         log.info("Wallet: withdrawal {} of {} started by {}", id, money(minor), me.getEmail());
-        audit.record(me, "WALLET", "WALLET_WITHDRAW", "Withdrew " + money(minor) + " (" + d.label() + ")", null,
+        audit.record(me, "WALLET", "WALLET_WITHDRAW", "Withdrew " + money(minor) + (waec ? " from the WAEC pin account" : "") + " (" + d.label() + ")", null,
                 d.holder == null || d.holder.isBlank() ? null : d.holder, "Ref " + refOf(id)
                 + (fee > 0 ? ", service fee " + money(fee) : ", no fee"), null);
         notifyWithdrawal(id, "started");
-        safety.alert("WALLET_WITHDRAWAL", "Wallet withdrawal", me.getFullName() + " started a withdrawal of " + money(minor) + " to " + d.label() + ".");
+        safety.alert("WALLET_WITHDRAWAL", "Wallet withdrawal", me.getFullName() + " started a withdrawal of " + money(minor) + (waec ? " from the WAEC pin account" : "") + " to " + d.label() + ".");
         if (saveAccount) {
             try {
                 storeSaved(me, d);
@@ -870,9 +1084,16 @@ public class WalletService {
                 "UPDATE wallet_withdrawals SET attempts = attempts + 1, updated_at = now() WHERE id = :id")
                 .setParameter("id", id).executeUpdate());
 
+        // A WAEC withdrawal is always paid from the WAEC account; it never falls back to the main one.
+        final boolean fromWaec = "WAEC".equals(row[8]);
+        if (fromWaec && !monimeApi.waecConfigured()) {
+            log.warn("Wallet: withdrawal {} is from the WAEC account but that account is not set up; it stays pending", id);
+            return;
+        }
+        final String sourceAccount = fromWaec ? monimeApi.waecAccountId() : monimeProps.defaultFinancialAccountId();
         CreatePayoutRequest req = "bank".equals(method)
-                ? CreatePayoutRequest.toBank(new Money(CURRENCY, amount), providerId, destination, monimeProps.defaultFinancialAccountId())
-                : CreatePayoutRequest.toMobileMoney(new Money(CURRENCY, amount), providerId, destination, monimeProps.defaultFinancialAccountId());
+                ? CreatePayoutRequest.toBank(new Money(CURRENCY, amount), providerId, destination, sourceAccount)
+                : CreatePayoutRequest.toMobileMoney(new Money(CURRENCY, amount), providerId, destination, sourceAccount);
         try {
             PayoutResult p = monimeClient.createPayout(req, "wallet-wd-" + id);
             if (p == null || p.id() == null || p.id().isBlank()) {
@@ -1006,7 +1227,7 @@ public class WalletService {
     private Object[] loadWithdrawal(UUID id) {
         @SuppressWarnings("unchecked")
         List<Object[]> rows = em.createNativeQuery(
-                        "SELECT status, monime_payout_id, amount_value, method, provider_id, destination, attempts, created_at "
+                        "SELECT status, monime_payout_id, amount_value, method, provider_id, destination, attempts, created_at, account "
                                 + "FROM wallet_withdrawals WHERE id = :id")
                 .setParameter("id", id).getResultList();
         return rows.isEmpty() ? null : rows.get(0);

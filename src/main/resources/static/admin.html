@@ -3081,8 +3081,18 @@
                 <div class="wallet-hero-sub" id="wallet-sub"></div>
                 <div class="wallet-actions">
                     <button type="button" class="wallet-action" id="wallet-withdraw-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg><span>Withdraw</span></button>
+                    <button type="button" class="wallet-action hidden" id="wallet-move-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h12M15 3l4 4-4 4"/><path d="M17 17H5M9 13l-4 4 4 4"/></svg><span>Move money</span></button>
                     <button type="button" class="wallet-action hidden" id="wallet-transfer-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg><span>Send to admin</span></button>
                 </div>
+            </div>
+            <div class="admin-card hidden" id="wallet-waec-card" style="margin-top:10px;padding:12px 14px;cursor:pointer;">
+                <p class="admin-card-sub" style="margin:0;font-weight:800;">WAEC pin payments account</p>
+                <div id="wallet-waec-amount" style="font-size:22px;font-weight:800;margin-top:2px;">&mdash;</div>
+                <p class="admin-card-sub" id="wallet-waec-sub" style="margin:2px 0 0;">Money from WAEC pin sales. Tap to see its payments.</p>
+            </div>
+            <div class="wallet-tabs hidden" id="wallet-acct-tabs">
+                <button type="button" class="wallet-tab wallet-acct active" data-wacct="main">Main account</button>
+                <button type="button" class="wallet-tab wallet-acct" data-wacct="waec">WAEC pin account</button>
             </div>
             <div class="wallet-tabs hidden" id="wallet-tabs">
                 <button type="button" class="wallet-tab active" data-wtab="payments">Payments</button>
@@ -3102,6 +3112,12 @@
             <div class="wallet-sheet-overlay" id="wallet-withdraw-overlay" aria-hidden="true">
                 <div class="wallet-sheet">
                     <div class="wallet-sheet-head"><strong>Withdraw money</strong><button type="button" class="wallet-sheet-close" data-wallet-close="withdraw" aria-label="Close">&times;</button></div>
+                    <div class="wallet-field hidden" id="wd-account-field">
+                        <div class="wallet-seg" id="wd-account">
+                            <button type="button" class="active" data-acct="main">Main account</button>
+                            <button type="button" data-acct="waec">WAEC pin account</button>
+                        </div>
+                    </div>
                     <div class="wallet-note" id="wd-available"></div>
                     <div class="wallet-field">
                         <div class="wallet-seg" id="wd-source">
@@ -3150,6 +3166,24 @@
                     <div class="wallet-field"><label for="tr-pin">Your admin PIN</label><input id="tr-pin" class="wallet-input" type="password" autocomplete="off" inputmode="numeric" maxlength="4" placeholder="4 digits" /></div>
                     <div class="wallet-note bad hidden" id="tr-error"></div>
                     <button type="button" class="btn-primary" id="tr-submit" style="margin-top:14px;">Send money</button>
+                </div>
+            </div>
+
+            <div class="wallet-sheet-overlay" id="wallet-move-overlay" aria-hidden="true">
+                <div class="wallet-sheet">
+                    <div class="wallet-sheet-head"><strong>Move money between accounts</strong><button type="button" class="wallet-sheet-close" data-wallet-close="move" aria-label="Close">&times;</button></div>
+                    <div class="wallet-field">
+                        <div class="wallet-seg" id="mv-dir">
+                            <button type="button" class="active" data-from="main">Main to WAEC</button>
+                            <button type="button" data-from="waec">WAEC to Main</button>
+                        </div>
+                    </div>
+                    <div class="wallet-note" id="mv-available"></div>
+                    <div class="wallet-note ok">Free and instant: the money stays inside DeenWallet's Monime space. No service fee.</div>
+                    <div class="wallet-field"><label for="mv-amount">Amount (SLE)</label><input id="mv-amount" class="wallet-input" autocomplete="off" inputmode="decimal" placeholder="0.00" /></div>
+                    <div class="wallet-field"><label for="mv-pin">Your admin PIN</label><input id="mv-pin" class="wallet-input" type="password" autocomplete="off" inputmode="numeric" maxlength="4" placeholder="4 digits" /></div>
+                    <div class="wallet-note bad hidden" id="mv-error"></div>
+                    <button type="button" class="btn-primary" id="mv-submit" style="margin-top:14px;">Move money</button>
                 </div>
             </div>
         </div>
@@ -6353,7 +6387,7 @@
             // ==============================================================
             // WALLET
             // ==============================================================
-            var walletState = { summary: null, tab: 'activity', rows: [], next: null, pages: 0, timer: null, loading: false, options: null, admins: [], seq: 0, query: '' };
+            var walletState = { summary: null, tab: 'activity', rows: [], next: null, pages: 0, timer: null, loading: false, options: null, admins: [], seq: 0, query: '', account: 'main' };
 
             function wFmt(minor) {
                 var v = Number(minor || 0) / 100;
@@ -6405,7 +6439,7 @@
                 var amount = document.getElementById('wallet-balance');
                 var sub = document.getElementById('wallet-sub');
                 if (s.superAdmin) {
-                    label.textContent = 'DeenWallet balance';
+                    label.textContent = s.waecConfigured ? 'Main account balance' : 'DeenWallet balance';
                     amount.textContent = s.monimeAvailable == null ? 'Unavailable' : wMoneyH(s.monimeAvailable);
                     sub.textContent = s.monimeAvailable == null
                         ? (s.error || 'Could not read the balance.')
@@ -6419,6 +6453,17 @@
                 document.getElementById('wallet-transfer-btn').classList.toggle('hidden', !s.superAdmin);
                 document.getElementById('wallet-tabs').classList.toggle('hidden', !s.superAdmin);
                 walletShowError(s.superAdmin && s.error && s.monimeAvailable == null ? s.error : null);
+                var waecOn = !!(s.superAdmin && s.waecConfigured);
+                if (!waecOn) walletState.account = 'main';
+                var wcard = document.getElementById('wallet-waec-card');
+                wcard.classList.toggle('hidden', !waecOn);
+                document.getElementById('wallet-move-btn').classList.toggle('hidden', !waecOn);
+                if (waecOn) {
+                    document.getElementById('wallet-waec-amount').textContent = s.waecAvailable == null ? 'Unavailable' : wMoneyH(s.waecAvailable);
+                    document.getElementById('wallet-waec-sub').textContent = s.waecAvailable == null
+                        ? (s.waecError || 'Could not read the WAEC balance.')
+                        : 'Money from WAEC pin sales. It is separate from the main account. Tap to see its payments.';
+                }
             }
 
             function walletRowHtml(r, idx) {
@@ -6459,6 +6504,20 @@
             }
 
             function walletActivityHtml(a) {
+                if (a.kind === 'account_transfer') {
+                    var stx = a.status;
+                    var clsx = stx === 'COMPLETED' ? 'ok' : (stx === 'FAILED' ? 'bad' : '');
+                    var txtx = stx === 'COMPLETED' ? 'Completed' : (stx === 'FAILED' ? 'Failed' : (stx === 'REVIEW' ? 'Needs review' : 'Processing'));
+                    var subx = escapeHtml(a.detail || '') + (a.ownerName ? ' &middot; ' + escapeHtml(a.ownerName) : '');
+                    if (a.reason && (stx === 'FAILED' || stx === 'REVIEW')) subx += '<br>' + escapeHtml(a.reason);
+                    var tx2 = wTime(a.at);
+                    if (tx2) subx += '<br>' + tx2;
+                    return '<div class="wallet-row">'
+                        + '<div class="wallet-row-icon neutral">' + W_ICON_DOT + '</div>'
+                        + '<div class="wallet-row-main"><div class="wallet-row-title">Money moved between accounts</div><div class="wallet-row-sub">' + subx + '</div></div>'
+                        + '<div class="wallet-row-side"><div class="wallet-amount">' + wAmt(a.amount) + '</div><span class="wallet-pill ' + clsx + '">' + txtx + '</span></div>'
+                        + '</div>';
+                }
                 var isWithdrawal = a.kind === 'withdrawal';
                 var pill = '';
                 if (isWithdrawal) {
@@ -6500,9 +6559,12 @@
                 title.textContent = tab === 'payments' ? 'Payments received' : tab === 'payouts' ? 'Payouts sent' : tab === 'admins' ? 'Admin wallets' : 'Wallet activity';
                 var searching = (tab === 'payments' || tab === 'payouts') && walletState.query;
                 document.getElementById('wallet-search-wrap').classList.toggle('hidden', !(tab === 'payments' || tab === 'payouts'));
+                var acctOn = !!(walletState.summary && walletState.summary.superAdmin && walletState.summary.waecConfigured && (tab === 'payments' || tab === 'payouts'));
+                document.getElementById('wallet-acct-tabs').classList.toggle('hidden', !acctOn);
+                document.querySelectorAll('.wallet-acct').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-wacct') === walletState.account); });
                 sub.textContent = searching ? 'Results for "' + walletState.query + '" in the latest 600 entries.'
-                    : tab === 'payments' ? 'Every payment received by DeenWallet, live.'
-                    : tab === 'payouts' ? 'Every payout sent by DeenWallet, live.'
+                    : tab === 'payments' ? (walletState.account === 'waec' ? 'Every WAEC pin payment received, live.' : 'Every payment received by DeenWallet, live.')
+                    : tab === 'payouts' ? (walletState.account === 'waec' ? 'Every payout sent from the WAEC pin account (refunds), live.' : 'Every payout sent by DeenWallet, live.')
                     : tab === 'admins' ? 'Balances owed to admins. Tap Send money to pay an admin.'
                     : (walletIsSuper() ? 'Withdrawals and transfers made from the wallet.' : 'Pay you received and your withdrawals.');
                 if (!walletState.rows.length) {
@@ -6532,6 +6594,7 @@
                 var req;
                 if (tab === 'payments' || tab === 'payouts') {
                     var params = { type: tab === 'payments' ? 'credit' : 'debit' };
+                    if (walletState.account === 'waec') params.account = 'waec';
                     if (walletState.query) params.q = walletState.query;
                     else if (append && walletState.next) params.after = walletState.next;
                     req = adminApiRequest('/api/admin/wallet/transactions', { params: params }).then(function (page) {
@@ -6580,7 +6643,7 @@
                 walletState.query = '';
                 var si = document.getElementById('wallet-search');
                 if (si) si.value = '';
-                document.querySelectorAll('.wallet-tab').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-wtab') === tab); });
+                document.querySelectorAll('.wallet-tab[data-wtab]').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-wtab') === tab); });
                 renderWalletList();
                 return walletLoadList(false);
             }
@@ -6601,8 +6664,23 @@
                 }, 10000);
             }
 
-            document.querySelectorAll('.wallet-tab').forEach(function (b) {
+            document.querySelectorAll('.wallet-tab[data-wtab]').forEach(function (b) {
                 b.addEventListener('click', function () { walletSetTab(b.getAttribute('data-wtab')); });
+            });
+            function walletSetAccount(acct) {
+                walletState.account = acct === 'waec' ? 'waec' : 'main';
+                walletState.rows = []; walletState.next = null; walletState.pages = 0; walletState.query = '';
+                var si = document.getElementById('wallet-search');
+                if (si) si.value = '';
+                renderWalletList();
+                return walletLoadList(false);
+            }
+            document.querySelectorAll('.wallet-acct').forEach(function (b) {
+                b.addEventListener('click', function () { walletSetAccount(b.getAttribute('data-wacct')); });
+            });
+            document.getElementById('wallet-waec-card').addEventListener('click', function () {
+                walletState.account = 'waec';
+                walletSetTab('payments');
             });
             document.getElementById('wallet-more').addEventListener('click', function () { walletLoadList(true); });
             var walletSearchTimer = null;
@@ -6637,7 +6715,7 @@
             document.querySelectorAll('[data-wallet-close]').forEach(function (b) {
                 b.addEventListener('click', function () { walletCloseSheet(b.getAttribute('data-wallet-close')); });
             });
-            ['withdraw', 'transfer', 'detail'].forEach(function (n) {
+            ['withdraw', 'transfer', 'detail', 'move'].forEach(function (n) {
                 var ov = document.getElementById('wallet-' + n + '-overlay');
                 if (ov) ov.addEventListener('click', function (e) { if (e.target === ov) walletCloseSheet(n); });
             });
@@ -6784,6 +6862,7 @@
             // ---------- withdraw
             var wdSource = 'saved';      // 'saved' or 'new'
             var wdMethod = 'momo';
+            var wdAccount = 'main';      // 'main' or 'waec' (super admin only): which account the withdrawal comes from
             var wdSavedList = [];
             var wdSavedPick = null;      // the saved account chosen
             var wdDetected = null;       // momo: { providerId, providerName, holderName } once the number is recognised
@@ -6891,13 +6970,14 @@
                 var fee = Math.floor((minor + 50) / 100);
                 el.className = 'wallet-note ok';
                 el.textContent = walletIsSuper()
-                    ? 'Service fee (' + pct + '): ' + wMoney(fee) + '. Total taken from the DeenWallet balance: ' + wMoney(minor + fee) + '.'
+                    ? 'Service fee (' + pct + '): ' + wMoney(fee) + '. Total taken from the ' + (wdAccount === 'waec' ? 'WAEC pin account' : 'DeenWallet balance') + ': ' + wMoney(minor + fee) + '.'
                     : 'Free: no service fee on your withdrawal. The receiver gets the full ' + wMoney(minor) + '.';
             }
             function wdAvailableText() {
                 var s = walletState.summary;
                 if (!s) return '';
-                if (s.superAdmin) return s.withdrawable == null ? 'The balance is not available right now.' : 'You can withdraw up to ' + wMoney(s.withdrawable) + '.';
+                if (s.superAdmin && wdAccount === 'waec') return s.waecWithdrawable == null ? 'The WAEC pin account balance is not available right now.' : 'You can withdraw up to ' + wMoney(s.waecWithdrawable) + ' from the WAEC pin account.';
+                if (s.superAdmin) return s.withdrawable == null ? 'The balance is not available right now.' : 'You can withdraw up to ' + wMoney(s.withdrawable) + (s.waecConfigured ? ' from the main account.' : '.');
                 return 'Your wallet balance: ' + wMoney(s.myBalance) + '.';
             }
 
@@ -6955,7 +7035,17 @@
                 walletSheetError('wd-error', null);
             }
 
+            function wdPaintAccount() {
+                var s = walletState.summary;
+                var on = !!(s && s.superAdmin && s.waecConfigured);
+                document.getElementById('wd-account-field').classList.toggle('hidden', !on);
+                document.querySelectorAll('#wd-account button').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-acct') === wdAccount); });
+                document.getElementById('wd-available').textContent = wdAvailableText();
+                wdUpdateFee();
+            }
             function walletOpenWithdraw() {
+                wdAccount = 'main';
+                wdPaintAccount();
                 walletSheetError('wd-error', null);
                 document.getElementById('wd-amount').value = '';
                 document.getElementById('wd-pin').value = '';
@@ -6976,6 +7066,13 @@
                     .catch(function (e) { showToast(e.message || 'Could not load the payout options.'); });
             }
             document.getElementById('wallet-withdraw-btn').addEventListener('click', walletOpenWithdraw);
+            document.querySelectorAll('#wd-account button').forEach(function (b) {
+                b.addEventListener('click', function () {
+                    wdAccount = b.getAttribute('data-acct') === 'waec' ? 'waec' : 'main';
+                    walletSheetError('wd-error', null);
+                    wdPaintAccount();
+                });
+            });
             document.getElementById('wd-amount').addEventListener('input', wdUpdateFee);
             document.querySelectorAll('#wd-source button').forEach(function (b) {
                 b.addEventListener('click', function () { wdSetSource(b.getAttribute('data-source')); });
@@ -7027,7 +7124,7 @@
                 btn.disabled = true; btn.textContent = 'Sending...';
                 adminApiRequest('/api/admin/wallet/withdraw', {
                     method: 'POST',
-                    body: { method: method, providerId: provider, destination: dest, amount: amount, pin: pin, save: save }
+                    body: { method: method, providerId: provider, destination: dest, amount: amount, pin: pin, save: save, account: wdAccount }
                 }).then(function (s) {
                     walletState.summary = s; renderWalletHero();
                     walletCloseSheet('withdraw');
@@ -7038,6 +7135,56 @@
                 }).finally(function () {
                     btn.disabled = false; btn.textContent = 'Withdraw';
                     document.getElementById('wd-pin').value = '';
+                });
+            });
+
+            // ---------- move money between the main account and the WAEC pin account (super admin)
+            var mvFrom = 'main';
+            function mvPaint() {
+                document.querySelectorAll('#mv-dir button').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-from') === mvFrom); });
+                var s = walletState.summary;
+                var el = document.getElementById('mv-available');
+                var avail = s ? (mvFrom === 'waec' ? s.waecWithdrawable : s.withdrawable) : null;
+                el.textContent = avail == null ? 'The balance is not available right now.'
+                    : 'You can move up to ' + wMoney(avail) + ' from the ' + (mvFrom === 'waec' ? 'WAEC pin account to the main account.' : 'main account to the WAEC pin account (money not already held for admins).');
+            }
+            function walletOpenMove() {
+                walletSheetError('mv-error', null);
+                document.getElementById('mv-amount').value = '';
+                document.getElementById('mv-pin').value = '';
+                mvFrom = 'main';
+                mvPaint();
+                walletOpenSheet('move');
+            }
+            document.getElementById('wallet-move-btn').addEventListener('click', walletOpenMove);
+            document.querySelectorAll('#mv-dir button').forEach(function (b) {
+                b.addEventListener('click', function () {
+                    mvFrom = b.getAttribute('data-from') === 'waec' ? 'waec' : 'main';
+                    walletSheetError('mv-error', null);
+                    mvPaint();
+                });
+            });
+            document.getElementById('mv-submit').addEventListener('click', function () {
+                var btn = this;
+                var amount = wParseAmount(document.getElementById('mv-amount').value);
+                var pin = document.getElementById('mv-pin').value.trim();
+                walletSheetError('mv-error', null);
+                if (!amount) { walletSheetError('mv-error', 'Enter an amount of at least 1.00 (up to 2 decimals).'); return; }
+                if (!/^\d{4}$/.test(pin)) { walletSheetError('mv-error', 'Enter your 4-digit PIN.'); return; }
+                btn.disabled = true; btn.textContent = 'Moving...';
+                adminApiRequest('/api/admin/wallet/account-transfer', {
+                    method: 'POST',
+                    body: { from: mvFrom, amount: amount, pin: pin }
+                }).then(function (s) {
+                    walletState.summary = s; renderWalletHero();
+                    walletCloseSheet('move');
+                    showToast('Money moved. See Activity for the status.');
+                    walletSetTab('activity');
+                }).catch(function (e) {
+                    walletSheetError('mv-error', e.message || 'The money could not be moved.');
+                }).finally(function () {
+                    btn.disabled = false; btn.textContent = 'Move money';
+                    document.getElementById('mv-pin').value = '';
                 });
             });
 

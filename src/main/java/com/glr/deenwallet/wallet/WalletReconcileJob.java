@@ -30,6 +30,17 @@ public class WalletReconcileJob {
             log.warn("Wallet reference sync failed: {}", e.toString());
         }
         try {
+            for (UUID id : wallet.openAccountTransferIds()) {
+                try {
+                    wallet.reconcileAccountTransfer(id);
+                } catch (Exception e) {
+                    log.warn("Wallet reconcile failed for account transfer {}: {}", id, e.toString());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Wallet account transfer run failed: {}", e.toString());
+        }
+        try {
             for (UUID id : wallet.openWithdrawalIds()) {
                 try {
                     wallet.reconcile(id);

@@ -169,4 +169,25 @@ public class MonimeClient {
 
         return response != null ? response.result() : null;
     }
+
+    /** Moves money between two of our own financial accounts. The fixed idempotency key makes a retry safe. */
+    public InternalTransferResult createInternalTransfer(CreateInternalTransferRequest request, String idempotencyKey) {
+        MonimeEnvelope<InternalTransferResult> response = monimeRestClient.post()
+                .uri("/v1/internal-transfers")
+                .header("Idempotency-Key", idempotencyKey)
+                .body(request)
+                .retrieve()
+                .body(new ParameterizedTypeReference<MonimeEnvelope<InternalTransferResult>>() {
+                });
+        return response != null ? response.result() : null;
+    }
+
+    /** Current state of an internal transfer (used when the first answer was not final). */
+    public InternalTransferResult getInternalTransfer(String transferId) {
+        MonimeEnvelope<InternalTransferResult> response = monimeRestClient.get()
+                .uri("/v1/internal-transfers/{id}", transferId)
+                .retrieve()
+                .body(new ParameterizedTypeReference<MonimeEnvelope<InternalTransferResult>>() {});
+        return response != null ? response.result() : null;
+    }
 }

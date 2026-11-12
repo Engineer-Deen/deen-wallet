@@ -140,6 +140,8 @@ app:
     space-id: ${MONIME_SPACE_ID:}
     webhook-secret: ${MONIME_WEBHOOK_SECRET:}
     default-financial-account-id: ${MONIME_DEFAULT_FINANCIAL_ACCOUNT_ID:}
+    waec-financial-account-id: ${MONIME_WAEC_FINANCIAL_ACCOUNT_ID:}
+    waec-account-since: ${MONIME_WAEC_ACCOUNT_SINCE:}
 
   admin:
     email: ${ADMIN_EMAIL:}
