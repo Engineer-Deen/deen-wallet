@@ -36,4 +36,19 @@ public record CreateCheckoutSessionRequest(
         return new CreateCheckoutSessionRequest(name, null, successUrl, cancelUrl, reference, items, options,
                 Map.of("transactionId", reference));
     }
+
+    /** A checkout that offers bank payment only: card, mobile money and wallet are switched off. */
+    public static CreateCheckoutSessionRequest bankOnly(String name, String successUrl, String cancelUrl, String reference,
+                                                        long amountMinor, long feeMinor) {
+        java.util.ArrayList<Item> items = new java.util.ArrayList<>();
+        items.add(new Item("custom", "Withdrawal", new Money("SLE", amountMinor), 1, "item-" + reference));
+        if (feeMinor > 0) items.add(new Item("custom", "Service fee", new Money("SLE", feeMinor), 1, "fee-" + reference));
+        Map<String, Object> options = new LinkedHashMap<>();
+        options.put("bank", Map.of("disable", false));
+        options.put("card", Map.of("disable", true));
+        options.put("momo", Map.of("disable", true));
+        options.put("wallet", Map.of("disable", true));
+        return new CreateCheckoutSessionRequest(name, null, successUrl, cancelUrl, reference, items, options,
+                Map.of("transactionId", reference));
+    }
 }

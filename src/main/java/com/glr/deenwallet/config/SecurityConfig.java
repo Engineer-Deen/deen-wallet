@@ -90,6 +90,7 @@ public class SecurityConfig {
                                 "/admin.html",
                                 "/transactions.html",
                                 "/pay.html",
+                                "/bank-return.html",
                                 "/p/**",
                                 "/qr.js",
                                 "/api/public/pay/**",

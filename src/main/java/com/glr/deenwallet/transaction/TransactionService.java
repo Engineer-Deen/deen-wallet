@@ -470,6 +470,7 @@ public class TransactionService {
         if (transaction.getStatus() == TransactionStatus.PAYING_OUT && transaction.getMonimePayoutId() != null) {
             nudgePayoutCheck(transaction.getMonimePayoutId());
         }
+        if (BANK_MARKER.equals(transaction.getSourcePhone())) nudgeCheckoutPayment(transaction);   // Withdraw from Bank: notice the payment without waiting for a webhook
         return transaction;
     }
 
@@ -613,6 +614,97 @@ public class TransactionService {
     /** A started card payment: the saved transfer and the provider's checkout page the payer must be sent to. */
     public record CardStart(Transaction transaction, String redirectUrl) {}
 
+    /** Where a "Withdraw from Bank" payer's money came from: their bank, paid on the provider's page (no phone number). */
+    public static final String BANK_MARKER = "BANK";
+
+    /** A started bank withdrawal: the saved transfer and the provider's bank payment page the user must be sent to. */
+    public record BankWithdrawStart(Transaction transaction, String redirectUrl) {}
+
+    /**
+     * "Withdraw from Bank": the user pays from their bank account on the provider's hosted page and that amount is sent to a mobile money number (the fee is added on top, like Convert Money). It is an ordinary transfer whose
+     * source is the BANK marker and whose payment is a provider checkout session ("cs:" + id), so confirmation, payout,
+     * retry and reconciliation reuse the existing flow. Not @Transactional on purpose: the provider calls are slow network I/O.
+     */
+    public BankWithdrawStart initiateBankWithdrawal(UUID userId, String destProviderId, String destPhone,
+                                                    java.math.BigDecimal amount, String returnBase) {
+        requireUsableUser(userId);
+        requireKnownProvider(destProviderId);
+
+        // The money must never be taken for a number that cannot be paid: check the number first (network only).
+        ProviderKycResult kyc;
+        try {
+            kyc = monimeClient.getProviderKyc(destProviderId, destPhone);
+        } catch (org.springframework.web.client.RestClientResponseException e) {
+            kyc = null;
+        }
+        if (kyc == null || kyc.account() == null) {
+            throw new IllegalArgumentException("We could not verify that mobile money number. Please check it and try again.");
+        }
+
+        final long minorUnits = toMinorUnits(amount);
+        final ConversionFee fee = ConversionFee.calculate(minorUnits);
+        final String transactionCode = generateTransactionCode();
+        final String holderName = kyc.account().holderName();
+
+        Transaction saved = saveWithGuards(userId, minorUnits, BANK_MARKER,
+                TransactionServiceType.MOBILE_MONEY, destPhone, null, () ->
+                        Transaction.builder()
+                                .userId(userId)
+                                .amountCurrency("SLE")
+                                .amountValue(minorUnits)
+                                .feeValue(fee.feeValue())
+                                .monimeDepositFeeValue(fee.monimeDepositFeeValue())
+                                .deenWalletFeeValue(fee.deenWalletFeeValue())
+                                .monimeWithdrawalFeeValue(fee.monimeWithdrawalFeeValue())
+                                .totalChargedValue(fee.totalChargedValue())
+                                .sourceProviderId("bank")
+                                .sourcePhone(BANK_MARKER)
+                                .serviceType(TransactionServiceType.MOBILE_MONEY)
+                                .destinationProviderId(destProviderId)
+                                .destinationPhone(destPhone)
+                                .destinationHolderName(holderName)
+                                .status(TransactionStatus.AWAITING_PAYMENT)
+                                .smsSent(false)
+                                .transactionCode(transactionCode)
+                                .build());
+        final UUID transactionId = saved.getId();
+        if (saved.getMonimePaymentCodeId() != null) {
+            // Double tap: the same request was just started. Give the same bank payment page back.
+            String ref = saved.getMonimePaymentCodeId();
+            com.glr.deenwallet.monime.CheckoutSessionResult again = ref.startsWith(com.glr.deenwallet.monime.MonimeClient.CHECKOUT_PREFIX)
+                    ? monimeClient.getCheckoutSession(ref.substring(com.glr.deenwallet.monime.MonimeClient.CHECKOUT_PREFIX.length())) : null;
+            if (again == null || again.redirectUrl() == null || again.redirectUrl().isBlank()) {
+                throw new TooManyRequestsException("Your previous request is still being processed. Please wait a moment.");
+            }
+            return new BankWithdrawStart(saved, again.redirectUrl());
+        }
+
+        final com.glr.deenwallet.monime.CheckoutSessionResult session;
+        try {
+            session = monimeClient.createCheckoutSession(com.glr.deenwallet.monime.CreateCheckoutSessionRequest.bankOnly(
+                    "DeenWallet Transfer - Withdraw from Bank", returnBase + "?paid=" + transactionId, returnBase + "?cancel=1",
+                    transactionId.toString(), minorUnits, fee.totalChargedValue() - minorUnits), "checkout-" + transactionId);
+        } catch (org.springframework.web.client.RestClientResponseException | org.springframework.web.client.ResourceAccessException e) {
+            log.warn("Bank checkout could not be created for {}: {}", transactionCode, e.getMessage());
+            transactionTemplate.executeWithoutResult(status -> transactionRepository.deleteById(transactionId));
+            throw new IllegalStateException("Withdraw from Bank is not available right now. Please try again later.");
+        } catch (RuntimeException e) {
+            transactionTemplate.executeWithoutResult(status -> transactionRepository.deleteById(transactionId));
+            throw e;
+        }
+        if (session == null || session.id() == null || session.id().isBlank() || session.redirectUrl() == null || session.redirectUrl().isBlank()) {
+            transactionTemplate.executeWithoutResult(status -> transactionRepository.deleteById(transactionId));
+            throw new IllegalStateException("Withdraw from Bank is not available right now. Please try again later.");
+        }
+        Transaction done = transactionTemplate.execute(status -> {
+            Transaction t = transactionRepository.findById(transactionId)
+                    .orElseThrow(() -> new IllegalStateException("Transaction disappeared during initiation"));
+            t.setMonimePaymentCodeId(com.glr.deenwallet.monime.MonimeClient.CHECKOUT_PREFIX + session.id());
+            return transactionRepository.save(t);
+        });
+        return new BankWithdrawStart(done, session.redirectUrl());
+    }
+
     /**
      * Starts a card payment on a payment link (the payment link page only offers it when CARD_PAYMENTS_ENABLED is on).
      * The row is an ordinary link payment owned by the link's owner. The provider's checkout session id is saved as
@@ -707,7 +799,13 @@ public class TransactionService {
         if (t.getStatus() == TransactionStatus.PAYING_OUT && t.getMonimePayoutId() != null) {
             nudgePayoutCheck(t.getMonimePayoutId());
         }
-        // A card payment has no payment webhook we can rely on yet: while the payer's page is open, ask the provider
+        nudgeCheckoutPayment(t);
+    }
+
+    /** Hosted-checkout payments (card on a payment link, Withdraw from Bank): ask the provider whether the payment went through. */
+    private void nudgeCheckoutPayment(Transaction t) {
+        final UUID transactionId = t.getId();
+        // A hosted checkout payment has no payment webhook we can rely on yet: while the page is open, ask the provider
         // (at most every 4 seconds per payment) and carry on as soon as it says the card was charged.
         String cardRef = t.getMonimePaymentCodeId();
         if (t.getStatus() == TransactionStatus.AWAITING_PAYMENT && cardRef != null
@@ -724,7 +822,7 @@ public class TransactionService {
                     if (st.equals("completed") || st.equals("processed")) {
                         handlePaymentCodeProcessed(cardRef);
                     } else if (st.equals("cancelled") || st.equals("canceled") || st.equals("expired")) {
-                        cancelIfStillAwaiting(transactionId, "The card payment was cancelled or not completed. No money was taken.");
+                        cancelIfStillAwaiting(transactionId, BANK_MARKER.equals(t.getSourcePhone()) ? "The bank payment was cancelled or not completed. No money was taken." : "The card payment was cancelled or not completed. No money was taken.");
                     }
                 } catch (RuntimeException e) {
                     log.debug("Card payment check for {} will be retried: {}", transactionId, e.toString());
@@ -1348,7 +1446,9 @@ public class TransactionService {
             transactionRepository.save(transaction);
         }
 
-        String completionMessage = bankTransfer
+        String completionMessage = BANK_MARKER.equals(transaction.getSourcePhone())
+                ? "Your bank withdrawal of " + transaction.getAmountCurrency() + " " + displayAmount + " was sent to your mobile money account successfully."
+                : bankTransfer
                 ? "Your bank transfer of " + transaction.getAmountCurrency() + " " + displayAmount + " was completed successfully."
                 : "Your transfer of " + transaction.getAmountCurrency() + " " + displayAmount + " was completed successfully.";
 
@@ -1692,6 +1792,9 @@ public class TransactionService {
         }
         if (CARD_MARKER.equals(current.getSourcePhone())) {
             throw new IllegalStateException("This was paid by card, so it cannot be refunded to a phone number. Retry the payout, or refund the card from the Monime dashboard.");
+        }
+        if (BANK_MARKER.equals(current.getSourcePhone())) {
+            throw new IllegalStateException("This was paid from a bank account, so it cannot be refunded to a phone number. Retry the payout, or refund the bank payment from the Monime dashboard.");
         }
         assertPreviousPayoutFailed(current);
 
