@@ -3823,6 +3823,21 @@
                 <span class="service-card-arrow" aria-hidden="true">›</span>
             </button>
 
+            <button type="button" class="service-card hidden" id="services-cardin-card">
+                <div class="service-card-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                        <rect x="2" y="5" width="20" height="14" rx="2.5"/>
+                        <path d="M2 10h20"/>
+                        <path d="M6 15h4"/>
+                    </svg>
+                </div>
+                <div class="service-card-content">
+                    <strong>Withdraw from Card</strong>
+                    <span>Pay with your bank card and receive the money on your Orange Money or Africell Money.</span>
+                </div>
+                <span class="service-card-arrow" aria-hidden="true">&rsaquo;</span>
+            </button>
+
             <button type="button" class="service-card hidden" id="services-bankin-card">
                 <div class="service-card-icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24">
@@ -6062,7 +6077,11 @@
         });
 
         document.getElementById('services-bankin-card').addEventListener('click', () => {
-            if (typeof window.openBankInService === 'function') window.openBankInService();
+            if (typeof window.openBankInService === 'function') window.openBankInService('bank');
+        });
+
+        document.getElementById('services-cardin-card').addEventListener('click', () => {
+            if (typeof window.openBankInService === 'function') window.openBankInService('card');
         });
 
         // A logo image that is missing must never leave a blank box: show the text instead.
@@ -8285,6 +8304,8 @@
         const biScreens = ['screen-bankin-start', 'screen-bankin-confirm', 'screen-bankin-wait'];
         const biEl = (id) => document.getElementById(id);
         let biEnabled = false;
+        let biCardEnabled = false;
+        let biMode = 'bank';           // 'bank' or 'card': both use the same screens
         let biAmount = null;            // number, SLE
         let biProviderId = null;
         let biHolderName = '';
@@ -8315,10 +8336,35 @@
                 biEnabled = false;
             }
             biEl('services-bankin-card').classList.toggle('hidden', !biEnabled);
+            try {
+                const cc = await apiRequest('/api/transactions/card-withdraw/config');
+                biCardEnabled = !!(cc && cc.enabled);
+            } catch (_) {
+                biCardEnabled = false;
+            }
+            biEl('services-cardin-card').classList.toggle('hidden', !biCardEnabled);
         };
 
-        window.openBankInService = function () {
-            if (!biEnabled) return;
+        // Words that differ between Withdraw from Bank and Withdraw from Card.
+        function biApplyMode() {
+            const card = biMode === 'card';
+            const q = (s) => document.querySelector(s);
+            q('#screen-bankin-start .greeting-title').textContent = card ? 'Withdraw from Card' : 'Withdraw from Bank';
+            q('#screen-bankin-start .greeting-sub').textContent = card
+                ? 'Pay with your bank card and receive the money on your mobile money number.'
+                : 'Pay from your bank account and receive the money on your mobile money number.';
+            q('#bankin-fee-card .fee-row.total .label').textContent = card ? 'Paid by card' : 'Paid from your bank';
+            biEl('bankin-confirm-total').previousElementSibling.textContent = card ? 'Paid by card' : 'Paid from your bank';
+            q('#screen-bankin-confirm .bank-review-row .value').textContent = card ? 'Withdraw from Card' : 'Withdraw from Bank';
+            q('#screen-bankin-confirm .bank-note').textContent = card
+                ? 'After you confirm, you will be taken to a secure page to enter your card details and pay. The money is sent to the number above as soon as your card payment is confirmed. Check the number carefully: it cannot be changed after you pay.'
+                : 'After you confirm, you will be taken to a secure page to choose your bank and pay. The money is sent to the number above as soon as your bank payment is confirmed. Check the number carefully: it cannot be changed after you pay.';
+        }
+
+        window.openBankInService = function (mode) {
+            biMode = mode === 'card' ? 'card' : 'bank';
+            if (biMode === 'card' ? !biCardEnabled : !biEnabled) return;
+            biApplyMode();
             armFlowHistory();
             biStopPoll();
             biAmount = null; biProviderId = null; biHolderName = ''; biFee = null; biTx = null;
@@ -8475,7 +8521,7 @@
             btn.disabled = true;
             btn.innerHTML = '<div class="spinner"></div>';
             try {
-                const data = await apiRequest('/api/transactions/bank-withdraw', {
+                const data = await apiRequest(biMode === 'card' ? '/api/transactions/card-withdraw' : '/api/transactions/bank-withdraw', {
                     method: 'POST',
                     body: {
                         amount: biAmount,
@@ -8517,8 +8563,8 @@
             spin.style.display = 'flex';
             openBtn.style.display = '';
             if (status === 'AWAITING_PAYMENT') {
-                title.textContent = 'Waiting for your bank payment';
-                sub.textContent = 'Finish the payment on the bank page. This screen updates by itself.';
+                title.textContent = biMode === 'card' ? 'Waiting for your card payment' : 'Waiting for your bank payment';
+                sub.textContent = biMode === 'card' ? 'Finish the payment on the card page. This screen updates by itself.' : 'Finish the payment on the bank page. This screen updates by itself.';
                 stat.textContent = 'Waiting for payment';
             } else if (status === 'PAID_IN' || status === 'PAYING_OUT') {
                 title.textContent = 'Payment received';
@@ -8539,7 +8585,7 @@
                 openBtn.style.display = 'none';
             } else {
                 title.textContent = 'Withdrawal not completed';
-                sub.textContent = reason || 'The bank payment was not completed. No money was taken.';
+                sub.textContent = reason || (biMode === 'card' ? 'The card payment was not completed. No money was taken.' : 'The bank payment was not completed. No money was taken.');
                 stat.textContent = status === 'CANCELED' ? 'Cancelled' : 'Failed';
                 spin.style.display = 'none';
                 openBtn.style.display = 'none';

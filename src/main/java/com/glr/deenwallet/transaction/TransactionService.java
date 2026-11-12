@@ -470,7 +470,7 @@ public class TransactionService {
         if (transaction.getStatus() == TransactionStatus.PAYING_OUT && transaction.getMonimePayoutId() != null) {
             nudgePayoutCheck(transaction.getMonimePayoutId());
         }
-        if (BANK_MARKER.equals(transaction.getSourcePhone())) nudgeCheckoutPayment(transaction);   // Withdraw from Bank: notice the payment without waiting for a webhook
+        if (isCheckoutWithdrawal(transaction.getSourcePhone())) nudgeCheckoutPayment(transaction);   // Withdraw from Bank: notice the payment without waiting for a webhook
         return transaction;
     }
 
@@ -617,6 +617,14 @@ public class TransactionService {
     /** Where a "Withdraw from Bank" payer's money came from: their bank, paid on the provider's page (no phone number). */
     public static final String BANK_MARKER = "BANK";
 
+    /** Where a "Withdraw from Card" payer's money came from: their card, paid on the provider's page (no phone number). */
+    public static final String CARD_IN_MARKER = "CARDIN";
+
+    /** True for transfers funded on the provider's hosted checkout page (bank or card) instead of from a phone number. */
+    public static boolean isCheckoutWithdrawal(String sourcePhone) {
+        return BANK_MARKER.equals(sourcePhone) || CARD_IN_MARKER.equals(sourcePhone);
+    }
+
     /** A started bank withdrawal: the saved transfer and the provider's bank payment page the user must be sent to. */
     public record BankWithdrawStart(Transaction transaction, String redirectUrl) {}
 
@@ -626,6 +634,25 @@ public class TransactionService {
      * retry and reconciliation reuse the existing flow. Not @Transactional on purpose: the provider calls are slow network I/O.
      */
     public BankWithdrawStart initiateBankWithdrawal(UUID userId, String destProviderId, String destPhone,
+                                                    java.math.BigDecimal amount, String returnBase) {
+        return startCheckoutWithdrawal(BANK_MARKER, "bank", false, userId, destProviderId, destPhone, amount, returnBase);
+    }
+
+    /** "Withdraw from Card": same as the bank withdrawal, but the customer pays by card on the provider's page. */
+    public BankWithdrawStart initiateCardWithdrawal(UUID userId, String destProviderId, String destPhone,
+                                                    java.math.BigDecimal amount, String returnBase) {
+        return startCheckoutWithdrawal(CARD_IN_MARKER, "card", true, userId, destProviderId, destPhone, amount, returnBase);
+    }
+
+    private static com.glr.deenwallet.monime.CreateCheckoutSessionRequest withdrawalCheckout(
+            boolean card, String name, String successUrl, String cancelUrl, String reference, long amountMinor, long feeMinor) {
+        return card
+                ? com.glr.deenwallet.monime.CreateCheckoutSessionRequest.cardOnly(name, successUrl, cancelUrl, reference, amountMinor, feeMinor)
+                : com.glr.deenwallet.monime.CreateCheckoutSessionRequest.bankOnly(name, successUrl, cancelUrl, reference, amountMinor, feeMinor);
+    }
+
+    private BankWithdrawStart startCheckoutWithdrawal(String marker, String sourceProvider, boolean card,
+                                                      UUID userId, String destProviderId, String destPhone,
                                                     java.math.BigDecimal amount, String returnBase) {
         requireUsableUser(userId);
         requireKnownProvider(destProviderId);
@@ -646,7 +673,7 @@ public class TransactionService {
         final String transactionCode = generateTransactionCode();
         final String holderName = kyc.account().holderName();
 
-        Transaction saved = saveWithGuards(userId, minorUnits, BANK_MARKER,
+        Transaction saved = saveWithGuards(userId, minorUnits, marker,
                 TransactionServiceType.MOBILE_MONEY, destPhone, null, () ->
                         Transaction.builder()
                                 .userId(userId)
@@ -657,8 +684,8 @@ public class TransactionService {
                                 .deenWalletFeeValue(fee.deenWalletFeeValue())
                                 .monimeWithdrawalFeeValue(fee.monimeWithdrawalFeeValue())
                                 .totalChargedValue(fee.totalChargedValue())
-                                .sourceProviderId("bank")
-                                .sourcePhone(BANK_MARKER)
+                                .sourceProviderId(sourceProvider)
+                                .sourcePhone(marker)
                                 .serviceType(TransactionServiceType.MOBILE_MONEY)
                                 .destinationProviderId(destProviderId)
                                 .destinationPhone(destPhone)
@@ -681,8 +708,8 @@ public class TransactionService {
 
         final com.glr.deenwallet.monime.CheckoutSessionResult session;
         try {
-            session = monimeClient.createCheckoutSession(com.glr.deenwallet.monime.CreateCheckoutSessionRequest.bankOnly(
-                    "DeenWallet Transfer - Withdraw from Bank", returnBase + "?paid=" + transactionId, returnBase + "?cancel=1",
+            session = monimeClient.createCheckoutSession(withdrawalCheckout(card,
+                    card ? "DeenWallet Transfer - Withdraw from Card" : "DeenWallet Transfer - Withdraw from Bank", returnBase + "?paid=" + transactionId, returnBase + "?cancel=1",
                     transactionId.toString(), minorUnits, fee.totalChargedValue() - minorUnits), "checkout-" + transactionId);
         } catch (org.springframework.web.client.RestClientResponseException | org.springframework.web.client.ResourceAccessException e) {
             log.warn("Bank checkout could not be created for {}: {}", transactionCode, e.getMessage());
@@ -1446,7 +1473,9 @@ public class TransactionService {
             transactionRepository.save(transaction);
         }
 
-        String completionMessage = BANK_MARKER.equals(transaction.getSourcePhone())
+        String completionMessage = CARD_IN_MARKER.equals(transaction.getSourcePhone())
+                ? "Your card withdrawal of " + transaction.getAmountCurrency() + " " + displayAmount + " was sent to your mobile money account successfully."
+                : BANK_MARKER.equals(transaction.getSourcePhone())
                 ? "Your bank withdrawal of " + transaction.getAmountCurrency() + " " + displayAmount + " was sent to your mobile money account successfully."
                 : bankTransfer
                 ? "Your bank transfer of " + transaction.getAmountCurrency() + " " + displayAmount + " was completed successfully."
@@ -1793,8 +1822,8 @@ public class TransactionService {
         if (CARD_MARKER.equals(current.getSourcePhone())) {
             throw new IllegalStateException("This was paid by card, so it cannot be refunded to a phone number. Retry the payout, or refund the card from the Monime dashboard.");
         }
-        if (BANK_MARKER.equals(current.getSourcePhone())) {
-            throw new IllegalStateException("This was paid from a bank account, so it cannot be refunded to a phone number. Retry the payout, or refund the bank payment from the Monime dashboard.");
+        if (isCheckoutWithdrawal(current.getSourcePhone())) {
+            throw new IllegalStateException("This was paid from a bank account or card, so it cannot be refunded to a phone number. Retry the payout, or refund the payment from the Monime dashboard.");
         }
         assertPreviousPayoutFailed(current);
 
