@@ -23,9 +23,12 @@ public record TransactionResponse(
         String bankName,
         String bankAccountNumber,
         String bankAccountHolderName,
-        boolean bankAccountKycVerified
+        boolean bankAccountKycVerified,
+        String withdrawalFrom   // "BANK" or "CARD" for Withdraw from Bank / Card, otherwise null
 ) {
     public static TransactionResponse from(Transaction t) {
+        String withdrawalFrom = TransactionService.BANK_MARKER.equals(t.getSourcePhone()) ? "BANK"
+                : TransactionService.CARD_IN_MARKER.equals(t.getSourcePhone()) ? "CARD" : null;
         return new TransactionResponse(
                 t.getId(),
                 t.getTransactionCode(),  // ✅ ADDED
@@ -45,7 +48,8 @@ public record TransactionResponse(
                 t.getDestinationBankName(),
                 t.getDestinationBankAccountNumber(),
                 t.getDestinationBankHolderName(),
-                t.isDestinationBankKycVerified()
+                t.isDestinationBankKycVerified(),
+                withdrawalFrom
         );
     }
 

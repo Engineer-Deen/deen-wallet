@@ -525,6 +525,10 @@
           <p class="receipt-txn-id" id="receipt-txn-id"></p>
 
           <div class="receipt-rows">
+            <div class="receipt-row hidden" id="receipt-source-row">
+              <span class="label">Paid with</span>
+              <span class="value" id="receipt-source"></span>
+            </div>
             <div class="receipt-row">
               <span class="label" id="receipt-amount-label">Amount sent</span>
               <span class="value" id="receipt-amount"></span>
@@ -693,6 +697,9 @@
                 : txn.serviceType === 'BANK_TRANSFER'
                         ? (txn.bankAccountHolderName || txn.destinationHolderName || 'Bank Transfer')
                         : (txn.destinationHolderName || txn.destinationPhone || 'Transfer');
+        if (txn.withdrawalFrom) {
+          name.textContent = (txn.withdrawalFrom === 'BANK' ? 'Bank withdrawal: ' : 'Card withdrawal: ') + name.textContent;
+        }
         const amount = document.createElement('span');
         amount.className = 'txn-amount';
         amount.textContent = txn.amount !== null ? formatMoney(txn.amount) + ' SLE' : '—';
@@ -785,7 +792,11 @@
       };
 
       const waecTitles = { PAYING_OUT: 'Processing Purchase', COMPLETED: 'Purchase Completed Successfully', FAILED: 'Purchase Failed' };
-      receiptTitle.textContent = (waec && waecTitles[status]) || titleByStatus[status] || status;
+      const wdTitles = { PAYING_OUT: 'Sending to Mobile Money', COMPLETED: 'Withdrawal Completed Successfully', FAILED: 'Withdrawal Failed' };
+      receiptTitle.textContent = (waec && waecTitles[status]) || (txn.withdrawalFrom && wdTitles[status]) || titleByStatus[status] || status;
+      const srcRow = document.getElementById('receipt-source-row');
+      srcRow.classList.toggle('hidden', !txn.withdrawalFrom);
+      if (txn.withdrawalFrom) document.getElementById('receipt-source').textContent = txn.withdrawalFrom === 'BANK' ? 'Bank account (Withdraw from Bank)' : 'Card (Withdraw from Card)';
       const iconInfo = iconByStatus[status] || { icon: '\u2139\uFE0F', cls: 'pending' };
       receiptIcon.textContent = iconInfo.icon;
       receiptIcon.className = 'receipt-icon ' + iconInfo.cls;
@@ -795,7 +806,7 @@
       receiptAmount.textContent = txn.amount !== null ? formatMoney(txn.amount) + ' SLE' : '—';
       receiptTotal.textContent = txn.totalCharged !== null ? formatMoney(txn.totalCharged) + ' SLE' : '—';
       const bankTransfer = txn.serviceType === 'BANK_TRANSFER';
-      receiptAmountLabel.textContent = waec ? 'Pins total' : 'Amount sent';
+      receiptAmountLabel.textContent = waec ? 'Pins total' : (txn.withdrawalFrom ? 'Amount received' : 'Amount sent');
       receiptOperatorLabel.textContent = bankTransfer ? 'Bank' : (waec ? 'Service' : 'Operator');
       receiptOperator.textContent = bankTransfer
               ? (txn.bankName || '—')

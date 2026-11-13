@@ -657,6 +657,12 @@ public class TransactionService {
         requireUsableUser(userId);
         requireKnownProvider(destProviderId);
 
+        // Only customers whose KYC identity verification was approved may fund a transfer by bank or card.
+        if (!kycLimits.isVerified(userId)) {
+            throw new com.glr.deenwallet.kyc.KycRequiredException("Withdraw from " + (card ? "Card" : "Bank")
+                    + " is only available after you complete your KYC identity verification. Please verify your identity first.");
+        }
+
         // The money must never be taken for a number that cannot be paid: check the number first (network only).
         ProviderKycResult kyc;
         try {

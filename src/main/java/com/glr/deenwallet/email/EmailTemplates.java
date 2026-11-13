@@ -314,7 +314,7 @@ final class EmailTemplates {
 
     static String transactionCompletedEmail(String transactionCode, String amount, String totalCharged,
                                             String recipientName, String recipientPhone, String recipientProvider,
-                                            boolean bankTransfer, String bankName, String bankAccountNumber) {
+                                            boolean bankTransfer, String bankName, String bankAccountNumber, String paidWith) {
         String body = """
             <div>
                 <div style="text-align: center; margin-bottom: 24px;">
@@ -331,6 +331,7 @@ final class EmailTemplates {
                         %7$s
                         %8$s
                         %9$s
+                        %10$s
                     </table>
                 </div>
 
@@ -347,20 +348,23 @@ final class EmailTemplates {
                 row("Total charged", "SLE " + totalCharged),
                 bankTransfer ? row("Destination bank", escape(bankName)) : row("Operator", providerLabel(recipientProvider)),
                 row("Recipient name", escape(recipientName)),
-                bankTransfer ? row("Bank account", maskTail(bankAccountNumber)) : row("Recipient number", maskTail(recipientPhone))
+                bankTransfer ? row("Bank account", maskTail(bankAccountNumber)) : row("Recipient number", maskTail(recipientPhone)),
+                paidWith == null ? "" : row("Paid with", escape(paidWith))
         );
 
         return wrap("Transfer complete", body);
     }
 
     static String transactionFailedEmail(String transactionCode, String amount, String recipientPhone, String failureReason,
-                                         boolean bankTransfer, String bankName, String bankAccountNumber, String bankHolderName) {
+                                         boolean bankTransfer, String bankName, String bankAccountNumber, String bankHolderName, String paidWith) {
         String destination = bankTransfer
                 ? escape((bankName == null ? "the selected bank" : bankName) + " account " + maskTail(bankAccountNumber))
                 : escape(maskTail(recipientPhone));
         String reason = escape(failureReason == null || failureReason.isBlank()
                 ? "The operator was unable to process this transaction." : failureReason);
-        String fundsNote = bankTransfer
+        String fundsNote = paidWith != null
+                ? "If your " + paidWith.toLowerCase() + " payment was not completed, no money was taken. If it was taken but the money did not arrive, please contact DeenWallet Transfer Support with this reference so we can sort it out."
+                : bankTransfer
                 ? "If your mobile-money payment was received but the bank payout failed, please contact DeenWallet Transfer Support so the transaction can be reconciled."
                 : "If any amount was deducted, it will be returned automatically through the payment process.";
 
@@ -405,6 +409,10 @@ final class EmailTemplates {
     // ---------------- Failed payout / refund emails ----------------
     static String payoutFailedEmail(String transactionCode, String amount, String totalCharged,
                                     String recipientLabel, String reason, String payerPhone) {
+        // BANK / CARDIN are the markers of Withdraw from Bank / Card (money came from a bank account or card, not a phone number).
+        String payerRef = "BANK".equals(payerPhone) ? "your bank account"
+                : "CARDIN".equals(payerPhone) ? "your card"
+                : "the number you paid from (" + maskTail(payerPhone) + ")";
         String body = """
             <div>
                 <div style="text-align: center; margin-bottom: 24px;">
@@ -419,7 +427,7 @@ final class EmailTemplates {
                 <div style="background-color: #F9FAFB; border-left: 4px solid %1$s; padding: 16px; border-radius: 4px; margin-bottom: 16px;">
                     <p style="margin: 0 0 8px; color: %1$s; font-size: 14px; line-height: 1.5;"><strong>Why it failed:</strong> %7$s</p>
                     <p style="margin: 0 0 8px; color: %1$s; font-size: 14px; line-height: 1.5;"><strong>Your money is safe.</strong> It is being held by DeenWallet Transfer and has not been lost.</p>
-                    <p style="margin: 0; color: %1$s; font-size: 14px; line-height: 1.5;"><strong>What happens next:</strong> our support team will either retry the transfer or refund SLE %4$s to the number you paid from (%8$s).</p>
+                    <p style="margin: 0; color: %1$s; font-size: 14px; line-height: 1.5;"><strong>What happens next:</strong> our support team will either retry the transfer or refund SLE %4$s to %8$s.</p>
                 </div>
                 <p style="margin: 0; color: %2$s; font-size: 13px; line-height: 1.5; text-align: center;">
                     To speed things up, contact DeenWallet Transfer Support and quote reference <strong>%3$s</strong>.
@@ -428,7 +436,7 @@ final class EmailTemplates {
             """.formatted(TEXT_COLOR, MUTED_COLOR, escape(transactionCode), escape(totalCharged), escape(amount),
                 escape(recipientLabel),
                 escape(reason == null || reason.isBlank() ? "The provider was unable to process this transfer." : reason),
-                escape(maskTail(payerPhone)));
+                escape(payerRef));
         return wrap("We couldn't deliver your transfer", body);
     }
 

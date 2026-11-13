@@ -3833,7 +3833,7 @@
                 </div>
                 <div class="service-card-content">
                     <strong>Withdraw from Card</strong>
-                    <span>Pay with your bank card and receive the money on your Orange Money or Africell Money.</span>
+                    <span>Pay with your bank card and receive the money on your Orange Money or Africell Money. For KYC-verified users.</span>
                 </div>
                 <span class="service-card-arrow" aria-hidden="true">&rsaquo;</span>
             </button>
@@ -3849,7 +3849,7 @@
                 </div>
                 <div class="service-card-content">
                     <strong>Withdraw from Bank</strong>
-                    <span>Move money from your bank account to your Orange Money or Africell Money.</span>
+                    <span>Move money from your bank account to your Orange Money or Africell Money. For KYC-verified users.</span>
                 </div>
                 <span class="service-card-arrow" aria-hidden="true">&rsaquo;</span>
             </button>
@@ -6157,6 +6157,7 @@
                 const name = document.createElement('span');
                 name.className = 'recent-activity-name';
                 name.textContent = txn.serviceType === 'WAEC_RESULT_PIN' ? 'WAEC Result Pin' : (txn.destinationHolderName || txn.destinationPhone || 'Transfer');
+                if (txn.withdrawalFrom) name.textContent = (txn.withdrawalFrom === 'BANK' ? 'Bank withdrawal: ' : 'Card withdrawal: ') + name.textContent;
 
                 const meta = document.createElement('span');
                 meta.className = 'recent-activity-meta';
@@ -8305,6 +8306,7 @@
         const biEl = (id) => document.getElementById(id);
         let biEnabled = false;
         let biCardEnabled = false;
+        let biVerified = false;         // KYC identity verification approved (required for bank and card withdrawals)
         let biMode = 'bank';           // 'bank' or 'card': both use the same screens
         let biAmount = null;            // number, SLE
         let biProviderId = null;
@@ -8332,6 +8334,7 @@
             try {
                 const cfg = await apiRequest('/api/transactions/bank-withdraw/config');
                 biEnabled = !!(cfg && cfg.enabled);
+                biVerified = !!(cfg && cfg.verified);
             } catch (_) {
                 biEnabled = false;
             }
@@ -8339,11 +8342,20 @@
             try {
                 const cc = await apiRequest('/api/transactions/card-withdraw/config');
                 biCardEnabled = !!(cc && cc.enabled);
+                if (cc && cc.verified) biVerified = true;
             } catch (_) {
                 biCardEnabled = false;
             }
             biEl('services-cardin-card').classList.toggle('hidden', !biCardEnabled);
         };
+
+        // Bank and card withdrawals are only for customers whose KYC identity verification was approved.
+        async function biKycPopup() {
+            const go = await showConfirmModal('\uD83D\uDD12', 'KYC verification required',
+                'Withdraw from Bank and Withdraw from Card are only for users who have completed KYC identity verification. Verify your identity first, then come back.',
+                'Verify now', false);
+            if (go) { openCustomerSubScreen('screen-kyc'); loadKycScreen(); }
+        }
 
         // Words that differ between Withdraw from Bank and Withdraw from Card.
         function biApplyMode() {
@@ -8361,9 +8373,11 @@
                 : 'After you confirm, you will be taken to a secure page to choose your bank and pay. The money is sent to the number above as soon as your bank payment is confirmed. Check the number carefully: it cannot be changed after you pay.';
         }
 
-        window.openBankInService = function (mode) {
+        window.openBankInService = async function (mode) {
             biMode = mode === 'card' ? 'card' : 'bank';
             if (biMode === 'card' ? !biCardEnabled : !biEnabled) return;
+            if (!biVerified) await window.loadBankInConfig();      // they may have just been approved
+            if (!biVerified) { biKycPopup(); return; }
             biApplyMode();
             armFlowHistory();
             biStopPoll();
@@ -8544,6 +8558,7 @@
                 if (error.status === 401 || error.status === 403) {
                     showAuthRequiredModal(error.message || 'Your session has expired. Please log in again.');
                 } else {
+                    if (/KYC/i.test(error.message || '')) { biKycPopup(); return; }
                     biEl('bankin-confirm-error-text').textContent = error.message || 'Could not start the withdrawal. Please try again.';
                     show(biEl('bankin-confirm-error'));
                 }

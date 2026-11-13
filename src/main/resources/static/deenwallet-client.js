@@ -1402,6 +1402,7 @@ function normalizeTransaction(raw) {
       bankAccountNumber: raw.bankAccountNumber || null,
       bankAccountHolderName: cleanName(raw.bankAccountHolderName) || null,
       bankAccountKycVerified: raw.bankAccountKycVerified === true,
+      withdrawalFrom: raw.withdrawalFrom || null,
     };
   }
 
@@ -1427,6 +1428,7 @@ function normalizeTransaction(raw) {
     bankAccountNumber: raw.bankAccountNumber || null,
     bankAccountHolderName: cleanName(raw.bankAccountHolderName) || null,
     bankAccountKycVerified: raw.bankAccountKycVerified === true,
+    withdrawalFrom: raw.withdrawalFrom || null,
   };
 }
 

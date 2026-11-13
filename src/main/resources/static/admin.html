@@ -5495,6 +5495,13 @@
             var fpCurrent = null;
 
             function fpMoney(v) { return 'SLE ' + Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+            // Where a customer's money came from: Withdraw from Bank / Card use markers instead of a phone number.
+            window.dwFundSource = function (providerId, phone) {
+                if (phone === 'BANK') return 'Bank account (Withdraw from Bank)';
+                if (phone === 'CARDIN') return 'Card (Withdraw from Card)';
+                if (phone === 'CARD') return 'Card (payment link)';
+                return ((providerId || '') + ' ' + (phone || '')).trim() || '\u2014';
+            };
             function fpTime(v) { return v ? new Date(v).toLocaleString() : '—'; }
             // ==============================================================
             // PAYMENT LINKS (customers' payment links and the payments made through them)
@@ -5708,7 +5715,7 @@
                                 '<span class="fp-status ' + info.cls + '">' + escapeHtml(info.label) + '</span></div>' +
                                 '<div class="fp-card-top" style="margin-top:6px;"><span class="fp-amount">' + escapeHtml(fpMoney(c.totalCharged)) + '</span>' +
                                 '<span class="fp-sub">' + escapeHtml(fpTime(c.failedAt)) + '</span></div>' +
-                                '<div class="fp-sub">' + escapeHtml(c.customerName || 'Unknown customer') + ' · paid from ' + escapeHtml(c.sourcePhone || '—') + '</div>' +
+                                '<div class="fp-sub">' + escapeHtml(c.customerName || 'Unknown customer') + ' · paid from ' + escapeHtml(window.dwFundSource(null, c.sourcePhone)) + '</div>' +
                                 '<div class="fp-sub">To: ' + escapeHtml(c.recipient || '—') + '</div>' +
                                 (c.failureReason ? '<div class="fp-reason">' + escapeHtml(c.failureReason) + '</div>' : '');
                             card.addEventListener('click', function () { openFailedPayout(c.id); });
@@ -5772,7 +5779,7 @@
                 } else { html += fpRow('Customer', 'Account not found'); }
 
                 html += '<div class="fp-section-title">Payment</div>' +
-                    fpRow('Paid from', (d.sourceProviderId || '') + ' ' + (d.sourcePhone || '')) +
+                    fpRow('Paid from', window.dwFundSource(d.sourceProviderId, d.sourcePhone)) +
                     fpRow('Amount to deliver', fpMoney(d.amount)) + fpRow('Fees', fpMoney(d.fee)) + fpRow('Total paid by customer', fpMoney(d.totalCharged)) +
                     fpRow('Transaction created', fpTime(d.createdAt)) + fpRow('Payment received', fpTime(d.paidInAt)) + fpRow('Payout failed', fpTime(d.failedAt));
 
@@ -5805,7 +5812,7 @@
                         '<div class="fp-actions">' +
                         '<button class="btn-primary" id="fp-resend" disabled>Send again</button>' +
                         '<button class="btn-danger" id="fp-refund" disabled>Refund to payer</button></div>' +
-                        '<div class="fp-sub" style="margin-top:6px;">Send again retries the payout to the recipient. If it fails again, use Refund to return ' + escapeHtml(fpMoney(d.totalCharged)) + ' to ' + escapeHtml(d.sourcePhone || 'the paying number') + '.</div>';
+                        '<div class="fp-sub" style="margin-top:6px;">Send again retries the payout to the recipient. If it fails again, use Refund to return ' + escapeHtml(fpMoney(d.totalCharged)) + ' to ' + escapeHtml((d.sourcePhone === 'BANK' || d.sourcePhone === 'CARDIN') ? 'the customer (this was paid by bank or card, so refund it from the Monime dashboard instead)' : (d.sourcePhone || 'the paying number')) + '.</div>';
                 } else if (d.status === 'REFUND_PENDING') {
                     html += '<div class="fp-verify">Refund is being sent to the paying number. This page will show Refunded once it completes.</div>';
                 } else if (d.status === 'NEEDS_REVIEW') {
@@ -5834,7 +5841,7 @@
                 var note = (document.getElementById('fp-note').value || '').trim();
                 var msg = kind === 'resend'
                     ? 'Send ' + fpMoney(d.amount) + ' to the recipient again for ' + d.transactionCode + '?'
-                    : 'Refund ' + fpMoney(d.totalCharged) + ' to ' + (d.sourcePhone || 'the paying number') + ' for ' + d.transactionCode + '? The customer will be emailed.';
+                    : 'Refund ' + fpMoney(d.totalCharged) + ' to ' + window.dwFundSource(null, d.sourcePhone || 'the paying number') + ' for ' + d.transactionCode + '? The customer will be emailed.';
                 showModal(kind === 'resend' ? 'Send again' : 'Refund customer', msg, function () {
                     var b1 = document.getElementById('fp-resend'), b2 = document.getElementById('fp-refund');
                     if (b1) b1.disabled = true; if (b2) b2.disabled = true;
@@ -8553,7 +8560,7 @@
                         document.getElementById('support-txn-status').textContent = data.status || '—';
                         document.getElementById('support-txn-amount').textContent = data.amount ? 'SLE ' + Number(data.amount).toFixed(2) : '—';
                         document.getElementById('support-txn-total').textContent = data.totalCharged ? 'SLE ' + Number(data.totalCharged).toFixed(2) : '—';
-                        document.getElementById('support-txn-source').textContent = data.sourcePhone || data.sourceProviderId || '—';
+                        document.getElementById('support-txn-source').textContent = data.sourcePhone === 'BANK' ? 'Bank account (Withdraw from Bank)' : data.sourcePhone === 'CARDIN' ? 'Card (Withdraw from Card)' : (data.sourcePhone || data.sourceProviderId || '—');
                         document.getElementById('support-txn-recipient').textContent = data.serviceType === 'BANK_TRANSFER' ? ((data.bankName || 'Bank') + ' · ' + (data.bankAccountHolderName || data.destinationHolderName || data.bankAccountNumber || '—')) : (data.destinationPhone || data.destinationHolderName || '—');
                         document.getElementById('support-txn-user').textContent = data.accountHolderAccountNumber ? data.accountHolderAccountNumber + (data.accountHolderName ? ' — ' + data.accountHolderName : '') : (data.accountHolderEmail || data.accountHolderName || '—');
                         document.getElementById('support-txn-created').textContent = data.createdAt ? new Date(data.createdAt).toLocaleString() : '—';

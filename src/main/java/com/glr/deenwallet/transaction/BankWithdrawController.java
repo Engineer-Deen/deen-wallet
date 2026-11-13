@@ -32,6 +32,7 @@ import java.util.UUID;
 public class BankWithdrawController {
 
     private final TransactionService transactionService;
+    private final com.glr.deenwallet.kyc.KycLimitService kycLimits;
 
     @Value("${BANK_WITHDRAW_ENABLED:false}")
     private boolean enabled;
@@ -57,13 +58,13 @@ public class BankWithdrawController {
         private String destinationPhone;
     }
 
-    public record Config(boolean enabled, int feePercent) {}
+    public record Config(boolean enabled, int feePercent, boolean verified) {}
 
     public record Started(TransactionResponse transaction, String redirectUrl) {}
 
     @GetMapping("/config")
     public ResponseEntity<Config> config() {
-        return ResponseEntity.ok(new Config(enabled, 3));
+        return ResponseEntity.ok(new Config(enabled, 3, kycLimits.isVerified(currentUserId())));
     }
 
     @PostMapping

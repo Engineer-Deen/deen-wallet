@@ -172,9 +172,17 @@ public class EmailService {
                         transaction.getDestinationProviderId(),
                         transaction.getServiceType() == com.glr.deenwallet.transaction.TransactionServiceType.BANK_TRANSFER,
                         transaction.getDestinationBankName(),
-                        transaction.getDestinationBankAccountNumber()
+                        transaction.getDestinationBankAccountNumber(),
+                        paidWithLabel(transaction)
                 )
         );
+    }
+
+    /** "Bank account" or "Card" for Withdraw from Bank / Card transfers, otherwise null (shown on receipts). */
+    private static String paidWithLabel(Transaction t) {
+        if (com.glr.deenwallet.transaction.TransactionService.BANK_MARKER.equals(t.getSourcePhone())) return "Bank account";
+        if (com.glr.deenwallet.transaction.TransactionService.CARD_IN_MARKER.equals(t.getSourcePhone())) return "Card";
+        return null;
     }
 
     public void sendTransactionFailedEmail(
@@ -196,7 +204,8 @@ public class EmailService {
                         transaction.getServiceType() == com.glr.deenwallet.transaction.TransactionServiceType.BANK_TRANSFER,
                         transaction.getDestinationBankName(),
                         transaction.getDestinationBankAccountNumber(),
-                        transaction.getDestinationBankHolderName()
+                        transaction.getDestinationBankHolderName(),
+                        paidWithLabel(transaction)
                 )
         );
     }
