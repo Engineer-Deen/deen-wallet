@@ -249,6 +249,12 @@ label.l{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:0 
   /* card-pay: the card option is live only when the server says so (view.cardEnabled); choosing it hides the phone field */
   function enableCard(v) {
     if (!v || !v.cardEnabled) return;
+    if (v.cardOwnerVerified === false) {
+      /* the person who sent this link is not KYC-verified: the card option stays off and says why */
+      var cb0 = document.querySelector('.prov.soon'); var tg0 = cb0 && cb0.querySelector('.tag'); if (tg0) tg0.textContent = 'Not active';
+      var cs0 = $('card-soon'); if (cs0) cs0.textContent = 'This option is not active for this user. Please contact the person who sent you this link so they can be verified.';
+      return;
+    }
     var cb = document.querySelector('.prov.soon'); if (!cb) return;
     cb.classList.remove('soon'); cb.removeAttribute('data-soon'); cb.removeAttribute('aria-disabled'); cb.setAttribute('data-p', 'card'); cb.setAttribute('aria-pressed', 'false');
     var tg = cb.querySelector('.tag'); if (tg) tg.remove();

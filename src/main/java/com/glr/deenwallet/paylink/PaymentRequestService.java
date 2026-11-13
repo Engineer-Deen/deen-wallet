@@ -261,6 +261,8 @@ public class PaymentRequestService {
         m.put("payeeType", row[7]);
         m.put("payeePhoto", ownerPhoto(row[1]));
         m.put("cardEnabled", cardEnabled);
+        // Card payments on a link are only for owners whose KYC identity verification was approved.
+        m.put("cardOwnerVerified", !cardEnabled || kyc.isVerified(UUID.fromString(String.valueOf(row[1]))));
         m.put("shortCode", row.length > 18 ? row[18] : null);
         m.put("ussdDial", ussdDial == null ? "" : ussdDial.trim());
         m.put("ussdDialFull", dialFull(row.length > 18 ? row[18] : null));
@@ -312,6 +314,9 @@ public class PaymentRequestService {
         final boolean card = "card".equals(providerId);
         if (card) {
             if (!cardEnabled) throw new IllegalStateException("Card payments are coming soon. Please pay with Orange Money or Africell Money.");
+            if (!kyc.isVerified(ownerId)) {
+                throw new IllegalStateException("This option is not active for this user. Please contact the person who sent you this link so they can be verified.");
+            }
             phone = TransactionService.CARD_MARKER;
         } else {
             if (!MOMO_PROVIDER.matcher(providerId).matches()) throw new IllegalArgumentException("Choose Orange Money, Africell Money or card.");

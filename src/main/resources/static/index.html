@@ -3833,7 +3833,7 @@
                 </div>
                 <div class="service-card-content">
                     <strong>Withdraw from Card</strong>
-                    <span>Pay with your bank card and receive the money on your Orange Money or Africell Money. For KYC-verified users.</span>
+                    <span>Pay with your bank card and receive the money on your Orange Money or Africell Money.</span>
                 </div>
                 <span class="service-card-arrow" aria-hidden="true">&rsaquo;</span>
             </button>
@@ -3849,7 +3849,7 @@
                 </div>
                 <div class="service-card-content">
                     <strong>Withdraw from Bank</strong>
-                    <span>Move money from your bank account to your Orange Money or Africell Money. For KYC-verified users.</span>
+                    <span>Move money from your bank account to your Orange Money or Africell Money.</span>
                 </div>
                 <span class="service-card-arrow" aria-hidden="true">&rsaquo;</span>
             </button>
@@ -8352,7 +8352,7 @@
         // Bank and card withdrawals are only for customers whose KYC identity verification was approved.
         async function biKycPopup() {
             const go = await showConfirmModal('\uD83D\uDD12', 'KYC verification required',
-                'Withdraw from Bank and Withdraw from Card are only for users who have completed KYC identity verification. Verify your identity first, then come back.',
+                (biMode === 'card' ? 'Withdraw from Card' : 'Withdraw from Bank') + ' is only for users who have completed KYC identity verification. Verify your identity first, then come back.',
                 'Verify now', false);
             if (go) { openCustomerSubScreen('screen-kyc'); loadKycScreen(); }
         }
