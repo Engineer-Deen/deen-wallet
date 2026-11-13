@@ -872,7 +872,15 @@ public class AuthService {
         }
 
         // Same words as for an email that is not registered: a bot must not learn which emails have an account.
-        return "Invalid email or password.";
+        return "Invalid email or password." + attemptsLeftNote(state.getLoginFailedAttempts());
+    }
+
+    /** " You have N attempt(s) left before login is paused for 5 minutes." - the same words for every email. */
+    private static String attemptsLeftNote(int failures) {
+        int left = USER_LOGIN_MAX_FAILURES - failures;
+        if (left <= 0 || left >= USER_LOGIN_MAX_FAILURES) return "";
+        return " You have " + left + (left == 1 ? " attempt" : " attempts")
+                + " left before login is paused for 5 minutes.";
     }
 
     /**
@@ -895,7 +903,8 @@ public class AuthService {
                     until
             );
         }
-        return new InvalidUserLoginException("Invalid email or password.");
+        return new InvalidUserLoginException("Invalid email or password."
+                + attemptsLeftNote(unknownLogins.failures(email, Instant.now())));
     }
 
     /** Spends the same time a real password check would, so the reply time does not give an unknown email away. */

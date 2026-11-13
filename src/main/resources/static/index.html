@@ -1818,6 +1818,30 @@
         }
 
         /* ============================================================ */
+        /* PIN screen: takes the WHOLE screen, like a bank / payment app */
+        /* ============================================================ */
+        #pin-modal-overlay {
+            background: #fff !important;
+            align-items: center;
+            justify-content: center;
+            padding: max(16px, env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px));
+        }
+        #pin-modal-overlay .modal-box {
+            background: transparent;
+            box-shadow: none;
+            border-radius: 0;
+            max-width: 420px;
+            width: 100%;
+            animation: none;
+        }
+        #pin-modal-overlay.active { animation: pinScreenIn .22s ease-out; }
+        @keyframes pinScreenIn { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+        #pin-modal-overlay .modal-icon { font-size: clamp(34px, 6.5dvh, 54px); }
+        #pin-modal-overlay .modal-title { font-size: clamp(20px, 3.2dvh, 24px); }
+        #pin-modal-overlay .pin-keypad .pin-key { height: clamp(46px, 8.2dvh, 66px); font-size: clamp(20px, 3.2dvh, 26px); border-radius: 16px; }
+        #pin-modal-overlay .pin-dot { width: clamp(44px, 7.4dvh, 56px); height: clamp(48px, 8dvh, 62px); }
+
+        /* ============================================================ */
         /* LOCKED MODAL - STAYS OPEN */
         /* ============================================================ */
         #locked-modal-overlay {
@@ -9609,6 +9633,8 @@
         window.dwOnBackButton = function () {
             // 1. Never bypass a security lock or account-locked screen.
             if (pinModalOverlay && pinModalOverlay.classList.contains('active')) {
+                // A payment / confirm PIN can be cancelled (like its Cancel button); the session-lock PIN cannot.
+                if (pendingPinAction && pinCancelBtn) pinCancelBtn.click();
                 return true;
             }
             if (lockedModalOverlay && lockedModalOverlay.style.display === 'flex') {
@@ -9633,6 +9659,10 @@
 
             // 4. Secondary customer screens use the same action as their visible
             //    in-app Back button: return to the customer home screen.
+            if (document.getElementById('screen-kyc').classList.contains('active') && kycState.mode === 'wizard') {
+                const wb = document.querySelector('#screen-kyc [data-kyc="wback"]');
+                if (wb) { wb.click(); return true; }
+            }
             const secondaryScreens = [
                 'screen-pin',
                 'screen-kyc',

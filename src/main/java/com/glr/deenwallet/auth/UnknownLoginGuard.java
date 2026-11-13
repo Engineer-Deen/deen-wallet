@@ -34,6 +34,13 @@ final class UnknownLoginGuard {
         return null;
     }
 
+    /** How many wrong tries are counted right now for this email (0 when none or the window has passed). */
+    synchronized int failures(String email, Instant now) {
+        Entry e = map.get(email);
+        if (e == null || e.last == null || e.last.plus(WINDOW).isBefore(now)) return 0;
+        return e.fails;
+    }
+
     /** Counts one wrong try. Returns the end of the pause if this try started one, otherwise null. */
     synchronized Instant fail(String email, Instant now) {
         if (map.size() >= MAX_KEYS && !map.containsKey(email)) purge(now);

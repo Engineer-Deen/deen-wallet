@@ -1118,8 +1118,8 @@
 
 <div id="account-lock-modal" class="modal-overlay" style="position:fixed;inset:0;background:rgba(18,36,43,.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:9999;">
   <div style="width:100%;max-width:380px;background:#fff;border-radius:16px;padding:24px;box-shadow:0 20px 50px rgba(0,0,0,.18);">
-    <h2 style="margin:0 0 8px;font-size:20px;">Account blocked</h2>
-    <p style="margin:0 0 18px;color:#6E7C82;line-height:1.5;">Your account has been blocked because of multiple incorrect PIN attempts. Please contact DeenWallet Transfer Support to have an administrator unlock your account.</p>
+    <h2 id="account-lock-title" style="margin:0 0 8px;font-size:20px;">Account blocked</h2>
+    <p id="account-lock-text" style="margin:0 0 18px;color:#6E7C82;line-height:1.5;">Your account has been blocked because of multiple incorrect PIN attempts. Please contact DeenWallet Transfer Support to have an administrator unlock your account.</p>
     <a id="account-lock-whatsapp" class="btn-primary" style="display:block;text-align:center;text-decoration:none;margin-bottom:8px;" target="_blank" rel="noopener">Contact support on WhatsApp</a>
     <button type="button" id="account-lock-close" class="btn-secondary" style="width:100%;">Close</button>
   </div>
@@ -1419,9 +1419,17 @@
       }
 
       if (accountLockClose) accountLockClose.addEventListener('click', function () { accountLockModal.style.display = 'none'; });
-      function showAccountLockModal() {
+      function showAccountLockModal(kind) {
         const number = String(window.DEENWALLET_SUPPORT_WHATSAPP || '').replace(/\D/g, '');
-        if (accountLockWhatsApp) accountLockWhatsApp.href = number ? 'https://wa.me/' + number + '?text=' + encodeURIComponent('Hello DeenWallet Transfer Support, my account was blocked after incorrect PIN attempts.') : '#';
+        const pause = kind === 'pause';
+        const titleEl = document.getElementById('account-lock-title');
+        const textEl = document.getElementById('account-lock-text');
+        if (titleEl) titleEl.textContent = pause ? 'Login paused' : 'Account blocked';
+        if (textEl) textEl.textContent = pause
+          ? 'You entered a wrong password 5 times, so login is paused for 5 minutes. Please wait for the countdown to finish and try again. If you forgot your password, or need help, contact DeenWallet Transfer Support.'
+          : 'Your account has been blocked because of multiple incorrect PIN attempts. Please contact DeenWallet Transfer Support to have an administrator unlock your account.';
+        const hello = pause ? 'Hello DeenWallet Transfer Support, my login was paused after incorrect password attempts.' : 'Hello DeenWallet Transfer Support, my account was blocked after incorrect PIN attempts.';
+        if (accountLockWhatsApp) accountLockWhatsApp.href = number ? 'https://wa.me/' + number + '?text=' + encodeURIComponent(hello) : '#';
         if (accountLockModal) accountLockModal.style.display = 'flex';
       }
 
@@ -1520,6 +1528,7 @@
           if (loginRecovery && (unverified || passwordLocked)) loginRecovery.classList.remove('hidden');
           if (passwordLocked) {
             if (loginErrorText) loginErrorText.textContent = 'Your account is temporarily locked because of multiple incorrect password attempts. Please wait for the countdown to finish before trying again.';
+            showAccountLockModal('pause');
           } else if (pinLocked || accountLocked) {
             showAccountLockModal();
           }
@@ -1841,6 +1850,16 @@
       if (welcomeSignupBtn) welcomeSignupBtn.addEventListener('click', function () { goToScreen('screen-register'); });
       if (loginBackBtn) loginBackBtn.addEventListener('click', function () { goToScreen('screen-welcome'); });
       if (registerBackBtn) registerBackBtn.addEventListener('click', function () { goToScreen('screen-welcome'); });
+
+      // Android back button = the on-screen Back arrow.
+      window.dwOnBackButton = function () {
+        if (accountLockModal && accountLockModal.style.display === 'flex') { accountLockModal.style.display = 'none'; return true; }
+        const on = function (id) { const el = document.getElementById(id); return !!(el && el.classList.contains('active')); };
+        if (on('screen-register')) { goToScreen(phoneQuery.matches ? 'screen-welcome' : 'screen-login'); return true; }
+        if (on('screen-confirm')) { goToScreen('screen-login'); return true; }
+        if (on('screen-login') && phoneQuery.matches) { goToScreen('screen-welcome'); return true; }
+        return 'exit';
+      };
 
       // The welcome screen only exists on phones. If the window grows past
       // that (rotation, desktop), fall back to the two-column login.
