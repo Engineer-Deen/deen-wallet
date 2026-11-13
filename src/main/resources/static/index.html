@@ -1842,6 +1842,27 @@
         #pin-modal-overlay .pin-dot { width: clamp(44px, 7.4dvh, 56px); height: clamp(48px, 8dvh, 62px); }
 
         /* ============================================================ */
+        /* Biometric lock screen (only when the customer turned biometric login on) */
+        /* ============================================================ */
+        #pin-modal-overlay .bio-lock { display: none; text-align: center; padding: 0 6px 10dvh; }
+        #pin-modal-overlay.bio-mode .bio-lock { display: block; }
+        #pin-modal-overlay.bio-mode .pin-info, #pin-modal-overlay.bio-mode .pin-pad { display: none; }
+        #pin-modal-overlay.bio-mode {
+            background-color: #181818 !important;
+            background-image: radial-gradient(circle at 86% 24%, rgba(255,255,255,.11), transparent 24%),
+                              radial-gradient(circle at 82% 52%, rgba(255,255,255,.09), transparent 22%),
+                              radial-gradient(circle at 10% 8%, rgba(255,255,255,.05), transparent 20%),
+                              radial-gradient(circle at 12% 94%, rgba(255,255,255,.04), transparent 22%) !important;
+        }
+        #pin-modal-overlay .bio-lock-ico { width: 76px; height: 76px; margin: 0 auto 26px; color: #ececec; }
+        #pin-modal-overlay .bio-lock h3 { margin: 0 0 30px; font-size: 30px; font-weight: 400; color: #f1f1f1; line-height: 1.2; }
+        #pin-modal-overlay .bio-lock-err { color: #ff8a80; min-height: 18px; margin: -14px 0 12px; font-size: 13px; }
+        #pin-modal-overlay .bio-lock-btn { display: block; width: 100%; min-height: 58px; border-radius: 999px; border: 1px solid #2c2c2c; background: #1d1d1d; color: #f1f1f1; font-size: 20px; font-weight: 400; margin: 0 0 14px; cursor: pointer; font-family: inherit; }
+        #pin-modal-overlay .bio-lock-btn:active { background: #262626; }
+        #pin-modal-overlay .bio-lock-btn:disabled { opacity: .6; }
+        #pin-modal-overlay .bio-lock-link { display: block; width: 100%; background: transparent; border: none; color: #a9a9a9; font-size: 14px; font-weight: 600; min-height: 40px; cursor: pointer; font-family: inherit; }
+
+        /* ============================================================ */
         /* LOCKED MODAL - STAYS OPEN */
         /* ============================================================ */
         #locked-modal-overlay {
@@ -4177,6 +4198,15 @@
 <!-- ===================== PIN MODAL ===================== -->
 <div class="modal-overlay" id="pin-modal-overlay">
     <div class="modal-box">
+        <div class="bio-lock" id="bio-lock">
+            <div class="bio-lock-ico"><svg viewBox="0 0 48 48" width="68" height="68" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-5a8 8 0 0 1 16 0v5"/><rect x="8" y="21" width="32" height="22" rx="5"/><path d="M24 29.5v5"/></svg></div>
+            <h3 id="bio-lock-title">DeenWallet Transfer locked</h3>
+            <div class="bio-lock-err" id="bio-lock-err"></div>
+            <button type="button" class="bio-lock-btn" id="bio-lock-btn">Unlock DeenWallet Transfer</button>
+            <button type="button" class="bio-lock-link" id="bio-lock-pin">Use PIN instead</button>
+            <button type="button" class="bio-lock-link" id="bio-lock-cancel" style="display:none;">Cancel</button>
+            <button type="button" class="bio-lock-link" id="bio-lock-logout">Log out</button>
+        </div>
         <div class="pin-info">
             <div class="modal-icon">&#128274;</div>
             <h3 class="modal-title">Session Locked</h3>
@@ -4843,6 +4873,7 @@
 
         function hidePinModal() {
             pinModalActive = false;
+            pinModalOverlay.classList.remove('bio-mode');
             pinModalOverlay.style.display = 'none';
             pinModalOverlay.classList.remove('active');
             if (sessionTimeoutId) {
@@ -4912,23 +4943,80 @@
                 return { enabled: false };
             }
             if (biometricUnlockState && Date.now() - biometricUnlockStateAt < 60000) return biometricUnlockState;
+            // Fast path: this phone already knows biometric login is on, so no server wait before the lock screen.
+            const remembered = bioRememberedRead();
+            if (remembered) {
+                biometricUnlockState = { enabled: true, credential: remembered };
+                biometricUnlockStateAt = Date.now();
+                bioVerifyInBackground();
+                return biometricUnlockState;
+            }
             try {
                 biometricUnlockState = await getBiometricStateForCurrentUser();
             } catch (_) {
                 biometricUnlockState = { enabled: false };
             }
             biometricUnlockStateAt = Date.now();
+            if (biometricUnlockState && biometricUnlockState.enabled && biometricUnlockState.credential) bioRememberedWrite(biometricUnlockState.credential);
             return biometricUnlockState;
+        }
+
+        // "Biometric login is on for this account on this phone" - remembered so the lock screen needs no server trip.
+        // It only decides which lock screen is shown; the unlock itself is always checked by the server.
+        function bioRememberedKey() { const id = getUserIdFromToken(); return id ? 'dw_bio_cred_' + id : null; }
+        function bioRememberedRead() {
+            try { const k = bioRememberedKey(); const v = k && localStorage.getItem(k); const c = v ? JSON.parse(v) : null; return c && c.credentialId ? c : null; } catch (_) { return null; }
+        }
+        function bioRememberedWrite(c) { try { const k = bioRememberedKey(); if (k && c) localStorage.setItem(k, JSON.stringify(c)); } catch (_) { } }
+        function bioRememberedClear() { try { const k = bioRememberedKey(); if (k) localStorage.removeItem(k); } catch (_) { } }
+        let bioVerifying = false;
+        function bioVerifyInBackground() {
+            if (bioVerifying) return;
+            bioVerifying = true;
+            getBiometricStateForCurrentUser().then(function (s) {
+                if (!s || s.offline) return;
+                if (s.enabled && s.credential) { bioRememberedWrite(s.credential); biometricUnlockState = s; biometricUnlockStateAt = Date.now(); return; }
+                bioRememberedClear();
+                biometricUnlockState = { enabled: false };
+                biometricUnlockStateAt = Date.now();
+                if (pinModalActive) bioLeaveMode();
+            }).catch(function () { }).then(function () { bioVerifying = false; });
+        }
+        function bioLockErr(text) {
+            pinErrorMsg.textContent = text || '';
+            const el = document.getElementById('bio-lock-err');
+            if (el) el.textContent = text || '';
+        }
+        function bioEnterMode() {
+            pinModalOverlay.classList.add('bio-mode');
+            const t = document.getElementById('bio-lock-title'), b = document.getElementById('bio-lock-btn');
+            if (t) t.textContent = pendingPinAction ? 'Confirm this transfer' : 'DeenWallet Transfer locked';
+            if (b) b.textContent = pendingPinAction ? 'Confirm with biometric' : 'Unlock DeenWallet Transfer';
+            const c = document.getElementById('bio-lock-cancel'), l = document.getElementById('bio-lock-logout');
+            if (c) c.style.display = pendingPinAction ? 'block' : 'none';
+            if (l) l.style.display = pendingPinAction ? 'none' : 'block';
+            pinBiometricBtn.style.display = 'none';
+            fitPinModal();
+        }
+        function bioLeaveMode() {
+            pinModalOverlay.classList.remove('bio-mode');
+            bioLockErr('');
+            if (biometricUnlockState && biometricUnlockState.enabled && biometricUnlockState.credential) pinBiometricBtn.style.display = 'block';
+            setTimeout(function () { pinHiddenInput.focus(); }, 100);
+            fitPinModal();
         }
 
         async function setupBiometricForPinModal() {
             const openId = ++pinModalOpenId;
             biometricAutoTried = false;
             pinBiometricBtn.style.display = 'none';
+            pinModalOverlay.classList.remove('bio-mode');
+            // Biometric already known on this phone: show the biometric lock screen at once (no PIN pad flash).
+            if (typeof getBiometricPlugin === 'function' && getBiometricPlugin() && bioRememberedRead()) bioEnterMode();
             const state = await getBiometricUnlockState();
             if (openId !== pinModalOpenId || !pinModalActive) return;
-            if (!state || !state.enabled || !state.credential) return;
-            pinBiometricBtn.style.display = 'block';
+            if (!state || !state.enabled || !state.credential) { pinModalOverlay.classList.remove('bio-mode'); return; }
+            bioEnterMode();
             if (!biometricAutoTried) {
                 biometricAutoTried = true;
                 unlockWithBiometric(true);
@@ -4940,14 +5028,16 @@
             const state = biometricUnlockState;
             if (!state || !state.enabled || !state.credential) return;
             biometricUnlockBusy = true;
-            pinErrorMsg.textContent = '';
+            bioLockErr('');
+            const bioBtn = document.getElementById('bio-lock-btn');
+            if (bioBtn) bioBtn.disabled = true;
             try {
                 // Fingerprint prompt + server-checked sign-in for THIS account (same as the login screen).
                 await biometricLogin(state.credential);
                 if (pinModalActive) onUnlockSuccess();
             } catch (error) {
                 if (isNetworkError(error)) {
-                    pinErrorMsg.textContent = 'No internet connection. Enter your PIN or try again.';
+                    bioLockErr('No internet connection. Enter your PIN or try again.');
                 } else if (error && error.status === 423) {
                     pendingPinAction = null;
                     sessionStorage.setItem('deenwallet_account_locked', 'true');
@@ -4955,12 +5045,16 @@
                     showLockedModal('Your account has been locked. Contact support or wait for an administrator to unlock it.');
                 } else if (error && error.code === 'LEGACY_CREDENTIAL') {
                     pinBiometricBtn.style.display = 'none';
+                    bioRememberedClear();
+                    biometricUnlockState = { enabled: false };
+                    bioLeaveMode();
                 } else if (!automatic) {
-                    pinErrorMsg.textContent = 'Fingerprint was not recognised. Enter your PIN instead.';
+                    bioLockErr('Not recognised. Try again, or use your PIN.');
                 }
                 // If the person just cancelled the prompt, nothing is shown: the PIN pad is right there.
             } finally {
                 biometricUnlockBusy = false;
+                if (bioBtn) bioBtn.disabled = false;
             }
         }
 
@@ -5998,12 +6092,17 @@
                             return;
                         }
                         await disableBiometricLogin();
+                        bioRememberedClear();
+                        biometricUnlockState = null;
                         if (successBox) {
                             successBox.textContent = 'Biometric login has been disabled on this device.';
                             successBox.classList.remove('hidden');
                         }
                     } else {
                         await registerBiometricLogin('DeenWallet Transfer Android');
+                        bioRememberedClear();
+                        biometricUnlockState = null;
+                        getBiometricUnlockState().catch(function () { });   // remember it right away: the next lock opens fast
                         if (successBox) {
                             successBox.textContent = 'Biometric login has been enabled on this device.';
                             successBox.classList.remove('hidden');
@@ -9047,8 +9146,13 @@
         });
 
         pinBiometricBtn.addEventListener('click', function () {
+            bioEnterMode();
             unlockWithBiometric(false);
         });
+        document.getElementById('bio-lock-btn').addEventListener('click', function () { unlockWithBiometric(false); });
+        document.getElementById('bio-lock-pin').addEventListener('click', bioLeaveMode);
+        document.getElementById('bio-lock-cancel').addEventListener('click', function () { pinCancelBtn.click(); });
+        document.getElementById('bio-lock-logout').addEventListener('click', function () { pinLogoutBtn.click(); });
 
         pinHiddenInput.addEventListener('keydown', function (e) {
             if (e.key >= '0' && e.key <= '9') {
