@@ -1017,6 +1017,14 @@
         .wd-saved-main { min-width: 0; flex: 1; }
         .wd-saved-main strong { display: block; font-size: 14px; font-weight: 800; color: var(--text); word-break: break-word; }
         .wd-saved-main span { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+        .wd-saved-pick { display:flex; align-items:center; gap:10px; width:100%; padding:11px 12px; border:1.5px solid var(--border); border-radius:12px; background:#fff; cursor:pointer; text-align:left; font:inherit; color:inherit; }
+        .wd-saved-pick.open { border-color: var(--primary); }
+        .wd-saved-pick .wd-saved-main { flex:1; min-width:0; }
+        .wd-saved-pick .wd-saved-main span.ph { color: var(--muted); font-size:14px; margin:0; }
+        .wd-saved-chev { flex-shrink:0; font-size:12px; color:var(--muted); transition: transform .15s; }
+        .wd-saved-pick.open .wd-saved-chev { transform: rotate(180deg); }
+        .wd-saved-panel { max-height: min(260px, 38dvh); overflow-y:auto; -webkit-overflow-scrolling:touch; margin-top:6px; padding:0 2px 2px; border-radius:12px; }
+        .wd-saved-panel .wd-saved-item:first-child { margin-top:2px; }
         .wd-saved-del { flex-shrink: 0; width: 30px; height: 30px; border: none; border-radius: 50%; background: #FDECEA; color: var(--error); font-size: 18px; font-weight: 800; line-height: 1; cursor: pointer; }
         .wd-save { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 13px; font-weight: 700; color: var(--text); cursor: pointer; }
         .wd-save input { width: 18px; height: 18px; }
@@ -2375,6 +2383,14 @@
             #pin-modal-overlay .modal-box { max-width: 640px; display: grid; grid-template-columns: 1fr 1fr; column-gap: 22px; align-items: center; }
         }
 
+
+        /* ===== Admin PIN / lock screen: takes the WHOLE screen ===== */
+        #pin-modal-overlay { background: #fff !important; }
+        #pin-modal-overlay .modal-box { background: transparent; box-shadow: none; border-radius: 0; max-width: 420px; animation: none; }
+        #pin-modal-overlay.active { animation: pinScreenIn .22s ease-out; }
+        @keyframes pinScreenIn { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+        #pin-modal-overlay .pin-keypad .pin-key { height: clamp(46px, 8dvh, 64px); font-size: clamp(20px, 3.1dvh, 26px); border-radius: 16px; }
+        #pin-modal-overlay .pin-dot { width: clamp(44px, 7.2dvh, 54px); height: clamp(48px, 7.8dvh, 60px); }
 
         /* ===== Profile / Admin Management ===== */
         .profile-row {
@@ -6872,6 +6888,7 @@
             var wdAccount = 'main';      // 'main' or 'waec' (super admin only): which account the withdrawal comes from
             var wdSavedList = [];
             var wdSavedPick = null;      // the saved account chosen
+            var wdSavedOpen = false;     // the list of saved accounts is open
             var wdDetected = null;       // momo: { providerId, providerName, holderName } once the number is recognised
             var wdBankOk = null;         // bank: { key, holderName } once the account is verified
             var wdSeq = 0;               // newer check makes an older answer ignored
@@ -6997,14 +7014,22 @@
                     box.innerHTML = '<div class="wallet-note">No saved accounts yet. Choose New account, and tick "Save this account for next time".</div>';
                     return;
                 }
-                box.innerHTML = wdSavedList.map(function (a, i) {
-                    return '<div class="wd-saved-item' + (wdSavedPick && wdSavedPick.id === a.id ? ' selected' : '') + '" data-sidx="' + i + '">'
-                        + '<div class="wd-saved-main"><strong>' + escapeHtml(wdSavedName(a)) + '</strong><span>' + escapeHtml((a.providerName ? a.providerName + ' - ' : '') + a.destination) + '</span></div>'
-                        + '<button type="button" class="wd-saved-del" data-sdel="' + i + '" aria-label="Remove this saved account">&times;</button></div>';
-                }).join('');
+                // One tidy row (the chosen account); tap it to open the list of saved accounts, tap an account to pick it.
+                var pickHtml = wdSavedPick
+                    ? '<strong>' + escapeHtml(wdSavedName(wdSavedPick)) + '</strong><span>' + escapeHtml((wdSavedPick.providerName ? wdSavedPick.providerName + ' - ' : '') + wdSavedPick.destination) + '</span>'
+                    : '<span class="ph">Choose a saved account (' + wdSavedList.length + ')</span>';
+                box.innerHTML = '<button type="button" class="wd-saved-pick' + (wdSavedOpen ? ' open' : '') + '" id="wd-saved-pick" aria-expanded="' + (wdSavedOpen ? 'true' : 'false') + '">'
+                    + '<div class="wd-saved-main">' + pickHtml + '</div><span class="wd-saved-chev">&#9660;</span></button>'
+                    + (wdSavedOpen ? '<div class="wd-saved-panel">' + wdSavedList.map(function (a, i) {
+                        return '<div class="wd-saved-item' + (wdSavedPick && wdSavedPick.id === a.id ? ' selected' : '') + '" data-sidx="' + i + '">'
+                            + '<div class="wd-saved-main"><strong>' + escapeHtml(wdSavedName(a)) + '</strong><span>' + escapeHtml((a.providerName ? a.providerName + ' - ' : '') + a.destination) + '</span></div>'
+                            + '<button type="button" class="wd-saved-del" data-sdel="' + i + '" aria-label="Remove this saved account">&times;</button></div>';
+                    }).join('') + '</div>' : '');
+                document.getElementById('wd-saved-pick').addEventListener('click', function () { wdSavedOpen = !wdSavedOpen; wdRenderSaved(); });
                 box.querySelectorAll('[data-sidx]').forEach(function (el) {
                     el.addEventListener('click', function () {
                         wdSavedPick = wdSavedList[Number(el.getAttribute('data-sidx'))] || null;
+                        wdSavedOpen = false;
                         wdRenderSaved();
                     });
                 });
@@ -7026,6 +7051,7 @@
                 return adminApiRequest('/api/admin/wallet/saved').then(function (rows) {
                     wdSavedList = rows || [];
                     wdSavedPick = wdSavedList.length === 1 ? wdSavedList[0] : null;
+                    wdSavedOpen = false;
                     wdRenderSaved();
                     if (thenSetSource) wdSetSource(wdSavedList.length ? 'saved' : 'new');
                 }).catch(function () {

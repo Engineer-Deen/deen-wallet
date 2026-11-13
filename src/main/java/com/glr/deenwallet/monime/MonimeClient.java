@@ -109,6 +109,19 @@ public class MonimeClient {
         return response != null ? response.result() : null;
     }
 
+    /**
+     * Closes a hosted checkout page nobody has started paying on. Monime refuses (HTTP 4xx) once the payer has started,
+     * so a successful call means the page can no longer be paid. Returns false when it could not be closed.
+     */
+    public boolean deleteCheckoutSession(String sessionId) {
+        try {
+            monimeRestClient.delete().uri("/v1/checkout-sessions/{id}", sessionId).retrieve().toBodilessEntity();
+            return true;
+        } catch (org.springframework.web.client.RestClientResponseException e) {
+            return false;
+        }
+    }
+
     /** Authoritative checkout session state (pending, completed, cancelled, expired). */
     public CheckoutSessionResult getCheckoutSession(String sessionId) {
         MonimeEnvelope<CheckoutSessionResult> response = monimeRestClient.get()

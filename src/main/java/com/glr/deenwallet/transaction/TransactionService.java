@@ -77,6 +77,8 @@ public class TransactionService {
     private static final Duration DUPLICATE_WINDOW = Duration.ofSeconds(120);
     /** Extra time after the 10-minute code lifetime before an unpaid row may be cancelled. */
     private static final Duration EXPIRY_GRACE = Duration.ofMinutes(5);
+    /** How long a hosted bank / card checkout page stays payable. */
+    private static final Duration CHECKOUT_TTL = Duration.ofMinutes(10);
     /** Per-user striped locks: close the double-tap race on a single instance. */
     private static final Object[] USER_LOCKS = new Object[64];
     static { for (int i = 0; i < USER_LOCKS.length; i++) USER_LOCKS[i] = new Object(); }
@@ -939,6 +941,7 @@ public class TransactionService {
                 log.warn("Could not reconcile AWAITING_PAYMENT transaction {}: {}", t.getTransactionCode(), e.toString());
             }
         }
+        closeStaleCheckouts(now);
         resumeInterruptedPayouts(now);
         if (safety.isFrozen()) return;   // frozen: money already collected waits until a super admin resumes
         // Money collected but the payout step was interrupted (e.g. Monime outage): resume it.
@@ -951,6 +954,35 @@ public class TransactionService {
                 } catch (Exception e) {
                     log.warn("Could not resume payout for PAID_IN transaction {}: {}", t.getTransactionCode(), e.toString());
                 }
+            }
+        }
+    }
+
+    /**
+     * Hosted checkout pages (bank / card) are only valid for CHECKOUT_TTL. After that the page is closed at Monime
+     * first, and the transaction is cancelled only when Monime confirms it closed. If the payer has already started
+     * paying, Monime refuses to close it and the transaction is left for Monime's own result - money is never cancelled
+     * on the clock alone.
+     */
+    private void closeStaleCheckouts(Instant now) {
+        final String prefix = com.glr.deenwallet.monime.MonimeClient.CHECKOUT_PREFIX;
+        for (Transaction t : transactionRepository.findByStatusAndCreatedAtBefore(
+                TransactionStatus.AWAITING_PAYMENT, now.minus(CHECKOUT_TTL), PageRequest.of(0, 50))) {
+            String ref = t.getMonimePaymentCodeId();
+            if (ref == null || !ref.startsWith(prefix)) continue;
+            try {
+                String sessionId = ref.substring(prefix.length());
+                com.glr.deenwallet.monime.CheckoutSessionResult s = monimeClient.getCheckoutSession(sessionId);
+                String st = s == null || s.status() == null ? "" : s.status().toLowerCase();
+                if (st.equals("completed") || st.equals("processed")) {
+                    handlePaymentCodeProcessed(ref);
+                } else if (st.equals("cancelled") || st.equals("canceled") || st.equals("expired")) {
+                    cancelIfStillAwaiting(t.getId(), "The payment was not completed within 10 minutes. No money was taken.");
+                } else if (monimeClient.deleteCheckoutSession(sessionId)) {
+                    cancelIfStillAwaiting(t.getId(), "The payment was not completed within 10 minutes. No money was taken.");
+                }
+            } catch (Exception e) {
+                log.warn("Could not close stale checkout for {}: {}", t.getTransactionCode(), e.toString());
             }
         }
     }
