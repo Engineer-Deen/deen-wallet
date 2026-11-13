@@ -6021,7 +6021,11 @@
             });
         }
 
+        // Where Convert Money / Bank Transfer was opened from (Home or Services), so Back returns there.
+        let customerServiceOrigin = 'home';
+
         function openCustomerService(serviceType) {
+            customerServiceOrigin = (typeof screenPayment !== 'undefined' && screenPayment.classList.contains('active')) ? 'payment' : 'home';
             activeService = serviceType;
             selectedRecipient = null;
             selectedBank = null;
@@ -6085,7 +6089,7 @@
         }
 
         document.getElementById('step1-back-btn').addEventListener('click', () => {
-            if (typeof window.showPrimaryScreen === 'function') window.showPrimaryScreen('home');
+            if (typeof window.showPrimaryScreen === 'function') window.showPrimaryScreen(customerServiceOrigin || 'home');
         });
 
         document.getElementById('services-convert-card').addEventListener('click', () => {

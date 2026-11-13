@@ -2392,6 +2392,24 @@
         #pin-modal-overlay .pin-keypad .pin-key { height: clamp(46px, 8dvh, 64px); font-size: clamp(20px, 3.1dvh, 26px); border-radius: 16px; }
         #pin-modal-overlay .pin-dot { width: clamp(44px, 7.2dvh, 54px); height: clamp(48px, 7.8dvh, 60px); }
 
+        /* ===== Admin biometric / screen-lock screen: dark "DeenWallet Transfer locked" ===== */
+        #pin-modal-overlay.pk-mode {
+            background-color: #181818 !important;
+            background-image: radial-gradient(circle at 86% 24%, rgba(255,255,255,.11), transparent 24%),
+                              radial-gradient(circle at 82% 52%, rgba(255,255,255,.09), transparent 22%),
+                              radial-gradient(circle at 10% 8%, rgba(255,255,255,.05), transparent 20%),
+                              radial-gradient(circle at 12% 94%, rgba(255,255,255,.04), transparent 22%) !important;
+        }
+        #pin-modal-overlay.pk-mode .modal-box { max-width: 420px; }
+        #pin-modal-overlay.pk-mode .pk-lock { padding: 0 6px 10dvh; }
+        #pin-modal-overlay.pk-mode .pk-lock .pk-lock-ico { width: 76px; height: 76px; margin: 0 auto 26px; background: transparent; border-radius: 0; color: #ececec; }
+        #pin-modal-overlay.pk-mode .pk-lock h3 { margin: 0 0 30px; font-size: 30px; font-weight: 400; color: #f1f1f1; line-height: 1.2; }
+        #pin-modal-overlay.pk-mode .pk-lock .pk-lock-err { color: #ff8a80; min-height: 18px; margin: -14px 0 12px; }
+        #pin-modal-overlay.pk-mode .pk-lock .btn-primary { width: 100%; min-height: 58px; border-radius: 999px; border: 1px solid #2c2c2c; background: #1d1d1d; color: #f1f1f1; font-size: 20px; font-weight: 400; margin-bottom: 14px; }
+        #pin-modal-overlay.pk-mode .pk-lock .btn-primary:active { background: #262626; }
+        #pin-modal-overlay.pk-mode .pk-lock .btn-primary:disabled { opacity: .6; }
+        #pin-modal-overlay.pk-mode .pk-lock .btn-secondary { color: #a9a9a9; font-size: 14px; min-height: 40px; }
+
         /* ===== Profile / Admin Management ===== */
         .profile-row {
             display: flex;
@@ -3617,11 +3635,10 @@
     <div class="modal-overlay" id="pin-modal-overlay">
         <div class="modal-box">
             <div class="pk-lock" id="pk-lock">
-                <div class="pk-lock-ico">&#128274;</div>
-                <h3>Session Locked</h3>
-                <p>Use your screen lock to continue.</p>
+                <div class="pk-lock-ico"><svg viewBox="0 0 48 48" width="68" height="68" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-5a8 8 0 0 1 16 0v5"/><rect x="8" y="21" width="32" height="22" rx="5"/><path d="M24 29.5v5"/></svg></div>
+                <h3>DeenWallet Transfer locked</h3>
                 <div class="pk-lock-err" id="pk-lock-err"></div>
-                <button type="button" class="btn-primary" id="pk-lock-btn">Unlock with passkey</button>
+                <button type="button" class="btn-primary" id="pk-lock-btn">Unlock DeenWallet Transfer</button>
                 <button type="button" class="btn-secondary" id="pk-lock-pin">Use PIN instead</button>
                 <button type="button" class="btn-secondary" id="pk-lock-logout">Log out</button>
             </div>
@@ -4159,7 +4176,7 @@
                 if (link) link.classList.toggle('hidden', !lockUsesPasskey());
                 var err = document.getElementById('pk-lock-err');
                 if (err) err.textContent = '';
-                if (useIt && auto) setTimeout(function () { if (pinModalActive && overlay.classList.contains('pk-mode')) adminPasskeyUnlock(); }, 450);
+                if (useIt && auto) requestAnimationFrame(function () { if (pinModalActive && overlay.classList.contains('pk-mode')) adminPasskeyUnlock(); });
                 fitPinModal();
             }
             async function adminPasskeyUnlock() {
@@ -4211,6 +4228,12 @@
             window.addEventListener('resize', fitPinModal);
             window.addEventListener('orientationchange', function () { setTimeout(fitPinModal, 250); });
             if (window.visualViewport) window.visualViewport.addEventListener('resize', fitPinModal);
+
+            // Android back button: the lock screen can never be skipped with it.
+            window.dwOnBackButton = function () {
+                if (pinModalOverlay && pinModalOverlay.classList.contains('active')) return true;
+                return false;
+            };
 
             function hideAdminPinModal() {
                 pinModalActive = false;
