@@ -4179,6 +4179,22 @@
                 if (useIt && auto) requestAnimationFrame(function () { if (pinModalActive && overlay.classList.contains('pk-mode')) adminPasskeyUnlock(); });
                 fitPinModal();
             }
+            // The passkey request is prepared BEFORE the lock screen is needed (when the app goes to the background), so the
+            // phone prompt opens the moment the lock screen appears. A request is valid for 5 minutes and works once.
+            var pkPre = null;
+            function pkPrefetch() {
+                try {
+                    if (!lockUsesPasskey() || typeof getToken !== 'function' || !getToken()) return;
+                    if (pkPre && Date.now() - pkPre.t < 120000) return;
+                    var o = { t: Date.now() };
+                    o.p = adminApiRequest('/api/admin/passkeys/unlock/options', { method: 'POST', body: {} });
+                    o.p.catch(function () { if (pkPre === o) pkPre = null; });
+                    pkPre = o;
+                } catch (e) { }
+            }
+            document.addEventListener('visibilitychange', function () { if (document.hidden) { pkPre = null; pkPrefetch(); } });
+            setTimeout(pkPrefetch, 4000);
+
             async function adminPasskeyUnlock() {
                 if (pkUnlockBusy || !pinModalActive) return;
                 pkUnlockBusy = true;
@@ -4186,7 +4202,12 @@
                 if (err) err.textContent = '';
                 if (btn) btn.disabled = true;
                 try {
-                    var start = await adminApiRequest('/api/admin/passkeys/unlock/options', { method: 'POST', body: {} });
+                    var start = null;
+                    if (pkPre && Date.now() - pkPre.t < 240000) {
+                        var pre = pkPre; pkPre = null;
+                        try { start = await pre.p; } catch (e) { start = null; }
+                    }
+                    if (!start) start = await adminApiRequest('/api/admin/passkeys/unlock/options', { method: 'POST', body: {} });
                     var answer = await pkGet(start.options);
                     answer.challengeId = start.challengeId;
                     await adminApiRequest('/api/admin/passkeys/unlock/verify', { method: 'POST', body: answer });
@@ -4194,6 +4215,7 @@
                     hideAdminPinModal();
                     showToast('Session unlocked');
                     updateAdminSessionActive();
+                    setTimeout(pkPrefetch, 1500);
                 } catch (e) {
                     if (err) err.textContent = (e && e.name && e.name !== 'Error') ? pkErrorText(e) : ((e && e.message) || 'Passkey failed. Try again or use your PIN.');
                 } finally {

@@ -4969,6 +4969,14 @@
         }
         function bioRememberedWrite(c) { try { const k = bioRememberedKey(); if (k && c) localStorage.setItem(k, JSON.stringify(c)); } catch (_) { } }
         function bioRememberedClear() { try { const k = bioRememberedKey(); if (k) localStorage.removeItem(k); } catch (_) { } }
+        // Going to the background: get the sign-in challenge ready, so the lock screen's phone prompt opens at once on return.
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden) return;
+            try {
+                const c = bioRememberedRead();
+                if (c && getBiometricPlugin() && getAccessToken()) prefetchBiometricChallenge(c);
+            } catch (_) { }
+        });
         let bioVerifying = false;
         function bioVerifyInBackground() {
             if (bioVerifying) return;

@@ -399,6 +399,23 @@ async function registerBiometricLogin(deviceName) {
   }
 }
 
+// The sign-in challenge is fetched BEFORE the lock screen is needed, so the phone prompt opens at once.
+// It is valid for 2 minutes and works only once.
+let biometricChallengePre = null;
+function prefetchBiometricChallenge(account) {
+  try {
+    if (!account || !account.credentialId || !account.accountId) return;
+    if (biometricChallengePre && biometricChallengePre.cid === account.credentialId && Date.now() - biometricChallengePre.t < 50000) return;
+    const o = { cid: account.credentialId, t: Date.now() };
+    o.p = apiRequest('/api/auth/biometric/challenge', {
+      method: 'POST',
+      body: { credentialId: account.credentialId, accountId: account.accountId }
+    });
+    o.p.catch(function () { if (biometricChallengePre === o) biometricChallengePre = null; });
+    biometricChallengePre = o;
+  } catch (_) { /* optional speed-up */ }
+}
+
 // Signs in to ONE specific account that the person chose.
 // account = an entry from listBiometricAccounts().
 async function biometricLogin(account) {
@@ -413,10 +430,18 @@ async function biometricLogin(account) {
     throw oldSetup;
   }
 
-  const challenge = await apiRequest('/api/auth/biometric/challenge', {
-    method: 'POST',
-    body: { credentialId: account.credentialId, accountId: account.accountId }
-  });
+  let challenge = null;
+  if (biometricChallengePre && biometricChallengePre.cid === account.credentialId && Date.now() - biometricChallengePre.t < 100000) {
+    const pre = biometricChallengePre;
+    biometricChallengePre = null;
+    try { challenge = await pre.p; } catch (_) { challenge = null; }
+  }
+  if (!challenge) {
+    challenge = await apiRequest('/api/auth/biometric/challenge', {
+      method: 'POST',
+      body: { credentialId: account.credentialId, accountId: account.accountId }
+    });
+  }
   const signed = await plugin.authenticate({
     challenge: challenge.challenge,
     credentialId: account.credentialId,
