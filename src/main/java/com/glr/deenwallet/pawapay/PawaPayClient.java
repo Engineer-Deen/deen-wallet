@@ -95,7 +95,15 @@ public class PawaPayClient {
     }
 
     private PawaPayResponse post(String path, Object body) {
-        return call(() -> http.post().uri(path).body(body).retrieve().onStatus(s -> true, (rq, rs) -> { }).toEntity(String.class), "POST " + path);
+        // Sent as ready-made JSON text: this Spring Boot's own JSON converter does not understand these (Jackson 2) objects and sent an
+        // empty body, which is why pawaPay answered "required parameter 'depositId' is missing".
+        final String json;
+        try {
+            json = mapper.writeValueAsString(body);
+        } catch (Exception e) {
+            throw new IllegalStateException("Could not build the pawaPay request", e);
+        }
+        return call(() -> http.post().uri(path).body(json).retrieve().onStatus(s -> true, (rq, rs) -> { }).toEntity(String.class), "POST " + path);
     }
 
     private PawaPayResponse call(java.util.function.Supplier<ResponseEntity<String>> request, String what) {
