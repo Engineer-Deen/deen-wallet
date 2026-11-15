@@ -50,6 +50,18 @@ public class KycSubmission {
     @Column(name = "document_expiry_date")
     private LocalDate documentExpiryDate;
 
+    @Column(name = "nationality", length = 3)
+    private String nationality;
+
+    @Column(name = "address_line", length = 120)
+    private String addressLine;
+
+    @Column(name = "city", length = 80)
+    private String city;
+
+    @Column(name = "postal_code", length = 12)
+    private String postalCode;
+
     @Column(name = "submitted_at")
     private Instant submittedAt;
 
@@ -109,6 +121,14 @@ public class KycSubmission {
     public void setDateOfBirth(LocalDate v) { this.dateOfBirth = v; }
     public LocalDate getDocumentExpiryDate() { return documentExpiryDate; }
     public void setDocumentExpiryDate(LocalDate v) { this.documentExpiryDate = v; }
+    public String getNationality() { return nationality; }
+    public void setNationality(String v) { this.nationality = v; }
+    public String getAddressLine() { return addressLine; }
+    public void setAddressLine(String v) { this.addressLine = v; }
+    public String getCity() { return city; }
+    public void setCity(String v) { this.city = v; }
+    public String getPostalCode() { return postalCode; }
+    public void setPostalCode(String v) { this.postalCode = v; }
     public Instant getSubmittedAt() { return submittedAt; }
     public void setSubmittedAt(Instant v) { this.submittedAt = v; }
     public Instant getReviewedAt() { return reviewedAt; }

@@ -1428,6 +1428,8 @@ function normalizeTransaction(raw) {
       bankAccountHolderName: cleanName(raw.bankAccountHolderName) || null,
       bankAccountKycVerified: raw.bankAccountKycVerified === true,
       withdrawalFrom: raw.withdrawalFrom || null,
+      statusText: raw.statusText || null,
+      xb: raw.xb || null,
     };
   }
 
@@ -1470,6 +1472,68 @@ function statusLabel(status) {
 }
 
 const AWAITING_PAYMENT_ASSUMED_TTL_MINUTES = 10;
+
+// ==============================================================
+// SEND MONEY ABROAD transfers, shown in Recent activity and Transaction history next to every other transaction.
+// ==============================================================
+const XB_STATUS_MAP = {
+  CREATED: ['AWAITING_PAYMENT', 'Waiting for payment'],
+  COLLECTING: ['AWAITING_PAYMENT', 'Waiting for payment'],
+  COLLECTED: ['PAYING_OUT', 'Sending'],
+  REMITTING: ['PAYING_OUT', 'Sending'],
+  COMPLETED: ['COMPLETED', 'Sent'],
+  REFUNDING: ['PAYING_OUT', 'Refunding'],
+  REFUNDED: ['CANCELED', 'Refunded'],
+  FAILED: ['FAILED', 'Not completed'],
+};
+
+function crossBorderToTransaction(t) {
+  const m = XB_STATUS_MAP[t.status] || ['PAYING_OUT', 'Being checked'];
+  let reason = null;
+  if (t.status === 'REFUNDED') reason = 'We could not send the money, so your payment was returned to your Orange Money.';
+  else if (t.status === 'FAILED') reason = 'The payment was not completed. No money was taken.';
+  return {
+    id: 'xb:' + t.id,
+    status: m[0],
+    statusText: m[1],
+    amount: Number(t.amount),
+    fee: Number(t.fee),
+    totalCharged: Number(t.total),
+    destinationHolderName: t.recipientName || null,
+    destinationPhone: t.recipientPhone || null,
+    sourceProviderId: null,
+    destinationProviderId: null,
+    ussdCode: null,
+    transactionCode: 'XB-' + String(t.id).replace(/-/g, '').slice(0, 8).toUpperCase(),
+    failureReason: reason,
+    createdAt: t.createdAt || null,
+    serviceType: 'CROSS_BORDER',
+    bankProviderId: null,
+    bankName: null,
+    bankAccountNumber: null,
+    bankAccountHolderName: null,
+    bankAccountKycVerified: false,
+    withdrawalFrom: null,
+    xb: t,
+  };
+}
+
+async function loadCrossBorderTransactions() {
+  try {
+    const rows = await apiRequest('/api/cross-border');
+    return Array.isArray(rows) ? rows.map(crossBorderToTransaction) : [];
+  } catch (_) {
+    return [];   // the list must still show everything else
+  }
+}
+
+function sortTransactionsNewestFirst(list) {
+  return list.sort((a, b) => {
+    const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return bTime - aTime;
+  });
+}
 
 function effectiveStatus(txn) {
   return txn.status;

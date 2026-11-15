@@ -18,7 +18,8 @@ public final class KycDtos {
 
     /** The details saved so far in a draft (so the customer can resume where they stopped). */
     public record DraftDetails(String documentType, String fullNameOnDocument, String documentNumber,
-                               String dateOfBirth, String documentExpiryDate) { }
+                               String dateOfBirth, String documentExpiryDate,
+                               String nationality, String addressLine, String city, String postalCode) { }
 
     public record StatusResponse(
             boolean available,
@@ -41,7 +42,8 @@ public final class KycDtos {
             List<DocumentOption> documentTypes) { }
 
     public record DraftRequest(String documentType, String fullNameOnDocument, String documentNumber,
-                               String dateOfBirth, String documentExpiryDate) { }
+                               String dateOfBirth, String documentExpiryDate,
+                               String nationality, String addressLine, String city, String postalCode) { }
 
     public record DocumentUpload(String contentType, String data) { }
 
@@ -60,7 +62,8 @@ public final class KycDtos {
                                 Instant joinedAt) { }
 
     public record AdminDocument(String type, String typeLabel, String fullNameOnDocument, String documentNumber,
-                                String dateOfBirth, String expiryDate) { }
+                                String dateOfBirth, String expiryDate,
+                                String nationality, String addressLine, String city, String postalCode) { }
 
     public record AdminHistoryItem(String id, String status, Instant submittedAt, Instant reviewedAt, String reason) { }
 

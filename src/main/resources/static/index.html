@@ -3435,10 +3435,7 @@
                 </div>
             </div>
 
-            <div id="xb-recent-wrap" class="bank-form-card hidden">
-                <div class="bank-field-label">Recent transfers abroad</div>
-                <div id="xb-recent"></div>
-            </div>
+            <!-- Recent transfers abroad are shown in Recent activity and Transaction history. -->
         </div>
 
         <div class="footer">
@@ -3476,6 +3473,8 @@
                 <div class="bank-field-label" style="margin-top:18px;">Your name (from KYC)</div>
                 <input class="bank-account-input" id="xb-sname" type="text" disabled />
 
+                <div id="xb-kyc-note" class="bank-account-hint hidden" style="margin-top:14px;">Your nationality and home address are taken from your identity verification (KYC).</div>
+                <div id="xb-addr-block">
                 <div class="bank-field-label" style="margin-top:14px;">Nationality</div>
                 <select class="bank-select" id="xb-nat"></select>
 
@@ -3485,6 +3484,7 @@
                 <input class="bank-account-input" id="xb-city" type="text" autocomplete="address-level2" maxlength="60" placeholder="City or town" />
                 <div class="bank-field-label" style="margin-top:14px;">Postal code (optional)</div>
                 <input class="bank-account-input" id="xb-postal" type="text" autocomplete="postal-code" maxlength="12" placeholder="Leave empty if you do not have one" />
+                </div>
 
                 <div class="bank-field-label" style="margin-top:14px;">Why are you sending this money?</div>
                 <select class="bank-select" id="xb-purpose"></select>
@@ -5859,12 +5859,15 @@
         }
 
         // ---------------- wizard ----------------
+        const KYC_NATIONS = [['SLE', 'Sierra Leone'], ['GHA', 'Ghana'], ['NGA', 'Nigeria'], ['LBR', 'Liberia'], ['GIN', 'Guinea'], ['SEN', 'Senegal'], ['GMB', 'Gambia'], ['MLI', 'Mali'], ['CIV', "Côte d'Ivoire"], ['BFA', 'Burkina Faso'], ['TGO', 'Togo'], ['BEN', 'Benin'], ['CMR', 'Cameroon'], ['KEN', 'Kenya'], ['UGA', 'Uganda'], ['TZA', 'Tanzania'], ['RWA', 'Rwanda'], ['ZMB', 'Zambia'], ['MWI', 'Malawi'], ['COD', 'DR Congo'], ['ETH', 'Ethiopia'], ['ZAF', 'South Africa'], ['LBN', 'Lebanon'], ['EGY', 'Egypt'], ['MAR', 'Morocco'], ['DZA', 'Algeria'], ['TUN', 'Tunisia'], ['SDN', 'Sudan'], ['SOM', 'Somalia'], ['NER', 'Niger'], ['TCD', 'Chad'], ['MRT', 'Mauritania'], ['GNB', 'Guinea-Bissau'], ['CPV', 'Cape Verde'], ['AGO', 'Angola'], ['MOZ', 'Mozambique'], ['ZWE', 'Zimbabwe'], ['BWA', 'Botswana'], ['NAM', 'Namibia'], ['SYR', 'Syria'], ['TUR', 'Turkey'], ['CHN', 'China'], ['BGD', 'Bangladesh'], ['ARE', 'United Arab Emirates'], ['SAU', 'Saudi Arabia'], ['ITA', 'Italy'], ['ESP', 'Spain'], ['NLD', 'Netherlands'], ['BEL', 'Belgium'], ['AUS', 'Australia'], ['IND', 'India'], ['PAK', 'Pakistan'], ['GBR', 'United Kingdom'], ['USA', 'United States'], ['CAN', 'Canada'], ['FRA', 'France'], ['DEU', 'Germany']];
+        function kycNationName(code) { const m = KYC_NATIONS.find((n) => n[0] === code); return m ? m[1] : (code || ''); }
         function kycStartWizard() {
             const d = kycState.data;
             const dr = d && d.draft ? d.draft : {};
             kycState.form = {
                 documentType: dr.documentType || '', fullNameOnDocument: dr.fullNameOnDocument || '', documentNumber: dr.documentNumber || '',
-                dateOfBirth: dr.dateOfBirth || '', documentExpiryDate: dr.documentExpiryDate || '', consent: false
+                dateOfBirth: dr.dateOfBirth || '', documentExpiryDate: dr.documentExpiryDate || '', consent: false,
+                nationality: dr.nationality || 'SLE', addressLine: dr.addressLine || '', city: dr.city || '', postalCode: dr.postalCode || ''
             };
             kycState.photos = {}; kycState.busy = {}; kycState.slotErr = {}; kycState.error = '';
             kycState.mode = 'wizard';
@@ -5902,6 +5905,14 @@
                     '<input class="kyc-input" type="date" id="kyc-dob" data-field="dateOfBirth" value="' + kycEsc(f.dateOfBirth) + '"></div>' +
                     '<div style="' + (meta && meta.needsExpiryDate ? '' : 'display:none') + '"><label class="kyc-label" for="kyc-exp">Expiry date</label>' +
                     '<input class="kyc-input" type="date" id="kyc-exp" data-field="documentExpiryDate" value="' + kycEsc(f.documentExpiryDate) + '"></div></div>' +
+                    '<label class="kyc-label" for="kyc-nat">Nationality</label>' +
+                    '<select class="kyc-input" id="kyc-nat" data-field="nationality">' + KYC_NATIONS.map((n) => '<option value="' + kycEsc(n[0]) + '"' + (f.nationality === n[0] ? ' selected' : '') + '>' + kycEsc(n[1]) + '</option>').join('') + '</select>' +
+                    '<label class="kyc-label" for="kyc-addr">Home address</label>' +
+                    '<input class="kyc-input" id="kyc-addr" data-field="addressLine" autocomplete="street-address" maxlength="100" placeholder="Street and house number or area" value="' + kycEsc(f.addressLine) + '">' +
+                    '<label class="kyc-label" for="kyc-city">City or town</label>' +
+                    '<input class="kyc-input" id="kyc-city" data-field="city" autocomplete="address-level2" maxlength="60" placeholder="City or town" value="' + kycEsc(f.city) + '">' +
+                    '<label class="kyc-label" for="kyc-postal">Postal code (optional)</label>' +
+                    '<input class="kyc-input" id="kyc-postal" data-field="postalCode" autocomplete="postal-code" maxlength="12" placeholder="Leave empty if you do not have one" value="' + kycEsc(f.postalCode) + '">' +
                     err + '<button class="btn-primary kyc-cta" data-kyc="s1next" type="button"' + (kycState.saving ? ' disabled' : '') + '>' +
                     (kycState.saving ? 'Saving…' : 'Continue') + '</button></div>' + back;
                 return;
@@ -5924,6 +5935,8 @@
                 '<div><span>ID number</span><strong>' + kycEsc(f.documentNumber) + '</strong></div>' +
                 '<div><span>Date of birth</span><strong>' + kycEsc(kycDate(f.dateOfBirth + 'T00:00:00')) + '</strong></div>' +
                 (meta.needsExpiryDate ? '<div><span>Expiry</span><strong>' + kycEsc(kycDate(f.documentExpiryDate + 'T00:00:00')) + '</strong></div>' : '') +
+                '<div><span>Nationality</span><strong>' + kycEsc(kycNationName(f.nationality)) + '</strong></div>' +
+                '<div><span>Address</span><strong>' + kycEsc(f.addressLine + ', ' + f.city + (f.postalCode ? ' ' + f.postalCode : '')) + '</strong></div>' +
                 '<div><span>Photos</span><strong>' + (d.uploaded || []).length + ' added</strong></div></div>' +
                 '<label class="kyc-consent"><input type="checkbox" id="kyc-consent"' + (f.consent ? ' checked' : '') + '><span>I confirm these details are mine and correct, and I allow DeenWallet Transfer to review my ID to verify my identity.</span></label>' +
                 err + '<button class="btn-primary kyc-cta" data-kyc="submit" type="button"' + (f.consent && !kycState.saving ? '' : ' disabled') + '>' +
@@ -6062,7 +6075,8 @@
                     body: {
                         documentType: f.documentType, fullNameOnDocument: f.fullNameOnDocument.trim(),
                         documentNumber: f.documentNumber.trim(), dateOfBirth: f.dateOfBirth,
-                        documentExpiryDate: meta && meta.needsExpiryDate ? f.documentExpiryDate : ''
+                        documentExpiryDate: meta && meta.needsExpiryDate ? f.documentExpiryDate : '',
+                        nationality: f.nationality, addressLine: f.addressLine.trim(), city: f.city.trim(), postalCode: f.postalCode.trim()
                     }
                 });
                 kycState.data = data; kycState.loadedAt = Date.now();
@@ -6119,6 +6133,9 @@
                 if (!f.dateOfBirth) { kycState.error = 'Enter your date of birth.'; kycRender(); return; }
                 const m = kycDocMeta(f.documentType);
                 if (m && m.needsExpiryDate && !f.documentExpiryDate) { kycState.error = 'Enter the expiry date of the document.'; kycRender(); return; }
+                if (!f.nationality) { kycState.error = 'Choose your nationality.'; kycRender(); return; }
+                if (f.addressLine.trim().length < 3) { kycState.error = 'Enter your home address.'; kycRender(); return; }
+                if (f.city.trim().length < 2) { kycState.error = 'Enter your city or town.'; kycRender(); return; }
                 kycSaveDraft(); return;
             }
             if (act === 's2next') { if (kycState.data && kycState.data.canSubmit) { kycState.step = 3; kycState.error = ''; kycRender(); document.querySelector('#screen-kyc .scroll').scrollTop = 0; } return; }
@@ -6500,6 +6517,7 @@
                 const name = document.createElement('span');
                 name.className = 'recent-activity-name';
                 name.textContent = txn.serviceType === 'WAEC_RESULT_PIN' ? 'WAEC Result Pin' : (txn.destinationHolderName || txn.destinationPhone || 'Transfer');
+                if (txn.serviceType === 'CROSS_BORDER') name.textContent = 'Send abroad: ' + (txn.destinationHolderName || 'Recipient');
                 if (txn.withdrawalFrom) name.textContent = (txn.withdrawalFrom === 'BANK' ? 'Bank withdrawal: ' : 'Card withdrawal: ') + name.textContent;
 
                 const meta = document.createElement('span');
@@ -6510,7 +6528,7 @@
 
                 const badge = document.createElement('span');
                 badge.className = 'recent-activity-status ' + recentActivityStatusClass(status);
-                badge.textContent = recentActivityStatusLabel(status);
+                badge.textContent = txn.statusText || recentActivityStatusLabel(status);
 
                 meta.appendChild(date);
                 meta.appendChild(badge);
@@ -6531,13 +6549,9 @@
 
         async function loadRecentActivity() {
             try {
-                const raw = await apiRequest('/api/transactions');
-                const transactions = (raw || []).map(normalizeTransaction);
-                transactions.sort((a, b) => {
-                    const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-                    const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-                    return bTime - aTime;
-                });
+                const results = await Promise.all([apiRequest('/api/transactions'), loadCrossBorderTransactions()]);
+                const transactions = (results[0] || []).map(normalizeTransaction).concat(results[1]);
+                sortTransactionsNewestFirst(transactions);
                 try {
                     sessionStorage.setItem('deenwallet.recentTransactions', JSON.stringify(transactions));
                 } catch (_) {}
@@ -9079,7 +9093,6 @@
             hide(xbEl('xb-quote-card')); hide(xbEl('xb-quote-status')); hide(xbEl('xb-start-error')); hide(xbEl('xb-details-error')); hide(xbEl('xb-confirm-error'));
             xbEl('xb-start-continue-btn').disabled = true;
             xbOnCorridor();
-            xbLoadRecent();
             xbShowScreen('screen-xb-start');
         };
 
@@ -9144,26 +9157,7 @@
             xbUpdateStart();
         }
 
-        async function xbLoadRecent() {
-            const wrap = xbEl('xb-recent-wrap'), box = xbEl('xb-recent');
-            hide(wrap); box.innerHTML = '';
-            try {
-                const rows = await apiRequest('/api/cross-border');
-                if (!rows || !rows.length) return;
-                rows.forEach((t) => {
-                    const info = xbStatusInfo(t.status);
-                    const row = document.createElement('button');
-                    row.type = 'button';
-                    row.className = 'bank-review-row';
-                    row.style.cssText = 'width:100%;background:none;border:none;text-align:left;cursor:pointer;';
-                    row.innerHTML = '<span class="label">' + escapeHtml(t.recipientName) + '<br><small>' + escapeHtml(xbMoneyDec(t.receiveAmount, t.receiveCurrency)) + '</small></span>' +
-                        '<span class="value">' + escapeHtml(info.short) + '</span>';
-                    row.addEventListener('click', () => { xbTx = t; xbPollCount = 0; xbRenderWait(t); xbShowScreen('screen-xb-wait'); xbPoll(); });
-                    box.appendChild(row);
-                });
-                show(wrap);
-            } catch (_) { /* the list is only a convenience */ }
-        }
+        // Send Abroad transfers are listed in Recent activity and Transaction history, not on this page.
 
         ['xb-rfirst', 'xb-rlast', 'xb-rphone'].forEach((id) => xbEl(id).addEventListener('input', xbUpdateStart));
         xbEl('xb-amount').addEventListener('input', xbScheduleQuote);
@@ -9185,6 +9179,8 @@
                 xbEl('xb-payer').value = d.length >= 8 ? d.slice(-8) : '';
             }
             xbEl('xb-sname').value = (xbCfg && xbCfg.senderName) || '';
+            const kh = !!(xbCfg && xbCfg.kycHasAddress);
+            if (kh) { hide(xbEl('xb-addr-block')); show(xbEl('xb-kyc-note')); } else { show(xbEl('xb-addr-block')); hide(xbEl('xb-kyc-note')); }
             if (!xbEl('xb-addr').value && p.addressLine) xbEl('xb-addr').value = p.addressLine;
             if (!xbEl('xb-city').value && p.city) xbEl('xb-city').value = p.city;
             if (!xbEl('xb-postal').value && p.postalCode) xbEl('xb-postal').value = p.postalCode;
@@ -9195,9 +9191,9 @@
 
         function xbDetailsReady() {
             return xbEl('xb-payer').value.replace(/\D/g, '').replace(/^0+/, '').length >= 8
-                && xbEl('xb-nat').value
-                && xbEl('xb-addr').value.trim().length >= 3
-                && xbEl('xb-city').value.trim().length >= 2
+                && (xbCfg.kycHasAddress || (xbEl('xb-nat').value
+                    && xbEl('xb-addr').value.trim().length >= 3
+                    && xbEl('xb-city').value.trim().length >= 2))
                 && xbEl('xb-purpose').value && xbEl('xb-source').value;
         }
         function xbUpdateDetails() { xbEl('xb-details-continue-btn').disabled = !xbDetailsReady(); }
@@ -9257,6 +9253,7 @@
                 xbShowScreen('screen-xb-wait');
                 xbPoll();
                 xbRequestId = null;
+                if (typeof loadRecentActivity === 'function') loadRecentActivity();
             } catch (error) {
                 if (error.status === 401 || error.status === 403) {
                     showAuthRequiredModal(error.message || 'Your session has expired. Please log in again.');

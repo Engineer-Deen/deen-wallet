@@ -650,8 +650,9 @@
 
     async function loadList({ background = false } = {}) {
       try {
-        const raw = await apiRequest('/api/transactions');
-        const transactions = (raw || []).map(normalizeTransaction);
+        const results = await Promise.all([apiRequest('/api/transactions'), loadCrossBorderTransactions()]);
+        const transactions = (results[0] || []).map(normalizeTransaction).concat(results[1]);
+        sortTransactionsNewestFirst(transactions);
         hide(loadingState);
 
         if (transactions.length === 0) {
@@ -697,6 +698,7 @@
                 : txn.serviceType === 'BANK_TRANSFER'
                         ? (txn.bankAccountHolderName || txn.destinationHolderName || 'Bank Transfer')
                         : (txn.destinationHolderName || txn.destinationPhone || 'Transfer');
+        if (txn.serviceType === 'CROSS_BORDER') name.textContent = 'Send abroad: ' + (txn.destinationHolderName || 'Recipient');
         if (txn.withdrawalFrom) {
           name.textContent = (txn.withdrawalFrom === 'BANK' ? 'Bank withdrawal: ' : 'Card withdrawal: ') + name.textContent;
         }
@@ -719,7 +721,7 @@
 
         const badge = document.createElement('span');
         badge.className = 'status-badge ' + statusBadgeClass(status);
-        badge.textContent = (txn.serviceType === 'WAEC_RESULT_PIN' && status === 'COMPLETED') ? 'Purchase completed' : statusLabel(status);
+        badge.textContent = txn.statusText || ((txn.serviceType === 'WAEC_RESULT_PIN' && status === 'COMPLETED') ? 'Purchase completed' : statusLabel(status));
 
         meta.appendChild(codeSpan);
         meta.appendChild(dateSpan);
@@ -751,10 +753,12 @@
       }
 
       try {
-        const raw = await apiRequest('/api/transactions/' + encodeURIComponent(id));
-        const txn = normalizeTransaction(raw);
+        const isXb = String(id).indexOf('xb:') === 0;
+        const raw = await apiRequest(isXb ? '/api/cross-border/' + encodeURIComponent(String(id).slice(3)) : '/api/transactions/' + encodeURIComponent(id));
+        const txn = isXb ? crossBorderToTransaction(raw) : normalizeTransaction(raw);
         renderReceipt(txn);
         show(receiptCard);
+        if (isXb) scheduleXbReceiptRefresh(id, txn.status, 0);
       } catch (error) {
         if (!cachedTransaction) {
           receiptError.textContent = error.message || "Couldn't load this transaction.";
@@ -831,7 +835,8 @@
         receiptWaecPins.classList.add('hidden');
       }
 
-      receiptCanceledNote.hidden = status !== 'CANCELED';
+      receiptCanceledNote.hidden = status !== 'CANCELED' || txn.serviceType === 'CROSS_BORDER';
+      if (txn.serviceType === 'CROSS_BORDER') renderCrossBorderReceipt(txn);
       const failureReason = txn.failureReason || '';
       if (receiptFailureReason && receiptFailureReasonText) {
         receiptFailureReason.hidden = !failureReason || (status !== 'FAILED' && status !== 'CANCELED');
@@ -844,6 +849,53 @@
     // the same details the customer gets by email. Fetched from the buyer's own order.
     // ==============================================================
     let waecDetailsToken = 0;
+
+    // ==============================================================
+    // SEND MONEY ABROAD receipt
+    // ==============================================================
+    function renderCrossBorderReceipt(txn) {
+      const x = txn.xb || {};
+      const titles = {
+        CREATED: 'Waiting for Payment', COLLECTING: 'Waiting for Payment', COLLECTED: 'Sending the Money',
+        REMITTING: 'Sending the Money', COMPLETED: 'Money Sent Successfully', REFUNDING: 'Refunding Your Money',
+        REFUNDED: 'Money Returned to You', FAILED: 'Payment Not Completed',
+      };
+      const icons = {
+        COMPLETED: { icon: '\u2705', cls: 'success' }, REFUNDED: { icon: '\u21A9\uFE0F', cls: 'canceled' },
+        FAILED: { icon: '\u26A0\uFE0F', cls: 'failed' },
+      };
+      receiptTitle.textContent = titles[x.status] || 'Being Checked';
+      const ic = icons[x.status] || { icon: '\u23F3', cls: 'pending' };
+      receiptIcon.textContent = ic.icon;
+      receiptIcon.className = 'receipt-icon ' + ic.cls;
+      receiptAmountLabel.textContent = 'Amount sent';
+      receiptOperatorLabel.textContent = 'Recipient gets';
+      receiptOperator.textContent = (x.receiveAmount !== undefined && x.receiveAmount !== null
+        ? formatMoney(Number(x.receiveAmount)) + ' ' + (x.receiveCurrency || '') : '—') + (x.destCountry ? ' (' + x.destCountry + ')' : '');
+      receiptRecipientLabel.textContent = 'Recipient name';
+      receiptRecipientName.textContent = txn.destinationHolderName || '—';
+      receiptRecipientDestinationLabel.textContent = 'Recipient number';
+      receiptRecipientPhone.textContent = txn.destinationPhone ? '+' + maskPhone(txn.destinationPhone) : '—';
+    }
+
+    let xbReceiptTimer = null;
+    function scheduleXbReceiptRefresh(id, status, count) {
+      if (xbReceiptTimer) { clearTimeout(xbReceiptTimer); xbReceiptTimer = null; }
+      if (status !== 'AWAITING_PAYMENT' && status !== 'PAYING_OUT') return;
+      if (count >= 60) return;
+      xbReceiptTimer = setTimeout(async () => {
+        xbReceiptTimer = null;
+        if (!screenReceipt.classList.contains('active')) return;
+        try {
+          const raw = await apiRequest('/api/cross-border/' + encodeURIComponent(String(id).slice(3)) + '/refresh', { method: 'POST' });
+          const txn = crossBorderToTransaction(raw);
+          if (screenReceipt.classList.contains('active')) renderReceipt(txn);
+          scheduleXbReceiptRefresh(id, txn.status, count + 1);
+        } catch (_) {
+          scheduleXbReceiptRefresh(id, status, count + 1);
+        }
+      }, 5000);
+    }
 
     function waecDeliveryText(deliveryStatus) {
       if (deliveryStatus === 'SENT') return 'Delivered';

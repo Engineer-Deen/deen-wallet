@@ -48,6 +48,10 @@ public class KycService {
     private static final int MAX_SUBMISSIONS_PER_DAY = 3;
     private static final Pattern NAME = Pattern.compile("^[\\p{L}][\\p{L} .'’-]{2,99}$");
     private static final Pattern NUMBER = Pattern.compile("^[A-Z0-9/]{5,24}$");
+    private static final Pattern ISO3 = Pattern.compile("^[A-Z]{3}$");
+    private static final Pattern ADDRESS = Pattern.compile("^[\\p{L}0-9 .,'#/()-]{3,120}$");
+    private static final Pattern CITY = Pattern.compile("^[\\p{L}0-9 .,'()-]{2,80}$");
+    private static final Pattern POSTAL = Pattern.compile("^[A-Za-z0-9 -]{2,12}$");
 
     private final KycSubmissionRepository submissions;
     private final KycDocumentRepository documents;
@@ -121,6 +125,10 @@ public class KycService {
         s.setDocumentLast4(d.number().substring(d.number().length() - 4));
         s.setDateOfBirth(d.dateOfBirth());
         s.setDocumentExpiryDate(d.expiry());
+        s.setNationality(d.nationality());
+        s.setAddressLine(d.addressLine());
+        s.setCity(d.city());
+        s.setPostalCode(d.postalCode());
         submissions.save(s);
 
         if (previousType != null && previousType != d.type() && !d.type().needsBackPhoto()) {
@@ -358,7 +366,8 @@ public class KycService {
     // helpers
     // =====================================================================
 
-    private record Details(KycDocumentType type, String fullName, String number, LocalDate dateOfBirth, LocalDate expiry) { }
+    private record Details(KycDocumentType type, String fullName, String number, LocalDate dateOfBirth, LocalDate expiry,
+                            String nationality, String addressLine, String city, String postalCode) { }
 
     private void requireAvailable() {
         if (!crypto.isConfigured()) {
@@ -426,7 +435,15 @@ public class KycService {
                 throw new IllegalArgumentException("The expiry date looks wrong. Please check it.");
             }
         }
-        return new Details(type, name, number, dob, expiry);
+        String nationality = r.nationality() == null ? "" : r.nationality().trim().toUpperCase(Locale.ROOT);
+        if (!ISO3.matcher(nationality).matches()) throw new IllegalArgumentException("Choose your nationality.");
+        String address = r.addressLine() == null ? "" : r.addressLine().trim().replaceAll("\\s+", " ");
+        if (!ADDRESS.matcher(address).matches()) throw new IllegalArgumentException("Enter your home address (street and house number or area).");
+        String city = r.city() == null ? "" : r.city().trim().replaceAll("\\s+", " ");
+        if (!CITY.matcher(city).matches()) throw new IllegalArgumentException("Enter your city or town.");
+        String postal = r.postalCode() == null ? "" : r.postalCode().trim();
+        if (!postal.isEmpty() && !POSTAL.matcher(postal).matches()) throw new IllegalArgumentException("The postal code is not valid. Leave it empty if you do not have one.");
+        return new Details(type, name, number, dob, expiry, nationality, address, city, postal.isEmpty() ? null : postal);
     }
 
     private static LocalDate parseDate(String text, String what) {
@@ -528,7 +545,8 @@ public class KycService {
             draft = new KycDtos.DraftDetails(open.getDocumentType().name(), open.getFullNameOnDocument(),
                     crypto.decryptText(open.getDocumentNumberEnc(), open.getId() + ":NUMBER"),
                     open.getDateOfBirth() == null ? null : open.getDateOfBirth().toString(),
-                    open.getDocumentExpiryDate() == null ? null : open.getDocumentExpiryDate().toString());
+                    open.getDocumentExpiryDate() == null ? null : open.getDocumentExpiryDate().toString(),
+                    open.getNationality(), open.getAddressLine(), open.getCity(), open.getPostalCode());
         }
 
         boolean canStart = crypto.isConfigured() && !"APPROVED".equals(status) && !"PENDING".equals(status);
@@ -590,7 +608,8 @@ public class KycService {
                         s.getDocumentType() == null ? null : s.getDocumentType().label(),
                         s.getFullNameOnDocument(), number,
                         s.getDateOfBirth() == null ? null : s.getDateOfBirth().toString(),
-                        s.getDocumentExpiryDate() == null ? null : s.getDocumentExpiryDate().toString()),
+                        s.getDocumentExpiryDate() == null ? null : s.getDocumentExpiryDate().toString(),
+                        s.getNationality(), s.getAddressLine(), s.getCity(), s.getPostalCode()),
                 u == null ? "DIFFERENT" : nameMatch(u.getFullName(), s.getFullNameOnDocument()),
                 others,
                 names(new HashSet<>(documents.kindsFor(s.getId()))),

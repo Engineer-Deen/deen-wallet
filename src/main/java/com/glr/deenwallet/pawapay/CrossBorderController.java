@@ -81,7 +81,20 @@ public class CrossBorderController {
         m.put("purposes", PURPOSES);
         m.put("sources", SOURCES);
         users.findById(uid).ifPresent(u -> m.put("phone", u.getPhone()));
-        submissions.findByUserIdAndStatus(uid, KycStatus.APPROVED).ifPresent(s -> m.put("senderName", s.getFullNameOnDocument()));
+        submissions.findByUserIdAndStatus(uid, KycStatus.APPROVED).ifPresent(s -> {
+            m.put("senderName", s.getFullNameOnDocument());
+            // Nationality and address now come from the KYC form. Older approved customers who never gave them are asked once here.
+            boolean has = notBlank(s.getNationality()) && notBlank(s.getAddressLine()) && notBlank(s.getCity());
+            m.put("kycHasAddress", has);
+            if (has) {
+                Map<String, Object> k = new LinkedHashMap<>();
+                k.put("nationality", s.getNationality());
+                k.put("addressLine", s.getAddressLine());
+                k.put("city", s.getCity());
+                k.put("postalCode", s.getPostalCode());
+                m.put("kycProfile", k);
+            }
+        });
         m.put("profile", loadProfile(uid));
         return ResponseEntity.ok(m);
     }
@@ -131,13 +144,14 @@ public class CrossBorderController {
 
             String payer = payerMsisdn(r.payerPhone());
             String recipient = recipientMsisdn(c.getDialCode(), r.recipientPhone());
-            String nat = upper(r.nationality());
+            boolean fromKyc = notBlank(kyc.getNationality()) && notBlank(kyc.getAddressLine()) && notBlank(kyc.getCity());
+            String nat = fromKyc ? upper(kyc.getNationality()) : upper(r.nationality());
             if (!ISO3.matcher(nat).matches()) throw new IllegalArgumentException("Choose your nationality.");
-            String line = trim(r.addressLine());
-            String city = trim(r.city());
+            String line = fromKyc ? trim(kyc.getAddressLine()) : trim(r.addressLine());
+            String city = fromKyc ? trim(kyc.getCity()) : trim(r.city());
             if (!TEXT.matcher(line).matches()) throw new IllegalArgumentException("Enter your home address.");
             if (!TEXT.matcher(city).matches()) throw new IllegalArgumentException("Enter your city or town.");
-            String postal = trim(r.postalCode());
+            String postal = fromKyc ? trim(kyc.getPostalCode()) : trim(r.postalCode());
             if (postal.isEmpty()) postal = "00000";   // Sierra Leone has no postal codes
             if (!Pattern.matches("^[A-Za-z0-9 -]{2,12}$", postal)) throw new IllegalArgumentException("The postal code is not valid.");
 
@@ -168,7 +182,7 @@ public class CrossBorderController {
                     trim(r.recipientFirstName()), trim(r.recipientLastName()), sender,
                     r.purposeOfFunds(), r.sourceOfFunds());
             CrossBorderTransfer t = service.start(cmd, r.requestId());
-            saveProfile(uid, nat, line, postal, city);   // only after the transfer exists
+            if (!fromKyc) saveProfile(uid, nat, line, postal, city);   // only after the transfer exists
             return ResponseEntity.ok(userView(t));
         } catch (IllegalArgumentException | IllegalStateException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -189,7 +203,7 @@ public class CrossBorderController {
     @GetMapping
     public ResponseEntity<?> recent() {
         List<Map<String, Object>> out = new ArrayList<>();
-        for (CrossBorderTransfer t : transfers.findByUserIdOrderByCreatedAtDesc(currentUserId(), PageRequest.of(0, 10))) {
+        for (CrossBorderTransfer t : transfers.findByUserIdOrderByCreatedAtDesc(currentUserId(), PageRequest.of(0, 100))) {
             out.add(userView(t));
         }
         return ResponseEntity.ok(out);
@@ -299,6 +313,8 @@ public class CrossBorderController {
         if (i <= 0) throw new IllegalArgumentException("Your KYC name needs a first and a last name. Contact support.");
         return new String[]{n.substring(0, i), n.substring(i + 1)};
     }
+
+    private static boolean notBlank(String s) { return s != null && !s.isBlank(); }
 
     private static String trim(String s) { return s == null ? "" : s.trim().replaceAll("\\s+", " "); }
 

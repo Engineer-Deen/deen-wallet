@@ -5095,6 +5095,7 @@
                         '<div class="fp-sub">' + xboEsc(t.customer || 'Customer') + '</div>' +
                         '<div class="fp-sub">To ' + xboEsc(t.recipientName) + ' · ' + xboEsc(t.recipientPhone) + ' · ' + xboEsc(t.destProvider) + '</div>' +
                         '<div class="fp-sub">' + xboEsc(fpTime(t.createdAt)) + (t.failureCode ? ' · ' + xboEsc(t.failureCode) : '') + '</div>' +
+                    (t.failureMessage ? '<div class="fp-sub" style="white-space:normal;word-break:break-word;">' + xboEsc(t.failureMessage) + '</div>' : '') +
                         (canCheck ? '<div class="fp-actions"><button class="btn-outline" data-xbo-check="' + xboEsc(t.id) + '">Check now</button></div>' : '');
                     tl.appendChild(card);
                 });
@@ -6229,6 +6230,8 @@
                 html += '<div class="fp-section-title">Identity document</div>' +
                     fpRow('Type', doc.typeLabel) + fpRow('Name on ID', doc.fullNameOnDocument) + fpRow('ID number', doc.documentNumber) +
                     fpRow('Date of birth', kcDay(doc.dateOfBirth)) + (doc.expiryDate ? fpRow('Expiry', kcDay(doc.expiryDate)) : '') +
+                    (doc.nationality ? fpRow('Nationality', doc.nationality) : '') +
+                    (doc.addressLine ? fpRow('Address', doc.addressLine + ', ' + (doc.city || '') + (doc.postalCode ? ' ' + doc.postalCode : '')) : '') +
                     fpRow('Submitted', kcTime(d.submittedAt));
                 if (d.reviewedAt) html += fpRow('Reviewed', kcTime(d.reviewedAt) + (d.reviewedBy ? ' by ' + d.reviewedBy : ''));
                 if (d.rejectionReason) html += fpRow('Reason', d.rejectionReason);
