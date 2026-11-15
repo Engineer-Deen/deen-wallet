@@ -580,7 +580,7 @@
 
 <script>window.DEENWALLET_REDIRECT_WHEN_LOCKED = true;</script>
 <script src="config.js"></script>
-<script src="deenwallet-client.js"></script>
+<script src="deenwallet-client.js?v=xb1"></script>
 <script>
   (function () {
     if (!requireAuth()) return;
@@ -650,9 +650,9 @@
 
     async function loadList({ background = false } = {}) {
       try {
-        const results = await Promise.all([apiRequest('/api/transactions'), loadCrossBorderTransactions()]);
+        const results = await Promise.all([apiRequest('/api/transactions'), (typeof loadCrossBorderTransactions === 'function' ? loadCrossBorderTransactions() : Promise.resolve([]))]);
         const transactions = (results[0] || []).map(normalizeTransaction).concat(results[1]);
-        sortTransactionsNewestFirst(transactions);
+        transactions.sort((a, b) => (b.createdAt ? new Date(b.createdAt).getTime() : 0) - (a.createdAt ? new Date(a.createdAt).getTime() : 0));
         hide(loadingState);
 
         if (transactions.length === 0) {

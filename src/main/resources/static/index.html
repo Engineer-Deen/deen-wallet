@@ -4482,7 +4482,7 @@
 <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-messaging-compat.js"></script>
 
-<script src="deenwallet-client.js"></script>
+<script src="deenwallet-client.js?v=xb1"></script>
 <script src="qr.js"></script>
 <script>
     // SECURITY: escape any server-supplied string (holder names, error
@@ -6549,9 +6549,9 @@
 
         async function loadRecentActivity() {
             try {
-                const results = await Promise.all([apiRequest('/api/transactions'), loadCrossBorderTransactions()]);
+                const results = await Promise.all([apiRequest('/api/transactions'), (typeof loadCrossBorderTransactions === 'function' ? loadCrossBorderTransactions() : Promise.resolve([]))]);
                 const transactions = (results[0] || []).map(normalizeTransaction).concat(results[1]);
-                sortTransactionsNewestFirst(transactions);
+                transactions.sort((a, b) => (b.createdAt ? new Date(b.createdAt).getTime() : 0) - (a.createdAt ? new Date(a.createdAt).getTime() : 0));
                 try {
                     sessionStorage.setItem('deenwallet.recentTransactions', JSON.stringify(transactions));
                 } catch (_) {}
