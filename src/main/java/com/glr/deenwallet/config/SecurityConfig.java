@@ -109,6 +109,7 @@ public class SecurityConfig {
                                 "/api/admin/auth/**",
                                 "/api/v1/webhooks/monime",
                                 "/api/v1/webhooks/honeycoin",
+                                "/api/v1/webhooks/pawapay/**",
                                 "/api/errors",
                                 "/api/app/version",
                                 "/api/app/android-update",
@@ -135,6 +136,7 @@ public class SecurityConfig {
                                 "/api/crypto/**",
                                 "/api/accounts/**",
                                 "/api/bank-transfers/**",
+                                "/api/cross-border/**",
                                 "/api/notifications/**"
                         ).hasRole("USER")
 

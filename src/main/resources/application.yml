@@ -143,6 +143,12 @@ app:
     waec-financial-account-id: ${MONIME_WAEC_FINANCIAL_ACCOUNT_ID:}
     waec-account-since: ${MONIME_WAEC_ACCOUNT_SINCE:}
 
+  pawapay:
+    enabled: ${PAWAPAY_ENABLED:true}
+    base-url: ${PAWAPAY_BASE_URL:https://api.sandbox.pawapay.io}
+    api-token: ${PAWAPAY_API_TOKEN:}
+    callback-secret: ${PAWAPAY_CALLBACK_SECRET:input here}
+
   admin:
     email: ${ADMIN_EMAIL:}
     password: ${ADMIN_PASSWORD:}

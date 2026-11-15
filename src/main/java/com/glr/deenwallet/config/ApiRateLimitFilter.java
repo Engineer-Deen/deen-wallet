@@ -400,8 +400,9 @@ public class ApiRateLimitFilter extends OncePerRequestFilter {
             HttpServletRequest request
     ) {
 
-        return "/api/v1/webhooks/monime"
-                .equals(request.getRequestURI());
+        String uri = request.getRequestURI();
+        return "/api/v1/webhooks/monime".equals(uri)
+                || (uri != null && uri.startsWith("/api/v1/webhooks/pawapay/"));
     }
 
     /**

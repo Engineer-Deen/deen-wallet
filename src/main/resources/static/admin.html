@@ -2910,6 +2910,7 @@
                 <button type="button" class="admin-drawer-item" data-drawer-action="payment-links"><span class="admin-drawer-icon">&#128279;</span><span class="admin-drawer-label">Payment Links</span><span class="admin-drawer-chevron">›</span></button>
                 <button type="button" class="admin-drawer-item" data-drawer-action="crypto"><span class="admin-drawer-icon">&#8383;</span><span class="admin-drawer-label">Crypto Orders</span><span class="admin-drawer-chevron">›</span></button>
                 <button type="button" class="admin-drawer-item" data-drawer-action="kyc"><span class="admin-drawer-icon">✔</span><span class="admin-drawer-label">KYC Verification</span><span class="admin-drawer-chevron">›</span></button>
+                <button type="button" class="admin-drawer-item" id="xbo-drawer-item" data-drawer-action="xborder" style="display:none;"><span class="admin-drawer-icon">&#127757;</span><span class="admin-drawer-label">Send Abroad</span><span class="admin-drawer-chevron">›</span></button>
                 <button type="button" class="admin-drawer-item" id="metrics-drawer-item" data-drawer-action="metrics" style="display:none;"><span class="admin-drawer-icon">◔</span><span class="admin-drawer-label">Server Metrics</span><span class="admin-drawer-chevron">›</span></button>
                 <button type="button" class="admin-drawer-item" data-drawer-action="waec-pins"><span class="admin-drawer-icon">▦</span><span class="admin-drawer-label">WAEC Pins</span><span class="admin-drawer-chevron">›</span></button>
                 <div class="admin-drawer-divider"></div>
@@ -3394,6 +3395,27 @@
             </div>
         </div>
 
+        <!-- ===== SEND ABROAD (super admin) ===== -->
+        <div class="scroll hidden" id="tab-xborder">
+            <div class="admin-card">
+                <p class="admin-card-title">Send Abroad</p>
+                <p class="admin-card-sub">Customers send money to mobile money wallets in other countries (through pawaPay). You set the exchange rate, the fees and the limits for every route. A route shows to customers only when it is turned on and has a rate.</p>
+                <div id="xbo-status" class="fp-sub" style="margin-bottom:10px;"></div>
+                <div class="fp-actions">
+                    <button class="btn-sm refresh" id="xbo-switch">…</button>
+                    <button class="btn-sm refresh" id="xbo-add">Add route</button>
+                    <button class="btn-sm refresh" id="xbo-catalog">Find routes</button>
+                    <button class="btn-sm refresh" id="xbo-refresh">Refresh</button>
+                </div>
+                <div id="xbo-loading" class="loading-state hidden"><div class="spinner"></div>Loading…</div>
+                <div id="xbo-error" class="error-state hidden"></div>
+                <div class="fp-section-title">Routes, rates and fees</div>
+                <div id="xbo-corridors"></div>
+                <div class="fp-section-title">Transfers</div>
+                <div id="xbo-transfers"></div>
+            </div>
+        </div>
+
         <!-- ===== KYC ===== -->
         <div class="scroll hidden" id="tab-kyc">
             <div class="stats-grid">
@@ -3690,6 +3712,11 @@
     <!-- Failed payout detail -->
     <div class="modal-overlay" id="fp-modal-overlay">
         <div class="fp-modal" id="fp-modal"></div>
+    </div>
+
+    <!-- Send abroad: route editor / route finder -->
+    <div class="modal-overlay" id="xbo-modal-overlay">
+        <div class="fp-modal" id="xbo-modal"></div>
     </div>
 
     <!-- Crypto order detail -->
@@ -4833,12 +4860,13 @@
                 'failed-payouts': document.getElementById('tab-failed-payouts'),
                 'payment-links': document.getElementById('tab-payment-links'),
                 'crypto': document.getElementById('tab-crypto'),
+                'xborder': document.getElementById('tab-xborder'),
                 'kyc': document.getElementById('tab-kyc'),
                 'waec-pins': document.getElementById('tab-waec-pins')
             };
 
             function showMainSection(section) {
-                if ((section === 'audit' || section === 'metrics') && !isSuperAdmin()) section = 'dashboard';
+                if ((section === 'audit' || section === 'metrics' || section === 'xborder') && !isSuperAdmin()) section = 'dashboard';
                 var amKey = { 'kyc': 'kyc', 'failed-payouts': 'failed-payouts', 'payment-links': 'payment-links', 'crypto': 'crypto', 'waec-pins': 'waec', 'users': 'users', 'errors': 'errors', 'wallet': 'wallet', 'messaging': 'messaging' }[section];
                 if (amKey && adminDeniedSections().indexOf(amKey) >= 0) { showToast('You do not have access to that section. Ask a super admin.'); section = 'dashboard'; }
                 applyRoleNav();
@@ -4859,6 +4887,7 @@
                 if (section === 'failed-payouts') loadFailedPayouts();
                 if (section === 'payment-links') loadPaymentLinks();
                 if (section === 'crypto') loadCryptoOrders();
+                if (section === 'xborder') loadXborder();
                 if (section === 'kyc') loadKyc();
                 if (section === 'waec-pins') loadWaecPins();
             }
@@ -4955,6 +4984,8 @@
                 if (btn) btn.style.display = sup ? '' : 'none';
                 var mxItem = document.getElementById('metrics-drawer-item');
                 if (mxItem) mxItem.style.display = sup ? '' : 'none';
+                var xboItem = document.getElementById('xbo-drawer-item');
+                if (xboItem) xboItem.style.display = sup ? '' : 'none';
                 var denied = adminDeniedSections();
                 AM_NAV.forEach(function (p) {
                     document.querySelectorAll(p[1]).forEach(function (el) {
@@ -5005,6 +5036,173 @@
             document.querySelectorAll('[data-drawer-action]').forEach(function(item){ item.addEventListener('click',function(){ drawerNavigate(item.dataset.drawerAction); }); });
             document.addEventListener('keydown',function(e){ if(e.key==='Escape' && adminDrawer.classList.contains('open')) closeAdminDrawer(); });
 
+
+            // ==============================================================
+            // SEND ABROAD (super admin): switch, routes with rate / fees / limits, transfers
+            // ==============================================================
+            var xboData = null;
+            function xboEsc(v) { return escapeHtml(v == null ? '' : String(v)); }
+            function xboClose() { document.getElementById('xbo-modal-overlay').classList.remove('active'); }
+            function xboStatusCls(s) { return s === 'COMPLETED' ? 'done' : (s === 'REVIEW' || s === 'FAILED') ? '' : (s === 'REFUNDED' || s === 'REFUNDING') ? 'refund' : 'muted'; }
+            function xboStatusLabel(s) {
+                return ({ CREATED: 'Starting', COLLECTING: 'Waiting for customer', COLLECTED: 'Paid in', REMITTING: 'Sending', COMPLETED: 'Sent', REFUNDING: 'Refunding', REFUNDED: 'Refunded', FAILED: 'Not paid', REVIEW: 'Needs review' })[s] || s;
+            }
+
+            function loadXborder() {
+                var loading = document.getElementById('xbo-loading'), error = document.getElementById('xbo-error');
+                show(loading); hide(error);
+                adminApiRequest('/api/admin/cross-border/overview').then(function (d) {
+                    hide(loading);
+                    xboData = d;
+                    xboRender();
+                }).catch(function (e) {
+                    hide(loading);
+                    error.textContent = e.message || 'Could not load Send Abroad.';
+                    show(error);
+                });
+            }
+
+            function xboRender() {
+                var d = xboData; if (!d) return;
+                var st = document.getElementById('xbo-status');
+                var msg = !d.pawapayConfigured ? 'pawaPay is not switched on in the server settings yet (PAWAPAY_ENABLED).'
+                    : (d.live ? 'Live: customers can see Send Money Abroad.' : 'Off: customers cannot see Send Money Abroad.');
+                st.textContent = msg + (d.pawapayConfigured ? (d.sandbox ? ' Using the pawaPay TEST system (no real money).' : ' Using the pawaPay LIVE system.') : '');
+                var sw = document.getElementById('xbo-switch');
+                sw.textContent = d.switchOn ? 'Turn off for customers' : 'Turn on for customers';
+                var list = document.getElementById('xbo-corridors');
+                list.innerHTML = '';
+                if (!d.corridors.length) list.innerHTML = '<div class="empty-state">No routes yet. Tap "Find routes" or "Add route".</div>';
+                d.corridors.forEach(function (c) {
+                    var card = document.createElement('div');
+                    card.className = 'fp-card';
+                    card.innerHTML =
+                        '<div class="fp-card-top"><span class="fp-amount">' + xboEsc(c.countryName) + ' · ' + xboEsc(c.providerName) + '</span><span class="fp-status ' + (c.enabled && Number(c.rate) > 0 ? 'done' : 'muted') + '">' + (c.enabled && Number(c.rate) > 0 ? 'On' : 'Off') + '</span></div>' +
+                        '<div class="fp-sub">1 SLE = ' + xboEsc(c.rate) + ' ' + xboEsc(c.currency) + ' · fee ' + xboEsc(c.feePercent) + '% + ' + xboEsc(c.feeFlat) + ' SLE</div>' +
+                        '<div class="fp-sub">Min ' + xboEsc(c.minSend) + ' · Max ' + xboEsc(c.maxSend) + ' SLE · ' + xboEsc(c.provider) + '</div>';
+                    card.addEventListener('click', function () { xboEditor(c); });
+                    list.appendChild(card);
+                });
+                var tl = document.getElementById('xbo-transfers');
+                tl.innerHTML = '';
+                if (!d.transfers.length) tl.innerHTML = '<div class="empty-state">No transfers yet.</div>';
+                d.transfers.forEach(function (t) {
+                    var card = document.createElement('div');
+                    card.className = 'fp-card' + (t.status === 'REVIEW' ? '' : ' ');
+                    var canCheck = ['CREATED', 'COLLECTING', 'COLLECTED', 'REMITTING', 'REFUNDING', 'REVIEW'].indexOf(t.status) >= 0;
+                    card.innerHTML =
+                        '<div class="fp-card-top"><span class="fp-amount">' + xboEsc(t.total) + ' ' + xboEsc(t.sendCurrency) + ' → ' + xboEsc(t.receiveAmount) + ' ' + xboEsc(t.receiveCurrency) + '</span><span class="fp-status ' + xboStatusCls(t.status) + '">' + xboEsc(xboStatusLabel(t.status)) + '</span></div>' +
+                        '<div class="fp-sub">' + xboEsc(t.customer || 'Customer') + '</div>' +
+                        '<div class="fp-sub">To ' + xboEsc(t.recipientName) + ' · ' + xboEsc(t.recipientPhone) + ' · ' + xboEsc(t.destProvider) + '</div>' +
+                        '<div class="fp-sub">' + xboEsc(fpTime(t.createdAt)) + (t.failureCode ? ' · ' + xboEsc(t.failureCode) : '') + '</div>' +
+                        (canCheck ? '<div class="fp-actions"><button class="btn-outline" data-xbo-check="' + xboEsc(t.id) + '">Check now</button></div>' : '');
+                    tl.appendChild(card);
+                });
+            }
+
+            function xboField(label, id, value, attrs) {
+                return '<div class="fp-section-title">' + label + '</div><input class="fp-note" style="margin-top:0;" id="' + id + '" value="' + xboEsc(value) + '" ' + (attrs || '') + ' />';
+            }
+
+            function xboEditor(c, seed) {
+                c = c || seed || { enabled: false, receiveDecimals: 2, rate: '', feePercent: '1', feeFlat: '0', minSend: '10', maxSend: '5000', sortOrder: 0 };
+                var overlay = document.getElementById('xbo-modal-overlay'), box = document.getElementById('xbo-modal');
+                var h = '<div class="fp-card-top"><h3 style="margin:0;font-size:17px;">' + (c.id ? 'Edit route' : 'Add route') + '</h3></div>';
+                h += xboField('Country name', 'xbo-f-cname', c.countryName || '', 'maxlength="60" placeholder="Ghana"');
+                h += xboField('Country code (3 letters)', 'xbo-f-country', c.country || '', 'maxlength="3" placeholder="GHA" style="text-transform:uppercase"');
+                h += xboField('Calling code', 'xbo-f-dial', c.dialCode || '', 'inputmode="numeric" maxlength="5" placeholder="233"');
+                h += xboField('Provider name', 'xbo-f-pname', c.providerName || '', 'maxlength="60" placeholder="MTN MoMo"');
+                h += xboField('Provider code (from pawaPay)', 'xbo-f-provider', c.provider || '', 'maxlength="40" placeholder="MTN_MOMO_GHA"');
+                h += xboField('Recipient currency (3 letters)', 'xbo-f-cur', c.currency || '', 'maxlength="3" placeholder="GHS"');
+                h += xboField('Decimals of that currency (0 to 3)', 'xbo-f-dec', c.receiveDecimals == null ? 2 : c.receiveDecimals, 'inputmode="numeric" maxlength="1"');
+                h += xboField('Exchange rate: 1 SLE = ? of that currency', 'xbo-f-rate', c.rate || '', 'inputmode="decimal" placeholder="0.00"');
+                h += xboField('Fee in percent (for example 1.5)', 'xbo-f-pct', c.feePercent == null ? '' : c.feePercent, 'inputmode="decimal"');
+                h += xboField('Flat fee in SLE (added to the percent fee)', 'xbo-f-flat', c.feeFlat == null ? '' : c.feeFlat, 'inputmode="decimal"');
+                h += xboField('Smallest amount a customer can send (SLE)', 'xbo-f-min', c.minSend == null ? '' : c.minSend, 'inputmode="decimal"');
+                h += xboField('Largest amount a customer can send (SLE)', 'xbo-f-max', c.maxSend == null ? '' : c.maxSend, 'inputmode="decimal"');
+                h += xboField('Order in the list (0 first)', 'xbo-f-sort', c.sortOrder || 0, 'inputmode="numeric" maxlength="3"');
+                h += '<label class="fp-section-title" style="display:flex;gap:8px;align-items:center;text-transform:none;font-size:14px;"><input type="checkbox" id="xbo-f-on" ' + (c.enabled ? 'checked' : '') + ' /> Show this route to customers</label>';
+                h += '<div class="fp-section-title">Example: customer sends 100 SLE</div><div class="fp-sub" id="xbo-f-preview"></div>';
+                h += '<div id="xbo-f-err" class="error-state hidden" style="margin-top:10px;"></div>';
+                h += '<div class="fp-actions"><button class="btn-outline" id="xbo-f-cancel">Cancel</button>' + (c.id ? '<button class="btn-outline" id="xbo-f-del" style="color:var(--error);">Delete</button>' : '') + '<button class="btn-primary" id="xbo-f-save">Save</button></div>';
+                box.innerHTML = h;
+                overlay.classList.add('active');
+                function v(id) { return document.getElementById(id).value.trim(); }
+                function preview() {
+                    var rate = Number(v('xbo-f-rate')) || 0, pct = Number(v('xbo-f-pct')) || 0, flat = Number(v('xbo-f-flat')) || 0, dec = Math.max(0, Math.min(3, parseInt(v('xbo-f-dec'), 10) || 0));
+                    var fee = Math.round((100 * pct / 100 + flat) * 100) / 100;
+                    var get = Math.floor(100 * rate * Math.pow(10, dec)) / Math.pow(10, dec);
+                    document.getElementById('xbo-f-preview').textContent = 'Fee ' + fee.toFixed(2) + ' SLE · customer pays ' + (100 + fee).toFixed(2) + ' SLE · recipient gets ' + get + ' ' + (v('xbo-f-cur').toUpperCase() || '');
+                }
+                ['xbo-f-rate', 'xbo-f-pct', 'xbo-f-flat', 'xbo-f-dec', 'xbo-f-cur'].forEach(function (id) { document.getElementById(id).addEventListener('input', preview); });
+                preview();
+                document.getElementById('xbo-f-cancel').addEventListener('click', xboClose);
+                if (c.id) document.getElementById('xbo-f-del').addEventListener('click', function () {
+                    if (!window.confirm('Delete this route? Past transfers are not affected.')) return;
+                    adminApiRequest('/api/admin/cross-border/corridors/' + encodeURIComponent(c.id), { method: 'DELETE' })
+                        .then(function () { xboClose(); loadXborder(); showToast('Route deleted.'); })
+                        .catch(function (e) { showToast(e.message || 'Could not delete.'); });
+                });
+                document.getElementById('xbo-f-save').addEventListener('click', function () {
+                    var btn = this, err = document.getElementById('xbo-f-err');
+                    hide(err); btn.disabled = true;
+                    var body = {
+                        id: c.id || null, countryName: v('xbo-f-cname'), country: v('xbo-f-country'), dialCode: v('xbo-f-dial'),
+                        providerName: v('xbo-f-pname'), provider: v('xbo-f-provider'), currency: v('xbo-f-cur'),
+                        receiveDecimals: parseInt(v('xbo-f-dec'), 10), rate: v('xbo-f-rate') || '0', feePercent: v('xbo-f-pct') || '0',
+                        feeFlat: v('xbo-f-flat') || '0', minSend: v('xbo-f-min'), maxSend: v('xbo-f-max'),
+                        sortOrder: parseInt(v('xbo-f-sort'), 10) || 0, enabled: document.getElementById('xbo-f-on').checked
+                    };
+                    ['rate', 'feePercent', 'feeFlat', 'minSend', 'maxSend'].forEach(function (k) { body[k] = Number(body[k]); });
+                    adminApiRequest('/api/admin/cross-border/corridors', { method: 'POST', body: body })
+                        .then(function () { xboClose(); loadXborder(); showToast('Route saved.'); })
+                        .catch(function (e) { btn.disabled = false; err.textContent = e.message || 'Could not save.'; show(err); });
+                });
+            }
+
+            function xboFindRoutes() {
+                var overlay = document.getElementById('xbo-modal-overlay'), box = document.getElementById('xbo-modal');
+                box.innerHTML = '<div class="loading-state"><div class="spinner"></div>Asking pawaPay…</div>';
+                overlay.classList.add('active');
+                adminApiRequest('/api/admin/cross-border/catalog').then(function (rows) {
+                    var h = '<div class="fp-card-top"><h3 style="margin:0;font-size:17px;">Routes pawaPay offers you</h3></div><div class="fp-sub">Tap one to set its rate and fees. Check with pawaPay that the route can receive transfers from Sierra Leone.</div>';
+                    if (!rows || !rows.length) h += '<div class="empty-state">Nothing came back. You can still add a route by hand.</div>';
+                    (rows || []).forEach(function (r, i) {
+                        h += '<div class="fp-card" data-xbo-pick="' + i + '"><div class="fp-card-top"><span class="fp-amount">' + xboEsc(r.countryName) + ' · ' + xboEsc(r.providerName) + '</span><span class="fp-sub">' + xboEsc(r.currency) + '</span></div><div class="fp-sub">' + xboEsc(r.provider) + '</div></div>';
+                    });
+                    h += '<div class="fp-actions"><button class="btn-outline" id="xbo-f-cancel">Close</button></div>';
+                    box.innerHTML = h;
+                    document.getElementById('xbo-f-cancel').addEventListener('click', xboClose);
+                    box.querySelectorAll('[data-xbo-pick]').forEach(function (el) {
+                        el.addEventListener('click', function () {
+                            var r = rows[Number(el.getAttribute('data-xbo-pick'))];
+                            xboEditor(null, { country: r.country, countryName: r.countryName, dialCode: r.dialCode, provider: r.provider, providerName: r.providerName, currency: r.currency, enabled: false, receiveDecimals: 2, rate: '', feePercent: '1', feeFlat: '0', minSend: '10', maxSend: '5000', sortOrder: 0 });
+                        });
+                    });
+                }).catch(function (e) {
+                    box.innerHTML = '<div class="error-state">' + xboEsc(e.message || 'Could not reach pawaPay.') + '</div><div class="fp-actions"><button class="btn-outline" id="xbo-f-cancel">Close</button></div>';
+                    document.getElementById('xbo-f-cancel').addEventListener('click', xboClose);
+                });
+            }
+
+            document.getElementById('xbo-refresh').addEventListener('click', loadXborder);
+            document.getElementById('xbo-add').addEventListener('click', function () { xboEditor(null); });
+            document.getElementById('xbo-catalog').addEventListener('click', xboFindRoutes);
+            document.getElementById('xbo-switch').addEventListener('click', function () {
+                if (!xboData) return;
+                var on = !xboData.switchOn;
+                adminApiRequest('/api/admin/cross-border/switch', { method: 'POST', body: { on: on } })
+                    .then(function () { showToast(on ? 'Send Abroad is on for customers.' : 'Send Abroad is off for customers.'); loadXborder(); })
+                    .catch(function (e) { showToast(e.message || 'Could not change it.'); });
+            });
+            document.getElementById('xbo-transfers').addEventListener('click', function (e) {
+                var b = e.target.closest('[data-xbo-check]'); if (!b) return;
+                b.disabled = true;
+                adminApiRequest('/api/admin/cross-border/transfers/' + encodeURIComponent(b.getAttribute('data-xbo-check')) + '/check', { method: 'POST' })
+                    .then(function () { showToast('Checked.'); loadXborder(); })
+                    .catch(function (e2) { b.disabled = false; showToast(e2.message || 'Could not check.'); });
+            });
+            document.getElementById('xbo-modal-overlay').addEventListener('click', function (e) { if (e.target === this) xboClose(); });
 
             // ==============================================================
             // SERVER METRICS (super admins): server, app, database, attacks, weak spots
