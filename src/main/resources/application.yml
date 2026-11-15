@@ -146,8 +146,8 @@ app:
   pawapay:
     enabled: ${PAWAPAY_ENABLED:true}
     base-url: ${PAWAPAY_BASE_URL:https://api.sandbox.pawapay.io}
-    api-token: ${PAWAPAY_API_TOKEN:eyJraWQiOiIxIiwiYWxnIjoiRVMyNTYifQ.eyJ0dCI6IkFBVCIsInN1YiI6IjMzNzQ1IiwibWF2IjoiMSIsImV4cCI6MjExMDM4MzkzMCwiaWF0IjoxNzk0NzY0NzMwLCJwbSI6IkRBRixQQUYiLCJqdGkiOiJhMGYyMzZjMy1lZjUzLTQ1NmMtOWExYi1lN2MzMjUwNGUxNGMifQ.bbbowG8rYUUE8_8Ng8KQEmaqu9gDRu20g7_1yjd46YhoDgcFynUF5T-Q1x6Xhgi_XIp3HyVWolJ_PpQ71UX3xg}
-    callback-secret: ${PAWAPAY_CALLBACK_SECRET:b9c48f600c5acb98b2e2e3da85048e50f9229c1d007ce6940382b1c6f30882c3}
+    api-token: ${PAWAPAY_API_TOKEN:}
+    callback-secret: ${PAWAPAY_CALLBACK_SECRET:}
 
   admin:
     email: ${ADMIN_EMAIL:}
