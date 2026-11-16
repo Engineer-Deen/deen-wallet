@@ -802,6 +802,104 @@
       .login-feature strong { font-size:9px; }
     }
 
+    /* ===================== DESIGN v3: Login + Sign up (dark rounded panel) ===================== */
+    html, body { background:#0b1c24 !important; }
+    body { color:#fff; }
+    #app { background:#0b1c24; box-shadow:none; border-radius:0; }
+    @media (min-width:769px) {
+      #app { width:100%; max-width:440px; margin:0 auto; min-height:100vh; box-shadow:none; border-radius:0; }
+    }
+    #screen-login, #screen-register { padding:0; background:#0b1c24; overflow-y:auto; }
+    .login-shell { display:block; min-height:0; overflow:visible; border-radius:0; background:transparent; }
+    #screen-login .login-visual, #screen-login .login-security-row { display:none !important; }
+    .login-panel, #screen-login .login-panel { display:block; padding:0 0 28px; background:transparent; }
+    .login-form-wrap { max-width:none; width:100%; }
+
+    .auth-hero { position:relative; overflow:hidden; background:linear-gradient(180deg,#157388 0%,#105d71 100%); border-radius:0 0 36px 36px; padding:calc(18px + env(safe-area-inset-top, 0px)) 20px 64px; color:#fff; }
+    .auth-hero::after { content:""; position:absolute; right:-70px; top:-70px; width:220px; height:220px; border-radius:50%; background:rgba(255,255,255,.12); pointer-events:none; }
+    .auth-hero > * { position:relative; z-index:1; }
+    .auth-hero .screen-back { color:#fff; font-size:16px; font-weight:800; margin:0 0 12px; padding:6px 0; }
+    .auth-hero-title { margin:0; font-size:30px; line-height:1.1; font-weight:800; letter-spacing:-.6px; color:#fff; }
+    .auth-hero-sub { margin:10px 0 0; font-size:14px; line-height:1.5; color:rgba(255,255,255,.92); }
+
+    .auth-card { position:relative; margin:-36px 20px 0; padding:18px 16px 18px; border-radius:26px; background:#12303b; border:1px solid #1c4654; }
+    .auth-card + .auth-card { margin-top:16px; }
+    .auth-card h2 { margin:0 0 4px; font-size:19px; font-weight:800; color:#fff; letter-spacing:-.2px; }
+    #screen-register label { margin:14px 0 8px; font-size:13.5px; font-weight:800; color:#fff; }
+    #screen-register label:first-of-type { margin-top:12px; }
+    #screen-register .text-input, #screen-login .text-input, .phone-card { background:#0e2631; border:1px solid #1c3a48; border-radius:16px; color:#fff; }
+    #screen-register .text-input, #screen-login .text-input { height:54px; padding:0 16px; font-size:16px; }
+    #screen-register .text-input::placeholder, #screen-login .text-input::placeholder, .phone-card input::placeholder { color:#8aa4ad; }
+    #screen-register .text-input:focus, #screen-login .text-input:focus { border-color:#2aa6bd; box-shadow:0 0 0 3px rgba(42,166,189,.15); }
+    .phone-card { height:54px; }
+    .phone-card:focus-within { border-color:#2aa6bd; box-shadow:0 0 0 3px rgba(42,166,189,.15); }
+    .phone-prefix { height:100%; padding:0 14px; border-right:1px solid #1c3a48; }
+    .phone-prefix span { font-size:16px; font-weight:800; color:#fff; }
+    .flag-badge { width:24px; height:24px; border-color:rgba(255,255,255,.25); }
+    .phone-card input { height:100%; padding:0 16px; font-size:16px; color:#fff; }
+    .password-field-wrap .text-input { padding-right:52px !important; }
+    .password-toggle-btn { right:6px; width:44px; height:44px; padding:0; font-size:0 !important; line-height:0; opacity:1; background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239db5bc' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E") center/22px no-repeat; }
+    .password-toggle-btn[aria-label="Hide password"] { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239db5bc' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Cpath d='M3 3l18 18'/%3E%3C/svg%3E"); }
+    #screen-register .password-strength { margin-top:12px; }
+    .strength-bar { height:6px; border-radius:3px; background:#1f4856; margin-bottom:12px; }
+    .strength-checklist { gap:8px; }
+    .strength-checklist li { font-size:13.5px; color:#cfe0e4; gap:10px; }
+    .strength-checklist li .dot { width:18px; font-size:17px; line-height:1; color:#9db5bc; }
+    .strength-checklist li.met { color:#5fd38d; }
+    .strength-checklist li.met .dot { color:#5fd38d; }
+    #screen-register .pin-label { margin-top:18px; margin-bottom:2px; }
+    .pin-help { margin:0 0 10px; font-size:12.5px; color:#cfe0e4; }
+    .pin-pair { display:flex; gap:12px; }
+    .pin-pair .text-input { flex:1; min-width:0; }
+    .inline-error { color:#ff8f94; }
+    #register-error { margin:14px 20px 0; }
+    .terms-card { margin:16px 20px 0; padding:16px; border-radius:20px; background:#12303b; border:1px solid #1c4654; }
+    .terms-label { display:flex !important; align-items:center; gap:14px; margin:0 !important; font-size:14.5px !important; line-height:1.45; font-weight:500 !important; color:#fff !important; cursor:pointer; }
+    #terms-checkbox { -webkit-appearance:none; appearance:none; flex:0 0 30px; width:30px; height:30px; margin:0; border-radius:9px; border:2px solid #7f9ba5; background:transparent; cursor:pointer; }
+    #terms-checkbox:checked { background:#1f9bb1 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/18px no-repeat; border-color:#1f9bb1; }
+    .terms-link { border:0; background:none; padding:0; color:#6ac0ce; font-weight:800; font-size:inherit; cursor:pointer; }
+    #screen-register .btn-primary, #login-btn { margin:16px 20px 0; width:calc(100% - 40px); height:56px; padding:0; border-radius:999px; background:linear-gradient(135deg,#2098ae 0%,#117086 100%); font-size:17px; font-weight:800; color:#fff; box-shadow:0 10px 24px rgba(8,80,98,.3); }
+    #login-btn { margin-top:18px; }
+    #screen-register .btn-primary:disabled, #login-btn:disabled { opacity:.55; background:linear-gradient(135deg,#2098ae 0%,#117086 100%); }
+    .switch-row, .login-bottom-signup { margin-top:22px; text-align:center; font-size:15px; color:#9db5bc; }
+    #screen-register .switch-row { padding-bottom:28px; }
+    .switch-row button, .login-bottom-signup button { color:#6ac0ce; font-weight:800; font-size:15px; }
+
+    /* login card */
+    .login-card { padding-top:16px; }
+    .login-tabs { gap:10px; margin-bottom:16px; }
+    .login-tab { height:54px; padding:0 8px; border-radius:18px; border:1px solid #1c4654; background:#0e2631; font-size:15px; font-weight:800; color:#a9bec5; }
+    .login-tab.active { background:linear-gradient(135deg,#2098ae 0%,#117086 100%); border-color:transparent; color:#fff; }
+    .login-tab.frozen { opacity:1; font-size:13px; padding:0 4px; white-space:nowrap; }
+    .login-field { margin-bottom:14px; }
+    .login-field-icon { left:16px; color:#9db5bc; display:flex; z-index:2; }
+    .login-field-icon svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+    #screen-login .login-field .text-input { height:60px; padding:0 52px 0 50px; border-radius:18px; background:#0e2631; box-shadow:none; }
+    #screen-login .login-field .text-input:focus { box-shadow:0 0 0 3px rgba(42,166,189,.15); }
+    .login-field .password-field-wrap { width:100%; }
+    .login-forgot-row { margin:-4px 0 10px; }
+    .login-link { padding:6px 0; color:#6ac0ce; font-weight:800; font-size:14.5px; }
+    #login-turnstile { margin:12px 0 0 !important; }
+    #login-recovery { background:#0e2631 !important; border-color:#1c3a48 !important; color:#cfe0e4; }
+    #login-recovery .support-chip { background:#12303b; border-color:#1c4654; color:#fff; }
+    #login-recovery .whatsapp-chip { color:#5fd38d; }
+    #login-rate-status { color:#e7b95a !important; }
+    .login-or { margin:24px 20px 14px; color:#9db5bc; font-size:13px; font-weight:700; }
+    .login-or::before, .login-or::after { background:#1f4856; }
+    #biometric-section { padding:0; }
+    .bio-accounts { margin:0 20px; }
+    .bio-chip { background:#12303b; border-color:#1c4654; color:#fff; }
+    .bio-avatar { background:#174754; color:#7fd6e3; }
+    .bio-text span { color:#9db5bc; }
+    .bio-go { color:#6ac0ce; }
+    .bio-hint { margin:0 24px; font-size:13.5px; line-height:1.55; color:#9db5bc; }
+    .biometric-btn { background:#12303b; border-color:#1c4654; color:#fff; }
+    #forgot-password-panel { margin:18px 20px 0; background:#12303b; border-color:#1c4654; }
+    #forgot-password-panel h3 { color:#fff; }
+    .field-note { color:#9db5bc; }
+    .login-card .field-note { margin:0 0 12px; }
+    .btn-secondary { background:#0e2631; border-color:#1c4654; color:#fff; }
+
   </style>
 </head>
 
@@ -883,57 +981,72 @@
 
   <!-- ===================== REGISTER ===================== -->
   <div class="screen" id="screen-register">
-    <button type="button" class="screen-back" id="register-back-btn" aria-label="Back to welcome">&#8592; Back</button>
-    <div class="brand">DeenWallet Transfer</div>
-    <h1 class="title">Create your account</h1>
-    <p class="subtitle">Register to start converting between Orange Money, Africell, and QMoney.</p>
+    <div class="auth-hero">
+      <button type="button" class="screen-back" id="register-back-btn" aria-label="Back to welcome">&#8592; Back</button>
+      <h1 class="auth-hero-title">Create account</h1>
+      <p class="auth-hero-sub">Join DeenWallet Transfer to send money, get paid and track every transaction.</p>
+    </div>
 
-    <label for="reg-full-name">Full name</label>
-    <input class="text-input" id="reg-full-name" type="text" placeholder="Abdul Deen Kamara" />
+    <div class="auth-card">
+      <h2>Your details</h2>
+      <label for="reg-full-name">Full name</label>
+      <input class="text-input" id="reg-full-name" type="text" placeholder="Your full name" />
 
-    <label for="reg-username">Username</label>
-    <input class="text-input" id="reg-username" type="text" placeholder="Choose a username" />
+      <label for="reg-username">Username</label>
+      <input class="text-input" id="reg-username" type="text" placeholder="Choose a username" />
 
-    <label for="reg-phone">Phone number</label>
-    <div class="phone-card">
-      <div class="phone-prefix">
-        <div class="flag-badge">
-          <div style="background:#1EB53A"></div>
-          <div style="background:#fff"></div>
-          <div style="background:#0072C6"></div>
+      <label for="reg-phone">Phone number</label>
+      <div class="phone-card">
+        <div class="phone-prefix">
+          <div class="flag-badge">
+            <div style="background:#1EB53A"></div>
+            <div style="background:#fff"></div>
+            <div style="background:#0072C6"></div>
+          </div>
+          <span>+232</span>
         </div>
-        <span>+232</span>
+        <input id="reg-phone" type="tel" inputmode="numeric" maxlength="9" placeholder="80 613600" />
       </div>
-      <input id="reg-phone" type="tel" inputmode="numeric" maxlength="9" placeholder="80 613600" />
+
+      <label for="reg-email">Email</label>
+      <input class="text-input" id="reg-email" type="email" placeholder="you@example.com" />
     </div>
 
-    <label for="reg-email">Email</label>
-    <input class="text-input" id="reg-email" type="email" placeholder="you@example.com" />
+    <div class="auth-card">
+      <h2>Security</h2>
+      <label for="reg-password">Password</label>
+      <div class="password-field-wrap">
+        <input class="text-input" id="reg-password" type="password" placeholder="At least 8 characters" />
+        <button type="button" class="password-toggle-btn" data-target="reg-password" aria-label="Show password">&#128065;</button>
+      </div>
 
-    <label for="reg-password">Password</label>
-    <div class="password-field-wrap">
-      <input class="text-input" id="reg-password" type="password" placeholder="At least 8 characters" />
-      <button type="button" class="password-toggle-btn" data-target="reg-password" aria-label="Show password">&#128065;</button>
+      <div class="password-strength" id="password-strength">
+        <div class="strength-bar">
+          <div class="strength-bar-fill" id="strength-bar-fill"></div>
+        </div>
+        <ul class="strength-checklist">
+          <li id="crit-length"><span class="dot">&#9675;</span> At least 8 characters</li>
+          <li id="crit-upper"><span class="dot">&#9675;</span> An uppercase letter</li>
+          <li id="crit-lower"><span class="dot">&#9675;</span> A lowercase letter</li>
+          <li id="crit-symbol"><span class="dot">&#9675;</span> A symbol (e.g. ! @ # $)</li>
+        </ul>
+      </div>
+
+      <label for="reg-pin" class="pin-label">Session PIN</label>
+      <p class="pin-help">4-digit PIN. This is not your password.</p>
+      <div class="pin-pair">
+        <input class="text-input" id="reg-pin" type="password" maxlength="4" placeholder="PIN" inputmode="numeric" />
+        <input class="text-input" id="reg-pin-confirm" type="password" maxlength="4" placeholder="Confirm PIN" inputmode="numeric" />
+      </div>
+      <div id="pin-error" class="inline-error hidden">
+        <span>&#9888;</span><span id="pin-error-text"></span>
+      </div>
     </div>
 
-    <label for="reg-pin" style="margin-top:16px;">Session PIN</label>
-    <p style="font-size:12px;color:var(--muted);margin:-4px 0 8px 0;">
-      4-digit PIN. This is not your password.
-    </p>
-    <div style="display:flex;gap:8px;">
-      <input class="text-input" id="reg-pin" type="password" maxlength="4" placeholder="PIN" inputmode="numeric"
-             style="flex:1;" />
-      <input class="text-input" id="reg-pin-confirm" type="password" maxlength="4" placeholder="Confirm PIN"
-             inputmode="numeric" style="flex:1;" />
-    </div>
-    <div id="pin-error" class="inline-error hidden">
-      <span>&#9888;</span><span id="pin-error-text"></span>
-    </div>
-
-    <div id="terms-section" style="margin:16px 0 4px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:#F7FAFB;">
-      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:12px;line-height:1.5;color:var(--muted);">
-        <input id="terms-checkbox" type="checkbox" style="margin-top:3px;accent-color:var(--primary);" />
-        <span>I agree to DeenWallet Transfer's <button type="button" id="terms-link" style="border:0;background:none;padding:0;color:var(--primary);font-weight:700;cursor:pointer;">Terms &amp; Conditions</button>.</span>
+    <div id="terms-section" class="terms-card">
+      <label class="terms-label">
+        <input id="terms-checkbox" type="checkbox" />
+        <span>I agree to DeenWallet Transfer's <button type="button" id="terms-link" class="terms-link">Terms &amp; Conditions</button></span>
       </label>
     </div>
     <div id="terms-modal" class="hidden" style="position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.45);align-items:center;justify-content:center;padding:20px;">
@@ -942,18 +1055,6 @@
         <p style="font-size:13px;line-height:1.6;color:var(--muted);">By creating a DeenWallet Transfer account, you agree to provide accurate information, keep your password and PIN confidential, use the service lawfully, and accept responsibility for activity performed through your account. DeenWallet Transfer may suspend access where required for security, fraud prevention, or violation of these terms.</p>
         <button type="button" id="terms-close" class="btn-primary" style="width:100%;">Close</button>
       </div>
-    </div>
-
-    <div class="password-strength" id="password-strength">
-      <div class="strength-bar">
-        <div class="strength-bar-fill" id="strength-bar-fill"></div>
-      </div>
-      <ul class="strength-checklist">
-        <li id="crit-length"><span class="dot">&#9675;</span> At least 8 characters</li>
-        <li id="crit-upper"><span class="dot">&#9675;</span> An uppercase letter</li>
-        <li id="crit-lower"><span class="dot">&#9675;</span> A lowercase letter</li>
-        <li id="crit-symbol"><span class="dot">&#9675;</span> A symbol (e.g. ! @ # $)</li>
-      </ul>
     </div>
 
     <div id="register-error" class="inline-error hidden">
@@ -1042,10 +1143,13 @@
 
       <section class="login-panel">
         <div class="login-form-wrap">
-          <button type="button" class="screen-back" id="login-back-btn" aria-label="Back to welcome">&#8592; Back</button>
-          <h1 class="login-form-title">Welcome Back</h1>
-          <p class="login-form-subtitle">Log in to make secure payments, manage your transactions, and access DeenWallet Transfer services.</p>
+          <div class="auth-hero">
+            <button type="button" class="screen-back" id="login-back-btn" aria-label="Back to welcome">&#8592; Back</button>
+            <h1 class="auth-hero-title">Welcome Back</h1>
+            <p class="auth-hero-sub">Log in to make secure payments, manage your transactions, and access DeenWallet Transfer services.</p>
+          </div>
 
+          <div class="auth-card login-card">
           <div class="login-tabs">
             <button class="login-tab active" id="login-tab-email" type="button">Email</button>
             <button class="login-tab frozen" id="login-tab-phone" type="button">Phone (coming soon)</button>
@@ -1055,12 +1159,12 @@
 
           <div id="login-email-fields">
             <div class="login-field">
-              <span class="login-field-icon" aria-hidden="true">♙</span>
+              <span class="login-field-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.8"/><path d="M5 20c.8-3.8 3.7-5.6 7-5.6s6.2 1.8 7 5.6"/></svg></span>
               <input class="text-input" id="login-email" type="email" placeholder="Account email" autocomplete="username" aria-label="Account email" />
             </div>
 
             <div class="login-field">
-              <span class="login-field-icon" aria-hidden="true">▣</span>
+              <span class="login-field-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.4"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg></span>
               <div class="password-field-wrap">
                 <input class="text-input" id="login-password" type="password" placeholder="Password" autocomplete="current-password" aria-label="Password" />
                 <button type="button" class="password-toggle-btn" data-target="login-password" aria-label="Show password">&#128065;</button>
@@ -1079,8 +1183,9 @@
             </div>
 
             <div id="login-turnstile" style="display:none;justify-content:center;margin:12px 0 4px;"></div>
-            <button class="btn-primary" id="login-btn">Log in</button>
           </div>
+          </div>
+          <button class="btn-primary" id="login-btn">Log in</button>
 
           <div id="biometric-section" hidden>
             <div class="login-or"><span>OR</span></div>
@@ -1170,7 +1275,7 @@
       const confirmFallback = document.getElementById('confirm-email-fallback');
       const confirmFallbackInput = document.getElementById('confirm-email-fallback-input');
 
-      const loginBtn = document.getElementById('login-btn'); var dwTs = { on: false, id: null }; function dwTurnstileInit() { try { var box = document.getElementById('login-turnstile'); if (!box) return; fetch(DEENWALLET_CONFIG.API_BASE_URL + '/api/auth/turnstile').then(function (r) { return r.json(); }).then(function (c) { if (!c || !c.enabled || !c.siteKey) return; dwTs.on = true; box.style.display = 'flex'; var s = document.createElement('script'); s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'; s.async = true; s.onload = function () { try { dwTs.id = window.turnstile.render(box, { sitekey: c.siteKey, theme: 'light' }); } catch (e) { } }; document.head.appendChild(s); }).catch(function () { }); } catch (e) { } } function dwTurnstileToken() { if (!dwTs.on) return ''; var t = ''; try { t = window.turnstile.getResponse(dwTs.id) || ''; } catch (e) { } if (!t) throw new Error('Please tick the "Verify you are human" box first.'); setTimeout(function () { try { window.turnstile.reset(dwTs.id); } catch (e) { } }, 0); return t; } dwTurnstileInit();
+      const loginBtn = document.getElementById('login-btn'); var dwTs = { on: false, id: null }; function dwTurnstileInit() { try { var box = document.getElementById('login-turnstile'); if (!box) return; fetch(DEENWALLET_CONFIG.API_BASE_URL + '/api/auth/turnstile').then(function (r) { return r.json(); }).then(function (c) { if (!c || !c.enabled || !c.siteKey) return; dwTs.on = true; box.style.display = 'flex'; var s = document.createElement('script'); s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'; s.async = true; s.onload = function () { try { dwTs.id = window.turnstile.render(box, { sitekey: c.siteKey, theme: 'dark', size: 'flexible' }); } catch (e) { } }; document.head.appendChild(s); }).catch(function () { }); } catch (e) { } } function dwTurnstileToken() { if (!dwTs.on) return ''; var t = ''; try { t = window.turnstile.getResponse(dwTs.id) || ''; } catch (e) { } if (!t) throw new Error('Please tick the "Verify you are human" box first.'); setTimeout(function () { try { window.turnstile.reset(dwTs.id); } catch (e) { } }, 0); return t; } dwTurnstileInit();
       const loginError = document.getElementById('login-error');
       const loginErrorText = document.getElementById('login-error-text');
       const loginEmail = document.getElementById('login-email');
