@@ -535,8 +535,8 @@ final class EmailTemplates {
             case "APPROVED" -> {
                 title = "Identity verified";
                 color = BRAND_COLOR;
-                lead = "Good news: your identity has been verified. You can now convert up to <strong>SLE "
-                        + escape(dailyLimit) + "</strong> per day for mobile money and bank transfers.";
+                lead = "Good news: your identity has been verified. Your daily transaction limit is now <strong>SLE "
+                        + escape(dailyLimit) + "</strong> for all services except WAEC result pins.";
             }
             case "REVOKED" -> {
                 title = "Verification withdrawn";

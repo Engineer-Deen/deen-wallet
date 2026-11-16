@@ -5,6 +5,9 @@ import com.glr.deenwallet.transaction.TransactionServiceType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -15,9 +18,10 @@ import java.util.UUID;
 /**
  * Daily conversion limits that depend on the customer's identity verification.
  *
- *  - Email-only (not ID-verified):  mobile money SLE 1,000 / day, bank transfer SLE 500 / day.
- *  - ID-verified (KYC approved):    SLE 100,000 / day, for each of mobile money and bank transfer.
- *  - WAEC result pins:              never limited here (verified or not).
+ *  One general daily transaction limit that all services share (mobile money, bank transfer, send abroad, crypto):
+ *  - Not ID-verified:   SLE 1,000 / day in total.
+ *  - ID-verified (KYC): SLE 200,000 / day in total.
+ *  - WAEC result pins:  never limited here (verified or not).
  *
  * "Day" is the calendar day in Freetown (UTC+0), so it resets at midnight and is easy to explain.
  * Cancelled, failed and refunded transfers do not use up the limit. All amounts are minor units (SLE x 100).
@@ -28,14 +32,14 @@ public class KycLimitService {
 
     public static final ZoneId ZONE = ZoneId.of("Africa/Freetown");
 
-    @Value("${KYC_BASIC_MOBILE_MONEY_DAILY_MINOR:100000}")
-    private long basicMobileMoneyMinor;
+    @Value("${KYC_DAILY_LIMIT_BASIC_MINOR:100000}")
+    private long basicMinor;
 
-    @Value("${KYC_BASIC_BANK_DAILY_MINOR:50000}")
-    private long basicBankMinor;
-
-    @Value("${KYC_VERIFIED_DAILY_MINOR:10000000}")
+    @Value("${KYC_DAILY_LIMIT_VERIFIED_MINOR:20000000}")
     private long verifiedMinor;
+
+    @PersistenceContext
+    private EntityManager em;
 
     private final TransactionRepository transactions;
     private final KycSubmissionRepository submissions;
@@ -55,46 +59,45 @@ public class KycLimitService {
         return verifiedMinor;
     }
 
-    /** Limits and today's usage for the KYC screen. */
+    /** The general limit and today's usage for the KYC screen (mobileMoney and bank both carry the same general numbers). */
     public Snapshot snapshot(UUID userId) {
         boolean verified = isVerified(userId);
-        Instant since = startOfToday();
-        return new Snapshot(verified,
-                bucket(limitFor(TransactionServiceType.MOBILE_MONEY, verified),
-                        transactions.sumKycCountedAmountSince(userId, TransactionServiceType.MOBILE_MONEY, since)),
-                bucket(limitFor(TransactionServiceType.BANK_TRANSFER, verified),
-                        transactions.sumKycCountedAmountSince(userId, TransactionServiceType.BANK_TRANSFER, since)));
+        KycDtos.LimitView general = bucket(limitFor(verified), usedToday(userId));
+        return new Snapshot(verified, general, general);
     }
 
     /**
      * Throws KycLimitExceededException (HTTP 400 with a clear message) if this conversion would take the
-     * customer over today's limit. Call it inside the same per-user lock that creates the transaction.
+     * customer over today's general limit. Call it inside the same per-user lock that creates the transaction.
      */
     public void enforce(UUID userId, TransactionServiceType type, long minorUnits) {
         if (type != TransactionServiceType.MOBILE_MONEY && type != TransactionServiceType.BANK_TRANSFER) {
             return; // WAEC pins: allowed whether verified or not
         }
+        enforceGeneral(userId, minorUnits);
+    }
+
+    /** The same general daily limit for any other service (send abroad, crypto). */
+    public void enforceGeneral(UUID userId, long minorUnits) {
         boolean verified = isVerified(userId);
-        long limit = limitFor(type, verified);
-        long used = transactions.sumKycCountedAmountSince(userId, type, startOfToday());
+        long limit = limitFor(verified);
+        long used = usedToday(userId);
         if (used + minorUnits <= limit) return;
 
         long remaining = Math.max(0L, limit - used);
-        String what = type == TransactionServiceType.BANK_TRANSFER ? "bank transfers" : "mobile money";
         StringBuilder msg = new StringBuilder();
         if (remaining == 0L) {
-            msg.append("Daily limit reached. ");
+            msg.append("Daily transaction limit reached. ");
         } else {
-            msg.append("This amount is above what is left of your daily limit. ");
+            msg.append("This amount is above what is left of your daily transaction limit. ");
         }
         if (verified) {
-            msg.append("Your limit for ").append(what).append(" is SLE ").append(sle(limit))
-                    .append(" per day and you have SLE ").append(sle(remaining))
+            msg.append("Your daily transaction limit is SLE ").append(sle(limit))
+                    .append(" and you have SLE ").append(sle(remaining))
                     .append(" left today. It resets at midnight.");
         } else {
-            msg.append("Accounts that are not ID-verified can use up to SLE ").append(sle(limit))
-                    .append(" per day for ").append(what).append(" (SLE ").append(sle(remaining))
-                    .append(" left today). ");
+            msg.append("Accounts that are not ID-verified have a daily transaction limit of SLE ").append(sle(limit))
+                    .append(" (SLE ").append(sle(remaining)).append(" left today). ");
             boolean pending = submissions.findOpenByUserId(userId)
                     .map(s -> s.getStatus() == KycStatus.PENDING).orElse(false);
             if (pending) {
@@ -108,9 +111,26 @@ public class KycLimitService {
         throw new KycLimitExceededException(msg.toString());
     }
 
-    private long limitFor(TransactionServiceType type, boolean verified) {
-        if (verified) return verifiedMinor;
-        return type == TransactionServiceType.BANK_TRANSFER ? basicBankMinor : basicMobileMoneyMinor;
+    private long limitFor(boolean verified) {
+        return verified ? verifiedMinor : basicMinor;
+    }
+
+    /** Everything counted today across all services except WAEC: mobile money, bank, send abroad and crypto. */
+    private long usedToday(UUID userId) {
+        Instant since = startOfToday();
+        long used = transactions.sumKycCountedAmountSince(userId, TransactionServiceType.MOBILE_MONEY, since)
+                + transactions.sumKycCountedAmountSince(userId, TransactionServiceType.BANK_TRANSFER, since);
+        java.sql.Timestamp ts = java.sql.Timestamp.from(since);
+        used += scalar("SELECT CAST(COALESCE(SUM(ROUND(send_amount * 100)), 0) AS BIGINT) FROM cross_border_transfers "
+                + "WHERE user_id = :u AND created_at >= :s AND status NOT IN ('FAILED','REFUNDED','REFUNDING')", userId, ts);
+        used += scalar("SELECT CAST(COALESCE(SUM(amount_minor), 0) AS BIGINT) FROM crypto_orders "
+                + "WHERE user_id = :u AND created_at >= :s AND status IN ('CREATED','PENDING','SUCCESSFUL')", userId, ts);
+        return used;
+    }
+
+    private long scalar(String sql, UUID userId, java.sql.Timestamp since) {
+        Object r = em.createNativeQuery(sql).setParameter("u", userId).setParameter("s", since).getSingleResult();
+        return r == null ? 0L : ((Number) r).longValue();
     }
 
     private static KycDtos.LimitView bucket(long limit, long used) {

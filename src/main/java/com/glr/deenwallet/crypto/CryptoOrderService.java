@@ -193,6 +193,7 @@ public class CryptoOrderService {
             long open = count("SELECT COUNT(*) FROM crypto_orders WHERE user_id = :u AND status IN ('CREATED','PENDING') "
                     + "AND created_at > now() - interval '6 hours'", "u", userId);
             if (open >= 2) throw new IllegalStateException("You already have crypto payments waiting. Approve or wait for them to finish first.");
+            kyc.enforceGeneral(userId, minor);
             if (usedLast24h(userId) + minor > dailyMinor) {
                 throw new IllegalStateException("This is above your daily limit for crypto. You can send up to SLE "
                         + money(Math.max(0, dailyMinor - usedLast24h(userId))) + " more today.");

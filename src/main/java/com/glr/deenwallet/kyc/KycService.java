@@ -309,8 +309,8 @@ public class KycService {
         audit.save(new KycAudit(s.getId(), s.getUserId(), "APPROVED", admin.getId(), admin.getEmail(), null));
         log.info("Admin {} approved KYC {} for user {}", admin.getEmail(), s.getId(), s.getUserId());
 
-        String msg = "Your identity is verified. Your daily limit is now SLE "
-                + KycLimitService.sle(limits.verifiedDailyLimitMinor()) + " for mobile money and bank transfers.";
+        String msg = "Your identity is verified. Your daily transaction limit is now SLE "
+                + KycLimitService.sle(limits.verifiedDailyLimitMinor()) + " for all services except WAEC result pins.";
         notifyUser(s.getUserId(), "KYC_APPROVED", "Identity verified", msg);
         emailUser(s.getUserId(), "APPROVED", null);
         return buildDetail(s, users.findById(s.getUserId()).orElse(null));

@@ -153,6 +153,7 @@ public class CrossBorderController {
             long open = transfers.countByUserIdAndStatusIn(uid, EnumSet.of(CrossBorderStatus.CREATED, CrossBorderStatus.COLLECTING,
                     CrossBorderStatus.COLLECTED, CrossBorderStatus.REMITTING, CrossBorderStatus.REFUNDING));
             if (open >= MAX_OPEN_PER_USER) throw new IllegalArgumentException("You have transfers still in progress. Wait for them to finish.");
+            kycLimits.enforceGeneral(uid, r.amount().multiply(BigDecimal.valueOf(100)).longValue());
 
             String payer = payerMsisdn(r.payerPhone());
             String recipient = recipientMsisdn(c.getDialCode(), r.recipientPhone());

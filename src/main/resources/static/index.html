@@ -2621,6 +2621,137 @@
         .app-bottom-nav.on-dark .app-nav-item.active { color:#7FD6E3; background:rgba(46,159,176,.18); }
         .app-bottom-nav.on-dark .app-nav-item.active .nav-icon { color:#7FD6E3; }
 
+        /* ===================== DESIGN v2: Home, Services, side menu ===================== */
+        /* --- Home --- */
+        #screen-home { background:#0b1c24; --hx:max(20px, calc((100% - 720px) / 2)); }
+        #screen-home .scroll { padding:0 0 14px; }
+        #screen-home .home-hero { background:linear-gradient(180deg,#157388 0%,#116579 55%,#105d71 100%); border-radius:0 0 40px 40px; padding:24px var(--hx) 84px; }
+        #screen-home .home-hero .top-bar.home-top { position:static; background:transparent; margin:0; padding:0; min-height:0; grid-template-columns:46px minmax(0,1fr) 46px; gap:8px; }
+        #screen-home .home-hero .menu-btn, #screen-home .home-hero .notification-btn { width:46px; height:46px; border-radius:16px; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.2); color:#fff; }
+        #screen-home .home-hero .menu-btn span { background:#fff; }
+        #screen-home .home-bell { width:23px; height:23px; stroke:#fff; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+        #screen-home .notification-badge { top:-8px; right:-8px; min-width:24px; height:24px; padding:0 5px; border-radius:999px; background:#d93232; color:#fff; font-size:12px; font-weight:800; box-sizing:border-box; }
+        .home-brand { color:#fff; font-size:19px; letter-spacing:-.3px; white-space:nowrap; }
+        .home-brand b { font-weight:800; }
+        .home-brand small { font-size:14.5px; font-weight:500; letter-spacing:0; }
+        #screen-home .home-hello { padding:18px 0 0; }
+        #screen-home .home-hello-sub { margin:0; font-size:16px; font-weight:500; color:rgba(255,255,255,.92); }
+        #screen-home .greeting-title { color:#fff; font-size:32px; font-weight:800; letter-spacing:-.8px; margin-top:6px; }
+        #screen-home .greeting-sub { color:rgba(255,255,255,.92); font-size:14.5px; margin-top:4px; }
+        .home-tiles { position:relative; display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:0 var(--hx); margin-top:-56px; }
+        .home-tile { display:flex; align-items:center; gap:11px; min-width:0; min-height:86px; padding:12px; box-sizing:border-box; border-radius:22px; background:#12303b; border:1px solid #1c4654; color:#fff; font:inherit; text-align:left; cursor:pointer; }
+        .home-tile:active, .home-more:active { transform:scale(.985); }
+        .home-tile-ic { width:42px; height:42px; flex:0 0 42px; border-radius:14px; display:flex; align-items:center; justify-content:center; }
+        .home-tile-ic svg { width:23px; height:23px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+        .home-tile-text { min-width:0; display:flex; flex-direction:column; gap:2px; }
+        .home-tile-text strong { font-size:15.5px; font-weight:800; color:#fff; line-height:1.2; }
+        .home-tile-text span { font-size:12.5px; line-height:1.4; color:#9db5bc; }
+        .ic-teal { background:#164350; color:#2fb0c6; }
+        .ic-blue { background:#213f58; color:#7b93ff; }
+        .ic-amber { background:#33443d; color:#f2b84b; }
+        .ic-green { background:#1b4747; color:#52c98b; }
+        .ic-crypto { background:#333e40; color:#f08a4e; }
+        .ic-violet { background:#2a3a5e; color:#8da0e6; }
+        .ic-olive { background:#3b483e; color:#f0a04b; }
+        .ic-slate { background:#2c4852; color:#9fb7bf; }
+        .home-body { padding:0 var(--hx); }
+        .home-more { width:100%; margin-top:12px; padding:16px; box-sizing:border-box; display:flex; align-items:center; gap:12px; border-radius:26px; background:linear-gradient(135deg,#183b46 0%,#15414f 100%); border:1px solid #1c4654; color:#fff; font:inherit; text-align:left; cursor:pointer; }
+        .home-more-ic { position:relative; width:64px; height:42px; flex:0 0 64px; }
+        .home-more-ic i { position:absolute; top:0; width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+        .home-more-ic i svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+        .home-more-ic .hm-b { left:0; background:#3b4445; color:#f08a4e; }
+        .home-more-ic .hm-p { left:22px; background:rgba(21,100,120,.75); color:#35b6cc; }
+        .home-more-text { min-width:0; flex:1; display:flex; flex-direction:column; gap:3px; }
+        .home-more-text strong { font-size:16.5px; font-weight:800; }
+        .home-more-text span { font-size:12.5px; line-height:1.4; color:#9db5bc; }
+        .home-more-go { flex:0 0 auto; padding:11px 15px; border-radius:16px; background:rgba(8,36,46,.45); color:#6ac0ce; font-size:14.5px; font-weight:800; }
+        #screen-home .home-limit { margin-top:12px; }
+        #screen-home .recent-activity-card { background:#12303b; border:1px solid #1c4654; border-radius:26px; padding:18px 18px 6px; margin-top:12px; }
+        #screen-home .recent-activity-heading { padding-bottom:14px; border-bottom:1px solid #173a46; }
+        #screen-home .recent-activity-title { font-size:21px; font-weight:800; color:#fff; letter-spacing:-.3px; }
+        #screen-home .recent-activity-sub { display:none; }
+        #screen-home .recent-activity-link { background:#15414f; color:#7fd6e3; padding:10px 16px; border-radius:14px; font-size:14.5px; }
+        #screen-home .recent-activity-empty { margin-top:0; padding:20px 0; background:transparent; border:0; color:#9db5bc; }
+        #screen-home .recent-activity-list { margin-top:0; gap:0; }
+        #screen-home .recent-activity-item { background:transparent; border:0; border-radius:0; padding:14px 0; }
+        #screen-home .recent-activity-item + .recent-activity-item { border-top:1px solid #173a46; }
+        #screen-home .recent-activity-name { font-size:15.5px; color:#fff; }
+        #screen-home .recent-activity-meta { font-size:13px; color:#9db5bc; gap:4px 12px; margin-top:5px; align-items:center; }
+        #screen-home .recent-activity-amount { font-size:17px; font-weight:800; color:#fff; }
+        #screen-home .recent-activity-status { background:none; padding:0; border-radius:0; font-size:13px; font-weight:700; }
+        #screen-home .recent-activity-status.completed { color:#49b37f; }
+        #screen-home .recent-activity-status.failed { color:#ff8a8f; }
+        #screen-home .recent-activity-status.canceled { color:#9db5bc; }
+        #screen-home .recent-activity-status.pending { color:#e7b95a; }
+
+        /* --- Bottom navigation: floating pill on Home, flat bar on Services --- */
+        .app-bottom-nav.on-dark.nav-home { position:relative; height:auto; background:#0b1c24; border-top:0; padding:10px 26px max(22px, calc(env(safe-area-inset-bottom) + 6px)); }
+        .app-bottom-nav.on-dark.nav-home::before { content:""; position:absolute; left:20px; right:20px; top:4px; bottom:max(16px, env(safe-area-inset-bottom)); border-radius:36px; background:#12303b; border:1px solid #1c4654; box-shadow:0 10px 26px rgba(0,0,0,.28); z-index:0; }
+        .app-bottom-nav.on-dark.nav-home .app-nav-item { position:relative; z-index:1; height:60px; border-radius:30px; color:#e4f0f3; }
+        .app-bottom-nav.on-dark.nav-home .app-nav-item.active { background:linear-gradient(135deg,#1b95ab 0%,#127086 100%); color:#fff; }
+        .app-bottom-nav.on-dark.nav-home .app-nav-item.active .nav-icon { color:#fff; }
+        .app-bottom-nav.on-dark.nav-home.nav-support { background:#0B1F27; }
+        .app-bottom-nav.on-dark.nav-services { background:#0b1c24; border-top:1px solid #173642; }
+        .app-bottom-nav.on-dark.nav-services .app-nav-item { color:#9db5bc; border-radius:22px; }
+        .app-bottom-nav.on-dark.nav-services .app-nav-item.active { background:#15414f; color:#fff; }
+        .app-bottom-nav.on-dark.nav-services .app-nav-item.active .nav-icon { color:#fff; }
+
+        /* --- Services --- */
+        #screen-payment { background:#0b1c24; }
+        #screen-payment .subscreen-heading { margin-bottom:0; }
+        #screen-payment .greeting-title { font-size:30px; font-weight:800; letter-spacing:-.6px; color:#fff; }
+        #screen-payment .greeting-sub { font-size:13.5px; color:#9db5bc; margin-top:6px; }
+        .svc-label { margin:22px 6px 10px; font-size:12.5px; font-weight:500; letter-spacing:1.6px; text-transform:uppercase; color:#9db5bc; }
+        .svc-group { border-radius:26px; background:#12303b; border:1px solid #1c4351; overflow:hidden; }
+        #screen-payment .svc-group .service-card { margin:0; width:100%; padding:14px 16px; gap:14px; border:0; border-radius:0; background:transparent; box-shadow:none; }
+        #screen-payment .svc-group .service-card:not(.hidden) ~ .service-card:not(.hidden) { border-top:1px solid #1f4856; }
+        #screen-payment .service-card-icon { width:42px; height:42px; border-radius:13px; }
+        #screen-payment .service-card-icon svg { width:23px; height:23px; stroke-width:1.8; }
+        #screen-payment .service-card-icon.ic-teal { background:#164350; color:#2fb0c6; }
+        #screen-payment .service-card-icon.ic-blue { background:#213f58; color:#7b93ff; }
+        #screen-payment .service-card-icon.ic-amber { background:#33443d; color:#f2b84b; }
+        #screen-payment .service-card-icon.ic-green { background:#1b4747; color:#52c98b; }
+        #screen-payment .service-card-icon.ic-crypto { background:#333e40; color:#f08a4e; }
+        #screen-payment .service-card-content { gap:2px; }
+        #screen-payment .service-card-content strong { font-size:16.5px; font-weight:800; color:#fff; }
+        #screen-payment .service-card-content span { font-size:13.5px; line-height:1.35; color:#9db5bc; }
+        #screen-payment .service-card-arrow { display:flex; width:22px; height:22px; flex:0 0 22px; color:#9db5bc; }
+        #screen-payment .service-card-arrow svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+        #screen-payment .services-coming-card { margin-top:22px; padding:18px 18px; border:1px dashed #1f4856; border-radius:22px; background:transparent; gap:14px; }
+        #screen-payment .services-coming-icon { width:34px; height:34px; border-radius:0; background:transparent; color:#9db5bc; }
+        #screen-payment .services-coming-icon svg { width:30px; height:30px; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; }
+        #screen-payment .services-coming-card strong { font-size:16px; font-weight:800; color:#fff; }
+        #screen-payment .services-coming-card p { font-size:13.5px; color:#9db5bc; margin-top:4px; }
+
+        /* --- Side menu --- */
+        .customer-drawer-overlay { background:rgba(7,14,17,.84); }
+        .customer-drawer { width:min(83vw,340px); background:linear-gradient(180deg,#10303b 0%,#0d2029 100%); border-radius:0 38px 38px 0; box-shadow:12px 0 40px rgba(0,0,0,.4); }
+        .customer-drawer::before { background:transparent; }
+        .cd-close { position:absolute; top:52px; left:calc(min(83vw,340px) + 14px); width:42px; height:42px; padding:0; border-radius:50%; border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.08); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+        .cd-close svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
+        .customer-drawer-profile { margin:18px 16px 16px; padding:20px 18px; min-height:0; border-radius:28px; background:linear-gradient(135deg,#14758a 0%,#0c5063 100%); box-shadow:none; }
+        .customer-drawer-avatar { width:64px; height:64px; background:rgba(255,255,255,.2); border:0; color:#fff; font-size:27px; }
+        .customer-drawer-name { font-size:21px; }
+        .customer-drawer-account { font-size:13.5px; color:rgba(255,255,255,.88); }
+        .customer-drawer-role { background:rgba(255,255,255,.16); border-color:rgba(255,255,255,.2); font-size:11px; padding:4px 11px; }
+        .customer-drawer-scroll { padding:0 16px 24px; }
+        .cd-group { border-radius:22px; background:#12303b; border:1px solid #193a48; overflow:hidden; margin-bottom:14px; }
+        .cd-group .customer-drawer-item { margin:0; border-radius:0; min-height:62px; padding:11px 14px; gap:14px; }
+        .cd-group .customer-drawer-item + .customer-drawer-item { border-top:1px solid #1c424f; }
+        .cd-ic { width:38px; height:38px; flex:0 0 38px; border-radius:12px; display:flex; align-items:center; justify-content:center; }
+        .cd-ic svg { width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+        .cd-ic.ic-teal { background:#174754; color:#3dbbd0; }
+        .cd-ic.ic-violet { background:#2b3b66; color:#8da0e6; }
+        .cd-ic.ic-green { background:#1f4a45; color:#52c98b; }
+        .cd-ic.ic-olive { background:#3b483e; color:#f0a04b; }
+        .cd-ic.ic-blue { background:#25425e; color:#7fa8e6; }
+        .customer-drawer-label { font-size:15.5px; font-weight:700; color:#fff; }
+        .customer-drawer-chevron { display:flex; width:20px; height:20px; color:#9db5bc; }
+        .customer-drawer-chevron svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+        .customer-drawer-item.danger { justify-content:center; gap:10px; margin:6px 0 0; min-height:56px; border:1px solid #5c444d; border-radius:20px; background:#0f2430; color:#f0828a; }
+        .customer-drawer-item.danger svg { width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+        .customer-drawer-item.danger .customer-drawer-label { flex:0 0 auto; color:#f0828a; }
+
         /* ===================== KYC ===================== */
         #screen-kyc .scroll { padding-bottom: 28px; }
         .kyc-head { padding: 2px 2px 14px; }
@@ -2773,58 +2904,53 @@
     <!-- ===================== HOME ===================== -->
     <div class="screen active" id="screen-home">
         <div class="scroll">
-            <div class="top-bar home-top">
-                <button class="menu-btn" id="menu-btn" type="button" aria-label="Open menu" aria-expanded="false"><span></span><span></span><span></span></button>
-                <div class="top-bar-brand">
-                    <img class="app-brand-logo" src="deenwallet-logo-sm.png" alt="DeenWallet Transfer" />
+            <div class="home-hero">
+                <div class="top-bar home-top">
+                    <button class="menu-btn" id="menu-btn" type="button" aria-label="Open menu" aria-expanded="false"><span></span><span></span><span></span></button>
+                    <div class="top-bar-brand">
+                        <span class="home-brand" aria-label="DeenWallet Transfer"><b>DeenWallet</b> <small>Transfer</small></span>
+                    </div>
+                    <button class="notification-btn" id="notification-btn" type="button" aria-label="Notifications" title="Notifications">
+                        <svg class="home-bell" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16v-5a6 6 0 0 1 12 0v5l1.6 2.2H4.4z"/><path d="M10 21h4"/></svg>
+                        <span class="notification-badge hidden" id="notification-badge">0</span>
+                    </button>
                 </div>
-                <button class="notification-btn" id="notification-btn" type="button" aria-label="Notifications" title="Notifications">
-                    <span aria-hidden="true">&#128276;</span>
-                    <span class="notification-badge hidden" id="notification-badge">0</span>
+
+                <div class="home-hello">
+                    <p class="home-hello-sub">What would you like to do?</p>
+                    <h1 class="greeting-title" id="greeting-title">Hello</h1>
+                    <p class="greeting-sub" id="greeting-account"></p>
+                </div>
+            </div>
+
+            <div class="home-tiles" id="home-cards" aria-label="Services">
+                <button type="button" class="home-tile" data-home-service="MOBILE_MONEY">
+                    <span class="home-tile-ic ic-teal" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 7h10l-2.5-2.5"/><path d="M17 7l-2.5 2.5"/><path d="M17 17H7l2.5 2.5"/><path d="M7 17l2.5-2.5"/></svg></span>
+                    <span class="home-tile-text"><strong>Convert</strong><span>Orange Money, Africell</span></span>
+                </button>
+                <button type="button" class="home-tile" data-home-service="BANK_TRANSFER">
+                    <span class="home-tile-ic ic-blue" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 10h18"/><path d="M5 10v8"/><path d="M9 10v8"/><path d="M15 10v8"/><path d="M19 10v8"/><path d="M2 20h20"/><path d="M12 4l9 5H3l9-5z"/></svg></span>
+                    <span class="home-tile-text"><strong>Bank</strong><span>To any bank</span></span>
+                </button>
+                <button type="button" class="home-tile" data-home-service="WAEC">
+                    <span class="home-tile-ic ic-amber" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17" rx="2"/><path d="M9 3.5v17"/><path d="M12.5 8h3"/></svg></span>
+                    <span class="home-tile-text"><strong>WAEC pin</strong><span>Buy your pin</span></span>
+                </button>
+                <button type="button" class="home-tile" data-home-service="PAY_LINK">
+                    <span class="home-tile-ic ic-green" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3A4 4 0 0 0 11 18.7l1-1"/></svg></span>
+                    <span class="home-tile-text"><strong>Pay link</strong><span>Get paid by anyone</span></span>
                 </button>
             </div>
 
-            <div class="home-hello">
-                <p class="home-hello-sub">What would you like to do?</p>
-                <h1 class="greeting-title" id="greeting-title">Hello</h1>
-                <p class="greeting-sub" id="greeting-account"></p>
-            </div>
-
-            <div class="home-cards" id="home-cards" aria-label="Services">
-                <button type="button" class="home-card home-card-convert" data-home-service="MOBILE_MONEY">
-                    <span class="home-card-glow" aria-hidden="true"></span>
-                    <span class="home-card-logos" aria-hidden="true">
-                        <img src="assets/provider-logos/orange-money.png" alt="" />
-                        <img src="assets/provider-logos/africell.png" alt="" />
-                    </span>
-                    <span class="home-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 7h10l-2.5-2.5"/><path d="M17 7l-2.5 2.5"/><path d="M17 17H7l2.5 2.5"/><path d="M7 17l2.5-2.5"/></svg></span>
-                    <strong>Convert Money</strong>
-                    <span class="home-card-text">Between Orange Money and Africell, instantly.</span>
-                    <span class="home-card-go">Start</span>
-                </button>
-
-                <button type="button" class="home-card home-card-bank" data-home-service="BANK_TRANSFER">
-                    <span class="home-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 10h18"/><path d="M5 10v8"/><path d="M9 10v8"/><path d="M15 10v8"/><path d="M19 10v8"/><path d="M2 20h20"/><path d="M12 4l9 5H3l9-5z"/></svg></span>
-                    <strong>Bank Transfer</strong>
-                    <span class="home-card-text">Send money from Orange Money or Africell to a bank account.</span>
-                    <span class="home-card-go">Send</span>
-                </button>
-
-                <button type="button" class="home-card home-card-waec" data-home-service="WAEC">
-                    <span class="home-card-waec-logo" aria-hidden="true"><img src="assets/waec-logo.png" alt="" data-logo-fallback="WAEC" /></span>
-                    <strong>WAEC Result Pin</strong>
-                    <span class="home-card-text">Buy a WAEC pin to check your result on the WAEC portal.</span>
-                    <span class="home-card-go">Buy pin</span>
-                </button>
-
-                <button type="button" class="home-card home-card-soon" data-home-service="MORE">
-                    <span class="home-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg></span>
-                    <strong>More services</strong>
-                    <span class="home-card-text">Payment links and everything else DeenWallet Transfer can do.</span>
-                    <span class="home-card-go">See all</span>
-                </button>
-            </div>
-            <div class="home-dots" id="home-dots" aria-hidden="true"></div>
+            <div class="home-body">
+            <button type="button" class="home-more" data-home-service="MORE">
+                <span class="home-more-ic" aria-hidden="true">
+                    <i class="hm-b"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 8.5h3.8a1.8 1.8 0 0 1 0 3.6H9.5m0 0h4.2a1.8 1.8 0 0 1 0 3.6H9.5M9.5 7v10M11.5 6v2M11.5 16v2"/></svg></i>
+                    <i class="hm-p"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></i>
+                </span>
+                <span class="home-more-text"><strong>More services</strong><span>Send to a crypto wallet and more. New services are coming soon.</span></span>
+                <span class="home-more-go">Explore</span>
+            </button>
 
             <button type="button" class="home-limit hidden" id="home-limit">
                 <span class="home-limit-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z"/><path d="M9 12l2.2 2.2L15 10"/></svg></span>
@@ -2842,6 +2968,7 @@
                 </div>
                 <div class="recent-activity-empty" id="recent-activity-empty">Loading recent activity…</div>
                 <div class="recent-activity-list hidden" id="recent-activity-list"></div>
+            </div>
             </div>
         </div>
     </div>
@@ -3875,7 +4002,7 @@
                 <p>We may require email verification, security checks, transaction confirmation, or other controls before allowing access to account features. We may temporarily restrict access after repeated incorrect credentials, suspicious activity, or security events. You must contact support if you believe your account has been compromised.</p>
 
                 <h2>3. Identity Verification (KYC) and Daily Limits</h2>
-                <p>Every account starts with standard daily limits on mobile-money conversions and bank transfers. The limits that currently apply to you are shown in the app. To raise them, you can verify your identity by sending the details and photos of a valid National ID card, driver's licence or passport, together with a selfie, from Verify your KYC in the menu. You must submit only your own genuine, valid and unaltered document, and the details you enter must match it. We review each request and may approve it, decline it with a reason, or later withdraw an approval if the information proves wrong, the document expires, or security or legal reasons require it. When a verification is withdrawn the standard limits apply again. A document can be verified on one account only. WAEC result pin purchases are not subject to the daily limits. We may change the limits and the documents we accept from time to time, and a transaction above your current daily limit will not be accepted.</p>
+                <p>Every account starts with a standard daily transaction limit that covers all our services except WAEC result pins. The limit that currently applies to you is shown in the app. To raise it, you can verify your identity by sending the details and photos of a valid National ID card, driver's licence or passport, together with a selfie, from Verify your KYC in the menu. You must submit only your own genuine, valid and unaltered document, and the details you enter must match it. We review each request and may approve it, decline it with a reason, or later withdraw an approval if the information proves wrong, the document expires, or security or legal reasons require it. When a verification is withdrawn the standard limits apply again. A document can be verified on one account only. WAEC result pin purchases are not subject to the daily limits. We may change the limits and the documents we accept from time to time, and a transaction above your current daily limit will not be accepted.</p>
 
                 <h2>4. Transactions and Mobile-Money Services</h2>
                 <p>Transactions are processed according to the information you submit and the availability and rules of the relevant mobile-money provider or bank. You are responsible for confirming recipient details, including phone numbers and bank account numbers, before submitting a transaction, and a transaction sent to a wrong recipient cannot be reversed by us. Provider delays, outages, reversals, fees, or service restrictions may affect a transaction.</p>
@@ -4022,132 +4149,93 @@
     <div class="screen" id="screen-payment">
         <div class="scroll">
             <div class="subscreen-heading">
-                <div class="subscreen-heading-icon" aria-hidden="true">↔</div>
                 <div class="subscreen-heading-copy">
                     <h1 class="greeting-title">Services</h1>
                     <p class="greeting-sub">Access DeenWallet Transfer services from one place.</p>
                 </div>
             </div>
 
-            <button type="button" class="service-card" id="services-convert-card">
-                <div class="service-card-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M7 7h10l-2.5-2.5"/>
-                        <path d="M17 7l-2.5 2.5"/>
-                        <path d="M17 17H7l2.5 2.5"/>
-                        <path d="M7 17l2.5-2.5"/>
-                    </svg>
-                </div>
-                <div class="service-card-content">
-                    <strong>Convert Money</strong>
-                    <span>Convert between Orange Money and Africell instantly.</span>
-                </div>
-                <span class="service-card-arrow" aria-hidden="true">›</span>
-            </button>
+            <div class="svc-label">Send money</div>
+            <div class="svc-group">
+                <button type="button" class="service-card" id="services-convert-card">
+                    <div class="service-card-icon ic-teal" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 7h10l-2.5-2.5"/><path d="M17 7l-2.5 2.5"/><path d="M17 17H7l2.5 2.5"/><path d="M7 17l2.5-2.5"/></svg></div>
+                    <div class="service-card-content">
+                        <strong>Convert Money</strong>
+                        <span>Orange Money and Africell</span>
+                    </div>
+                    <span class="service-card-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+                </button>
+                <button type="button" class="service-card" id="services-bank-transfer-card">
+                    <div class="service-card-icon ic-blue" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 10h18"/><path d="M5 10v8"/><path d="M9 10v8"/><path d="M15 10v8"/><path d="M19 10v8"/><path d="M2 20h20"/><path d="M12 4l9 5H3l9-5z"/></svg></div>
+                    <div class="service-card-content">
+                        <strong>Bank Transfer</strong>
+                        <span>To any bank account</span>
+                    </div>
+                    <span class="service-card-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+                </button>
+                <button type="button" class="service-card hidden" id="services-xb-card">
+                    <div class="service-card-icon ic-teal" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg></div>
+                    <div class="service-card-content">
+                        <strong>Send Money Abroad</strong>
+                        <span>To a mobile money wallet abroad</span>
+                    </div>
+                    <span class="service-card-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+                </button>
+                <button type="button" class="service-card" id="services-crypto-card">
+                    <div class="service-card-icon ic-crypto" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 8.5h3.8a1.8 1.8 0 0 1 0 3.6H9.5m0 0h4.2a1.8 1.8 0 0 1 0 3.6H9.5M9.5 7v10M11.5 6v2M11.5 16v2"/></svg></div>
+                    <div class="service-card-content">
+                        <strong>Send to a crypto wallet</strong>
+                        <span>Receive USDT</span>
+                    </div>
+                    <span class="service-card-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+                </button>
+            </div>
 
-            <button type="button" class="service-card" id="services-bank-transfer-card">
-                <div class="service-card-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M3 10h18"/>
-                        <path d="M5 10v8"/><path d="M9 10v8"/><path d="M15 10v8"/><path d="M19 10v8"/>
-                        <path d="M2 20h20"/>
-                        <path d="M12 4l9 5H3l9-5z"/>
-                    </svg>
-                </div>
-                <div class="service-card-content">
-                    <strong>Bank Transfer</strong>
-                    <span>Send money from Orange Money or Africell to a bank account.</span>
-                </div>
-                <span class="service-card-arrow" aria-hidden="true">›</span>
-            </button>
+            <div class="svc-label">Get paid</div>
+            <div class="svc-group">
+                <button type="button" class="service-card" id="services-links-card">
+                    <div class="service-card-icon ic-green" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3A4 4 0 0 0 11 18.7l1-1"/></svg></div>
+                    <div class="service-card-content">
+                        <strong>Payment Links</strong>
+                        <span>Get paid by anyone</span>
+                    </div>
+                    <span class="service-card-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+                </button>
+                <button type="button" class="service-card hidden" id="services-cardin-card">
+                    <div class="service-card-icon ic-teal" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/><path d="M6 15h4"/></svg></div>
+                    <div class="service-card-content">
+                        <strong>Withdraw from Card</strong>
+                        <span>Card to mobile money</span>
+                    </div>
+                    <span class="service-card-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+                </button>
+                <button type="button" class="service-card hidden" id="services-bankin-card">
+                    <div class="service-card-icon ic-blue" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 10h18"/><path d="M5 10v8"/><path d="M9 10v8"/><path d="M15 10v8"/><path d="M19 10v8"/><path d="M2 20h20"/><path d="M12 4l9 5H3l9-5z"/></svg></div>
+                    <div class="service-card-content">
+                        <strong>Withdraw from Bank</strong>
+                        <span>Bank to mobile money</span>
+                    </div>
+                    <span class="service-card-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+                </button>
+            </div>
 
-            <button type="button" class="service-card hidden" id="services-xb-card">
-                <div class="service-card-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="9"/>
-                        <path d="M3 12h18"/>
-                        <path d="M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/>
-                    </svg>
-                </div>
-                <div class="service-card-content">
-                    <strong>Send Money Abroad</strong>
-                    <span>Send money to a mobile money wallet in another country. Pay with Orange Money.</span>
-                </div>
-                <span class="service-card-arrow" aria-hidden="true">&rsaquo;</span>
-            </button>
-
-            <button type="button" class="service-card hidden" id="services-cardin-card">
-                <div class="service-card-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24">
-                        <rect x="2" y="5" width="20" height="14" rx="2.5"/>
-                        <path d="M2 10h20"/>
-                        <path d="M6 15h4"/>
-                    </svg>
-                </div>
-                <div class="service-card-content">
-                    <strong>Withdraw from Card</strong>
-                    <span>Pay with your bank card and receive the money on your Orange Money or Africell Money.</span>
-                </div>
-                <span class="service-card-arrow" aria-hidden="true">&rsaquo;</span>
-            </button>
-
-            <button type="button" class="service-card hidden" id="services-bankin-card">
-                <div class="service-card-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M3 10h18"/>
-                        <path d="M5 10v8"/><path d="M9 10v8"/><path d="M15 10v8"/><path d="M19 10v8"/>
-                        <path d="M2 20h20"/>
-                        <path d="M12 4l9 5H3l9-5z"/>
-                    </svg>
-                </div>
-                <div class="service-card-content">
-                    <strong>Withdraw from Bank</strong>
-                    <span>Move money from your bank account to your Orange Money or Africell Money.</span>
-                </div>
-                <span class="service-card-arrow" aria-hidden="true">&rsaquo;</span>
-            </button>
-
-            <button type="button" class="service-card" id="services-waec-card">
-                <div class="service-card-icon has-logo" aria-hidden="true">
-                    <img src="assets/waec-logo.png" alt="" data-logo-fallback="WAEC" />
-                </div>
-                <div class="service-card-content">
-                    <strong>WAEC Result Pin</strong>
-                    <span>Purchase WAEC pin to scratch your result in the WAEC portal.</span>
-                </div>
-                <span class="service-card-arrow" aria-hidden="true">›</span>
-            </button>
-
-            <button type="button" class="service-card" id="services-links-card">
-                <div class="service-card-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/>
-                        <path d="M14 10a4 4 0 0 0-5.7 0l-3 3A4 4 0 0 0 11 18.7l1-1"/>
-                    </svg>
-                </div>
-                <div class="service-card-content">
-                    <strong>Payment Links</strong>
-                    <span>Send a link and get paid by anyone, even without an account.</span>
-                </div>
-                <span class="service-card-arrow" aria-hidden="true">›</span>
-            </button>
-
-            <button type="button" class="service-card" id="services-crypto-card">
-                <div class="service-card-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 8.5h3.8a1.8 1.8 0 0 1 0 3.6H9.5m0 0h4.2a1.8 1.8 0 0 1 0 3.6H9.5M9.5 7v10M11.5 6v2M11.5 16v2"/></svg>
-                </div>
-                <div class="service-card-content">
-                    <strong>Send to a crypto wallet</strong>
-                    <span>Pay with Orange Money or Africell Money and receive USDT in Binance or any wallet.</span>
-                </div>
-                <span class="service-card-arrow" aria-hidden="true">›</span>
-            </button>
+            <div class="svc-label">Pay for</div>
+            <div class="svc-group">
+                <button type="button" class="service-card" id="services-waec-card">
+                    <div class="service-card-icon ic-amber" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17" rx="2"/><path d="M9 3.5v17"/><path d="M12.5 8h3"/></svg></div>
+                    <div class="service-card-content">
+                        <strong>WAEC Result Pin</strong>
+                        <span>Buy your result pin</span>
+                    </div>
+                    <span class="service-card-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+                </button>
+            </div>
 
             <div class="services-coming-card">
-                <div class="services-coming-icon" aria-hidden="true">✦</div>
+                <div class="services-coming-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div>
                 <div>
                     <strong>More services are coming soon</strong>
-                    <p>New DeenWallet Transfer services will appear here when available.</p>
+                    <p>New services will appear here when available.</p>
                 </div>
             </div>
         </div>
@@ -4352,7 +4440,7 @@
     </div>
 
     <!-- ===================== PRIMARY APP NAVIGATION ===================== -->
-    <nav class="app-bottom-nav" id="app-bottom-nav" aria-label="Primary navigation">
+    <nav class="app-bottom-nav nav-home" id="app-bottom-nav" aria-label="Primary navigation">
         <button class="app-nav-item active" type="button" data-nav-screen="home" aria-label="Home" aria-current="page">
       <span class="nav-icon" aria-hidden="true">
         <svg viewBox="0 0 24 24">
@@ -4659,6 +4747,12 @@
         // remains reliable in the browser and in the Capacitor WebView.
         // Only one primary screen may be active at a time.
         function setPrimaryNavActive(navName) {
+            const navEl = document.getElementById('app-bottom-nav');
+            if (navEl) {
+                navEl.classList.add('nav-home');
+                navEl.classList.remove('nav-services');
+                navEl.classList.toggle('nav-support', navName === 'support');
+            }
             appNavItems.forEach((item) => {
                 const active = item.dataset.navScreen === navName;
                 item.classList.toggle('active', active);
@@ -5533,19 +5627,22 @@
                 '</div>' +
                 '</div>' +
                 '<div class="customer-drawer-scroll">' +
-                '<button type="button" class="customer-drawer-item" data-drawer-action="profile"><span class="customer-drawer-icon">♙</span><span class="customer-drawer-label">Profile</span><span class="customer-drawer-chevron">›</span></button>' +
-                '<button type="button" class="customer-drawer-item" data-drawer-action="pin"><span class="customer-drawer-icon">⚿</span><span class="customer-drawer-label">Change PIN</span><span class="customer-drawer-chevron">›</span></button>' +
-                '<button type="button" class="customer-drawer-item" data-drawer-action="kyc"><span class="customer-drawer-icon">▣</span><span class="customer-drawer-label">Verify your KYC</span><span class="customer-drawer-chevron">›</span></button>' +
-                '<button type="button" class="customer-drawer-item" data-drawer-action="biometric"><span class="customer-drawer-icon">◉</span><span class="customer-drawer-label">Biometric Login</span><span class="customer-drawer-chevron">›</span></button>' +
-                '<div class="customer-drawer-divider"></div>' +
-                '<button type="button" class="customer-drawer-item" data-drawer-action="history"><span class="customer-drawer-icon">▤</span><span class="customer-drawer-label">Transaction History</span><span class="customer-drawer-chevron">›</span></button>' +
-                '<button type="button" class="customer-drawer-item" data-drawer-action="terms"><span class="customer-drawer-icon">▧</span><span class="customer-drawer-label">Terms and Conditions</span><span class="customer-drawer-chevron">›</span></button>' +
-                '<button type="button" class="customer-drawer-item" data-drawer-action="privacy"><span class="customer-drawer-icon">▥</span><span class="customer-drawer-label">Privacy Policy</span><span class="customer-drawer-chevron">›</span></button>' +
-                '<button type="button" class="customer-drawer-item" data-drawer-action="devices"><span class="customer-drawer-icon">◨</span><span class="customer-drawer-label">Trusted Devices</span><span class="customer-drawer-chevron">›</span></button>' +
-                '<div class="customer-drawer-divider"></div>' +
-                '<button type="button" class="customer-drawer-item danger" data-drawer-action="logout"><span class="customer-drawer-icon">↪</span><span class="customer-drawer-label">Log out</span><span class="customer-drawer-chevron">›</span></button>' +
+                '<div class="cd-group">' +
+                '<button type="button" class="customer-drawer-item" data-drawer-action="profile"><span class="cd-ic ic-teal" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c.8-3.6 3.6-5.4 7-5.4s6.2 1.8 7 5.4"/></svg></span><span class="customer-drawer-label">Profile</span><span class="customer-drawer-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>' +
+                '<button type="button" class="customer-drawer-item" data-drawer-action="pin"><span class="cd-ic ic-violet" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.4"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg></span><span class="customer-drawer-label">Change PIN</span><span class="customer-drawer-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>' +
+                '<button type="button" class="customer-drawer-item" data-drawer-action="kyc"><span class="cd-ic ic-green" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z"/><path d="M9 12l2.2 2.2L15 10"/></svg></span><span class="customer-drawer-label">Verify your KYC</span><span class="customer-drawer-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>' +
+                '<button type="button" class="customer-drawer-item" data-drawer-action="biometric"><span class="cd-ic ic-olive" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 4a7 7 0 0 0-7 7v2"/><path d="M12 8a3 3 0 0 0-3 3v3c0 2 .6 3.4 1.6 4.6"/><path d="M12 11v4c0 1.8.6 3.2 1.6 4.4"/><path d="M16 12v1c0 2-.4 3.6-1.2 5"/><path d="M19 11a7 7 0 0 0-2-5"/></svg></span><span class="customer-drawer-label">Biometric Login</span><span class="customer-drawer-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>' +
+                '<button type="button" class="customer-drawer-item" data-drawer-action="devices"><span class="cd-ic ic-blue" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="7" y="2.8" width="10" height="18.4" rx="2.4"/><path d="M11 18.2h2"/></svg></span><span class="customer-drawer-label">Trusted Devices</span><span class="customer-drawer-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>' +
+                '</div>' +
+                '<div class="cd-group">' +
+                '<button type="button" class="customer-drawer-item" data-drawer-action="history"><span class="cd-ic ic-teal" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 7v5l3 2"/><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"/><path d="M4 4v3.5h3.5"/></svg></span><span class="customer-drawer-label">Transaction History</span><span class="customer-drawer-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>' +
+                '<button type="button" class="customer-drawer-item" data-drawer-action="terms"><span class="cd-ic ic-slate" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3.5h7l4 4V20a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1z"/><path d="M14 3.5V8h4"/><path d="M9 12.5h6M9 16h6"/></svg></span><span class="customer-drawer-label">Terms and Conditions</span><span class="customer-drawer-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>' +
+                '<button type="button" class="customer-drawer-item" data-drawer-action="privacy"><span class="cd-ic ic-slate" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z"/></svg></span><span class="customer-drawer-label">Privacy Policy</span><span class="customer-drawer-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>' +
+                '</div>' +
+                '<button type="button" class="customer-drawer-item danger" data-drawer-action="logout"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6.5A1.5 1.5 0 0 0 5 5.5v13A1.5 1.5 0 0 0 6.5 20H10"/><path d="M15 8l4 4-4 4"/><path d="M19 12H9.5"/></svg><span class="customer-drawer-label">Log out</span></button>' +
                 '</div>';
 
+            overlay.innerHTML = '<button type="button" class="cd-close" id="customer-drawer-close" aria-label="Close menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
             document.body.appendChild(overlay);
             document.body.appendChild(drawer);
             menuOpen = true;
@@ -5560,6 +5657,8 @@
             });
 
             overlay.addEventListener('click', closeMenu);
+            const closeX = document.getElementById('customer-drawer-close');
+            if (closeX) closeX.addEventListener('click', (ev) => { ev.stopPropagation(); closeMenu(); });
             drawer.querySelectorAll('[data-drawer-action]').forEach((item) => {
                 item.addEventListener('click', (event) => {
                     event.preventDefault();
@@ -5813,8 +5912,8 @@
         }
 
         function kycLimitsCard(d) {
-            return '<div class="kyc-card"><h2>Your daily limits</h2>' +
-                kycMeter('Mobile money', d.mobileMoney) + kycMeter('Bank transfer', d.bank) + '</div>';
+            return '<div class="kyc-card"><h2>Daily transaction limit</h2>' +
+                kycMeter('All services except WAEC pin', d.mobileMoney) + '</div>';
         }
 
         function kycRender() {
@@ -5827,7 +5926,7 @@
                 hero = kycHero('basic', 'Basic account', 'Verification unavailable', 'ID verification is temporarily unavailable. Your current daily limits still apply.');
             } else if (d.status === 'APPROVED') {
                 hero = kycHero('', '&#10003; Verified', 'Identity verified', 'Your ' + kycEsc(d.documentTypeLabel || 'ID') + (d.documentLast4 ? ' ending ' + kycEsc(d.documentLast4) : '') +
-                    ' was approved' + (d.reviewedAt ? ' on ' + kycEsc(kycDate(d.reviewedAt)) : '') + '. You can convert up to SLE ' + top + ' per day.');
+                    ' was approved' + (d.reviewedAt ? ' on ' + kycEsc(kycDate(d.reviewedAt)) : '') + '. Your daily transaction limit is SLE ' + top + '.');
             } else if (d.status === 'PENDING') {
                 hero = kycHero('review', 'In review', 'We are checking your ID', 'Submitted ' + kycEsc(kycDate(d.submittedAt)) + '. We will notify you as soon as it is reviewed. Your basic limits apply until then.');
                 action = '<button class="btn-primary kyc-cta" data-kyc="refresh" type="button"' + (kycState.checking ? ' disabled' : '') + '>' +
@@ -5840,7 +5939,7 @@
                 if (d.canStart) action = '<button class="btn-primary kyc-cta" data-kyc="start" type="button">Try again</button>';
             } else {
                 const resume = d.status === 'DRAFT';
-                hero = kycHero('basic', 'Basic account', resume ? 'Finish your verification' : 'Raise your daily limit to SLE ' + top,
+                hero = kycHero('basic', 'Basic account', resume ? 'Finish your verification' : 'Raise your daily transaction limit to SLE ' + top,
                     resume ? 'Your details are saved. Continue where you stopped.' : 'Verify with a National ID card, driver\'s licence or passport. It takes about two minutes.');
                 if (d.canStart) action = '<button class="btn-primary kyc-cta" data-kyc="start" type="button">' + (resume ? 'Continue verification' : 'Verify my identity') + '</button>' +
                     (resume ? '<button class="kyc-link" data-kyc="discard" type="button">Start over</button>' : '');
@@ -6206,57 +6305,26 @@
             box.classList.toggle('warn', over);
             const verified = kycState.data.level === 'VERIFIED';
             box.textContent = over
-                ? 'This is above your daily limit (SLE ' + kycSle(b.remainingMinor) + ' left today).' + (verified ? '' : ' Verify your ID in the menu to raise it to SLE ' + kycSle(kycState.data.verifiedDailyLimitMinor) + ' per day.')
-                : 'Daily limit left today: SLE ' + kycSle(b.remainingMinor) + (verified ? '' : '. Verify your ID to raise it.');
+                ? 'This is above your daily transaction limit (SLE ' + kycSle(b.remainingMinor) + ' left today).' + (verified ? '' : ' Verify your ID in the menu to raise it to SLE ' + kycSle(kycState.data.verifiedDailyLimitMinor) + ' per day.')
+                : 'Daily transaction limit left today: SLE ' + kycSle(b.remainingMinor) + (verified ? '' : '. Verify your ID to raise it.');
         }
         // ==============================================================
         // HOME: service cards (swipe sideways) and the daily-limit strip
         // ==============================================================
-        (function initHomeCards() {
-            const track = document.getElementById('home-cards');
-            const dots = document.getElementById('home-dots');
-            if (!track || !dots) return;
-            const cards = Array.from(track.querySelectorAll('.home-card'));
-            dots.innerHTML = cards.map(() => '<i></i>').join('');
-            const dotEls = Array.from(dots.children);
-
-            function syncDots() {
-                if (!cards.length) return;
-                const step = cards.length > 1 ? (cards[1].offsetLeft - cards[0].offsetLeft) : 1;
-                const max = track.scrollWidth - track.clientWidth;
-                let idx = step > 0 ? Math.round(track.scrollLeft / step) : 0;
-                if (max > 0 && track.scrollLeft >= max - 4) idx = cards.length - 1;
-                dotEls.forEach((d, i) => d.classList.toggle('on', i === idx));
-            }
-            track.addEventListener('scroll', syncDots, { passive: true });
-            window.addEventListener('resize', syncDots);
-            syncDots();
-
-            // Mouse: drag the cards sideways like a finger does on a phone.
-            let down = false, moved = false, startX = 0, startLeft = 0;
-            track.addEventListener('pointerdown', (e) => {
-                if (e.pointerType !== 'mouse') return;
-                down = true; moved = false; startX = e.clientX; startLeft = track.scrollLeft;
-            });
-            window.addEventListener('pointermove', (e) => {
-                if (!down) return;
-                const dx = e.clientX - startX;
-                if (!moved && Math.abs(dx) > 6) { moved = true; track.classList.add('dragging'); }
-                if (moved) track.scrollLeft = startLeft - dx;
-            });
-            window.addEventListener('pointerup', () => {
-                if (!down) return;
-                down = false;
-                if (moved) setTimeout(() => track.classList.remove('dragging'), 0);
-            });
-            track.addEventListener('click', (e) => {
+        (function initHomeTiles() {
+            const root = document.getElementById('screen-home');
+            if (!root) return;
+            root.addEventListener('click', (e) => {
                 const card = e.target.closest('[data-home-service]');
-                if (!card || moved) { moved = false; return; }
+                if (!card) return;
                 const kind = card.getAttribute('data-home-service');
                 if (kind === 'MORE') showPrimaryScreen('payment');
                 else if (kind === 'WAEC') openWaecService();
-                else openCustomerService(kind);
-            }, true);
+                else if (kind === 'PAY_LINK') {
+                    const link = document.getElementById('services-links-card');
+                    if (link) link.click();
+                } else openCustomerService(kind);
+            });
         })();
 
         window.refreshHomeLimit = async function () {
@@ -6269,18 +6337,16 @@
                 const text = document.getElementById('home-limit-text');
                 const cta = document.getElementById('home-limit-cta');
                 const top = kycSle(d.verifiedDailyLimitMinor);
+                // Verified customers do not see this strip; it is only for customers who are not verified yet.
+                if (d.level === 'VERIFIED') { box.classList.add('hidden'); return; }
                 box.classList.remove('hidden');
-                box.classList.toggle('ok', d.level === 'VERIFIED');
-                if (d.level === 'VERIFIED') {
-                    title.textContent = 'Identity verified';
-                    text.textContent = 'You can convert up to SLE ' + top + ' per day.';
-                    cta.textContent = 'Details';
-                } else if (d.status === 'PENDING') {
+                box.classList.remove('ok');
+                if (d.status === 'PENDING') {
                     title.textContent = 'ID verification in review';
-                    text.textContent = 'Daily limit SLE ' + kycSle(d.mobileMoney ? d.mobileMoney.dailyLimitMinor : 0) + ' until it is approved.';
+                    text.textContent = 'Daily transaction limit SLE ' + kycSle(d.mobileMoney ? d.mobileMoney.dailyLimitMinor : 0) + ' until it is approved.';
                     cta.textContent = 'View';
                 } else {
-                    title.textContent = 'Daily limit SLE ' + kycSle(d.mobileMoney ? d.mobileMoney.dailyLimitMinor : 0);
+                    title.textContent = 'Daily transaction limit SLE ' + kycSle(d.mobileMoney ? d.mobileMoney.dailyLimitMinor : 0);
                     text.textContent = 'Verify your ID to unlock SLE ' + top + ' a day.';
                     cta.textContent = 'Verify';
                 }
@@ -6300,7 +6366,7 @@
             const b = kycBucketFor(kycState.data);
             if (!b || Math.round(Number(currentFeePreview.amount) * 100) <= b.remainingMinor) return false;
             const verified = kycState.data.level === 'VERIFIED';
-            showModal('🛡️', 'Daily limit', 'You have SLE ' + kycSle(b.remainingMinor) + ' left of your SLE ' + kycSle(b.dailyLimitMinor) + ' daily limit.' +
+            showModal('🛡️', 'Daily transaction limit', 'You have SLE ' + kycSle(b.remainingMinor) + ' left of your SLE ' + kycSle(b.dailyLimitMinor) + ' daily transaction limit.' +
                 (verified ? ' It resets at midnight.' : ' Verify your ID from the menu (Verify your KYC) to raise it to SLE ' + kycSle(kycState.data.verifiedDailyLimitMinor) + ' per day.'));
             return true;
         }
