@@ -509,6 +509,24 @@ final class EmailTemplates {
         return wrap("Refund sent", body);
     }
 
+    static String crossBorderEmail(String reference, String headline, String lead, String sentTo,
+                                   String amountSent, String totalPaid, String recipientGets) {
+        StringBuilder rows = new StringBuilder();
+        if (sentTo != null) rows.append(row("Sent to", escape(sentTo)));
+        if (amountSent != null) rows.append(row("Amount sent", escape(amountSent)));
+        if (totalPaid != null) rows.append(row("You paid (with fee)", escape(totalPaid)));
+        if (recipientGets != null) rows.append(row("Recipient gets", escape(recipientGets)));
+        String body = "<div><div style=\"text-align: center; margin-bottom: 24px;\">"
+                + "<h2 style=\"margin: 0; color: " + TEXT_COLOR + "; font-size: 22px; font-weight: 700;\">" + escape(headline) + "</h2>"
+                + "<p style=\"margin: 6px 0 0 0; color: " + MUTED_COLOR + "; font-size: 14px;\">Reference: "
+                + "<span style=\"font-family: monospace; font-weight: 600; background: #F3F4F6; padding: 2px 8px; border-radius: 4px;\">" + escape(reference) + "</span></p></div>"
+                + "<p style=\"margin: 0 0 20px 0; color: " + TEXT_COLOR + "; font-size: 15px; line-height: 1.6; text-align: center;\">" + escape(lead) + "</p>"
+                + (rows.length() == 0 ? "" : "<div style=\"border: 1px solid " + BORDER_COLOR + "; border-radius: 12px; overflow: hidden; margin-bottom: 24px;\">"
+                + "<table cellpadding=\"0\" cellspacing=\"0\" style=\"width: 100%; border-collapse: collapse;\">" + rows + "</table></div>")
+                + "<p style=\"margin: 0; color: " + MUTED_COLOR + "; font-size: 13px; line-height: 1.5; text-align: center;\">You can see this transfer any time in Transaction history. Thank you for using DeenWallet Transfer.</p></div>";
+        return wrap(headline, body);
+    }
+
     static String kycDecisionEmail(String firstName, String outcome, String detail, String dailyLimit) {
         String title;
         String color;

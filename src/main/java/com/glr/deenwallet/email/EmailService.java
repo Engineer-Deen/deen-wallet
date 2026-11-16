@@ -256,6 +256,12 @@ public class EmailService {
                 EmailTemplates.refundCompletedEmail(transactionCode, totalCharged, payerPhone));
     }
 
+    @Async("emailTaskExecutor")
+    public void sendCrossBorderEmail(String toEmail, String subject, String reference, String headline, String lead,
+                                     String sentTo, String amountSent, String totalPaid, String recipientGets) {
+        send(toEmail, subject, EmailTemplates.crossBorderEmail(reference, headline, lead, sentTo, amountSent, totalPaid, recipientGets));
+    }
+
     private boolean sendTracked(String toEmail, String subject, String htmlBody) {
         if (toEmail == null || toEmail.isBlank()) {
             log.warn("Skipping email '{}': no recipient address available", subject);

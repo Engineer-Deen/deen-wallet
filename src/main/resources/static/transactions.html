@@ -489,6 +489,9 @@
       <h1 class="title">Transaction history</h1>
     </div>
 
+    <input id="txn-search" type="search" autocomplete="off" placeholder="Search by transaction ID, name, number or amount"
+           style="width:100%;box-sizing:border-box;margin:0 0 12px 0;padding:12px 14px;font-size:15px;border:1px solid var(--border);border-radius:12px;background:var(--card);color:inherit;" />
+
     <div id="loading-state" class="loading-state">
       <div class="spinner"></div>
       Loading your transactions…
@@ -586,6 +589,14 @@
     if (!requireAuth()) return;
 
     const screenList = document.getElementById('screen-list');
+    const searchEl = document.getElementById('txn-search');
+    let lastTransactions = [];
+    function transactionMatches(txn, q) {
+      const hay = [txn.transactionCode, txn.id, txn.destinationHolderName, txn.destinationPhone, txn.bankAccountHolderName,
+        txn.bankAccountNumber, txn.amount, txn.totalCharged, txn.statusText, txn.status, txn.serviceType === 'CROSS_BORDER' ? 'send abroad' : '']
+        .filter((v) => v !== null && v !== undefined).join(' ').toLowerCase().replace(/\s+/g, '');
+      return hay.indexOf(q) >= 0;
+    }
     const screenReceipt = document.getElementById('screen-receipt');
 
     const loadingState = document.getElementById('loading-state');
@@ -637,6 +648,8 @@
       }
     }
 
+    searchEl.addEventListener('input', () => renderList(lastTransactions));
+
     function renderCachedListImmediately() {
       const cached = getCachedTransactions();
       if (!cached.length) return false;
@@ -678,8 +691,17 @@
     // ==============================================================
     // ✅ RENDER LIST - SHOW TRANSACTION CODE
     // ==============================================================
-    function renderList(transactions) {
+    function renderList(all) {
+      lastTransactions = all;
+      const q = (searchEl.value || '').trim().toLowerCase().replace(/\s+/g, '');
+      const transactions = q ? all.filter((t) => transactionMatches(t, q)) : all;
       listEl.innerHTML = '';
+      if (q && !transactions.length) {
+        const none = document.createElement('div');
+        none.className = 'empty-state';
+        none.textContent = 'No transaction matches your search.';
+        listEl.appendChild(none);
+      }
       transactions.forEach((txn) => {
         const status = effectiveStatus(txn);
         // ✅ Use transaction code if available

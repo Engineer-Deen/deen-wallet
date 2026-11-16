@@ -3412,6 +3412,7 @@
                 <div class="fp-section-title">Routes, rates and fees</div>
                 <div id="xbo-corridors"></div>
                 <div class="fp-section-title">Transfers</div>
+                <input class="fp-note" style="margin:0 0 10px 0;" id="xbo-search" type="search" autocomplete="off" placeholder="Search transaction ID (XB-…), name or number" />
                 <div id="xbo-transfers"></div>
             </div>
         </div>
@@ -5041,6 +5042,15 @@
             // SEND ABROAD (super admin): switch, routes with rate / fees / limits, transfers
             // ==============================================================
             var xboData = null;
+            var xboFound = null;   // search result (null = show the latest transfers)
+            var xboSearchTimer = null;
+            function xboLiveLabel(l) {
+                return l === 'OPERATIONAL' ? 'pawaPay: open'
+                    : l === 'DELAYED' ? 'pawaPay: open but slower than usual'
+                    : l === 'CLOSED' ? 'pawaPay: closed right now - hidden from customers'
+                    : l === 'NOT_ENABLED' ? 'pawaPay: not enabled on your account - hidden from customers'
+                    : 'pawaPay: could not be checked';
+            }
             function xboEsc(v) { return escapeHtml(v == null ? '' : String(v)); }
             function xboClose() { document.getElementById('xbo-modal-overlay').classList.remove('active'); }
             function xboStatusCls(s) { return s === 'COMPLETED' ? 'done' : (s === 'REVIEW' || s === 'FAILED') ? '' : (s === 'REFUNDED' || s === 'REFUNDING') ? 'refund' : 'muted'; }
@@ -5079,19 +5089,23 @@
                     card.innerHTML =
                         '<div class="fp-card-top"><span class="fp-amount">' + xboEsc(c.countryName) + ' · ' + xboEsc(c.providerName) + '</span><span class="fp-status ' + (c.enabled && Number(c.rate) > 0 ? 'done' : 'muted') + '">' + (c.enabled && Number(c.rate) > 0 ? 'On' : 'Off') + '</span></div>' +
                         '<div class="fp-sub">1 SLE = ' + xboEsc(c.rate) + ' ' + xboEsc(c.currency) + ' · fee ' + xboEsc(c.feePercent) + '% + ' + xboEsc(c.feeFlat) + ' SLE</div>' +
-                        '<div class="fp-sub">Min ' + xboEsc(c.minSend) + ' · Max ' + xboEsc(c.maxSend) + ' SLE · ' + xboEsc(c.provider) + '</div>';
+                        '<div class="fp-sub">Min ' + xboEsc(c.minSend) + ' · Max ' + xboEsc(c.maxSend) + ' SLE · ' + xboEsc(c.provider) + '</div>' +
+                        '<div class="fp-sub">Recipient number: ' + (c.numberMin === c.numberMax ? xboEsc(c.numberMin) : xboEsc(c.numberMin) + ' to ' + xboEsc(c.numberMax)) + ' digits after +' + xboEsc(c.dialCode) + '</div>' +
+                        '<div class="fp-sub" style="' + (c.live === 'OPERATIONAL' ? '' : 'color:#B45309;') + '">' + xboEsc(xboLiveLabel(c.live)) + '</div>';
                     card.addEventListener('click', function () { xboEditor(c); });
                     list.appendChild(card);
                 });
                 var tl = document.getElementById('xbo-transfers');
                 tl.innerHTML = '';
-                if (!d.transfers.length) tl.innerHTML = '<div class="empty-state">No transfers yet.</div>';
-                d.transfers.forEach(function (t) {
+                var shown = xboFound !== null ? xboFound : d.transfers;
+                if (!shown.length) tl.innerHTML = '<div class="empty-state">' + (xboFound !== null ? 'No transfer matches your search.' : 'No transfers yet.') + '</div>';
+                shown.forEach(function (t) {
                     var card = document.createElement('div');
                     card.className = 'fp-card' + (t.status === 'REVIEW' ? '' : ' ');
                     var canCheck = ['CREATED', 'COLLECTING', 'COLLECTED', 'REMITTING', 'REFUNDING', 'REVIEW'].indexOf(t.status) >= 0;
                     card.innerHTML =
                         '<div class="fp-card-top"><span class="fp-amount">' + xboEsc(t.total) + ' ' + xboEsc(t.sendCurrency) + ' → ' + xboEsc(t.receiveAmount) + ' ' + xboEsc(t.receiveCurrency) + '</span><span class="fp-status ' + xboStatusCls(t.status) + '">' + xboEsc(xboStatusLabel(t.status)) + '</span></div>' +
+                        '<div class="fp-sub" style="font-family:monospace;font-weight:600;">' + xboEsc(t.reference || '') + '</div>' +
                         '<div class="fp-sub">' + xboEsc(t.customer || 'Customer') + '</div>' +
                         '<div class="fp-sub">To ' + xboEsc(t.recipientName) + ' · ' + xboEsc(t.recipientPhone) + ' · ' + xboEsc(t.destProvider) + '</div>' +
                         '<div class="fp-sub">' + xboEsc(fpTime(t.createdAt)) + (t.failureCode ? ' · ' + xboEsc(t.failureCode) : '') + '</div>' +
@@ -5167,9 +5181,9 @@
                 overlay.classList.add('active');
                 adminApiRequest('/api/admin/cross-border/catalog').then(function (rows) {
                     var h = '<div class="fp-card-top"><h3 style="margin:0;font-size:17px;">Routes pawaPay offers you</h3></div><div class="fp-sub">Tap one to set its rate and fees. Check with pawaPay that the route can receive transfers from Sierra Leone.</div>';
-                    if (!rows || !rows.length) h += '<div class="empty-state">Nothing came back. You can still add a route by hand.</div>';
+                    if (!rows || !rows.length) h += '<div class="empty-state">pawaPay has not enabled any sending routes (remittances) on your account yet. Ask pawaPay to enable them, or add a route by hand.</div>';
                     (rows || []).forEach(function (r, i) {
-                        h += '<div class="fp-card" data-xbo-pick="' + i + '"><div class="fp-card-top"><span class="fp-amount">' + xboEsc(r.countryName) + ' · ' + xboEsc(r.providerName) + '</span><span class="fp-sub">' + xboEsc(r.currency) + '</span></div><div class="fp-sub">' + xboEsc(r.provider) + '</div></div>';
+                        h += '<div class="fp-card" data-xbo-pick="' + i + '"><div class="fp-card-top"><span class="fp-amount">' + xboEsc(r.countryName) + ' · ' + xboEsc(r.providerName) + '</span><span class="fp-sub">' + xboEsc(r.currency) + '</span></div><div class="fp-sub">' + xboEsc(r.provider) + ' · ' + xboEsc(xboLiveLabel(r.live)) + '</div></div>';
                     });
                     h += '<div class="fp-actions"><button class="btn-outline" id="xbo-f-cancel">Close</button></div>';
                     box.innerHTML = h;
@@ -5177,7 +5191,7 @@
                     box.querySelectorAll('[data-xbo-pick]').forEach(function (el) {
                         el.addEventListener('click', function () {
                             var r = rows[Number(el.getAttribute('data-xbo-pick'))];
-                            xboEditor(null, { country: r.country, countryName: r.countryName, dialCode: r.dialCode, provider: r.provider, providerName: r.providerName, currency: r.currency, enabled: false, receiveDecimals: 2, rate: '', feePercent: '1', feeFlat: '0', minSend: '10', maxSend: '5000', sortOrder: 0 });
+                            xboEditor(null, { country: r.country, countryName: r.countryName, dialCode: r.dialCode, provider: r.provider, providerName: r.providerName, currency: r.currency, enabled: false, receiveDecimals: (r.decimals == null ? 2 : r.decimals), rate: '', feePercent: '1', feeFlat: '0', minSend: '10', maxSend: '5000', sortOrder: 0 });
                         });
                     });
                 }).catch(function (e) {
@@ -5186,7 +5200,18 @@
                 });
             }
 
-            document.getElementById('xbo-refresh').addEventListener('click', loadXborder);
+            document.getElementById('xbo-search').addEventListener('input', function () {
+                var q = this.value.trim();
+                if (xboSearchTimer) clearTimeout(xboSearchTimer);
+                if (!q) { xboFound = null; xboRender(); return; }
+                xboSearchTimer = setTimeout(function () {
+                    adminApiRequest('/api/admin/cross-border/transfers?q=' + encodeURIComponent(q)).then(function (rows) {
+                        if (document.getElementById('xbo-search').value.trim() !== q) return;
+                        xboFound = rows || []; xboRender();
+                    }).catch(function () { });
+                }, 350);
+            });
+            document.getElementById('xbo-refresh').addEventListener('click', function () { xboFound = null; document.getElementById('xbo-search').value = ''; loadXborder(); });
             document.getElementById('xbo-add').addEventListener('click', function () { xboEditor(null); });
             document.getElementById('xbo-catalog').addEventListener('click', xboFindRoutes);
             document.getElementById('xbo-switch').addEventListener('click', function () {

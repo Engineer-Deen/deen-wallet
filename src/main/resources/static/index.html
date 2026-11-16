@@ -3411,8 +3411,9 @@
                 <div class="bank-field-label" style="margin-top:14px;">Recipient mobile money number</div>
                 <div class="phone-card">
                     <div class="phone-prefix"><span id="xb-dial">+</span></div>
-                    <input id="xb-rphone" type="tel" inputmode="numeric" maxlength="14" placeholder="Mobile money number" autocomplete="off" />
+                    <input id="xb-rphone" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="14" placeholder="Mobile money number" autocomplete="off" />
                 </div>
+                <div id="xb-rphone-hint" class="bank-account-hint" style="margin-top:6px;"></div>
 
                 <div class="bank-field-label" style="margin-top:18px;">Amount to send (SLE)</div>
                 <div class="amount-card">
@@ -9101,7 +9102,10 @@
             xbEl('xb-dial').textContent = xbCorridor ? '+' + xbCorridor.dialCode : '+';
             xbEl('xb-limits').textContent = xbCorridor
                 ? 'Minimum ' + xbMoneyDec(xbCorridor.minSend, 'SLE') + ' · Maximum ' + xbMoneyDec(xbCorridor.maxSend, 'SLE')
+                    + (xbCorridor.delayed ? ' · This route may be slower than usual today.' : '')
                 : '';
+            xbEl('xb-rphone').maxLength = xbCorridor ? (Number(xbCorridor.numberMax) || 12) + 4 : 14;
+            xbCleanRecipient();
             xbScheduleQuote();
         }
 
@@ -9112,9 +9116,40 @@
             return n > 0 ? n : null;
         }
 
+        // The number is typed WITHOUT the country code and WITHOUT the leading 0; only digits; the exact length of that country.
+        function xbCleanRecipient() {
+            const el = xbEl('xb-rphone');
+            let d = el.value.replace(/\D/g, '');
+            if (xbCorridor) {
+                const max = Number(xbCorridor.numberMax) || 12;
+                if (d.indexOf(xbCorridor.dialCode) === 0 && d.length > max) d = d.slice(xbCorridor.dialCode.length);
+                if (!xbCorridor.keepZero) d = d.replace(/^0+/, '');
+                d = d.slice(0, max);
+            } else {
+                d = d.replace(/^0+/, '');
+            }
+            if (el.value !== d) el.value = d;
+            xbPhoneHint();
+        }
+        function xbPhoneOk() {
+            if (!xbCorridor) return false;
+            const n = xbEl('xb-rphone').value.length;
+            return n >= (Number(xbCorridor.numberMin) || 7) && n <= (Number(xbCorridor.numberMax) || 12);
+        }
+        function xbPhoneHint() {
+            const h = xbEl('xb-rphone-hint');
+            if (!xbCorridor) { h.textContent = ''; return; }
+            const mn = Number(xbCorridor.numberMin) || 7, mx = Number(xbCorridor.numberMax) || 12;
+            const need = mn === mx ? String(mn) : mn + ' to ' + mx;
+            const n = xbEl('xb-rphone').value.length;
+            h.style.color = '';
+            if (n === 0) h.textContent = 'Digits only' + (xbCorridor.keepZero ? ', as you dial it in ' + xbCorridor.countryName + '. ' : ', no leading 0. ') + xbCorridor.countryName + ' numbers have ' + need + ' digits after +' + xbCorridor.dialCode + '.';
+            else if (n < mn) { h.textContent = 'Needs ' + need + ' digits (' + n + ' so far).'; h.style.color = '#B45309'; }
+            else { h.textContent = 'Number looks right.'; }
+        }
+
         function xbStartReady() {
-            const digits = xbEl('xb-rphone').value.replace(/\D/g, '');
-            return !!(xbCorridor && xbQuote && xbEl('xb-rfirst').value.trim() && xbEl('xb-rlast').value.trim() && digits.length >= 7);
+            return !!(xbCorridor && xbQuote && xbEl('xb-rfirst').value.trim() && xbEl('xb-rlast').value.trim() && xbPhoneOk());
         }
         function xbUpdateStart() { xbEl('xb-start-continue-btn').disabled = !xbStartReady(); }
 
@@ -9159,7 +9194,8 @@
 
         // Send Abroad transfers are listed in Recent activity and Transaction history, not on this page.
 
-        ['xb-rfirst', 'xb-rlast', 'xb-rphone'].forEach((id) => xbEl(id).addEventListener('input', xbUpdateStart));
+        ['xb-rfirst', 'xb-rlast'].forEach((id) => xbEl(id).addEventListener('input', xbUpdateStart));
+        xbEl('xb-rphone').addEventListener('input', () => { xbCleanRecipient(); xbUpdateStart(); });
         xbEl('xb-amount').addEventListener('input', xbScheduleQuote);
         xbEl('xb-corridor').addEventListener('change', xbOnCorridor);
 

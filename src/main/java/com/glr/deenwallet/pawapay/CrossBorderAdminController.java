@@ -35,6 +35,7 @@ public class CrossBorderAdminController {
     private final PawaPayProperties props;
     private final PawaPayClient client;
     private final UserRepository users;
+    private final CrossBorderAvailability availability;
 
     @GetMapping("/overview")
     public ResponseEntity<?> overview() {
@@ -45,12 +46,38 @@ public class CrossBorderAdminController {
         m.put("switchOn", pricing.switchOn());
         m.put("live", pricing.serviceOn());
         List<Map<String, Object>> cs = new ArrayList<>();
-        for (CrossBorderCorridor c : corridors.findAllByOrderBySortOrderAscCountryNameAscProviderNameAsc()) cs.add(corridorView(c));
+        for (CrossBorderCorridor c : corridors.findAllByOrderBySortOrderAscCountryNameAscProviderNameAsc()) {
+            Map<String, Object> v = corridorView(c);
+            v.put("live", availability.remittance(c.getProvider()));   // what pawaPay says right now
+            int[] len = CrossBorderNumbers.length(c.getDialCode());
+            v.put("numberMin", len[0]);
+            v.put("numberMax", len[1]);
+            cs.add(v);
+        }
         m.put("corridors", cs);
         List<Map<String, Object>> ts = new ArrayList<>();
         for (CrossBorderTransfer t : transfers.findAllByOrderByCreatedAtDesc(PageRequest.of(0, 40))) ts.add(transferView(t));
         m.put("transfers", ts);
         return ResponseEntity.ok(m);
+    }
+
+    /** Find transfers by transaction ID (XB-...), the full id, recipient name or number, or the customer's Orange number. */
+    @GetMapping("/transfers")
+    public ResponseEntity<?> search(@RequestParam(defaultValue = "") String q) {
+        superAdmin();
+        String needle = q == null ? "" : q.trim().toLowerCase(Locale.ROOT).replace(" ", "");
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (CrossBorderTransfer t : transfers.findAllByOrderByCreatedAtDesc(PageRequest.of(0, 1000))) {
+            if (!needle.isEmpty()) {
+                String hay = (CrossBorderTransferService.reference(t) + " " + t.getId() + " " + t.getRecipientFirstName() + t.getRecipientLastName()
+                        + " " + t.getRecipientPhone() + " " + t.getPayerPhone() + " " + t.getDestProvider() + " " + t.getStatus())
+                        .toLowerCase(Locale.ROOT).replace(" ", "");
+                if (!hay.contains(needle)) continue;
+            }
+            out.add(transferView(t));
+            if (out.size() >= 60) break;
+        }
+        return ResponseEntity.ok(out);
     }
 
     public record SwitchRequest(boolean on) { }
@@ -133,14 +160,13 @@ public class CrossBorderAdminController {
         superAdmin();
         if (!props.enabled()) return ResponseEntity.badRequest().body(Map.of("message", "pawaPay is not switched on in the server settings."));
         try {
-            PawaPayResponse r = client.activeConfiguration();
+            PawaPayResponse r = client.activeConfiguration("REMITTANCE");   // only what pawaPay really lets us send to
             List<Map<String, Object>> out = new ArrayList<>();
             for (JsonNode c : r.json().path("countries")) {
                 for (JsonNode p : c.path("providers")) {
                     for (JsonNode cur : p.path("currencies")) {
                         JsonNode ops = cur.path("operationTypes");
-                        boolean ok = !ops.isObject() || ops.has("PAYOUT") || ops.has("REMITTANCE");
-                        if (!ok) continue;
+                        if (ops.isObject() && !ops.has("REMITTANCE")) continue;
                         Map<String, Object> o = new LinkedHashMap<>();
                         o.put("country", c.path("country").asText());
                         JsonNode dn = c.path("displayName");
@@ -149,6 +175,13 @@ public class CrossBorderAdminController {
                         o.put("provider", p.path("provider").asText());
                         o.put("providerName", p.path("displayName").asText(p.path("provider").asText()));
                         o.put("currency", cur.path("currency").asText());
+                        JsonNode rem = ops.path("REMITTANCE");
+                        String dec = rem.path("decimalsInAmount").asText("");
+                        o.put("decimals", dec.equals("NONE") ? 0 : dec.equals("ONE_PLACE") ? 1 : dec.equals("THREE_PLACES") ? 3 : 2);
+                        o.put("live", availability.remittance(p.path("provider").asText()));
+                        int[] len = CrossBorderNumbers.length(c.path("prefix").asText(""));
+                        o.put("numberMin", len[0]);
+                        o.put("numberMax", len[1]);
                         out.add(o);
                     }
                 }

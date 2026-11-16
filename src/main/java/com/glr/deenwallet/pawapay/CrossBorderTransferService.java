@@ -60,6 +60,7 @@ public class CrossBorderTransferService {
     private final PawaPayProperties props;
     private final KycCrypto crypto;
     private final PlatformTransactionManager txManager;
+    private final CrossBorderNotifier notifier;
     private final ObjectMapper mapper = new ObjectMapper();
 
     private TransactionTemplate tt;
@@ -364,6 +365,11 @@ public class CrossBorderTransferService {
         return s.length() <= max ? s : s.substring(0, max);
     }
 
+    /** The short transaction ID customers and admins can search for, e.g. XB-1A2B3C4D. */
+    static String reference(CrossBorderTransfer t) {
+        return "XB-" + t.getId().toString().replace("-", "").substring(0, 8).toUpperCase();
+    }
+
     /** pawaPay wants plain numbers without trailing zeros, e.g. "15" or "15.5". */
     static String amount(BigDecimal v) {
         return v.stripTrailingZeros().toPlainString();
@@ -371,13 +377,17 @@ public class CrossBorderTransferService {
 
     /** Short database transaction with the row locked; nothing happens if the transfer already moved on. */
     private boolean apply(UUID id, Set<CrossBorderStatus> expected, Consumer<CrossBorderTransfer> change) {
+        final CrossBorderTransfer[] changed = new CrossBorderTransfer[1];
         Boolean ok = tt().execute(s -> {
             CrossBorderTransfer t = repo.findByIdForUpdate(id).orElseThrow();
             if (!expected.contains(t.getStatus())) return false;
+            CrossBorderStatus before = t.getStatus();
             change.accept(t);
             repo.save(t);
+            if (t.getStatus() != before) changed[0] = t;
             return true;
         });
+        if (changed[0] != null) notifier.statusChanged(changed[0]);   // after the database change is saved; never throws
         return Boolean.TRUE.equals(ok);
     }
 
@@ -458,6 +468,7 @@ public class CrossBorderTransferService {
     public Map<String, Object> view(CrossBorderTransfer t) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", t.getId());
+        m.put("reference", reference(t));
         m.put("status", t.getStatus());
         m.put("sendAmount", t.getSendAmount());
         m.put("sendCurrency", t.getSendCurrency());

@@ -47,6 +47,12 @@ public class PawaPayClient {
     // ------------------------------------------------------------------ toolkit
     public PawaPayResponse activeConfiguration() { return get("/v2/active-conf"); }
 
+    /** Only the routes pawaPay really offers us for one operation: DEPOSIT, REMITTANCE, PAYOUT or REFUND. */
+    public PawaPayResponse activeConfiguration(String operationType) { return get("/v2/active-conf?operationType=" + operationType); }
+
+    /** Live status (OPERATIONAL, DELAYED, CLOSED) of every provider we can use, per operation. */
+    public PawaPayResponse availability() { return get("/v2/availability"); }
+
     public PawaPayResponse walletBalances() { return get("/v2/wallet-balances"); }
 
     // ------------------------------------------------------------------ deposits (collect from the sender)

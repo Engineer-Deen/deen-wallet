@@ -50,6 +50,7 @@ public class CrossBorderController {
     private final KycSubmissionRepository submissions;
     private final KycCrypto crypto;
     private final UserRepository users;
+    private final CrossBorderAvailability availability;
     // Created here on purpose: this app has no ObjectMapper bean to inject (that is what stopped it starting).
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -65,6 +66,9 @@ public class CrossBorderController {
         List<Map<String, Object>> list = new ArrayList<>();
         for (CrossBorderCorridor c : corridors.findByEnabledTrueOrderBySortOrderAscCountryNameAscProviderNameAsc()) {
             if (c.getRate().signum() <= 0) continue;
+            String live = availability.remittance(c.getProvider());
+            if (CrossBorderAvailability.blocks(live)) continue;   // pawaPay cannot pay this route right now: do not offer it
+            int[] len = CrossBorderNumbers.length(c.getDialCode());
             Map<String, Object> o = new LinkedHashMap<>();
             o.put("id", c.getId());
             o.put("country", c.getCountry());
@@ -75,6 +79,10 @@ public class CrossBorderController {
             o.put("currency", c.getCurrency());
             o.put("minSend", c.getMinSend());
             o.put("maxSend", c.getMaxSend());
+            o.put("numberMin", len[0]);
+            o.put("numberMax", len[1]);
+            o.put("keepZero", CrossBorderNumbers.keepsZero(c.getDialCode()));
+            o.put("delayed", "DELAYED".equals(live));
             list.add(o);
         }
         m.put("corridors", list);
@@ -137,6 +145,10 @@ public class CrossBorderController {
             CrossBorderPricing.Quote q = pricing.quote(c, r.amount());
             if (r.expectedTotal() != null && r.expectedTotal().compareTo(q.total()) != 0) {
                 throw new IllegalArgumentException("The price changed. Go back and check the new amount.");
+            }
+            if (CrossBorderAvailability.blocks(availability.remittance(c.getProvider()))
+                    || CrossBorderAvailability.blocks(availability.deposit(PAYER_PROVIDER))) {
+                throw new IllegalArgumentException("Sending to this country is not available right now. Please try again later.");
             }
             long open = transfers.countByUserIdAndStatusIn(uid, EnumSet.of(CrossBorderStatus.CREATED, CrossBorderStatus.COLLECTING,
                     CrossBorderStatus.COLLECTED, CrossBorderStatus.REMITTING, CrossBorderStatus.REFUNDING));
@@ -298,12 +310,7 @@ public class CrossBorderController {
     }
 
     static String recipientMsisdn(String dial, String raw) {
-        String d = raw == null ? "" : raw.replaceAll("[^0-9]", "");
-        if (d.startsWith(dial) && d.length() > dial.length() + 6) d = d.substring(dial.length());
-        while (d.startsWith("0")) d = d.substring(1);
-        String full = dial + d;
-        if (!full.matches("^[1-9][0-9]{8,14}$")) throw new IllegalArgumentException("Enter the recipient's mobile money number.");
-        return full;
+        return CrossBorderNumbers.normalize(dial, raw);   // digits only, the exact length of that country, no leading 0
     }
 
     /** pawaPay needs a first and a last name; the KYC name is split at its last word. */
