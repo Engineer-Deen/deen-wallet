@@ -2752,6 +2752,91 @@
         .customer-drawer-item.danger svg { width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
         .customer-drawer-item.danger .customer-drawer-label { flex:0 0 auto; color:#f0828a; }
 
+        /* ===================== DESIGN v3: lock screen, PIN screen, Profile, no-internet banner ===================== */
+        /* --- No internet banner (the app's own banner, restyled) --- */
+        #dw-offline-banner { left:20px !important; right:20px !important; top:max(14px, calc(env(safe-area-inset-top, 0px) + 10px)) !important; height:44px !important; box-sizing:border-box !important; display:flex !important; align-items:center !important; justify-content:center !important; gap:10px !important; padding:0 14px !important; border-radius:14px !important; background:rgba(62,20,25,.96) !important; border:1px solid #6b2a31 !important; color:#ff9a9d !important; font:800 14px/1 inherit !important; font-family:inherit !important; box-shadow:0 8px 22px rgba(0,0,0,.3) !important; z-index:100000 !important; }
+        #dw-offline-banner::before { content:""; width:20px; height:20px; flex:0 0 20px; background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff9a9d' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 8.8a15 15 0 0 1 4.2-2.6M22 8.8a15 15 0 0 0-9.5-3.7'/%3E%3Cpath d='M5 12.5a10 10 0 0 1 3.2-1.9M19 12.5a10 10 0 0 0-4.6-2.4'/%3E%3Cpath d='M8.5 16a5.5 5.5 0 0 1 2-1.1M15.5 16a5.5 5.5 0 0 0-1.5-1'/%3E%3Cpath d='M12 19.5h.01'/%3E%3Cpath d='M3 3l18 18'/%3E%3C/svg%3E") center/contain no-repeat; }
+        #dw-offline-banner[style*="-100%"] { opacity:0 !important; visibility:hidden !important; }
+
+        /* --- Lock screen: glass card --- */
+        #pin-modal-overlay.bio-mode { background-color:#0a1a21 !important; background-image:radial-gradient(ellipse at 0% 24%, rgba(30,140,162,.55), transparent 52%), radial-gradient(ellipse at 100% 88%, rgba(125,104,60,.34), transparent 46%), radial-gradient(ellipse at 100% 8%, rgba(20,90,110,.22), transparent 40%) !important; }
+        #pin-modal-overlay.bio-mode .modal-box { max-width:380px; padding:18px 20px 16px; border-radius:32px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.15); box-shadow:0 24px 60px rgba(0,0,0,.38); -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px); }
+        #pin-modal-overlay .bio-lock { padding:0; }
+        #pin-modal-overlay .bio-lock-ico { width:200px; height:200px; margin:0 auto 4px; color:inherit; display:flex; align-items:center; justify-content:center; }
+        #pin-modal-overlay .bio-lock-ico svg { width:200px; height:200px; }
+        #pin-modal-overlay .bio-lock h3 { margin:0 0 12px; font-size:26px; font-weight:800; color:#fff; letter-spacing:-.4px; }
+        #pin-modal-overlay .bio-lock-err { color:#ff8f94; min-height:20px; margin:0 0 14px; font-size:13.5px; line-height:1.45; }
+        #pin-modal-overlay .bio-lock-btn { display:flex; align-items:center; justify-content:center; gap:10px; min-height:56px; border:0; border-radius:999px; background:linear-gradient(135deg,#1f9bb1 0%,#0f6f85 100%); color:#fff; font-size:17px; font-weight:800; margin:0 0 16px; box-shadow:0 10px 24px rgba(8,80,98,.35); }
+        #pin-modal-overlay .bio-lock-btn::before { content:""; width:22px; height:22px; background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 4a7 7 0 0 0-7 7v2'/%3E%3Cpath d='M12 8a3 3 0 0 0-3 3v3c0 2 .6 3.4 1.6 4.6'/%3E%3Cpath d='M12 11v4c0 1.8.6 3.2 1.6 4.4'/%3E%3Cpath d='M16 12v1c0 2-.4 3.6-1.2 5'/%3E%3Cpath d='M19 11a7 7 0 0 0-2-5'/%3E%3C/svg%3E") center/contain no-repeat; flex:0 0 22px; }
+        #pin-modal-overlay .bio-lock-btn:active { background:linear-gradient(135deg,#1a8aa0 0%,#0d6075 100%); }
+        #pin-modal-overlay .bio-lock-links { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+        #pin-modal-overlay .bio-lock-link { display:block; width:auto; min-height:36px; padding:0 4px; color:#a9bec5; font-size:14.5px; font-weight:700; }
+
+        /* --- PIN screen (Session Locked): dark classic --- */
+        #pin-modal-overlay { background:#0b1c24 !important; }
+        #pin-modal-overlay .modal-box { max-width:380px; }
+        #pin-modal-overlay .pin-info .modal-icon { width:84px; height:84px; margin:0 auto 18px; border-radius:50%; background:linear-gradient(135deg,#1b95ab 0%,#0f6a80 100%); box-shadow:0 0 0 10px #12303b; font-size:0; line-height:0; display:flex; align-items:center; justify-content:center; }
+        #pin-modal-overlay .pin-info .modal-icon::before { content:""; width:36px; height:36px; background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='10.5' width='14' height='10' rx='2.4'/%3E%3Cpath d='M8 10.5V8a4 4 0 0 1 8 0v2.5'/%3E%3C/svg%3E") center/contain no-repeat; }
+        #pin-modal-overlay .modal-title { color:#fff; font-size:24px; font-weight:800; letter-spacing:-.3px; margin:0 0 6px; }
+        #pin-modal-overlay .modal-message { color:#9db5bc; font-size:14.5px; }
+        #pin-modal-overlay .pin-dots { gap:12px; margin:clamp(10px, 2.4dvh, 22px) 0 clamp(8px, 1.6dvh, 14px); }
+        #pin-modal-overlay .pin-dot { width:clamp(54px, 8.4dvh, 62px); height:clamp(54px, 8.4dvh, 62px); border:1px solid #1c4654; border-radius:18px; background:#12303b; color:#fff; font-size:16px; }
+        #pin-modal-overlay .pin-dot:not(.filled) { color:transparent; }
+        #pin-modal-overlay .pin-dot.filled { background:#12303b; border-color:#2a6577; }
+        #pin-modal-overlay .pin-dot.active { border:2px solid #22a8be; box-shadow:0 0 0 4px rgba(34,168,190,.18); }
+        #pin-modal-overlay .pin-dot.error { border-color:#ff6b73; }
+        #pin-modal-overlay .pin-error-msg { color:#ff8f94; }
+        #pin-modal-overlay .pin-keypad { gap:clamp(8px, 1.4dvh, 12px); }
+        #pin-modal-overlay .pin-keypad .pin-key { height:clamp(50px, 8.4dvh, 64px); border-radius:18px; border:1px solid #1c4654; background:#12303b; color:#fff; font-size:clamp(22px, 3.4dvh, 28px); font-weight:700; }
+        #pin-modal-overlay .pin-keypad .pin-key:active { background:#17414f; }
+        #pin-modal-overlay .pin-keypad .pin-key.btn-fill { border:0; background:linear-gradient(135deg,#2098ae 0%,#117086 100%); color:#fff; }
+        #pin-modal-overlay .pin-actions { margin-top:clamp(10px, 2dvh, 20px); }
+        #pin-modal-overlay .pin-actions-row { justify-content:space-between; }
+        #pin-modal-overlay .pin-actions-row button { flex:0 0 auto; width:auto !important; height:40px; padding:0 8px; background:transparent; border:0; color:#6ac0ce; font-size:15px; font-weight:800; }
+        #pin-modal-overlay #pin-biometric-btn { height:48px; border-radius:999px; background:#15414f; color:#7fd6e3; border:0; font-weight:800; }
+
+        /* --- Profile: full page --- */
+        #screen-profile { background:#0b1c24; }
+        #screen-profile .profile-page-scroll { padding-bottom:36px; }
+        #screen-profile .account-hero-card { flex-direction:column; align-items:center; gap:14px; padding:6px 0 4px; background:transparent; border:0; box-shadow:none; border-radius:0; overflow:visible; text-align:center; }
+        #screen-profile .account-avatar { width:106px; height:106px; flex:0 0 106px; background:#3c4a50; color:#fff; font-size:44px; font-weight:800; border:2px solid rgba(255,255,255,.5); }
+        #screen-profile #profile-avatar::after { right:0; bottom:0; width:32px; height:32px; font-size:15px; background:#fff; color:#0b3a46; border:0; box-shadow:0 2px 8px rgba(0,0,0,.35); }
+        #screen-profile .account-hero-copy { display:flex; flex-direction:column; align-items:center; flex:0 0 auto; width:100%; }
+        #screen-profile .account-eyebrow { display:none; }
+        #screen-profile .account-hero-name { margin:0; font-size:26px; font-weight:800; letter-spacing:-.4px; max-width:100%; }
+        #screen-profile .account-chips { display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:10px; margin-top:12px; }
+        #screen-profile .account-verified-badge { position:static; padding:6px 13px; border-radius:999px; background:rgba(95,211,141,.14); border:1px solid rgba(95,211,141,.28); color:#5fd38d; font-size:13px; font-weight:700; }
+        #screen-profile .account-hero-account { margin:0; padding:6px 14px; border-radius:999px; background:#12303b; border:1px solid #1c4654; font-size:13px; color:#c6d8dd; }
+        #screen-profile .dw-ph-link { margin:12px 7px 0; color:#7fd6e3; font-size:14px; font-weight:700; text-decoration:none; opacity:1; }
+        #screen-profile .profile-section-heading { margin:26px 2px 8px; }
+        #screen-profile .profile-section-heading h2 { font-size:22px; font-weight:800; color:#fff; letter-spacing:-.3px; }
+        #screen-profile .profile-section-heading p { font-size:13.5px; color:#9db5bc; margin-top:4px; padding-bottom:12px; border-bottom:1px solid #173a46; }
+        #screen-profile .profile-info-card { background:transparent; border:0; box-shadow:none; border-radius:0; }
+        #screen-profile .profile-info-row { flex-direction:row-reverse; justify-content:flex-end; gap:14px; padding:14px 2px; min-height:0; border-bottom:1px solid #173a46; }
+        #screen-profile .profile-info-row:last-child { border-bottom:1px solid #173a46; }
+        #screen-profile .profile-row-icon { width:46px; height:46px; flex:0 0 46px; border-radius:50%; background:#12303b; color:#35b6cc; }
+        #screen-profile .profile-row-icon svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+        #screen-profile .profile-info-row span:not(.profile-row-icon) { font-size:12.5px; color:#9db5bc; margin-bottom:2px; }
+        #screen-profile .profile-info-row strong { font-size:16px; font-weight:800; color:#fff; }
+        #screen-profile .profile-edit-card { background:transparent; border:0; box-shadow:none; padding:0; }
+        #screen-profile .pf-field { position:relative; margin-top:12px; }
+        #screen-profile .pf-field label { position:absolute; left:16px; top:10px; margin:0; font-size:12px; font-weight:500; color:#9db5bc; pointer-events:none; }
+        #screen-profile .pf-field .text-input { margin:0; height:64px; padding:26px 16px 8px; border-radius:16px; background:#0a2230; border:1px solid #1c3a48; color:#fff; font-size:16px; font-weight:800; box-sizing:border-box; }
+        #screen-profile .pf-field .text-input:focus { border-color:#2e9fb0; }
+        #screen-profile .profile-save-btn { width:100%; margin-top:16px; height:56px; border-radius:999px; font-size:16.5px; font-weight:800; background:linear-gradient(135deg,#2098ae 0%,#117086 100%); }
+        #screen-profile .profile-info-note { display:flex; align-items:flex-start; gap:8px; margin:14px 2px 0; font-size:12.5px; color:#9db5bc; }
+        #screen-profile .profile-info-note svg { width:16px; height:16px; flex:0 0 16px; margin-top:1px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; }
+        #screen-profile .danger-card { margin-top:26px; padding:18px 16px 16px; border-radius:22px; background:#1b1a22; border:1px solid #5a2a33; }
+        #screen-profile .danger-title { font-size:20px; font-weight:800; color:#ff8f94; }
+        #screen-profile .danger-text { margin:10px 0 16px; font-size:13.5px; line-height:1.55; color:#b4c3c8; }
+        #screen-profile .danger-label { display:block; margin:0 0 10px; font-size:14px; font-weight:800; color:#fff; }
+        #screen-profile .dpin { position:relative; display:flex; gap:10px; }
+        #screen-profile .dpin-box { flex:1 1 0; height:54px; border-radius:14px; background:#0f2433; border:1px solid #5a2a33; display:flex; align-items:center; justify-content:center; color:#fff; font-size:22px; }
+        #screen-profile .dpin-box.on { border-color:#ff7a82; box-shadow:0 0 0 3px rgba(255,122,130,.15); }
+        #screen-profile .dpin .text-input { position:absolute; inset:0; width:100%; height:100%; margin:0; padding:0; opacity:0; font-size:16px; border:0; background:transparent; }
+        #screen-profile .danger-btn { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; height:54px; margin-top:14px; border-radius:999px; background:#c62828; color:#fff; font-size:16px; font-weight:800; border:0; }
+        #screen-profile .danger-btn svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+
         /* ===================== KYC ===================== */
         #screen-kyc .scroll { padding-bottom: 28px; }
         .kyc-head { padding: 2px 2px 14px; }
@@ -3811,9 +3896,11 @@
                 <div class="account-hero-copy">
                     <span class="account-eyebrow">DeenWallet Transfer account</span>
                     <h1 class="account-hero-name" id="profile-name">—</h1>
-                    <p class="account-hero-account">Account <strong id="profile-account">—</strong></p>
+                    <div class="account-chips">
+                        <span class="account-verified-badge hidden" id="profile-email-badge">&#10003; Verified</span>
+                        <p class="account-hero-account">Account <strong id="profile-account">—</strong></p>
+                    </div>
                 </div>
-                <span class="account-verified-badge hidden" id="profile-email-badge">&#10003; Verified</span>
             </div>
 
             <div class="profile-section-heading">
@@ -3821,35 +3908,38 @@
                 <p>Your registered DeenWallet Transfer details.</p>
             </div>
             <div class="profile-info-card">
-                <div class="profile-info-row"><div><span>Username</span><strong id="profile-username">—</strong></div><span class="profile-row-icon">@</span></div>
-                <div class="profile-info-row"><div><span>Phone number</span><strong id="profile-phone">—</strong></div><span class="profile-row-icon">☎</span></div>
-                <div class="profile-info-row"><div><span>Email address</span><strong id="profile-email-text">—</strong></div><span class="profile-row-icon">✉</span></div>
+                <div class="profile-info-row"><div><span>Username</span><strong id="profile-username">—</strong></div><span class="profile-row-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"/></svg></span></div>
+                <div class="profile-info-row"><div><span>Phone number</span><strong id="profile-phone">—</strong></div><span class="profile-row-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg></span></div>
+                <div class="profile-info-row"><div><span>Email address</span><strong id="profile-email-text">—</strong></div><span class="profile-row-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 7l8.5 6 8.5-6"/></svg></span></div>
             </div>
 
             <div class="profile-section-heading">
                 <h2>Profile details</h2>
-                <p>Keep your name and username up to date.</p>
             </div>
             <div class="profile-edit-card">
-                <label for="profile-full-name">Full name</label>
-                <input class="text-input" id="profile-full-name" type="text" maxlength="120" autocomplete="name" />
-                <label for="profile-username-edit">Username</label>
-                <input class="text-input" id="profile-username-edit" type="text" maxlength="50" autocomplete="username" />
+                <div class="pf-field">
+                    <label for="profile-full-name">Full name</label>
+                    <input class="text-input" id="profile-full-name" type="text" maxlength="120" autocomplete="name" />
+                </div>
+                <div class="pf-field">
+                    <label for="profile-username-edit">Username</label>
+                    <input class="text-input" id="profile-username-edit" type="text" maxlength="50" autocomplete="username" />
+                </div>
                 <button class="btn-primary profile-save-btn" id="profile-save-btn">Save profile</button>
                 <div id="profile-save-error" class="pin-error hidden"></div>
                 <div id="profile-save-success" class="pin-success hidden">Profile updated successfully!</div>
-                <p class="profile-admin-note">Email and phone number can only be changed by an administrator.</p>
+                <p class="profile-admin-note profile-info-note"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span>Email and phone number can only be changed by an administrator.</span></p>
             </div>
 
-            <div class="profile-section-heading">
-                <h2>Delete account</h2>
-                <p>Permanently remove your DeenWallet Transfer account.</p>
-            </div>
-            <div class="profile-edit-card" id="delete-account-card">
-                <p class="profile-admin-note" style="margin:0 0 10px;">Your name, email, phone number and saved recipients are removed and you can never sign in to this account again. Your past transfer records are kept for legal and accounting reasons. This cannot be undone.</p>
-                <label for="delete-account-pin">Enter your PIN to confirm</label>
-                <input class="text-input" id="delete-account-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••" />
-                <button class="btn-primary" id="delete-account-btn" style="background:#d32f2f;margin-top:10px;">Delete my account</button>
+            <div class="profile-edit-card danger-card" id="delete-account-card">
+                <div class="danger-title">Delete account</div>
+                <p class="profile-admin-note danger-text">Permanently remove your DeenWallet Transfer account. Your name, email, phone number and saved recipients are removed. Past transfer records are kept for legal and accounting reasons. This cannot be undone.</p>
+                <label class="danger-label" for="delete-account-pin">Enter your PIN to confirm</label>
+                <div class="dpin" id="dpin">
+                    <span class="dpin-box"></span><span class="dpin-box"></span><span class="dpin-box"></span><span class="dpin-box"></span>
+                    <input class="text-input" id="delete-account-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" aria-label="PIN" />
+                </div>
+                <button class="btn-primary danger-btn" id="delete-account-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></svg><span>Delete my account</span></button>
                 <div id="delete-account-error" class="pin-error hidden"></div>
             </div>
 
@@ -4495,13 +4585,15 @@
 <div class="modal-overlay" id="pin-modal-overlay">
     <div class="modal-box">
         <div class="bio-lock" id="bio-lock">
-            <div class="bio-lock-ico"><svg viewBox="0 0 48 48" width="68" height="68" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-5a8 8 0 0 1 16 0v5"/><rect x="8" y="21" width="32" height="22" rx="5"/><path d="M24 29.5v5"/></svg></div>
+            <div class="bio-lock-ico"><svg viewBox="0 0 200 200" width="200" height="200" aria-hidden="true"><defs><linearGradient id="bkG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f2d58a"/><stop offset="1" stop-color="#c79a45"/></linearGradient><linearGradient id="bkT" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1c9db4"/><stop offset="1" stop-color="#0d5f74"/></linearGradient></defs><circle cx="100" cy="100" r="96" fill="none" stroke="#caa65a" stroke-opacity=".5" stroke-width="1" stroke-dasharray="2 4"/><circle cx="100" cy="100" r="72" fill="none" stroke="#5fb7c6" stroke-opacity=".28" stroke-width="1"/><g transform="translate(100 100) scale(1.12) translate(-100 -100)"><path d="M100 48 L136 60 V98 C136 120 120 136 100 146 C80 136 64 120 64 98 V60 Z" fill="url(#bkT)" stroke="url(#bkG)" stroke-width="7" stroke-linejoin="round"/><path d="M92 92 v-6 a8 8 0 0 1 16 0 v6" fill="none" stroke="#f6e4a8" stroke-width="5" stroke-linecap="round"/><rect x="86" y="92" width="28" height="22" rx="5" fill="#f6e4a8"/><circle cx="100" cy="102" r="3" fill="#0d5f74"/></g></svg></div>
             <h3 id="bio-lock-title">DeenWallet Transfer locked</h3>
             <div class="bio-lock-err" id="bio-lock-err"></div>
             <button type="button" class="bio-lock-btn" id="bio-lock-btn">Unlock DeenWallet Transfer</button>
-            <button type="button" class="bio-lock-link" id="bio-lock-pin">Use PIN instead</button>
-            <button type="button" class="bio-lock-link" id="bio-lock-cancel" style="display:none;">Cancel</button>
-            <button type="button" class="bio-lock-link" id="bio-lock-logout">Log out</button>
+            <div class="bio-lock-links">
+                <button type="button" class="bio-lock-link" id="bio-lock-pin">Use PIN instead</button>
+                <button type="button" class="bio-lock-link" id="bio-lock-cancel" style="display:none;">Cancel</button>
+                <button type="button" class="bio-lock-link" id="bio-lock-logout">Log out</button>
+            </div>
         </div>
         <div class="pin-info">
             <div class="modal-icon">&#128274;</div>
@@ -4531,9 +4623,9 @@
                 <button class="btn-outline pin-key" data-value="7">7</button>
                 <button class="btn-outline pin-key" data-value="8">8</button>
                 <button class="btn-outline pin-key" data-value="9">9</button>
-                <button class="btn-outline pin-key" data-value="clear">⌫</button>
+                <button class="btn-outline pin-key" data-value="clear" aria-label="Delete"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-6-7z"/><path d="M12 10l4 4M16 10l-4 4"/></svg></button>
                 <button class="btn-outline pin-key" data-value="0">0</button>
-                <button class="btn-fill pin-key" data-value="submit">↵</button>
+                <button class="btn-fill pin-key" data-value="submit" aria-label="Confirm"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6v6a2 2 0 0 1-2 2H5"/><path d="M9 10l-4 4 4 4"/></svg></button>
             </div>
 
             <div class="pin-actions">
@@ -5348,7 +5440,7 @@
                 if (pinModalActive) onUnlockSuccess();
             } catch (error) {
                 if (isNetworkError(error)) {
-                    bioLockErr('No internet connection. Enter your PIN or try again.');
+                    bioLockErr('Unable to reach the server. Please check your connection and try again.');
                 } else if (error && error.status === 423) {
                     pendingPinAction = null;
                     sessionStorage.setItem('deenwallet_account_locked', 'true');
@@ -10533,6 +10625,31 @@
         };
 
     })();
+</script>
+
+<script>
+(function () {
+    // Delete-account PIN: four boxes that follow the real (invisible) input.
+    var inp = document.getElementById('delete-account-pin');
+    var boxes = document.querySelectorAll('#dpin .dpin-box');
+    var last = null;
+    function paintBoxes() {
+        if (!inp || !boxes.length) return;
+        var v = inp.value || '';
+        if (v === last && document.activeElement === inp) return;
+        last = v;
+        var focus = document.activeElement === inp;
+        for (var i = 0; i < boxes.length; i++) {
+            boxes[i].textContent = i < v.length ? '\u2022' : '';
+            boxes[i].classList.toggle('on', focus && i === Math.min(v.length, boxes.length - 1));
+        }
+    }
+    if (inp) {
+        ['input', 'focus', 'blur', 'change'].forEach(function (ev) { inp.addEventListener(ev, function () { last = null; paintBoxes(); }); });
+        setInterval(function () { var s = document.getElementById('screen-profile'); if (s && s.classList.contains('active')) { var v = inp.value || ''; if (v !== last) { last = null; paintBoxes(); } } }, 250);
+        paintBoxes();
+    }
+})();
 </script>
 
 <script>
