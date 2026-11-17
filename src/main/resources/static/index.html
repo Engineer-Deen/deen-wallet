@@ -798,6 +798,27 @@
         .bank-recipient-option.selected .check { background:var(--primary); border-color:var(--primary); color:#fff; }
         .bank-recipient-option .delete-bank-recipient { border:0; background:transparent; color:#789098; cursor:pointer; font-size:18px; padding:4px; }
         .bank-recipient-option .delete-bank-recipient:hover { color:#C84B4B; }
+
+        /* Send Money Abroad: country, provider and recipient */
+        .xb-sec-title { font-size:12px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin:0 0 10px; }
+        .xb-countries { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+        .xb-country, .xb-prov { display:flex; align-items:center; gap:10px; padding:11px 12px; border:1px solid var(--border); border-radius:14px; background:#fff; cursor:pointer; text-align:left; font:inherit; color:var(--text); min-width:0; transition:border-color .2s, background .2s; }
+        .xb-country .nm { font-weight:700; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .xb-country.selected, .xb-prov.selected { border-color:#2CA4B6; background:#F3FBFC; box-shadow:0 0 0 2px rgba(44,164,182,.14); }
+        .xb-flag { width:34px; height:24px; flex:0 0 34px; border-radius:5px; object-fit:cover; background:#E6EEF0; box-shadow:0 0 0 1px rgba(0,0,0,.08); display:inline-flex; align-items:center; justify-content:center; font-size:17px; line-height:1; }
+        .xb-provs { display:flex; flex-direction:column; gap:8px; }
+        .xb-prov { justify-content:space-between; }
+        .xb-prov .pn { font-weight:700; font-size:15px; }
+        .xb-prov .pc { font-size:12px; color:var(--muted); margin-top:2px; }
+        .xb-prov .dot { width:20px; height:20px; flex:0 0 20px; border-radius:50%; border:2px solid #C9D9DD; }
+        .xb-prov.selected .dot { border-color:#2CA4B6; background:radial-gradient(circle,#2CA4B6 0 45%,transparent 50%); }
+        .xb-av { width:38px; height:38px; flex:0 0 38px; border-radius:50%; background:#2CA4B6; color:#fff; font-weight:800; font-size:14px; display:inline-flex; align-items:center; justify-content:center; }
+        #xb-rcp-list .recipient-option { gap:12px; justify-content:flex-start; }
+        #xb-rcp-list .recipient-option .info { flex:1; min-width:0; }
+        .xb-rcp-summary { display:flex; align-items:center; gap:12px; padding:12px 14px; border:1px solid #CFE6EA; background:#F3FBFC; border-radius:14px; }
+        .xb-rcp-summary .nm { font-weight:800; color:var(--text); }
+        .xb-rcp-summary .mt { font-size:13px; color:var(--muted); margin-top:2px; overflow-wrap:anywhere; }
+        .xb-gap { margin-top:16px; }
         .bank-add-result { margin-top:14px; padding:14px; border:1px solid #DCE7EA; border-radius:14px; background:#F7FAFB; }
         .bank-add-result.ok { border-color:#A9DCC5; background:#F1FBF6; }
         .bank-add-result.error { border-color:#F1B7B7; background:#FFF6F6; }
@@ -3600,55 +3621,59 @@
         <div class="scroll">
             <div class="top-bar">
                 <div style="grid-column:1 / -1;min-width:0;">
-                    <h1 class="greeting-title">Send Money Abroad</h1>
-                    <p class="greeting-sub">Send money to a mobile money wallet in another country. You pay with your Orange Money.</p>
+                    <h1 class="greeting-title">Recipient</h1>
+                    <p class="greeting-sub">Choose the country, the mobile money provider and who you are sending to.</p>
                 </div>
             </div>
 
             <div class="step-indicator">
+                <div class="step-dot done"></div>
                 <div class="step-dot active"></div>
-                <div class="step-dot"></div>
                 <div class="step-dot"></div>
                 <div class="step-dot"></div>
             </div>
 
             <div class="bank-form-card" style="margin-top:0;">
-                <div class="bank-field-label">Send to</div>
-                <select class="bank-select" id="xb-corridor"></select>
+                <div class="xb-sec-title">Country</div>
+                <div id="xb-country-list" class="xb-countries"></div>
 
-                <div class="bank-field-label" style="margin-top:18px;">Recipient first name</div>
-                <input class="bank-account-input" id="xb-rfirst" type="text" autocomplete="off" maxlength="40" placeholder="First name" />
-                <div class="bank-field-label" style="margin-top:14px;">Recipient last name</div>
-                <input class="bank-account-input" id="xb-rlast" type="text" autocomplete="off" maxlength="40" placeholder="Last name" />
-                <div class="bank-field-label" style="margin-top:14px;">Recipient mobile money number</div>
-                <div class="phone-card">
-                    <div class="phone-prefix"><span id="xb-dial">+</span></div>
-                    <input id="xb-rphone" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="14" placeholder="Mobile money number" autocomplete="off" />
-                </div>
-                <div id="xb-rphone-hint" class="bank-account-hint" style="margin-top:6px;"></div>
-
-                <div class="bank-field-label" style="margin-top:18px;">Amount to send (SLE)</div>
-                <div class="amount-card">
-                    <input id="xb-amount" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off" />
-                </div>
-                <div id="xb-limits" class="bank-account-hint" style="margin-top:6px;"></div>
-
-                <div id="xb-quote-status" class="hidden" style="margin-top:16px;"></div>
-                <div id="xb-quote-card" class="fee-card hidden" style="margin-top:16px;">
-                    <div class="fee-row"><span class="label">You send</span><span class="value" id="xb-q-amount"></span></div>
-                    <div class="fee-row"><span class="label">Service fee</span><span class="value" id="xb-q-fee"></span></div>
-                    <div class="fee-row"><span class="label">Exchange rate</span><span class="value" id="xb-q-rate"></span></div>
-                    <div class="fee-divider"></div>
-                    <div class="fee-row"><span class="label">Recipient gets</span><span class="value" id="xb-q-receive"></span></div>
-                    <div class="fee-row total"><span class="label">You pay</span><span class="value" id="xb-q-total"></span></div>
-                </div>
-
-                <div id="xb-start-error" class="inline-error hidden">
-                    <span>&#9888;</span><span id="xb-start-error-text"></span>
+                <div id="xb-prov-sec" class="hidden xb-gap">
+                    <div class="xb-sec-title">Mobile money provider</div>
+                    <div id="xb-prov-list" class="xb-provs"></div>
                 </div>
             </div>
 
-            <!-- Recent transfers abroad are shown in Recent activity and Transaction history. -->
+            <div id="xb-rcp-sec" class="bank-form-card hidden">
+                <div class="xb-sec-title">Recipient</div>
+                <div id="xb-rcp-list" class="recipient-list"></div>
+                <button type="button" class="add-recipient-btn hidden" id="xb-rcp-add-btn">+ Add recipient</button>
+
+                <div id="xb-rcp-form" class="hidden">
+                    <div class="bank-field-label">Recipient first name</div>
+                    <input class="bank-account-input" id="xb-rfirst" type="text" autocomplete="off" maxlength="40" placeholder="First name" />
+                    <div class="bank-field-label" style="margin-top:14px;">Recipient last name</div>
+                    <input class="bank-account-input" id="xb-rlast" type="text" autocomplete="off" maxlength="40" placeholder="Last name" />
+                    <div class="bank-field-label" style="margin-top:14px;">Mobile money number</div>
+                    <div class="phone-card">
+                        <div class="phone-prefix"><span id="xb-dial">+</span></div>
+                        <input id="xb-rphone" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="14" placeholder="Mobile money number" autocomplete="off" />
+                    </div>
+                    <div id="xb-rphone-hint" class="bank-account-hint" style="margin-top:6px;"></div>
+
+                    <div id="xb-rcp-error" class="inline-error hidden">
+                        <span>&#9888;</span><span id="xb-rcp-error-text"></span>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn-outline" id="xb-rcp-cancel">Cancel</button>
+                        <button type="button" class="btn-fill" id="xb-rcp-save" disabled>Save recipient</button>
+                    </div>
+                </div>
+
+                <div class="warning-banner">
+                    <span class="icon">&#9888;</span>
+                    <p>Double check the number. Money sent to a wrong number cannot be reversed.</p>
+                </div>
+            </div>
         </div>
 
         <div class="footer">
@@ -3663,14 +3688,15 @@
         <div class="scroll">
             <div class="top-bar">
                 <div style="grid-column:1 / -1;min-width:0;">
-                    <h1 class="greeting-title">Your details</h1>
-                    <p class="greeting-sub">Money laws require us to send these with every transfer abroad. Your name and ID come from your verified KYC. We save the rest for next time.</p>
+                    <h1 class="greeting-title">Sender details</h1>
+                    <p class="greeting-sub">Check your own details first. Money laws require us to send them with every transfer abroad. Your name and ID come from your verified KYC. We save the rest for next time.</p>
                 </div>
             </div>
 
+            <div id="xb-preview-note" class="bank-account-hint hidden" style="margin:0 0 10px;font-weight:700;">Preview mode: sample countries and prices. Nothing is sent until pawaPay is active.</div>
             <div class="step-indicator">
-                <div class="step-dot done"></div>
                 <div class="step-dot active"></div>
+                <div class="step-dot"></div>
                 <div class="step-dot"></div>
                 <div class="step-dot"></div>
             </div>
@@ -3718,6 +3744,56 @@
         </div>
     </div>
 
+    <div class="screen" id="screen-xb-amount">
+        <div class="scroll">
+            <div class="top-bar">
+                <div style="grid-column:1 / -1;min-width:0;">
+                    <h1 class="greeting-title">Amount</h1>
+                    <p class="greeting-sub">Check who you are sending to, then enter the amount.</p>
+                </div>
+            </div>
+
+            <div class="step-indicator">
+                <div class="step-dot done"></div>
+                <div class="step-dot done"></div>
+                <div class="step-dot active"></div>
+                <div class="step-dot"></div>
+            </div>
+
+            <div class="bank-form-card" style="margin-top:0;">
+                <div class="xb-sec-title">Sending to</div>
+                <div id="xb-rcp-summary" class="xb-rcp-summary"></div>
+
+                <div class="bank-field-label" style="margin-top:18px;">Amount to send (SLE)</div>
+                <div class="amount-card">
+                    <input id="xb-amount" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off" />
+                </div>
+                <div id="xb-limits" class="bank-account-hint" style="margin-top:6px;"></div>
+
+                <div id="xb-quote-status" class="hidden" style="margin-top:16px;"></div>
+                <div id="xb-quote-card" class="fee-card hidden" style="margin-top:16px;">
+                    <div class="fee-row"><span class="label">You send</span><span class="value" id="xb-q-amount"></span></div>
+                    <div class="fee-row"><span class="label">Service fee</span><span class="value" id="xb-q-fee"></span></div>
+                    <div class="fee-row"><span class="label">Exchange rate</span><span class="value" id="xb-q-rate"></span></div>
+                    <div class="fee-divider"></div>
+                    <div class="fee-row"><span class="label">Recipient gets</span><span class="value" id="xb-q-receive"></span></div>
+                    <div class="fee-row total"><span class="label">You pay</span><span class="value" id="xb-q-total"></span></div>
+                </div>
+
+                <div id="xb-start-error" class="inline-error hidden">
+                    <span>&#9888;</span><span id="xb-start-error-text"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div class="step-actions">
+                <button class="btn-back" id="xb-amount-back-btn">&#8592; Back</button>
+                <button class="btn-primary" id="xb-amount-continue-btn" disabled style="flex:1;">Continue</button>
+            </div>
+        </div>
+    </div>
+
     <div class="screen" id="screen-xb-confirm">
         <div class="scroll">
             <div class="top-bar">
@@ -3730,8 +3806,8 @@
             <div class="step-indicator">
                 <div class="step-dot done"></div>
                 <div class="step-dot done"></div>
+                <div class="step-dot done"></div>
                 <div class="step-dot active"></div>
-                <div class="step-dot"></div>
             </div>
 
             <div class="bank-confirm-card">
@@ -9169,7 +9245,7 @@
         // Prices, fees and the exchange rate come from the server - this screen only shows them.
         // Hidden until the server says it is switched on.
         // ==============================================================
-        const xbScreens = ['screen-xb-start', 'screen-xb-details', 'screen-xb-confirm', 'screen-xb-wait'];
+        const xbScreens = ['screen-xb-start', 'screen-xb-details', 'screen-xb-amount', 'screen-xb-confirm', 'screen-xb-wait'];
         const xbEl = (id) => document.getElementById(id);
         const XB_PURPOSE = { FAMILY_SUPPORT: 'Family support', MEDICAL_EXPENSES: 'Medical expenses', TUITION_FEES: 'School fees', EDUCATION_SUPPORT: 'Education support', GIFT_AND_OTHER_DONATIONS: 'Gift', HOME_IMPROVEMENT: 'Home improvement', DEBT_SETTLEMENT: 'Paying a debt', REAL_ESTATE: 'Property', SAVINGS: 'Savings', PERSONAL_TRANSFER: 'Personal transfer', OTHER: 'Other' };
         const XB_SOURCE = { SALARY: 'Salary', SAVINGS: 'Savings', BUSINESS_INCOME: 'Business income', GIFT: 'Gift', LOAN: 'Loan', OTHER: 'Other' };
@@ -9177,6 +9253,18 @@
         let xbEnabled = false;
         let xbVerified = false;
         let xbCfg = null;
+        let xbPreview = false;
+        const XB_SAMPLE = {
+            enabled: true, verified: true, preview: true, phone: '23277000000', senderName: 'Your name (preview)', kycHasAddress: false, profile: {},
+            purposes: ['FAMILY_SUPPORT', 'MEDICAL_EXPENSES', 'TUITION_FEES', 'EDUCATION_SUPPORT', 'OTHER'],
+            sources: ['SALARY', 'SAVINGS', 'BUSINESS_INCOME', 'GIFT', 'LOAN', 'OTHER'],
+            corridors: [
+                { id: -1, country: 'GHA', countryName: 'Ghana', dialCode: '233', provider: 'MTN_MOMO_GHA', providerName: 'MTN MoMo', currency: 'GHS', minSend: 20, maxSend: 5000, numberMin: 9, numberMax: 9, keepZero: false, delayed: false, rate: 0.52 },
+                { id: -4, country: 'GHA', countryName: 'Ghana', dialCode: '233', provider: 'VODAFONE_GHA', providerName: 'Vodafone Cash', currency: 'GHS', minSend: 20, maxSend: 5000, numberMin: 9, numberMax: 9, keepZero: false, delayed: false, rate: 0.52 },
+                { id: -2, country: 'KEN', countryName: 'Kenya', dialCode: '254', provider: 'MPESA_KEN', providerName: 'M-Pesa', currency: 'KES', minSend: 20, maxSend: 5000, numberMin: 9, numberMax: 9, keepZero: false, delayed: false, rate: 5.4 },
+                { id: -3, country: 'NGA', countryName: 'Nigeria', dialCode: '234', provider: 'MTN_MOMO_NGA', providerName: 'MTN MoMo', currency: 'NGN', minSend: 20, maxSend: 5000, numberMin: 10, numberMax: 10, keepZero: false, delayed: false, rate: 66 }
+            ]
+        };
         let xbCorridor = null;
         let xbQuote = null;
         let xbQuoteId = 0;
@@ -9215,8 +9303,12 @@
                 xbCfg = cfg;
                 xbVerified = !!(cfg && cfg.verified);
                 xbEnabled = !!(cfg && cfg.enabled && cfg.corridors && cfg.corridors.length);
+                xbPreview = false;
+                if (!xbEnabled && cfg && cfg.preview) {          // design preview: sample countries, nothing can be sent
+                    xbCfg = XB_SAMPLE; xbVerified = true; xbEnabled = true; xbPreview = true;
+                }
             } catch (_) {
-                xbEnabled = false;
+                xbEnabled = false; xbPreview = false;
             }
             xbEl('services-xb-card').classList.toggle('hidden', !xbEnabled);
         };
@@ -9238,6 +9330,71 @@
             if (selected) sel.value = selected;
         }
 
+        const XB_ISO2 = { BEN: 'bj', BFA: 'bf', CMR: 'cm', CIV: 'ci', COD: 'cd', COG: 'cg', GAB: 'ga', GHA: 'gh', KEN: 'ke', MWI: 'mw', MOZ: 'mz', NGA: 'ng', RWA: 'rw', SEN: 'sn', SLE: 'sl', TZA: 'tz', UGA: 'ug', ZMB: 'zm', ETH: 'et', LBR: 'lr', GIN: 'gn', GMB: 'gm', MLI: 'ml', TGO: 'tg', NER: 'ne', TCD: 'td', AGO: 'ao', ZWE: 'zw', BWA: 'bw', NAM: 'na', LSO: 'ls', SWZ: 'sz', ZAF: 'za', MDG: 'mg', BDI: 'bi', SSD: 'ss', EGY: 'eg', MAR: 'ma', TUN: 'tn', DZA: 'dz', SDN: 'sd', SOM: 'so', MRT: 'mr', CPV: 'cv', GNB: 'gw', GNQ: 'gq', CAF: 'cf', DJI: 'dj', ERI: 'er', COM: 'km', SYC: 'sc', MUS: 'mu', STP: 'st' };
+        let xbCountry = '';
+        let xbRecipients = [];
+        let xbRecipient = null;
+
+        // A flag picture (flagcdn.com). If it cannot load, the flag emoji (or the country code) is shown instead.
+        function xbFlag(iso3, size) {
+            const c = XB_ISO2[iso3] || '';
+            const fallback = () => {
+                const s = document.createElement('span');
+                s.className = 'xb-flag';
+                s.textContent = c ? String.fromCodePoint(...c.toUpperCase().split('').map((ch) => 127397 + ch.charCodeAt(0))) : (iso3 || '').slice(0, 2);
+                return s;
+            };
+            if (!c) return fallback();
+            const img = document.createElement('img');
+            img.className = 'xb-flag';
+            img.alt = '';
+            img.loading = 'lazy';
+            img.src = 'https://flagcdn.com/w80/' + c + '.png';
+            img.onerror = () => { if (img.parentNode) img.parentNode.replaceChild(fallback(), img); };
+            return img;
+        }
+        function xbInitials(first, last) {
+            return ((first || '').trim().charAt(0) + (last || '').trim().charAt(0)).toUpperCase() || '?';
+        }
+        function xbCorridorsOf(iso3) { return xbCfg.corridors.filter((c) => c.country === iso3); }
+        function xbPrettyNumber(c, national) { return '+' + c.dialCode + ' ' + national; }
+
+        // ---- saved recipients: on the server; in preview mode only in this phone's browser
+        function xbPreviewStore(list) {
+            try {
+                if (list) localStorage.setItem('xb_preview_recipients', JSON.stringify(list));
+                else return JSON.parse(localStorage.getItem('xb_preview_recipients') || '[]');
+            } catch (_) { return []; }
+            return list;
+        }
+        async function xbLoadRecipients() {
+            if (xbPreview) { xbRecipients = xbPreviewStore() || []; return; }
+            try {
+                const list = await apiRequest('/api/cross-border/recipients');
+                xbRecipients = Array.isArray(list) ? list : [];
+            } catch (_) { xbRecipients = []; }
+        }
+
+        // ---- step 1: the sender
+        function xbFillSender() {
+            const p = (xbCfg && xbCfg.profile) || {};
+            xbFill(xbEl('xb-nat'), XB_NATIONS, null, p.nationality || 'SLE');
+            xbFill(xbEl('xb-purpose'), (xbCfg.purposes || []).map((k) => [k, XB_PURPOSE[k] || k]));
+            xbFill(xbEl('xb-source'), (xbCfg.sources || []).map((k) => [k, XB_SOURCE[k] || k]));
+            if (!xbEl('xb-payer').value) {
+                const d = String((xbCfg && xbCfg.phone) || '').replace(/\D/g, '');
+                xbEl('xb-payer').value = d.length >= 8 ? d.slice(-8) : '';
+            }
+            xbEl('xb-sname').value = (xbCfg && xbCfg.senderName) || '';
+            const kh = !!(xbCfg && xbCfg.kycHasAddress);
+            if (kh) { hide(xbEl('xb-addr-block')); show(xbEl('xb-kyc-note')); } else { show(xbEl('xb-addr-block')); hide(xbEl('xb-kyc-note')); }
+            if (!xbEl('xb-addr').value && p.addressLine) xbEl('xb-addr').value = p.addressLine;
+            if (!xbEl('xb-city').value && p.city) xbEl('xb-city').value = p.city;
+            if (!xbEl('xb-postal').value && p.postalCode) xbEl('xb-postal').value = p.postalCode;
+            hide(xbEl('xb-details-error'));
+            xbUpdateDetails();
+        }
+
         window.openXbService = async function () {
             if (!xbEnabled) return;
             await window.loadXbConfig();                 // fresh prices, and they may have just been verified
@@ -9245,34 +9402,147 @@
             if (!xbVerified) { xbKycPopup(); return; }
             armFlowHistory();
             xbStopPoll();
-            xbCorridor = null; xbQuote = null; xbQuoteId++; xbRequestId = null; xbTx = null;
-            const sel = xbEl('xb-corridor');
-            xbFill(sel, xbCfg.corridors.map((c) => [String(c.id), c.countryName + ' · ' + c.providerName + ' (' + c.currency + ')']));
-            ['xb-rfirst', 'xb-rlast', 'xb-rphone', 'xb-amount'].forEach((id) => { xbEl(id).value = ''; });
+            xbCountry = ''; xbCorridor = null; xbRecipient = null; xbQuote = null; xbQuoteId++; xbRequestId = null; xbTx = null;
+            xbEl('xb-amount').value = '';
             hide(xbEl('xb-quote-card')); hide(xbEl('xb-quote-status')); hide(xbEl('xb-start-error')); hide(xbEl('xb-details-error')); hide(xbEl('xb-confirm-error'));
-            xbEl('xb-start-continue-btn').disabled = true;
-            xbOnCorridor();
-            xbShowScreen('screen-xb-start');
+            xbEl('xb-preview-note').classList.toggle('hidden', !xbPreview);
+            await xbLoadRecipients();
+            xbFillSender();
+            xbRenderCountries();
+            hide(xbEl('xb-prov-sec')); hide(xbEl('xb-rcp-sec'));
+            xbUpdateStart();
+            xbShowScreen('screen-xb-details');
         };
 
-        function xbOnCorridor() {
-            xbCorridor = xbCfg.corridors.find((c) => String(c.id) === xbEl('xb-corridor').value) || null;
-            xbEl('xb-dial').textContent = xbCorridor ? '+' + xbCorridor.dialCode : '+';
-            xbEl('xb-limits').textContent = xbCorridor
-                ? 'Minimum ' + xbMoneyDec(xbCorridor.minSend, 'SLE') + ' · Maximum ' + xbMoneyDec(xbCorridor.maxSend, 'SLE')
-                    + (xbCorridor.delayed ? ' · This route may be slower than usual today.' : '')
-                : '';
-            xbEl('xb-rphone').maxLength = xbCorridor ? (Number(xbCorridor.numberMax) || 12) + 4 : 14;
+        // ---- step 2: country, provider, recipient
+        function xbRenderCountries() {
+            const box = xbEl('xb-country-list');
+            box.innerHTML = '';
+            const seen = [];
+            xbCfg.corridors.forEach((c) => { if (seen.indexOf(c.country) < 0) seen.push(c.country); });
+            seen.forEach((iso3) => {
+                const first = xbCorridorsOf(iso3)[0];
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'xb-country' + (iso3 === xbCountry ? ' selected' : '');
+                b.setAttribute('data-country', iso3);
+                b.appendChild(xbFlag(iso3));
+                const n = document.createElement('span');
+                n.className = 'nm';
+                n.textContent = first.countryName;
+                b.appendChild(n);
+                b.addEventListener('click', () => xbPickCountry(iso3));
+                box.appendChild(b);
+            });
+        }
+        function xbPickCountry(iso3) {
+            if (xbCountry === iso3) return;
+            xbCountry = iso3; xbCorridor = null; xbRecipient = null; xbQuote = null; xbQuoteId++;
+            xbRenderCountries();
+            const list = xbCorridorsOf(iso3);
+            xbRenderProviders(list);
+            show(xbEl('xb-prov-sec'));
+            hide(xbEl('xb-rcp-sec'));
+            if (list.length === 1) xbPickCorridor(list[0].id);     // only one provider: chosen for the customer
+            xbUpdateStart();
+        }
+        function xbRenderProviders(list) {
+            const box = xbEl('xb-prov-list');
+            box.innerHTML = '';
+            list.forEach((c) => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'xb-prov' + (xbCorridor && xbCorridor.id === c.id ? ' selected' : '');
+                b.setAttribute('data-corridor', String(c.id));
+                const l = document.createElement('span');
+                const pn = document.createElement('span'); pn.className = 'pn'; pn.textContent = c.providerName;
+                const pc = document.createElement('span'); pc.className = 'pc'; pc.style.display = 'block';
+                pc.textContent = 'Recipient gets ' + c.currency + (c.delayed ? ' · may be slower today' : '');
+                l.appendChild(pn); l.appendChild(pc);
+                const d = document.createElement('span'); d.className = 'dot';
+                b.appendChild(l); b.appendChild(d);
+                b.addEventListener('click', () => xbPickCorridor(c.id));
+                box.appendChild(b);
+            });
+        }
+        function xbPickCorridor(id) {
+            const c = xbCfg.corridors.find((x) => x.id === id);
+            if (!c) return;
+            if (!xbCorridor || xbCorridor.id !== c.id) { xbRecipient = null; xbQuote = null; xbQuoteId++; }
+            xbCorridor = c;
+            xbRenderProviders(xbCorridorsOf(xbCountry));
+            show(xbEl('xb-rcp-sec'));
+            xbEl('xb-dial').textContent = '+' + c.dialCode;
+            xbEl('xb-rphone').maxLength = (Number(c.numberMax) || 12) + 4;
+            const saved = xbSavedFor();
+            xbRenderRecipients();
+            if (saved.length) xbCloseRcpForm(); else xbOpenRcpForm();
+            xbUpdateStart();
+        }
+        function xbSavedFor() {
+            return xbCorridor ? xbRecipients.filter((r) => r.provider === xbCorridor.provider) : [];
+        }
+        function xbRecipientFrom(r) {
+            const national = String(r.phone || '').indexOf(xbCorridor.dialCode) === 0 ? String(r.phone).slice(xbCorridor.dialCode.length) : String(r.phone || '');
+            return { id: r.id, firstName: r.firstName, lastName: r.lastName, national: national };
+        }
+        function xbRenderRecipients() {
+            const box = xbEl('xb-rcp-list');
+            box.innerHTML = '';
+            const saved = xbSavedFor();
+            saved.forEach((r) => {
+                const rec = xbRecipientFrom(r);
+                const row = document.createElement('div');
+                row.className = 'recipient-option' + (xbRecipient && xbRecipient.id === r.id ? ' selected' : '');
+                row.setAttribute('data-rcp', String(r.id));
+                const av = document.createElement('span'); av.className = 'xb-av'; av.textContent = xbInitials(r.firstName, r.lastName);
+                const info = document.createElement('div'); info.className = 'info';
+                const nm = document.createElement('div'); nm.className = 'name'; nm.textContent = r.firstName + ' ' + r.lastName;
+                const mt = document.createElement('div'); mt.className = 'meta'; mt.textContent = xbPrettyNumber(xbCorridor, rec.national) + ' · ' + xbCorridor.providerName;
+                info.appendChild(nm); info.appendChild(mt);
+                const act = document.createElement('div'); act.className = 'actions';
+                const del = document.createElement('button'); del.type = 'button'; del.className = 'icon-btn danger'; del.setAttribute('aria-label', 'Remove recipient'); del.innerHTML = '&#128465;';
+                const ck = document.createElement('span'); ck.className = 'check'; ck.innerHTML = '&#10003;';
+                act.appendChild(del); act.appendChild(ck);
+                row.appendChild(av); row.appendChild(info); row.appendChild(act);
+                row.addEventListener('click', () => { xbRecipient = rec; xbQuote = null; xbQuoteId++; xbRenderRecipients(); xbUpdateStart(); });
+                del.addEventListener('click', (ev) => { ev.stopPropagation(); xbDeleteRecipient(r); });
+                box.appendChild(row);
+            });
+            xbEl('xb-rcp-add-btn').classList.toggle('hidden', !xbEl('xb-rcp-form').classList.contains('hidden'));
+        }
+        async function xbDeleteRecipient(r) {
+            const ok = await showConfirmModal('🗑️', 'Remove recipient', 'Remove ' + r.firstName + ' ' + r.lastName + ' from your saved recipients?', 'Remove', true);
+            if (!ok) return;
+            try {
+                if (xbPreview) { xbPreviewStore(xbPreviewStore().filter((x) => x.id !== r.id)); }
+                else await apiRequest('/api/cross-border/recipients/' + encodeURIComponent(r.id), { method: 'DELETE' });
+                xbRecipients = xbRecipients.filter((x) => x.id !== r.id);
+                if (xbRecipient && xbRecipient.id === r.id) xbRecipient = null;
+                xbRenderRecipients();
+                if (!xbSavedFor().length) xbOpenRcpForm();
+                xbUpdateStart();
+            } catch (error) {
+                if (error.status === 401 || error.status === 403) showAuthRequiredModal(error.message || 'Your session has expired. Please log in again.');
+            }
+        }
+        function xbOpenRcpForm() {
+            ['xb-rfirst', 'xb-rlast', 'xb-rphone'].forEach((id) => { xbEl(id).value = ''; });
+            hide(xbEl('xb-rcp-error'));
+            show(xbEl('xb-rcp-form'));
+            xbEl('xb-rcp-add-btn').classList.add('hidden');
+            xbEl('xb-rcp-cancel').classList.toggle('hidden', !xbSavedFor().length);
             xbCleanRecipient();
-            xbScheduleQuote();
+            xbUpdateRcpSave();
         }
-
-        function xbParseAmount(text) {
-            const v = String(text || '').replace(/,/g, '').trim();
-            if (!/^\d{1,9}(\.\d{1,2})?$/.test(v)) return null;
-            const n = Number(v);
-            return n > 0 ? n : null;
+        function xbCloseRcpForm() {
+            hide(xbEl('xb-rcp-form'));
+            xbEl('xb-rcp-add-btn').classList.remove('hidden');
         }
+        function xbRcpFormReady() {
+            return !!(xbCorridor && xbEl('xb-rfirst').value.trim() && xbEl('xb-rlast').value.trim() && xbPhoneOk());
+        }
+        function xbUpdateRcpSave() { xbEl('xb-rcp-save').disabled = !xbRcpFormReady(); }
 
         // The number is typed WITHOUT the country code and WITHOUT the leading 0; only digits; the exact length of that country.
         function xbCleanRecipient() {
@@ -9306,15 +9576,79 @@
             else { h.textContent = 'Number looks right.'; }
         }
 
-        function xbStartReady() {
-            return !!(xbCorridor && xbQuote && xbEl('xb-rfirst').value.trim() && xbEl('xb-rlast').value.trim() && xbPhoneOk());
-        }
+        xbEl('xb-rcp-add-btn').addEventListener('click', xbOpenRcpForm);
+        xbEl('xb-rcp-cancel').addEventListener('click', () => { xbCloseRcpForm(); xbRenderRecipients(); });
+        ['xb-rfirst', 'xb-rlast'].forEach((id) => xbEl(id).addEventListener('input', xbUpdateRcpSave));
+        xbEl('xb-rphone').addEventListener('input', () => { xbCleanRecipient(); xbUpdateRcpSave(); });
+
+        let xbSaving = false;
+        xbEl('xb-rcp-save').addEventListener('click', async () => {
+            if (xbSaving || !xbRcpFormReady()) return;
+            xbSaving = true;
+            const btn = xbEl('xb-rcp-save');
+            btn.disabled = true;
+            hide(xbEl('xb-rcp-error'));
+            const body = { corridorId: xbCorridor.id, phone: xbEl('xb-rphone').value, firstName: xbEl('xb-rfirst').value.trim(), lastName: xbEl('xb-rlast').value.trim() };
+            try {
+                let saved;
+                if (xbPreview) {
+                    const msisdn = xbCorridor.dialCode + body.phone.replace(/\D/g, '');
+                    const all = xbPreviewStore().filter((x) => !(x.provider === xbCorridor.provider && x.phone === msisdn));
+                    saved = { id: 'p' + Date.now(), country: xbCorridor.country, provider: xbCorridor.provider, phone: msisdn, firstName: body.firstName, lastName: body.lastName };
+                    all.unshift(saved);
+                    xbPreviewStore(all);
+                } else {
+                    saved = await apiRequest('/api/cross-border/recipients', { method: 'POST', body: body });
+                    if (!saved || !saved.id) throw new Error('We could not save this recipient. Please try again.');
+                }
+                xbRecipients = xbRecipients.filter((x) => x.id !== saved.id && !(x.provider === saved.provider && x.phone === saved.phone));
+                xbRecipients.unshift(saved);
+                xbRecipient = xbRecipientFrom(saved);
+                xbQuote = null; xbQuoteId++;
+                xbCloseRcpForm();
+                xbRenderRecipients();
+                xbUpdateStart();
+            } catch (error) {
+                if (error.status === 401 || error.status === 403) showAuthRequiredModal(error.message || 'Your session has expired. Please log in again.');
+                else { xbEl('xb-rcp-error-text').textContent = error.message || 'We could not save this recipient. Please try again.'; show(xbEl('xb-rcp-error')); }
+            } finally {
+                xbSaving = false;
+                xbUpdateRcpSave();
+            }
+        });
+
+        function xbStartReady() { return !!(xbCorridor && xbRecipient); }
         function xbUpdateStart() { xbEl('xb-start-continue-btn').disabled = !xbStartReady(); }
+
+        // ---- step 3: the amount, with the recipient shown for a last check
+        function xbParseAmount(text) {
+            const v = String(text || '').replace(/,/g, '').trim();
+            if (!/^\d{1,9}(\.\d{1,2})?$/.test(v)) return null;
+            const n = Number(v);
+            return n > 0 ? n : null;
+        }
+        function xbShowAmount() {
+            const box = xbEl('xb-rcp-summary');
+            box.innerHTML = '';
+            const av = document.createElement('span'); av.className = 'xb-av'; av.textContent = xbInitials(xbRecipient.firstName, xbRecipient.lastName);
+            const info = document.createElement('div'); info.style.minWidth = '0'; info.style.flex = '1';
+            const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = xbRecipient.firstName + ' ' + xbRecipient.lastName;
+            const mt = document.createElement('div'); mt.className = 'mt'; mt.textContent = xbPrettyNumber(xbCorridor, xbRecipient.national);
+            const mt2 = document.createElement('div'); mt2.className = 'mt'; mt2.textContent = xbCorridor.providerName + ' · ' + xbCorridor.countryName + ' · receives ' + xbCorridor.currency;
+            info.appendChild(nm); info.appendChild(mt); info.appendChild(mt2);
+            box.appendChild(av); box.appendChild(info); box.appendChild(xbFlag(xbCorridor.country));
+            xbEl('xb-limits').textContent = 'Minimum ' + xbMoneyDec(xbCorridor.minSend, 'SLE') + ' · Maximum ' + xbMoneyDec(xbCorridor.maxSend, 'SLE')
+                + (xbCorridor.delayed ? ' · This route may be slower than usual today.' : '');
+            hide(xbEl('xb-start-error'));
+            xbShowScreen('screen-xb-amount');
+            xbScheduleQuote();
+        }
+        function xbUpdateAmountBtn() { xbEl('xb-amount-continue-btn').disabled = !(xbCorridor && xbRecipient && xbQuote); }
 
         function xbScheduleQuote() {
             xbQuote = null; xbQuoteId++;
             hide(xbEl('xb-quote-card')); hide(xbEl('xb-start-error'));
-            xbUpdateStart();
+            xbUpdateAmountBtn();
             if (xbQuoteTimer) clearTimeout(xbQuoteTimer);
             const amt = xbParseAmount(xbEl('xb-amount').value);
             if (!xbCorridor || !amt) { hide(xbEl('xb-quote-status')); return; }
@@ -9330,7 +9664,14 @@
             st.className = 'detect-status loading';
             st.innerHTML = '<div class="spinner dark"></div><span>Calculating…</span>';
             try {
-                const q = await apiRequest('/api/cross-border/quote', { method: 'POST', body: { corridorId: xbCorridor.id, amount: amt } });
+                let q;
+                if (xbPreview) {
+                    const fee = Math.round(amt * 0.03 * 100) / 100;
+                    q = { amount: amt, fee: fee, total: Math.round((amt + fee) * 100) / 100, rate: xbCorridor.rate,
+                          receiveAmount: Math.round(amt * xbCorridor.rate * 100) / 100, receiveCurrency: xbCorridor.currency };
+                } else {
+                    q = await apiRequest('/api/cross-border/quote', { method: 'POST', body: { corridorId: xbCorridor.id, amount: amt } });
+                }
                 if (id !== xbQuoteId) return;
                 xbQuote = q;
                 hide(st);
@@ -9347,41 +9688,26 @@
                 xbEl('xb-start-error-text').textContent = error.message || 'Could not calculate the price. Please try again.';
                 show(xbEl('xb-start-error'));
             }
-            xbUpdateStart();
+            xbUpdateAmountBtn();
         }
 
-        // Send Abroad transfers are listed in Recent activity and Transaction history, not on this page.
-
-        ['xb-rfirst', 'xb-rlast'].forEach((id) => xbEl(id).addEventListener('input', xbUpdateStart));
-        xbEl('xb-rphone').addEventListener('input', () => { xbCleanRecipient(); xbUpdateStart(); });
         xbEl('xb-amount').addEventListener('input', xbScheduleQuote);
-        xbEl('xb-corridor').addEventListener('change', xbOnCorridor);
 
-        xbEl('xb-start-back-btn').addEventListener('click', () => {
+        // ---- the buttons: Sender -> Recipient -> Amount -> Confirm
+        xbEl('xb-details-back-btn').addEventListener('click', () => {
             xbQuoteId++;
             if (typeof window.showPrimaryScreen === 'function') window.showPrimaryScreen('payment');
         });
-
+        xbEl('xb-details-continue-btn').addEventListener('click', () => {
+            if (!xbDetailsReady()) return;
+            xbShowScreen('screen-xb-start');
+        });
+        xbEl('xb-start-back-btn').addEventListener('click', () => xbShowScreen('screen-xb-details'));
         xbEl('xb-start-continue-btn').addEventListener('click', () => {
             if (!xbStartReady()) return;
-            const p = (xbCfg && xbCfg.profile) || {};
-            xbFill(xbEl('xb-nat'), XB_NATIONS, null, p.nationality || 'SLE');
-            xbFill(xbEl('xb-purpose'), (xbCfg.purposes || []).map((k) => [k, XB_PURPOSE[k] || k]));
-            xbFill(xbEl('xb-source'), (xbCfg.sources || []).map((k) => [k, XB_SOURCE[k] || k]));
-            if (!xbEl('xb-payer').value) {
-                const d = String((xbCfg && xbCfg.phone) || '').replace(/\D/g, '');
-                xbEl('xb-payer').value = d.length >= 8 ? d.slice(-8) : '';
-            }
-            xbEl('xb-sname').value = (xbCfg && xbCfg.senderName) || '';
-            const kh = !!(xbCfg && xbCfg.kycHasAddress);
-            if (kh) { hide(xbEl('xb-addr-block')); show(xbEl('xb-kyc-note')); } else { show(xbEl('xb-addr-block')); hide(xbEl('xb-kyc-note')); }
-            if (!xbEl('xb-addr').value && p.addressLine) xbEl('xb-addr').value = p.addressLine;
-            if (!xbEl('xb-city').value && p.city) xbEl('xb-city').value = p.city;
-            if (!xbEl('xb-postal').value && p.postalCode) xbEl('xb-postal').value = p.postalCode;
-            hide(xbEl('xb-details-error'));
-            xbUpdateDetails();
-            xbShowScreen('screen-xb-details');
+            xbShowAmount();
         });
+        xbEl('xb-amount-back-btn').addEventListener('click', () => { xbQuoteId++; xbShowScreen('screen-xb-start'); });
 
         function xbDetailsReady() {
             return xbEl('xb-payer').value.replace(/\D/g, '').replace(/^0+/, '').length >= 8
@@ -9393,13 +9719,12 @@
         function xbUpdateDetails() { xbEl('xb-details-continue-btn').disabled = !xbDetailsReady(); }
         ['xb-payer', 'xb-addr', 'xb-city', 'xb-postal'].forEach((id) => xbEl(id).addEventListener('input', xbUpdateDetails));
         ['xb-nat', 'xb-purpose', 'xb-source'].forEach((id) => xbEl(id).addEventListener('change', xbUpdateDetails));
-        xbEl('xb-details-back-btn').addEventListener('click', () => xbShowScreen('screen-xb-start'));
 
-        xbEl('xb-details-continue-btn').addEventListener('click', () => {
-            if (!xbDetailsReady() || !xbQuote) return;
+        xbEl('xb-amount-continue-btn').addEventListener('click', () => {
+            if (!xbQuote || !xbRecipient || !xbCorridor) return;
             const q = xbQuote;
-            xbEl('xb-c-name').textContent = xbEl('xb-rfirst').value.trim() + ' ' + xbEl('xb-rlast').value.trim();
-            xbEl('xb-c-phone').textContent = '+' + xbCorridor.dialCode + ' ' + xbEl('xb-rphone').value.replace(/\D/g, '').replace(/^0+/, '');
+            xbEl('xb-c-name').textContent = xbRecipient.firstName + ' ' + xbRecipient.lastName;
+            xbEl('xb-c-phone').textContent = xbPrettyNumber(xbCorridor, xbRecipient.national);
             xbEl('xb-c-country').textContent = xbCorridor.countryName + ' · ' + xbCorridor.providerName;
             xbEl('xb-c-amount').textContent = xbMoney(q.amount, 'SLE');
             xbEl('xb-c-fee').textContent = xbMoney(q.fee, 'SLE');
@@ -9409,10 +9734,15 @@
             hide(xbEl('xb-confirm-error'));
             xbShowScreen('screen-xb-confirm');
         });
-        xbEl('xb-confirm-back-btn').addEventListener('click', () => xbShowScreen('screen-xb-details'));
+        xbEl('xb-confirm-back-btn').addEventListener('click', () => xbShowScreen('screen-xb-amount'));
 
         xbEl('xb-confirm-btn').addEventListener('click', async () => {
             if (xbBusy || !xbQuote || !xbCorridor) return;
+            if (xbPreview) {
+                xbEl('xb-confirm-error-text').textContent = 'Preview mode: transfers abroad will work once pawaPay activates your account.';
+                show(xbEl('xb-confirm-error'));
+                return;
+            }
             xbBusy = true;
             const btn = xbEl('xb-confirm-btn');
             btn.disabled = true;
@@ -9429,9 +9759,9 @@
                         amount: xbQuote.amount,
                         expectedTotal: xbQuote.total,
                         payerPhone: xbEl('xb-payer').value,
-                        recipientPhone: xbEl('xb-rphone').value,
-                        recipientFirstName: xbEl('xb-rfirst').value,
-                        recipientLastName: xbEl('xb-rlast').value,
+                        recipientPhone: xbRecipient.national,
+                        recipientFirstName: xbRecipient.firstName,
+                        recipientLastName: xbRecipient.lastName,
                         nationality: xbEl('xb-nat').value,
                         addressLine: xbEl('xb-addr').value,
                         city: xbEl('xb-city').value,
@@ -9524,6 +9854,7 @@
         function xbHandleBack() {
             if (xbEl('screen-xb-wait').classList.contains('active')) { xbEl('xb-wait-done-btn').click(); return true; }
             if (xbEl('screen-xb-confirm').classList.contains('active')) { xbEl('xb-confirm-back-btn').click(); return true; }
+            if (xbEl('screen-xb-amount').classList.contains('active')) { xbEl('xb-amount-back-btn').click(); return true; }
             if (xbEl('screen-xb-details').classList.contains('active')) { xbEl('xb-details-back-btn').click(); return true; }
             if (xbEl('screen-xb-start').classList.contains('active')) { xbEl('xb-start-back-btn').click(); return true; }
             return false;

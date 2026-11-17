@@ -44,6 +44,7 @@ public class CrossBorderController {
     private final CrossBorderPricing pricing;
     private final CrossBorderCorridorRepository corridors;
     private final CrossBorderSenderProfileRepository profiles;
+    private final CrossBorderRecipientRepository recipients;
     private final CrossBorderTransferRepository transfers;
     private final CrossBorderTransferService service;
     private final KycLimitService kycLimits;
@@ -53,6 +54,10 @@ public class CrossBorderController {
     private final CrossBorderAvailability availability;
     // Created here on purpose: this app has no ObjectMapper bean to inject (that is what stopped it starting).
     private final ObjectMapper mapper = new ObjectMapper();
+    // Design preview: set CROSS_BORDER_PREVIEW=true to show Send Money Abroad with sample countries while pawaPay is not active yet.
+    // Nothing can be sent in preview mode. Leave it unset (false) for real customers.
+    @org.springframework.beans.factory.annotation.Value("${CROSS_BORDER_PREVIEW:false}")
+    private boolean preview;
 
     // ------------------------------------------------------------------ config for the screens
     @GetMapping("/config")
@@ -62,6 +67,7 @@ public class CrossBorderController {
         boolean on = pricing.serviceOn();
         m.put("enabled", on);
         m.put("verified", kycLimits.isVerified(uid));
+        if (preview) m.put("preview", true);   // the screen only uses it when there are no real countries to show
         if (!on) return ResponseEntity.ok(m);
         List<Map<String, Object>> list = new ArrayList<>();
         for (CrossBorderCorridor c : corridors.findByEnabledTrueOrderBySortOrderAscCountryNameAscProviderNameAsc()) {
@@ -203,6 +209,68 @@ public class CrossBorderController {
             // the transfer is saved; the 30-second job continues it. Tell the app to look at its status.
             return ResponseEntity.status(202).body(Map.of("message", "We are connecting to the payment network. Check your transfer status in a moment."));
         }
+    }
+
+    // ------------------------------------------------------------------ saved recipients
+    private static final Pattern PERSON_NAME = Pattern.compile("^[\\p{L} .'-]{1,64}$");
+    private static final int MAX_RECIPIENTS = 100;
+
+    public record RecipientRequest(Long corridorId, String phone, String firstName, String lastName) { }
+
+    @GetMapping("/recipients")
+    public ResponseEntity<?> listRecipients() {
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (CrossBorderRecipient r : recipients.findByUserIdOrderByCreatedAtDesc(currentUserId())) out.add(recipientView(r));
+        return ResponseEntity.ok(out);
+    }
+
+    @PostMapping("/recipients")
+    public ResponseEntity<?> saveRecipient(@RequestBody RecipientRequest r) {
+        UUID uid = currentUserId();
+        try {
+            CrossBorderCorridor c = corridors.findById(r.corridorId() == null ? -1L : r.corridorId()).orElse(null);
+            if (c == null || !c.isEnabled()) throw new IllegalArgumentException("Choose a country and a mobile money provider.");
+            String first = trim(r.firstName());
+            String last = trim(r.lastName());
+            if (!PERSON_NAME.matcher(first).matches() || !PERSON_NAME.matcher(last).matches()) {
+                throw new IllegalArgumentException("Enter the recipient's first name and last name.");
+            }
+            String msisdn = recipientMsisdn(c.getDialCode(), r.phone());
+            CrossBorderRecipient rec = recipients.findByUserIdAndProviderAndPhone(uid, c.getProvider(), msisdn).orElse(null);
+            if (rec == null) {
+                if (recipients.countByUserId(uid) >= MAX_RECIPIENTS) throw new IllegalArgumentException("You have saved too many recipients. Remove one first.");
+                rec = new CrossBorderRecipient();
+                rec.setId(UUID.randomUUID());
+                rec.setUserId(uid);
+                rec.setCountry(c.getCountry());
+                rec.setProvider(c.getProvider());
+                rec.setPhone(msisdn);
+                rec.setCreatedAt(Instant.now());
+            }
+            rec.setFirstName(first);
+            rec.setLastName(last);
+            return ResponseEntity.ok(recipientView(recipients.save(rec)));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/recipients/{id}")
+    public ResponseEntity<?> deleteRecipient(@PathVariable UUID id) {
+        UUID uid = currentUserId();
+        recipients.findById(id).filter(x -> x.getUserId().equals(uid)).ifPresent(recipients::delete);
+        return ResponseEntity.noContent().build();
+    }
+
+    private static Map<String, Object> recipientView(CrossBorderRecipient r) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", r.getId());
+        m.put("country", r.getCountry());
+        m.put("provider", r.getProvider());
+        m.put("phone", r.getPhone());          // calling code + national digits
+        m.put("firstName", r.getFirstName());
+        m.put("lastName", r.getLastName());
+        return m;
     }
 
     // ------------------------------------------------------------------ status

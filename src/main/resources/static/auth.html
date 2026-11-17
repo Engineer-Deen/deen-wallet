@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="auth-dark">
 
 <head>
   <meta charset="UTF-8" />
@@ -803,11 +803,12 @@
     }
 
     /* ===================== DESIGN v3: Login + Sign up (dark rounded panel) ===================== */
-    html, body { background:#0b1c24 !important; }
-    body { color:#fff; }
-    #app { background:#0b1c24; box-shadow:none; border-radius:0; }
+    /* The dark look is only for Login and Sign up (body.auth-dark). The Welcome slides keep their original light colors. */
+    html.auth-dark, body.auth-dark { background:#0b1c24 !important; }
+    body.auth-dark { color:#fff; }
+    body.auth-dark #app { background:#0b1c24; box-shadow:none; border-radius:0; }
     @media (min-width:769px) {
-      #app { width:100%; max-width:440px; margin:0 auto; min-height:100vh; box-shadow:none; border-radius:0; }
+      body.auth-dark #app { width:100%; max-width:440px; margin:0 auto; min-height:100vh; box-shadow:none; border-radius:0; }
     }
     #screen-login, #screen-register { padding:0; background:#0b1c24; overflow-y:auto; }
     .login-shell { display:block; min-height:0; overflow:visible; border-radius:0; background:transparent; }
@@ -903,7 +904,7 @@
   </style>
 </head>
 
-<body>
+<body class="auth-dark">
 <div id="deenwallet-splash" aria-label="DeenWallet Transfer loading">
   <div class="splash-brand">
     <img class="splash-logo" src="deenwallet-logo-md.png?v=2" alt="DeenWallet Transfer" width="480" height="423" fetchpriority="high" onerror="this.onerror=null;this.src='deenwallet-logo.png'" />
@@ -1919,6 +1920,9 @@
         }
         window.scrollTo(0, 0);
         if (id === 'screen-welcome') startWelcomeAutoplay(); else stopWelcomeAutoplay();
+        const dark = (id === 'screen-login' || id === 'screen-register');
+        document.body.classList.toggle('auth-dark', dark);
+        document.documentElement.classList.toggle('auth-dark', dark);
       }
 
       if (welcomeTrack) {
