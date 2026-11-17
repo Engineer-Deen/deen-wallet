@@ -9349,7 +9349,7 @@
         let xbRecipients = [];
         let xbRecipient = null;
 
-        // A flag picture (flagcdn.com). If it cannot load, the flag emoji (or the country code) is shown instead.
+        // A flag picture (from our own server, /flags/xx.png). If it cannot load, the flag emoji (or the country code) is shown instead.
         function xbFlag(iso3, size) {
             const c = XB_ISO2[iso3] || '';
             const fallback = () => {
@@ -9362,8 +9362,7 @@
             const img = document.createElement('img');
             img.className = 'xb-flag';
             img.alt = '';
-            img.loading = 'lazy';
-            img.src = 'https://flagcdn.com/w80/' + c + '.png';
+            img.src = '/flags/' + c + '.png';          // served by our own server (it keeps a copy of each flag)
             img.onerror = () => { if (img.parentNode) img.parentNode.replaceChild(fallback(), img); };
             return img;
         }

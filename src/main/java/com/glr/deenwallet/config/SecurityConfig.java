@@ -122,6 +122,7 @@ public class SecurityConfig {
                                 "/api/auth/biometric/challenge",
                                 "/api/auth/biometric/login",
                                 "/icon-192.png",
+                                "/flags/**",
                                 "/dw-agent.py",
                                 "/.well-known/assetlinks.json",
                                 "/api/monitor/agent/report"

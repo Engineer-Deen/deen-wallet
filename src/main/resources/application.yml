@@ -66,7 +66,7 @@ app:
   # WAEC pin records, archive). KYC data is never deleted. Unfinished transactions are kept.
   data-retention:
     enabled: ${DATA_RETENTION_ENABLED:true}
-    days: ${DATA_RETENTION_DAYS:30}
+    days: ${DATA_RETENTION_DAYS:90}
 
   mailbox:
       retention-days: 1
