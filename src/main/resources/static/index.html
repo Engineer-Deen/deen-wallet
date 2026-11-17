@@ -819,6 +819,26 @@
         .xb-rcp-summary .nm { font-weight:800; color:var(--text); }
         .xb-rcp-summary .mt { font-size:13px; color:var(--muted); margin-top:2px; overflow-wrap:anywhere; }
         .xb-gap { margin-top:16px; }
+        .xb-dd { position:relative; }
+        .xb-dd-btn { width:100%; display:flex; align-items:center; gap:10px; padding:12px 14px; border:1px solid var(--border); border-radius:14px; background:#fff; font:inherit; color:var(--text); cursor:pointer; text-align:left; }
+        .xb-dd-btn .nm { flex:1; min-width:0; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .xb-dd-btn .nm.placeholder { font-weight:500; color:var(--muted); }
+        .xb-dd-btn .chev { color:var(--muted); font-size:14px; transition:transform .2s; }
+        .xb-dd-btn[aria-expanded="true"] { border-color:#2CA4B6; box-shadow:0 0 0 2px rgba(44,164,182,.14); }
+        .xb-dd-btn[aria-expanded="true"] .chev { transform:rotate(180deg); }
+        .xb-dd-flag:empty { display:none; }
+        .xb-dd-menu { position:absolute; left:0; right:0; top:calc(100% + 6px); z-index:30; background:#fff; border:1px solid var(--border); border-radius:14px; box-shadow:0 14px 32px rgba(16,45,58,.18); padding:8px; }
+        .xb-dd-search { width:100%; box-sizing:border-box; padding:10px 12px; border:1px solid var(--border); border-radius:10px; font:inherit; margin-bottom:6px; outline:none; }
+        .xb-dd-list { max-height:260px; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+        .xb-dd-list .xb-country { width:100%; border:0; border-radius:10px; }
+        .xb-dd-list .xb-country:active, .xb-dd-list .xb-country:hover { background:#F3FBFC; }
+        .xb-dd-empty { padding:12px; color:var(--muted); font-size:14px; text-align:center; }
+        .xb-rate-line { margin-top:10px; padding:10px 14px; border-radius:12px; background:#F3FBFC; border:1px solid #CFE6EA; color:var(--text); font-size:14px; font-weight:700; }
+        .xb-clr-wrap { position:relative; }
+        .xb-clr-wrap > input { padding-right:40px; }
+        .xb-clr-btn { position:absolute; right:8px; top:50%; transform:translateY(-50%); width:26px; height:26px; border:0; border-radius:50%; background:#E6EEF0; color:#5F747C; font-size:16px; line-height:1; cursor:pointer; display:none; align-items:center; justify-content:center; padding:0; }
+        .phone-card .xb-clr-btn, .amount-card .xb-clr-btn { position:static; transform:none; margin-right:8px; flex:0 0 26px; }
+        .xb-clr-btn.on { display:inline-flex; }
         .bank-add-result { margin-top:14px; padding:14px; border:1px solid #DCE7EA; border-radius:14px; background:#F7FAFB; }
         .bank-add-result.ok { border-color:#A9DCC5; background:#F1FBF6; }
         .bank-add-result.error { border-color:#F1B7B7; background:#FFF6F6; }
@@ -3635,7 +3655,17 @@
 
             <div class="bank-form-card" style="margin-top:0;">
                 <div class="xb-sec-title">Country</div>
-                <div id="xb-country-list" class="xb-countries"></div>
+                <div class="xb-dd" id="xb-dd">
+                    <button type="button" class="xb-dd-btn" id="xb-dd-btn" aria-haspopup="listbox" aria-expanded="false">
+                        <span id="xb-dd-flag" class="xb-dd-flag"></span>
+                        <span class="nm" id="xb-dd-name">Select a country</span>
+                        <span class="chev" aria-hidden="true">&#9662;</span>
+                    </button>
+                    <div class="xb-dd-menu hidden" id="xb-dd-menu">
+                        <input class="xb-dd-search" id="xb-dd-search" type="text" autocomplete="off" placeholder="Search country" />
+                        <div id="xb-country-list" class="xb-dd-list" role="listbox"></div>
+                    </div>
+                </div>
 
                 <div id="xb-prov-sec" class="hidden xb-gap">
                     <div class="xb-sec-title">Mobile money provider</div>
@@ -3693,7 +3723,7 @@
                 </div>
             </div>
 
-            <div id="xb-preview-note" class="bank-account-hint hidden" style="margin:0 0 10px;font-weight:700;">Preview mode: sample countries and prices. Nothing is sent until pawaPay is active.</div>
+            <!-- sender step -->
             <div class="step-indicator">
                 <div class="step-dot active"></div>
                 <div class="step-dot"></div>
@@ -3721,8 +3751,7 @@
                 <input class="bank-account-input" id="xb-addr" type="text" autocomplete="street-address" maxlength="100" placeholder="Street and house number or area" />
                 <div class="bank-field-label" style="margin-top:14px;">City or town</div>
                 <input class="bank-account-input" id="xb-city" type="text" autocomplete="address-level2" maxlength="60" placeholder="City or town" />
-                <div class="bank-field-label" style="margin-top:14px;">Postal code (optional)</div>
-                <input class="bank-account-input" id="xb-postal" type="text" autocomplete="postal-code" maxlength="12" placeholder="Leave empty if you do not have one" />
+                <!-- no postal code -->
                 </div>
 
                 <div class="bank-field-label" style="margin-top:14px;">Why are you sending this money?</div>
@@ -3768,13 +3797,13 @@
                 <div class="amount-card">
                     <input id="xb-amount" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off" />
                 </div>
-                <div id="xb-limits" class="bank-account-hint" style="margin-top:6px;"></div>
+                <div id="xb-rate-line" class="xb-rate-line hidden"></div>
 
                 <div id="xb-quote-status" class="hidden" style="margin-top:16px;"></div>
                 <div id="xb-quote-card" class="fee-card hidden" style="margin-top:16px;">
                     <div class="fee-row"><span class="label">You send</span><span class="value" id="xb-q-amount"></span></div>
                     <div class="fee-row"><span class="label">Service fee</span><span class="value" id="xb-q-fee"></span></div>
-                    <div class="fee-row"><span class="label">Exchange rate</span><span class="value" id="xb-q-rate"></span></div>
+                    <!-- the exchange rate is shown under the amount box -->
                     <div class="fee-divider"></div>
                     <div class="fee-row"><span class="label">Recipient gets</span><span class="value" id="xb-q-receive"></span></div>
                     <div class="fee-row total"><span class="label">You pay</span><span class="value" id="xb-q-total"></span></div>
@@ -9253,18 +9282,7 @@
         let xbEnabled = false;
         let xbVerified = false;
         let xbCfg = null;
-        let xbPreview = false;
-        const XB_SAMPLE = {
-            enabled: true, verified: true, preview: true, phone: '23277000000', senderName: 'Your name (preview)', kycHasAddress: false, profile: {},
-            purposes: ['FAMILY_SUPPORT', 'MEDICAL_EXPENSES', 'TUITION_FEES', 'EDUCATION_SUPPORT', 'OTHER'],
-            sources: ['SALARY', 'SAVINGS', 'BUSINESS_INCOME', 'GIFT', 'LOAN', 'OTHER'],
-            corridors: [
-                { id: -1, country: 'GHA', countryName: 'Ghana', dialCode: '233', provider: 'MTN_MOMO_GHA', providerName: 'MTN MoMo', currency: 'GHS', minSend: 20, maxSend: 5000, numberMin: 9, numberMax: 9, keepZero: false, delayed: false, rate: 0.52 },
-                { id: -4, country: 'GHA', countryName: 'Ghana', dialCode: '233', provider: 'VODAFONE_GHA', providerName: 'Vodafone Cash', currency: 'GHS', minSend: 20, maxSend: 5000, numberMin: 9, numberMax: 9, keepZero: false, delayed: false, rate: 0.52 },
-                { id: -2, country: 'KEN', countryName: 'Kenya', dialCode: '254', provider: 'MPESA_KEN', providerName: 'M-Pesa', currency: 'KES', minSend: 20, maxSend: 5000, numberMin: 9, numberMax: 9, keepZero: false, delayed: false, rate: 5.4 },
-                { id: -3, country: 'NGA', countryName: 'Nigeria', dialCode: '234', provider: 'MTN_MOMO_NGA', providerName: 'MTN MoMo', currency: 'NGN', minSend: 20, maxSend: 5000, numberMin: 10, numberMax: 10, keepZero: false, delayed: false, rate: 66 }
-            ]
-        };
+        // (no sample data: the countries come from pawaPay)
         let xbCorridor = null;
         let xbQuote = null;
         let xbQuoteId = 0;
@@ -9303,12 +9321,8 @@
                 xbCfg = cfg;
                 xbVerified = !!(cfg && cfg.verified);
                 xbEnabled = !!(cfg && cfg.enabled && cfg.corridors && cfg.corridors.length);
-                xbPreview = false;
-                if (!xbEnabled && cfg && cfg.preview) {          // design preview: sample countries, nothing can be sent
-                    xbCfg = XB_SAMPLE; xbVerified = true; xbEnabled = true; xbPreview = true;
-                }
             } catch (_) {
-                xbEnabled = false; xbPreview = false;
+                xbEnabled = false;
             }
             xbEl('services-xb-card').classList.toggle('hidden', !xbEnabled);
         };
@@ -9359,16 +9373,8 @@
         function xbCorridorsOf(iso3) { return xbCfg.corridors.filter((c) => c.country === iso3); }
         function xbPrettyNumber(c, national) { return '+' + c.dialCode + ' ' + national; }
 
-        // ---- saved recipients: on the server; in preview mode only in this phone's browser
-        function xbPreviewStore(list) {
-            try {
-                if (list) localStorage.setItem('xb_preview_recipients', JSON.stringify(list));
-                else return JSON.parse(localStorage.getItem('xb_preview_recipients') || '[]');
-            } catch (_) { return []; }
-            return list;
-        }
+        // ---- saved recipients (kept on the server)
         async function xbLoadRecipients() {
-            if (xbPreview) { xbRecipients = xbPreviewStore() || []; return; }
             try {
                 const list = await apiRequest('/api/cross-border/recipients');
                 xbRecipients = Array.isArray(list) ? list : [];
@@ -9390,9 +9396,10 @@
             if (kh) { hide(xbEl('xb-addr-block')); show(xbEl('xb-kyc-note')); } else { show(xbEl('xb-addr-block')); hide(xbEl('xb-kyc-note')); }
             if (!xbEl('xb-addr').value && p.addressLine) xbEl('xb-addr').value = p.addressLine;
             if (!xbEl('xb-city').value && p.city) xbEl('xb-city').value = p.city;
-            if (!xbEl('xb-postal').value && p.postalCode) xbEl('xb-postal').value = p.postalCode;
+            // no postal code
             hide(xbEl('xb-details-error'));
             xbUpdateDetails();
+            xbSyncClears();
         }
 
         window.openXbService = async function () {
@@ -9405,7 +9412,7 @@
             xbCountry = ''; xbCorridor = null; xbRecipient = null; xbQuote = null; xbQuoteId++; xbRequestId = null; xbTx = null;
             xbEl('xb-amount').value = '';
             hide(xbEl('xb-quote-card')); hide(xbEl('xb-quote-status')); hide(xbEl('xb-start-error')); hide(xbEl('xb-details-error')); hide(xbEl('xb-confirm-error'));
-            xbEl('xb-preview-note').classList.toggle('hidden', !xbPreview);
+            // (no preview note)
             await xbLoadRecipients();
             xbFillSender();
             xbRenderCountries();
@@ -9418,23 +9425,63 @@
         function xbRenderCountries() {
             const box = xbEl('xb-country-list');
             box.innerHTML = '';
+            const q = (xbEl('xb-dd-search').value || '').trim().toLowerCase();
             const seen = [];
             xbCfg.corridors.forEach((c) => { if (seen.indexOf(c.country) < 0) seen.push(c.country); });
+            let shown = 0;
             seen.forEach((iso3) => {
                 const first = xbCorridorsOf(iso3)[0];
+                if (q && first.countryName.toLowerCase().indexOf(q) < 0) return;
+                shown++;
                 const b = document.createElement('button');
                 b.type = 'button';
                 b.className = 'xb-country' + (iso3 === xbCountry ? ' selected' : '');
                 b.setAttribute('data-country', iso3);
+                b.setAttribute('role', 'option');
                 b.appendChild(xbFlag(iso3));
                 const n = document.createElement('span');
                 n.className = 'nm';
                 n.textContent = first.countryName;
                 b.appendChild(n);
-                b.addEventListener('click', () => xbPickCountry(iso3));
+                b.addEventListener('click', () => { xbCloseDd(); xbPickCountry(iso3); });
                 box.appendChild(b);
             });
+            if (!shown) {
+                const e = document.createElement('div');
+                e.className = 'xb-dd-empty';
+                e.textContent = 'No country found.';
+                box.appendChild(e);
+            }
+            // the closed box shows the chosen country
+            const nm = xbEl('xb-dd-name'), fl = xbEl('xb-dd-flag');
+            fl.innerHTML = '';
+            if (xbCountry) {
+                nm.textContent = xbCorridorsOf(xbCountry)[0].countryName;
+                nm.classList.remove('placeholder');
+                fl.appendChild(xbFlag(xbCountry));
+            } else {
+                nm.textContent = 'Select a country';
+                nm.classList.add('placeholder');
+            }
         }
+        function xbOpenDd() {
+            xbEl('xb-dd-search').value = '';
+            xbRenderCountries();
+            show(xbEl('xb-dd-menu'));
+            xbEl('xb-dd-btn').setAttribute('aria-expanded', 'true');
+        }
+        function xbCloseDd() {
+            hide(xbEl('xb-dd-menu'));
+            xbEl('xb-dd-btn').setAttribute('aria-expanded', 'false');
+        }
+        xbEl('xb-dd-btn').addEventListener('click', () => {
+            if (xbEl('xb-dd-menu').classList.contains('hidden')) xbOpenDd(); else xbCloseDd();
+        });
+        xbEl('xb-dd-search').addEventListener('input', xbRenderCountries);
+        document.addEventListener('click', (ev) => {
+            const dd = xbEl('xb-dd');
+            if (dd && !dd.contains(ev.target) && !xbEl('xb-dd-menu').classList.contains('hidden')) xbCloseDd();
+        });
         function xbPickCountry(iso3) {
             if (xbCountry === iso3) return;
             xbCountry = iso3; xbCorridor = null; xbRecipient = null; xbQuote = null; xbQuoteId++;
@@ -9501,11 +9548,13 @@
                 const mt = document.createElement('div'); mt.className = 'meta'; mt.textContent = xbPrettyNumber(xbCorridor, rec.national) + ' · ' + xbCorridor.providerName;
                 info.appendChild(nm); info.appendChild(mt);
                 const act = document.createElement('div'); act.className = 'actions';
+                const ed = document.createElement('button'); ed.type = 'button'; ed.className = 'icon-btn'; ed.setAttribute('aria-label', 'Edit recipient'); ed.innerHTML = '&#9998;';
                 const del = document.createElement('button'); del.type = 'button'; del.className = 'icon-btn danger'; del.setAttribute('aria-label', 'Remove recipient'); del.innerHTML = '&#128465;';
                 const ck = document.createElement('span'); ck.className = 'check'; ck.innerHTML = '&#10003;';
-                act.appendChild(del); act.appendChild(ck);
+                act.appendChild(ed); act.appendChild(del); act.appendChild(ck);
                 row.appendChild(av); row.appendChild(info); row.appendChild(act);
                 row.addEventListener('click', () => { xbRecipient = rec; xbQuote = null; xbQuoteId++; xbRenderRecipients(); xbUpdateStart(); });
+                ed.addEventListener('click', (ev) => { ev.stopPropagation(); xbOpenRcpForm(r); });
                 del.addEventListener('click', (ev) => { ev.stopPropagation(); xbDeleteRecipient(r); });
                 box.appendChild(row);
             });
@@ -9515,8 +9564,7 @@
             const ok = await showConfirmModal('🗑️', 'Remove recipient', 'Remove ' + r.firstName + ' ' + r.lastName + ' from your saved recipients?', 'Remove', true);
             if (!ok) return;
             try {
-                if (xbPreview) { xbPreviewStore(xbPreviewStore().filter((x) => x.id !== r.id)); }
-                else await apiRequest('/api/cross-border/recipients/' + encodeURIComponent(r.id), { method: 'DELETE' });
+                await apiRequest('/api/cross-border/recipients/' + encodeURIComponent(r.id), { method: 'DELETE' });
                 xbRecipients = xbRecipients.filter((x) => x.id !== r.id);
                 if (xbRecipient && xbRecipient.id === r.id) xbRecipient = null;
                 xbRenderRecipients();
@@ -9526,16 +9574,27 @@
                 if (error.status === 401 || error.status === 403) showAuthRequiredModal(error.message || 'Your session has expired. Please log in again.');
             }
         }
-        function xbOpenRcpForm() {
+        let xbEditingId = null;
+        function xbOpenRcpForm(editRec) {
+            xbEditingId = editRec ? editRec.id : null;
             ['xb-rfirst', 'xb-rlast', 'xb-rphone'].forEach((id) => { xbEl(id).value = ''; });
+            if (editRec) {
+                const rec = xbRecipientFrom(editRec);
+                xbEl('xb-rfirst').value = editRec.firstName;
+                xbEl('xb-rlast').value = editRec.lastName;
+                xbEl('xb-rphone').value = rec.national;
+            }
+            xbEl('xb-rcp-save').textContent = editRec ? 'Save changes' : 'Save recipient';
             hide(xbEl('xb-rcp-error'));
             show(xbEl('xb-rcp-form'));
             xbEl('xb-rcp-add-btn').classList.add('hidden');
             xbEl('xb-rcp-cancel').classList.toggle('hidden', !xbSavedFor().length);
             xbCleanRecipient();
             xbUpdateRcpSave();
+            xbSyncClears();
         }
         function xbCloseRcpForm() {
+            xbEditingId = null;
             hide(xbEl('xb-rcp-form'));
             xbEl('xb-rcp-add-btn').classList.remove('hidden');
         }
@@ -9576,7 +9635,43 @@
             else { h.textContent = 'Number looks right.'; }
         }
 
-        xbEl('xb-rcp-add-btn').addEventListener('click', xbOpenRcpForm);
+        // A small x inside every box the customer types in, so a value can be cleared in one tap.
+        const XB_CLEARABLE = ['xb-payer', 'xb-addr', 'xb-city', 'xb-rfirst', 'xb-rlast', 'xb-rphone', 'xb-amount'];
+        function xbSyncClears() {
+            XB_CLEARABLE.forEach((id) => {
+                const inp = xbEl(id), b = inp && inp._xbClr;
+                if (b) b.classList.toggle('on', !!inp.value);
+            });
+        }
+        XB_CLEARABLE.forEach((id) => {
+            const inp = xbEl(id);
+            if (!inp) return;
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'xb-clr-btn';
+            b.setAttribute('aria-label', 'Clear');
+            b.innerHTML = '&times;';
+            const p = inp.parentElement;
+            if (p.classList.contains('phone-card') || p.classList.contains('amount-card')) {
+                p.appendChild(b);
+            } else {
+                const w = document.createElement('div');
+                w.className = 'xb-clr-wrap';
+                p.insertBefore(w, inp);
+                w.appendChild(inp);
+                w.appendChild(b);
+            }
+            inp._xbClr = b;
+            inp.addEventListener('input', xbSyncClears);
+            b.addEventListener('click', () => {
+                inp.value = '';
+                inp.dispatchEvent(new Event('input', { bubbles: true }));
+                xbSyncClears();
+                inp.focus();
+            });
+        });
+
+        xbEl('xb-rcp-add-btn').addEventListener('click', () => xbOpenRcpForm());
         xbEl('xb-rcp-cancel').addEventListener('click', () => { xbCloseRcpForm(); xbRenderRecipients(); });
         ['xb-rfirst', 'xb-rlast'].forEach((id) => xbEl(id).addEventListener('input', xbUpdateRcpSave));
         xbEl('xb-rphone').addEventListener('input', () => { xbCleanRecipient(); xbUpdateRcpSave(); });
@@ -9591,12 +9686,9 @@
             const body = { corridorId: xbCorridor.id, phone: xbEl('xb-rphone').value, firstName: xbEl('xb-rfirst').value.trim(), lastName: xbEl('xb-rlast').value.trim() };
             try {
                 let saved;
-                if (xbPreview) {
-                    const msisdn = xbCorridor.dialCode + body.phone.replace(/\D/g, '');
-                    const all = xbPreviewStore().filter((x) => !(x.provider === xbCorridor.provider && x.phone === msisdn));
-                    saved = { id: 'p' + Date.now(), country: xbCorridor.country, provider: xbCorridor.provider, phone: msisdn, firstName: body.firstName, lastName: body.lastName };
-                    all.unshift(saved);
-                    xbPreviewStore(all);
+                if (xbEditingId) {
+                    saved = await apiRequest('/api/cross-border/recipients/' + encodeURIComponent(xbEditingId), { method: 'PUT', body: { phone: body.phone, firstName: body.firstName, lastName: body.lastName } });
+                    if (!saved || !saved.id) throw new Error('We could not save the changes. Please try again.');
                 } else {
                     saved = await apiRequest('/api/cross-border/recipients', { method: 'POST', body: body });
                     if (!saved || !saved.id) throw new Error('We could not save this recipient. Please try again.');
@@ -9637,11 +9729,17 @@
             const mt2 = document.createElement('div'); mt2.className = 'mt'; mt2.textContent = xbCorridor.providerName + ' · ' + xbCorridor.countryName + ' · receives ' + xbCorridor.currency;
             info.appendChild(nm); info.appendChild(mt); info.appendChild(mt2);
             box.appendChild(av); box.appendChild(info); box.appendChild(xbFlag(xbCorridor.country));
-            xbEl('xb-limits').textContent = 'Minimum ' + xbMoneyDec(xbCorridor.minSend, 'SLE') + ' · Maximum ' + xbMoneyDec(xbCorridor.maxSend, 'SLE')
-                + (xbCorridor.delayed ? ' · This route may be slower than usual today.' : '');
+            xbSetRate(xbCorridor.rate, xbCorridor.currency);
             hide(xbEl('xb-start-error'));
             xbShowScreen('screen-xb-amount');
             xbScheduleQuote();
+        }
+        // The exchange rate sits right under the amount box, as soon as the country and provider are known.
+        function xbSetRate(rate, cur) {
+            const el = xbEl('xb-rate-line');
+            if (rate === undefined || rate === null || rate === '') { hide(el); return; }
+            el.textContent = 'Exchange rate: 1 SLE = ' + rate + ' ' + cur + (xbCorridor && xbCorridor.delayed ? ' · This route may be slower than usual today.' : '');
+            show(el);
         }
         function xbUpdateAmountBtn() { xbEl('xb-amount-continue-btn').disabled = !(xbCorridor && xbRecipient && xbQuote); }
 
@@ -9665,19 +9763,13 @@
             st.innerHTML = '<div class="spinner dark"></div><span>Calculating…</span>';
             try {
                 let q;
-                if (xbPreview) {
-                    const fee = Math.round(amt * 0.03 * 100) / 100;
-                    q = { amount: amt, fee: fee, total: Math.round((amt + fee) * 100) / 100, rate: xbCorridor.rate,
-                          receiveAmount: Math.round(amt * xbCorridor.rate * 100) / 100, receiveCurrency: xbCorridor.currency };
-                } else {
-                    q = await apiRequest('/api/cross-border/quote', { method: 'POST', body: { corridorId: xbCorridor.id, amount: amt } });
-                }
+                q = await apiRequest('/api/cross-border/quote', { method: 'POST', body: { corridorId: xbCorridor.id, amount: amt } });
                 if (id !== xbQuoteId) return;
                 xbQuote = q;
                 hide(st);
                 xbEl('xb-q-amount').textContent = xbMoney(q.amount, 'SLE');
                 xbEl('xb-q-fee').textContent = xbMoney(q.fee, 'SLE');
-                xbEl('xb-q-rate').textContent = '1 SLE = ' + q.rate + ' ' + q.receiveCurrency;
+                xbSetRate(q.rate, q.receiveCurrency);
                 xbEl('xb-q-receive').textContent = xbMoneyDec(q.receiveAmount, q.receiveCurrency);
                 xbEl('xb-q-total').textContent = xbMoney(q.total, 'SLE');
                 show(xbEl('xb-quote-card'));
@@ -9717,7 +9809,7 @@
                 && xbEl('xb-purpose').value && xbEl('xb-source').value;
         }
         function xbUpdateDetails() { xbEl('xb-details-continue-btn').disabled = !xbDetailsReady(); }
-        ['xb-payer', 'xb-addr', 'xb-city', 'xb-postal'].forEach((id) => xbEl(id).addEventListener('input', xbUpdateDetails));
+        ['xb-payer', 'xb-addr', 'xb-city'].forEach((id) => xbEl(id).addEventListener('input', xbUpdateDetails));
         ['xb-nat', 'xb-purpose', 'xb-source'].forEach((id) => xbEl(id).addEventListener('change', xbUpdateDetails));
 
         xbEl('xb-amount-continue-btn').addEventListener('click', () => {
@@ -9738,11 +9830,6 @@
 
         xbEl('xb-confirm-btn').addEventListener('click', async () => {
             if (xbBusy || !xbQuote || !xbCorridor) return;
-            if (xbPreview) {
-                xbEl('xb-confirm-error-text').textContent = 'Preview mode: transfers abroad will work once pawaPay activates your account.';
-                show(xbEl('xb-confirm-error'));
-                return;
-            }
             xbBusy = true;
             const btn = xbEl('xb-confirm-btn');
             btn.disabled = true;
@@ -9765,7 +9852,7 @@
                         nationality: xbEl('xb-nat').value,
                         addressLine: xbEl('xb-addr').value,
                         city: xbEl('xb-city').value,
-                        postalCode: xbEl('xb-postal').value,
+                        postalCode: '',
                         purposeOfFunds: xbEl('xb-purpose').value,
                         sourceOfFunds: xbEl('xb-source').value
                     }

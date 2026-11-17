@@ -5077,7 +5077,7 @@
                 var st = document.getElementById('xbo-status');
                 var msg = !d.pawapayConfigured ? 'pawaPay is not switched on in the server settings yet (PAWAPAY_ENABLED).'
                     : (d.live ? 'Live: customers can see Send Money Abroad.' : 'Off: customers cannot see Send Money Abroad.');
-                st.textContent = msg + (d.pawapayConfigured ? (d.sandbox ? ' Using the pawaPay TEST system (no real money).' : ' Using the pawaPay LIVE system.') : '');
+                st.textContent = msg; // status line
                 var sw = document.getElementById('xbo-switch');
                 sw.textContent = d.switchOn ? 'Turn off for customers' : 'Turn on for customers';
                 var list = document.getElementById('xbo-corridors');

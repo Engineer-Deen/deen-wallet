@@ -54,10 +54,7 @@ public class CrossBorderController {
     private final CrossBorderAvailability availability;
     // Created here on purpose: this app has no ObjectMapper bean to inject (that is what stopped it starting).
     private final ObjectMapper mapper = new ObjectMapper();
-    // Design preview: set CROSS_BORDER_PREVIEW=true to show Send Money Abroad with sample countries while pawaPay is not active yet.
-    // Nothing can be sent in preview mode. Leave it unset (false) for real customers.
-    @org.springframework.beans.factory.annotation.Value("${CROSS_BORDER_PREVIEW:false}")
-    private boolean preview;
+    // (the design preview switch has been removed: Send Money Abroad only appears when pawaPay is live)
 
     // ------------------------------------------------------------------ config for the screens
     @GetMapping("/config")
@@ -67,7 +64,6 @@ public class CrossBorderController {
         boolean on = pricing.serviceOn();
         m.put("enabled", on);
         m.put("verified", kycLimits.isVerified(uid));
-        if (preview) m.put("preview", true);   // the screen only uses it when there are no real countries to show
         if (!on) return ResponseEntity.ok(m);
         List<Map<String, Object>> list = new ArrayList<>();
         for (CrossBorderCorridor c : corridors.findByEnabledTrueOrderBySortOrderAscCountryNameAscProviderNameAsc()) {
@@ -88,6 +84,7 @@ public class CrossBorderController {
             o.put("numberMin", len[0]);
             o.put("numberMax", len[1]);
             o.put("keepZero", CrossBorderNumbers.keepsZero(c.getDialCode()));
+            o.put("rate", c.getRate().stripTrailingZeros().toPlainString());
             o.put("delayed", "DELAYED".equals(live));
             list.add(o);
         }
@@ -120,7 +117,9 @@ public class CrossBorderController {
         if (!pricing.serviceOn()) return unavailable();
         try {
             CrossBorderCorridor c = corridors.findById(r.corridorId() == null ? -1L : r.corridorId()).orElse(null);
-            return ResponseEntity.ok(quoteView(pricing.quote(c, r.amount())));
+            CrossBorderPricing.Quote q = pricing.quote(c, r.amount());
+            kycLimits.enforceGeneral(currentUserId(), q.amount().multiply(BigDecimal.valueOf(100)).longValue());   // the daily transaction limit
+            return ResponseEntity.ok(quoteView(q));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
@@ -246,6 +245,36 @@ public class CrossBorderController {
                 rec.setProvider(c.getProvider());
                 rec.setPhone(msisdn);
                 rec.setCreatedAt(Instant.now());
+            }
+            rec.setFirstName(first);
+            rec.setLastName(last);
+            return ResponseEntity.ok(recipientView(recipients.save(rec)));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    public record RecipientEdit(String phone, String firstName, String lastName) { }
+
+    @PutMapping("/recipients/{id}")
+    public ResponseEntity<?> editRecipient(@PathVariable UUID id, @RequestBody RecipientEdit r) {
+        UUID uid = currentUserId();
+        try {
+            CrossBorderRecipient rec = recipients.findById(id).filter(x -> x.getUserId().equals(uid))
+                    .orElseThrow(() -> new IllegalArgumentException("Recipient not found."));
+            CrossBorderCorridor c = corridors.findByCountryAndProvider(rec.getCountry(), rec.getProvider())
+                    .orElseThrow(() -> new IllegalArgumentException("This destination is not available right now."));
+            String first = trim(r.firstName());
+            String last = trim(r.lastName());
+            if (!PERSON_NAME.matcher(first).matches() || !PERSON_NAME.matcher(last).matches()) {
+                throw new IllegalArgumentException("Enter the recipient's first name and last name.");
+            }
+            String msisdn = recipientMsisdn(c.getDialCode(), r.phone());
+            if (!msisdn.equals(rec.getPhone())) {
+                if (recipients.findByUserIdAndProviderAndPhone(uid, rec.getProvider(), msisdn).isPresent()) {
+                    throw new IllegalArgumentException("You already saved this number.");
+                }
+                rec.setPhone(msisdn);
             }
             rec.setFirstName(first);
             rec.setLastName(last);

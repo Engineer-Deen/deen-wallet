@@ -51,12 +51,7 @@ public class CrossBorderPricing {
         if (amount == null || amount.signum() <= 0 || amount.scale() > 2) {
             throw new IllegalArgumentException("Enter a valid amount (up to 2 decimals).");
         }
-        if (amount.compareTo(c.getMinSend()) < 0) {
-            throw new IllegalArgumentException("The minimum you can send to " + c.getCountryName() + " is " + plain(c.getMinSend()) + " SLE.");
-        }
-        if (amount.compareTo(c.getMaxSend()) > 0) {
-            throw new IllegalArgumentException("The maximum you can send to " + c.getCountryName() + " is " + plain(c.getMaxSend()) + " SLE.");
-        }
+        // No separate minimum / maximum any more: the customer's daily transaction limit (KYC) is the limit.
         BigDecimal fee = amount.multiply(c.getFeePercent()).divide(BigDecimal.valueOf(100), 8, RoundingMode.HALF_UP)
                 .add(c.getFeeFlat()).setScale(2, RoundingMode.HALF_UP);
         BigDecimal receive = amount.multiply(c.getRate()).setScale(c.getReceiveDecimals(), RoundingMode.DOWN);
