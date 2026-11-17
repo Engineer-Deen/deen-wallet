@@ -16,7 +16,6 @@ import lombok.Data;
 import jakarta.validation.Valid; import jakarta.validation.constraints.Email; import jakarta.validation.constraints.NotBlank; import jakarta.validation.constraints.NotEmpty; import jakarta.validation.constraints.Pattern; import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -52,9 +51,6 @@ public class AdminController {
     private final PushNotificationService pushNotificationService;
     private final com.glr.deenwallet.user.AccountDeletionService accountDeletion;
     private final com.glr.deenwallet.settings.SupportContactService supportContact;
-
-    @Value("${app.support.whatsapp:+23280613600}")
-    private String supportWhatsApp;
 
     @GetMapping("/me")
     public ResponseEntity<AdminUserResponse> me() {

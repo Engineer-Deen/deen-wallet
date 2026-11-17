@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 
 import java.net.http.HttpClient;
 import java.time.Duration;
-import java.util.List;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 

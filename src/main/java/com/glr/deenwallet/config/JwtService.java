@@ -68,6 +68,4 @@ public class JwtService {
     public boolean isValid(String token) { try { parse(token); return !extractExpiration(token).before(new Date()); } catch (Exception e) { return false; } }
     public boolean isAccessToken(String token) { try { return "access".equals(parse(token).get("type", String.class)) && !extractExpiration(token).before(new Date()); } catch (Exception e) { return false; } }
     public boolean isRefreshToken(String token) { try { return "refresh".equals(parse(token).get("type", String.class)) && !extractExpiration(token).before(new Date()); } catch (Exception e) { return false; } }
-    public Boolean validateToken(String token, String userId) { return isAccessToken(token) && userId.equals(extractUserId(token)); }
-    public String issueToken(String userId) { return generateAccessToken(userId); }
 }

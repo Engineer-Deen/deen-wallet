@@ -58,8 +58,4 @@ public class CrossBorderPricing {
         if (receive.signum() <= 0) throw new IllegalArgumentException("The amount is too small to send.");
         return new Quote(amount, fee, amount.add(fee), c.getRate().stripTrailingZeros(), receive, c.getCurrency());
     }
-
-    private static String plain(BigDecimal v) {
-        return v.stripTrailingZeros().toPlainString();
-    }
 }

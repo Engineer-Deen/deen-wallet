@@ -30,8 +30,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AdminAuthController {
 
-    private static final int MAX_ADMIN_PASSWORD_FAILURES = 2;
-
     private final UserRepository repo;
     private final PasswordEncoder encoder;
     private final JwtService jwt;

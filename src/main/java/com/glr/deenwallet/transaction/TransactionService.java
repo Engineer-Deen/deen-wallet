@@ -1446,27 +1446,6 @@ public class TransactionService {
                 monimeProperties.defaultFinancialAccountId());
     }
 
-    private void notifyTransactionFailure(Transaction transaction) {
-        notificationService.create(
-                transaction.getUserId(),
-                "TRANSACTION_FAILED",
-                "Transfer failed",
-                transaction.getFailureReason() == null ? "The transfer could not be completed." : transaction.getFailureReason(),
-                transaction.getId(),
-                transaction.getTransactionCode()
-        );
-
-        pushNotificationService.sendToUser(
-                transaction.getUserId(),
-                "Transfer failed",
-                transaction.getFailureReason() == null ? "The transfer could not be completed." : transaction.getFailureReason(),
-                Map.of("type", "TRANSACTION_FAILED", "transactionId", transaction.getId().toString())
-        );
-
-        userRepository.findById(transaction.getUserId())
-                .ifPresent(user -> emailService.sendTransactionFailedEmail(user.getEmail(), transaction));
-    }
-
     @Transactional
     public void handlePayoutCompleted(String payoutId) {
         Optional<Transaction> maybeTransaction =

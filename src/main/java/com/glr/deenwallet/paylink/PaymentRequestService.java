@@ -53,7 +53,6 @@ public class PaymentRequestService {
     private static final Pattern MOMO_PROVIDER = Pattern.compile("^m1[78]$");
     private static final String SLUG_CHARS = "abcdefghjkmnpqrstuvwxyz23456789";
     private static final int MAX_ACTIVE_LINKS = 20;
-    private static final long TWENTY_MIN_MS = 20L * 60 * 1000;
     private static final SecureRandom RANDOM = new SecureRandom();
 
     /** The status shown to people: closed / expired / paid (one-time link that was paid) / active. */
@@ -83,9 +82,6 @@ public class PaymentRequestService {
     private EntityManager em;
 
     // Payment link limits follow the link owner's KYC limit (see ownerDailyLimit).
-
-    @Value("${app.public-base-url:https://api.deenwallapp.com}")
-    private String baseUrl;
 
     /** Shareable links look like https://pay.deenwallapp.com/76dk5jzy (PAY_LINK_BASE_URL). Old /p/ links on the app address keep working. */
     @Value("${PAY_LINK_BASE_URL:https://pay.deenwallapp.com}")
