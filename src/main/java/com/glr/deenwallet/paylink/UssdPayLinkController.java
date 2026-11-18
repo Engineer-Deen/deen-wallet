@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.glr.deenwallet.transaction.ConversionFee;
 import com.glr.deenwallet.transaction.TooManyRequestsException;
+import com.glr.deenwallet.wallet.UssdWalletFlow;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
@@ -36,6 +38,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 
 /**
  * Pay a DeenWallet payment link from a USSD menu (Monime USSD Flow).
@@ -54,14 +57,19 @@ public class UssdPayLinkController {
     private static final long WINDOW_MS = 600_000L;
 
     private final PaymentRequestService service;
+    private final UssdWalletFlow walletFlow;
+    private final boolean walletEnabled;
     private final List<PrivateKey> keys = new ArrayList<>();
     private final Map<String, Deque<Long>> lookups = new ConcurrentHashMap<>();
     private final Map<String, Deque<Long>> starts = new ConcurrentHashMap<>();
     private final Map<String, Object[]> done = new ConcurrentHashMap<>();
 
-    public UssdPayLinkController(PaymentRequestService service,
+    public UssdPayLinkController(PaymentRequestService service, UssdWalletFlow walletFlow,
+                                 @Value("${USSD_WALLET_ENABLED:false}") boolean walletEnabled,
                                  @Value("${USSD_PRIVATE_KEY_FILES:}") String files) {
         this.service = service;
+        this.walletFlow = walletFlow;
+        this.walletEnabled = walletEnabled;
         for (String f : files.split(",")) {
             if (f.isBlank()) continue;
             try {
@@ -77,6 +85,17 @@ public class UssdPayLinkController {
 
     @PostMapping("/api/ussd/paylink")
     public ResponseEntity<String> handle(@RequestBody Map<String, String> body) {
+        return exchange(body, this::process);
+    }
+
+    /** Wallet balances and withdrawals for the super admin by USSD. Off (404) until USSD_WALLET_ENABLED=true. */
+    @PostMapping("/api/ussd/wallet")
+    public ResponseEntity<String> handleWallet(@RequestBody Map<String, String> body) {
+        if (!walletEnabled) return ResponseEntity.notFound().build();
+        return exchange(body, walletFlow::process);
+    }
+
+    private ResponseEntity<String> exchange(Map<String, String> body, Function<JsonNode, Map<String, Object>> flowFn) {
         if (keys.isEmpty()) return ResponseEntity.notFound().build();
         byte[] aesKey;
         JsonNode payload;
@@ -90,9 +109,11 @@ public class UssdPayLinkController {
         }
         Map<String, Object> reply;
         try {
-            reply = process(payload);
+            reply = flowFn.apply(payload);
         } catch (IllegalArgumentException | IllegalStateException | TooManyRequestsException e) {
             reply = stop(e.getMessage());
+        } catch (ResponseStatusException e) {
+            reply = stop(e.getReason());
         } catch (Exception e) {
             log.warn("USSD payment-link error: {}", e.toString());
             reply = stop("Sorry, we could not complete this right now. Please try again in a few minutes.");

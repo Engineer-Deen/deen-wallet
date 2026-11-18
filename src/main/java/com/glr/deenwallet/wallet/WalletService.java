@@ -1274,6 +1274,19 @@ public class WalletService {
 
     // ------------------------------------------------------------------ PIN, roles, money helpers
 
+    /** USSD: the PIN can only be tried while it is not disabled (two wrong tries disable it until the admin logs in again). */
+    public void verifyPinForUssd(User me, String pin) {
+        assertPinUsableForUssd(me);
+        verifyPin(me, pin);
+    }
+
+    public void assertPinUsableForUssd(User me) {
+        User fresh = users.findById(me.getId()).orElseThrow(() -> new IllegalArgumentException("Admin account not found."));
+        if (fresh.getPinAttempts() >= 2) {
+            throw new IllegalStateException("PIN is disabled. Open the Admin app and log in again to use it.");
+        }
+    }
+
     private void verifyPin(User me, String pin) {
         if (pin == null || !pin.matches("^\\d{4}$")) throw new IllegalArgumentException("Enter your 4-digit PIN.");
         User fresh = users.findById(me.getId()).orElseThrow(() -> new IllegalArgumentException("Admin account not found."));

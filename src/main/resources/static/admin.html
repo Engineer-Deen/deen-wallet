@@ -5780,12 +5780,17 @@
             var fpCurrent = null;
 
             function fpMoney(v) { return 'SLE ' + Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+            // Mobile money provider code -> the name people know (m17 = Orange Money, m18 = Africell Money).
+            window.dwProviderName = function (id) {
+                var names = { m17: 'Orange Money', m18: 'Africell Money' };
+                return names[String(id || '').toLowerCase()] || id || '\u2014';
+            };
             // Where a customer's money came from: Withdraw from Bank / Card use markers instead of a phone number.
             window.dwFundSource = function (providerId, phone) {
                 if (phone === 'BANK') return 'Bank account (Withdraw from Bank)';
                 if (phone === 'CARDIN') return 'Card (Withdraw from Card)';
                 if (phone === 'CARD') return 'Card (payment link)';
-                return ((providerId || '') + ' ' + (phone || '')).trim() || '\u2014';
+                return ((providerId ? window.dwProviderName(providerId) : '') + ' ' + (phone || '')).trim() || '\u2014';
             };
             function fpTime(v) { return v ? new Date(v).toLocaleString() : '—'; }
             // ==============================================================
@@ -6074,7 +6079,7 @@
                 } else if (d.serviceType === 'WAEC_RESULT_PIN') {
                     html += fpRow('Service', 'WAEC Result Pin') + fpRow('If you press Send again', 'Retries selling the pin and emailing it. Check stock first (WAEC Pins tab).');
                 } else {
-                    html += fpRow('Provider', d.destinationProviderId) + fpRow('Phone', d.destinationPhone) + fpRow('Name', d.destinationHolderName);
+                    html += fpRow('Provider', window.dwProviderName(d.destinationProviderId)) + fpRow('Phone', d.destinationPhone) + fpRow('Name', d.destinationHolderName);
                 }
 
                 html += '<div class="fp-section-title">Payment details</div>' +
@@ -8857,7 +8862,7 @@
                         document.getElementById('support-txn-status').textContent = data.status || '—';
                         document.getElementById('support-txn-amount').textContent = data.amount ? 'SLE ' + Number(data.amount).toFixed(2) : '—';
                         document.getElementById('support-txn-total').textContent = data.totalCharged ? 'SLE ' + Number(data.totalCharged).toFixed(2) : '—';
-                        document.getElementById('support-txn-source').textContent = data.sourcePhone === 'BANK' ? 'Bank account (Withdraw from Bank)' : data.sourcePhone === 'CARDIN' ? 'Card (Withdraw from Card)' : (data.sourcePhone || data.sourceProviderId || '—');
+                        document.getElementById('support-txn-source').textContent = window.dwFundSource(data.sourceProviderId, data.sourcePhone);
                         document.getElementById('support-txn-recipient').textContent = data.serviceType === 'BANK_TRANSFER' ? ((data.bankName || 'Bank') + ' · ' + (data.bankAccountHolderName || data.destinationHolderName || data.bankAccountNumber || '—')) : (data.destinationPhone || data.destinationHolderName || '—');
                         document.getElementById('support-txn-user').textContent = data.accountHolderAccountNumber ? data.accountHolderAccountNumber + (data.accountHolderName ? ' — ' + data.accountHolderName : '') : (data.accountHolderEmail || data.accountHolderName || '—');
                         document.getElementById('support-txn-created').textContent = data.createdAt ? new Date(data.createdAt).toLocaleString() : '—';
