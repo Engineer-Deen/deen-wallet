@@ -24,8 +24,8 @@ public class SavedRecipientController {
     private final BankTransferService bankTransferService;
 
     @GetMapping
-    public ResponseEntity<List<SavedRecipient>> list() {
-        return ResponseEntity.ok(savedRecipientService.listForUser(currentUserId()));
+    public ResponseEntity<List<SavedRecipient>> list(@RequestParam(required = false) String purpose) {
+        return ResponseEntity.ok(savedRecipientService.listForUser(currentUserId(), purpose));
     }
 
     @PostMapping

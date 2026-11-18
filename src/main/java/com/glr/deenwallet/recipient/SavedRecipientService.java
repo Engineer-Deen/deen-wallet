@@ -14,13 +14,30 @@ public class SavedRecipientService {
 
     private final SavedRecipientRepository savedRecipientRepository;
 
-    public List<SavedRecipient> listForUser(UUID userId) {
-        return savedRecipientRepository.findByUserIdOrderByCreatedAtDesc(userId);
+    /** Recipients of one service. No purpose means Send Money (and saved bank accounts). */
+    public List<SavedRecipient> listForUser(UUID userId, String purpose) {
+        String p = normalizePurpose(purpose);
+        return p == null
+                ? savedRecipientRepository.findByUserIdAndPurposeIsNullOrderByCreatedAtDesc(userId)
+                : savedRecipientRepository.findByUserIdAndPurposeOrderByCreatedAtDesc(userId, p);
+    }
+
+    private static String normalizePurpose(String purpose) {
+        if (purpose == null || purpose.isBlank()) return null;
+        String p = purpose.trim();
+        if (!p.equals("BANK_WITHDRAW") && !p.equals("CARD_WITHDRAW")) {
+            throw new IllegalArgumentException("Invalid recipient type");
+        }
+        return p;
     }
 
     public SavedRecipient save(UUID userId, SaveRecipientRequest request) {
-        boolean alreadySaved = savedRecipientRepository.existsByUserIdAndPhoneNumberAndProviderId(
-                userId, request.getPhoneNumber(), request.getProviderId());
+        String purpose = normalizePurpose(request.getPurpose());
+        boolean alreadySaved = purpose == null
+                ? savedRecipientRepository.existsByUserIdAndPhoneNumberAndProviderIdAndPurposeIsNull(
+                        userId, request.getPhoneNumber(), request.getProviderId())
+                : savedRecipientRepository.existsByUserIdAndPhoneNumberAndProviderIdAndPurpose(
+                        userId, request.getPhoneNumber(), request.getProviderId(), purpose);
 
         if (alreadySaved) {
             throw new IllegalArgumentException("This recipient is already saved");
@@ -32,6 +49,7 @@ public class SavedRecipientService {
                 .providerId(request.getProviderId())
                 .holderName(request.getHolderName())
                 .label(request.getLabel())
+                .purpose(purpose)
                 .build();
 
         return savedRecipientRepository.save(recipient);
@@ -80,18 +98,15 @@ public class SavedRecipientService {
 
         // If phoneNumber is provided, update all related fields
         if (request.getPhoneNumber() != null && !request.getPhoneNumber().isEmpty()) {
-            // Check if another recipient with this phone already exists
-            boolean alreadyExists = savedRecipientRepository.existsByUserIdAndPhoneNumberAndProviderId(
-                    userId, request.getPhoneNumber(), request.getProviderId());
-
-            // If the existing one is a different recipient, prevent duplicate
-            if (alreadyExists) {
-                Optional<SavedRecipient> existing = savedRecipientRepository
-                        .findByUserIdAndPhoneNumberAndProviderId(
-                                userId, request.getPhoneNumber(), request.getProviderId());
-                if (existing.isPresent() && !existing.get().getId().equals(recipient.getId())) {
-                    throw new IllegalArgumentException("This phone number is already saved for another recipient");
-                }
+            // If a different recipient of the same service already has this phone, prevent a duplicate
+            String purpose = recipient.getPurpose();
+            Optional<SavedRecipient> existing = purpose == null
+                    ? savedRecipientRepository.findByUserIdAndPhoneNumberAndProviderIdAndPurposeIsNull(
+                            userId, request.getPhoneNumber(), request.getProviderId())
+                    : savedRecipientRepository.findByUserIdAndPhoneNumberAndProviderIdAndPurpose(
+                            userId, request.getPhoneNumber(), request.getProviderId(), purpose);
+            if (existing.isPresent() && !existing.get().getId().equals(recipient.getId())) {
+                throw new IllegalArgumentException("This phone number is already saved for another recipient");
             }
 
             recipient.setPhoneNumber(request.getPhoneNumber());

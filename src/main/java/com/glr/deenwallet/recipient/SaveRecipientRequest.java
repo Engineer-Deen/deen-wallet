@@ -23,4 +23,8 @@ public class SaveRecipientRequest {
     @Size(max = 50, message = "Label must be at most 50 characters")
     @Pattern(regexp = "^[^<>]*$", message = "Label cannot contain '<' or '>'")
     private String label;
+
+    /** Optional: BANK_WITHDRAW or CARD_WITHDRAW. Empty means Send Money. */
+    @Size(max = 20, message = "Invalid recipient type")
+    private String purpose;
 }

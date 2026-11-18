@@ -815,6 +815,17 @@
         .xb-av { width:38px; height:38px; flex:0 0 38px; border-radius:50%; background:#2CA4B6; color:#fff; font-weight:800; font-size:14px; display:inline-flex; align-items:center; justify-content:center; }
         #xb-rcp-list .recipient-option { gap:12px; justify-content:flex-start; }
         #xb-rcp-list .recipient-option .info { flex:1; min-width:0; }
+        #bankin-rcp-list .recipient-option { gap:12px; justify-content:flex-start; }
+        #bankin-rcp-list .recipient-option .info { flex:1; min-width:0; }
+        .bi-add-form { margin-top:12px; padding:14px; border:1px solid #CFE6EA; background:#F7FCFD; border-radius:14px; }
+        .bi-add-form .bi-title { font-size:14px; font-weight:800; color:var(--text); margin-bottom:10px; }
+        .bi-add-form .bi-lbl { font-size:13px; font-weight:700; color:var(--text); margin:12px 0 6px; }
+        .bi-add-form input.bi-text { width:100%; box-sizing:border-box; padding:12px 14px; border:1px solid var(--border); border-radius:12px; font:inherit; font-size:15px; background:#fff; }
+        .bi-add-form .bi-actions { display:flex; gap:10px; margin-top:14px; }
+        .bi-add-form .bi-actions button { flex:1; padding:12px 14px; border-radius:12px; border:1px solid #2CA4B6; background:#2CA4B6; color:#fff; font:inherit; font-weight:700; font-size:15px; cursor:pointer; }
+        .bi-add-form .bi-actions button.ghost { background:#fff; color:#2CA4B6; }
+        .bi-add-form .bi-actions button:disabled { opacity:.5; cursor:default; }
+        .bi-err { margin-top:10px; font-size:13px; color:#B3261E; }
         .xb-rcp-summary { display:flex; align-items:center; gap:12px; padding:12px 14px; border:1px solid #CFE6EA; background:#F3FBFC; border-radius:14px; }
         .xb-rcp-summary .nm { font-weight:800; color:var(--text); }
         .xb-rcp-summary .mt { font-size:13px; color:var(--muted); margin-top:2px; overflow-wrap:anywhere; }
@@ -3533,18 +3544,32 @@
                 </div>
 
                 <div class="section-label" style="margin-top:20px;">Receive on</div>
-                <div class="phone-card">
-                    <div class="phone-prefix">
-                        <div class="flag-badge">
-                            <div style="background:#1EB53A"></div>
-                            <div style="background:#fff"></div>
-                            <div style="background:#0072C6"></div>
+                <div id="bankin-rcp-list" class="recipient-list hidden"></div>
+                <button type="button" class="add-recipient-btn hidden" id="bankin-add-btn">+ Add recipient</button>
+                <div id="bankin-add-form" class="bi-add-form hidden">
+                    <div class="bi-title" id="bankin-form-title">New recipient</div>
+                    <div id="bankin-number-block">
+                        <div class="phone-card">
+                            <div class="phone-prefix">
+                                <div class="flag-badge">
+                                    <div style="background:#1EB53A"></div>
+                                    <div style="background:#fff"></div>
+                                    <div style="background:#0072C6"></div>
+                                </div>
+                                <span>+232</span>
+                            </div>
+                            <input id="bankin-phone" type="tel" inputmode="numeric" maxlength="9" placeholder="Mobile money number" autocomplete="off" />
                         </div>
-                        <span>+232</span>
+                        <div id="bankin-detect-status" class="hidden"></div>
                     </div>
-                    <input id="bankin-phone" type="tel" inputmode="numeric" maxlength="9" placeholder="Mobile money number" autocomplete="off" />
+                    <div class="bi-lbl">Name (optional)</div>
+                    <input id="bankin-save-label" class="bi-text" type="text" maxlength="50" autocomplete="off" placeholder="e.g. My Orange Money" />
+                    <div id="bankin-save-err" class="bi-err hidden"></div>
+                    <div class="bi-actions">
+                        <button type="button" class="ghost" id="bankin-save-cancel">Cancel</button>
+                        <button type="button" id="bankin-save-btn" disabled>Save recipient</button>
+                    </div>
                 </div>
-                <div id="bankin-detect-status" class="hidden"></div>
 
                 <div id="bankin-fee-status" class="hidden" style="margin-top:20px;"></div>
                 <div id="bankin-fee-card" class="fee-card hidden" style="margin-top:20px;">
@@ -5790,11 +5815,6 @@
                 }
             }
         }
-
-        async function manageBiometricLogin() {
-            await refreshBiometricScreen();
-        }
-
 
         function openMenu() {
             if (menuOpen) return;
@@ -9011,11 +9031,13 @@
             hide(biEl('bankin-fee-card')); hide(biEl('bankin-fee-status'));
             hide(biEl('bankin-start-error')); hide(biEl('bankin-confirm-error'));
             biEl('bankin-start-continue-btn').disabled = true;
+            biResetRecipients();
             biShowScreen('screen-bankin-start');
+            biLoadRecipients();
         };
 
         function biUpdateStartState() {
-            biEl('bankin-start-continue-btn').disabled = !(biAmount && biFee && ['m17', 'm18'].includes(biProviderId));
+            biEl('bankin-start-continue-btn').disabled = !(biAmount && biFee && biSelRcpId && ['m17', 'm18'].includes(biProviderId));
         }
 
         function biParseAmount(text) {
@@ -9072,6 +9094,7 @@
         biEl('bankin-phone').addEventListener('input', (e) => {
             e.target.value = onlyDigits(e.target.value).slice(0, 8);
             biProviderId = null; biHolderName = '';
+            biSelRcpId = null; biSyncSave(); biRenderRecipients();
             hide(biEl('bankin-detect-status'));
             biUpdateStartState();
             if (e.target.value.length === 8) biRunDetect(e.target.value);
@@ -9088,12 +9111,203 @@
                 biHolderName = result.status === 'ok' ? (result.holderName || '') : '';
                 renderDetectStatus(box, result);
                 biUpdateStartState();
+                biSyncSave();
             } catch (error) {
                 if (error.status === 401 || error.status === 403) {
                     showAuthRequiredModal(error.message || 'Session expired. Please log in again.');
                 } else {
                     renderDetectStatus(box, { status: 'error', message: error.message || 'Could not check number.' });
                 }
+            }
+        }
+
+        // ---- Saved recipients (mobile money numbers the money is paid out to), shared with the other sections ----
+        let biRecipients = [];
+        let biSelRcpId = null;      // the saved recipient chosen to receive the money
+        let biEditRcpId = null;     // set while only the name of a saved recipient is being edited
+        let biAdding = false;       // the add / edit form is open
+        let biLoaded = false;
+
+        function biResetRecipients() {
+            biRecipients = []; biSelRcpId = null; biEditRcpId = null; biAdding = false; biLoaded = false;
+            biEl('bankin-save-label').value = '';
+            hide(biEl('bankin-add-form')); hide(biEl('bankin-save-err'));
+            show(biEl('bankin-number-block'));
+            biRenderRecipients();
+        }
+
+        // Withdraw from Bank and Withdraw from Card each keep their own saved recipients.
+        function biPurpose() { return biMode === 'card' ? 'CARD_WITHDRAW' : 'BANK_WITHDRAW'; }
+
+        async function biLoadRecipients() {
+            const purpose = biPurpose();
+            try {
+                const data = await apiRequest('/api/recipients', { params: { purpose } });
+                if (purpose !== biPurpose()) return;          // the user switched screens while this was loading
+                biRecipients = (data || []).filter((r) => r.purpose === purpose && (!r.recipientType || r.recipientType === 'MOBILE_MONEY') && r.phoneNumber && ['m17', 'm18'].includes(r.providerId));
+            } catch (error) {
+                if (error.status === 401 || error.status === 403) { showAuthRequiredModal(error.message || 'Session expired. Please log in again.'); return; }
+                biRecipients = [];
+            }
+            biLoaded = true;
+            if (!biRecipients.length && !biAdding) biOpenAdd(); else biRenderRecipients();
+        }
+
+        function biLocalOf(r) { return onlyDigits(r.phoneNumber).slice(-8); }
+
+        function biRenderRecipients() {
+            const box = biEl('bankin-rcp-list');
+            box.innerHTML = '';
+            biEl('bankin-add-btn').classList.toggle('hidden', !biLoaded || biAdding);
+            if (!biRecipients.length) { hide(box); return; }
+            show(box);
+            biRecipients.forEach((r) => {
+                const row = document.createElement('div');
+                row.className = 'recipient-option' + (biSelRcpId === r.id ? ' selected' : '');
+                const info = document.createElement('div'); info.className = 'info';
+                const nm = document.createElement('span'); nm.className = 'name'; nm.textContent = r.label || r.holderName || r.phoneNumber;
+                const mt = document.createElement('span'); mt.className = 'meta'; mt.textContent = '+232 ' + biLocalOf(r) + ' \u00B7 ' + providerName(r.providerId);
+                info.appendChild(nm); info.appendChild(mt);
+                const act = document.createElement('div'); act.className = 'actions';
+                const ed = document.createElement('button'); ed.type = 'button'; ed.className = 'icon-btn'; ed.title = 'Edit name'; ed.setAttribute('aria-label', 'Edit name'); ed.textContent = '\u270E';
+                const del = document.createElement('button'); del.type = 'button'; del.className = 'icon-btn danger'; del.title = 'Delete recipient'; del.setAttribute('aria-label', 'Delete recipient'); del.textContent = '\u2716';
+                const ck = document.createElement('span'); ck.className = 'check'; ck.textContent = '\u2713';
+                act.appendChild(ed); act.appendChild(del); act.appendChild(ck);
+                row.appendChild(createMobileMoneyLogo(r.providerId)); row.appendChild(info); row.appendChild(act);
+                row.addEventListener('click', () => biPickRecipient(r));
+                ed.addEventListener('click', (ev) => { ev.stopPropagation(); biStartEdit(r); });
+                del.addEventListener('click', (ev) => { ev.stopPropagation(); biDeleteRecipient(r); });
+                box.appendChild(row);
+            });
+        }
+
+        function biCloseAdd() {
+            biAdding = false; biEditRcpId = null;
+            hide(biEl('bankin-add-form')); hide(biEl('bankin-save-err'));
+            show(biEl('bankin-number-block'));
+            biEl('bankin-save-label').value = '';
+            biRenderRecipients();
+        }
+
+        function biOpenAdd() {
+            biAdding = true; biEditRcpId = null; biSelRcpId = null;
+            biDetectId++;
+            biProviderId = null; biHolderName = '';
+            biEl('bankin-phone').value = '';
+            hide(biEl('bankin-detect-status')); biEl('bankin-detect-status').innerHTML = '';
+            biEl('bankin-save-label').value = '';
+            biEl('bankin-form-title').textContent = 'New recipient';
+            biEl('bankin-save-btn').textContent = 'Save recipient';
+            show(biEl('bankin-number-block'));
+            biEl('bankin-save-cancel').classList.toggle('hidden', !biRecipients.length);
+            hide(biEl('bankin-save-err'));
+            show(biEl('bankin-add-form'));
+            biSyncSave(); biUpdateStartState(); biRenderRecipients();
+        }
+
+        function biPickRecipient(r) {
+            const local = biLocalOf(r);
+            biAdding = false; biEditRcpId = null;
+            hide(biEl('bankin-add-form'));
+            show(biEl('bankin-number-block'));
+            biEl('bankin-phone').value = local;
+            biProviderId = null; biHolderName = '';
+            biSelRcpId = r.id;
+            hide(biEl('bankin-detect-status'));
+            biUpdateStartState();
+            biRenderRecipients();
+            biRunDetect(local);          // re-checks the number and name with the provider
+        }
+
+        function biStartEdit(r) {
+            biAdding = true; biEditRcpId = r.id;
+            biEl('bankin-save-label').value = r.label || '';
+            biEl('bankin-form-title').textContent = 'Edit ' + (r.holderName || ('+232 ' + biLocalOf(r)));
+            biEl('bankin-save-btn').textContent = 'Save changes';
+            biEl('bankin-save-btn').disabled = false;
+            hide(biEl('bankin-number-block'));
+            show(biEl('bankin-save-cancel'));
+            hide(biEl('bankin-save-err'));
+            show(biEl('bankin-add-form'));
+            biRenderRecipients();
+            biEl('bankin-save-label').focus();
+        }
+
+        // The Save button is only live once the number is recognised and is not already saved.
+        function biSyncSave() {
+            const btn = biEl('bankin-save-btn');
+            const err = biEl('bankin-save-err');
+            if (!biAdding || biEditRcpId) return;
+            hide(err);
+            const local = onlyDigits(biEl('bankin-phone').value);
+            const dup = !!biProviderId && local.length === 8 && biRecipients.some((r) => biLocalOf(r) === local && r.providerId === biProviderId);
+            if (dup) { err.textContent = 'This number is already in your saved recipients. Tap it in the list above.'; show(err); }
+            btn.disabled = !(biProviderId && local.length === 8 && !dup);
+        }
+
+        biEl('bankin-add-btn').addEventListener('click', () => biOpenAdd());
+        biEl('bankin-save-cancel').addEventListener('click', () => {
+            const keep = biRecipients.find((r) => r.id === biSelRcpId);
+            biCloseAdd();
+            if (!keep) { biEl('bankin-phone').value = ''; biProviderId = null; biHolderName = ''; hide(biEl('bankin-detect-status')); }
+            biUpdateStartState();
+        });
+
+        biEl('bankin-save-btn').addEventListener('click', async () => {
+            const btn = biEl('bankin-save-btn');
+            const errBox = biEl('bankin-save-err');
+            const label = biEl('bankin-save-label').value.trim();
+            hide(errBox);
+            if (/[<>]/.test(label)) { errBox.textContent = "The name can't contain < or >."; show(errBox); return; }
+            const original = btn.textContent;
+            btn.disabled = true; btn.textContent = '\u2026';
+            try {
+                if (biEditRcpId) {
+                    const cur = biRecipients.find((x) => x.id === biEditRcpId);
+                    const updated = await apiRequest('/api/recipients/' + encodeURIComponent(biEditRcpId), { method: 'PUT', body: { label: label || undefined } });
+                    const i = biRecipients.findIndex((x) => x.id === biEditRcpId);
+                    if (i !== -1) biRecipients[i] = Object.assign({}, cur, updated);
+                    showToast('Recipient updated');
+                } else {
+                    if (!biProviderId) return;
+                    const saved = await apiRequest('/api/recipients', { method: 'POST', body: {
+                        phoneNumber: toE164SL(onlyDigits(biEl('bankin-phone').value)),
+                        providerId: biProviderId,
+                        holderName: biHolderName || undefined,
+                        purpose: biPurpose(),
+                        label: label || undefined } });
+                    biRecipients.unshift(saved);
+                    biSelRcpId = saved.id;
+                    showToast('Recipient saved');
+                }
+                biCloseAdd(); biUpdateStartState();
+            } catch (error) {
+                if (error.status === 401 || error.status === 403) { showAuthRequiredModal(error.message || 'Session expired. Please log in again.'); }
+                else { errBox.textContent = error.message || "Couldn't save this recipient."; show(errBox); }
+            } finally {
+                btn.textContent = original; if (biAdding) biSyncSaveAfter(); 
+            }
+        });
+        function biSyncSaveAfter() { if (biEditRcpId) biEl('bankin-save-btn').disabled = false; else biSyncSave(); }
+
+        async function biDeleteRecipient(r) {
+            const ok = await showConfirmModal('\uD83D\uDDD1\uFE0F', 'Delete recipient', 'Remove ' + (r.label || r.holderName || ('+232 ' + biLocalOf(r))) + ' from your saved recipients?', 'Delete', true);
+            if (!ok) return;
+            try {
+                await apiRequest('/api/recipients/' + encodeURIComponent(r.id), { method: 'DELETE' });
+                biRecipients = biRecipients.filter((x) => x.id !== r.id);
+                if (biSelRcpId === r.id) {
+                    biSelRcpId = null; biDetectId++;
+                    biEl('bankin-phone').value = ''; biProviderId = null; biHolderName = '';
+                    hide(biEl('bankin-detect-status'));
+                }
+                if (biEditRcpId === r.id) biCloseAdd();
+                biRenderRecipients(); biUpdateStartState();
+                if (!biRecipients.length && !biAdding) biOpenAdd();
+                showToast('Recipient deleted');
+            } catch (error) {
+                if (error.status === 401 || error.status === 403) showAuthRequiredModal(error.message || 'Session expired. Please log in again.');
+                else showToast(error.message || "Couldn't delete this recipient.");
             }
         }
 

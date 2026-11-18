@@ -10,13 +10,23 @@ import java.util.UUID;
 
 public interface SavedRecipientRepository extends JpaRepository<SavedRecipient, UUID> {
 
-    List<SavedRecipient> findByUserIdOrderByCreatedAtDesc(UUID userId);
+    /** Send Money recipients (and saved bank accounts): the ones with no purpose. */
+    List<SavedRecipient> findByUserIdAndPurposeIsNullOrderByCreatedAtDesc(UUID userId);
 
-    Optional<SavedRecipient> findByUserIdAndPhoneNumberAndProviderId(
+    /** Recipients saved for one service, e.g. BANK_WITHDRAW or CARD_WITHDRAW. */
+    List<SavedRecipient> findByUserIdAndPurposeOrderByCreatedAtDesc(UUID userId, String purpose);
+
+    Optional<SavedRecipient> findByUserIdAndPhoneNumberAndProviderIdAndPurposeIsNull(
             UUID userId, String phoneNumber, String providerId);
 
-    boolean existsByUserIdAndPhoneNumberAndProviderId(
+    Optional<SavedRecipient> findByUserIdAndPhoneNumberAndProviderIdAndPurpose(
+            UUID userId, String phoneNumber, String providerId, String purpose);
+
+    boolean existsByUserIdAndPhoneNumberAndProviderIdAndPurposeIsNull(
             UUID userId, String phoneNumber, String providerId);
+
+    boolean existsByUserIdAndPhoneNumberAndProviderIdAndPurpose(
+            UUID userId, String phoneNumber, String providerId, String purpose);
 
     boolean existsByUserIdAndBankProviderIdAndBankAccountNumber(
             UUID userId, String bankProviderId, String bankAccountNumber);

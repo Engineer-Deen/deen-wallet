@@ -27,13 +27,6 @@
     })();
   </script>
   <style>
-    #login-success-popup { position:fixed; inset:0; z-index:10000; display:flex; align-items:center; justify-content:center; padding:20px; background:rgba(18,36,43,.38); opacity:0; visibility:hidden; transition:opacity .2s ease,visibility .2s ease; }
-    #login-success-popup.visible { opacity:1; visibility:visible; }
-    .login-success-card { width:min(340px,100%); background:#fff; border-radius:20px; padding:28px 24px; text-align:center; box-shadow:0 20px 55px rgba(0,0,0,.2); transform:translateY(10px) scale(.97); transition:transform .2s ease; }
-    #login-success-popup.visible .login-success-card { transform:translateY(0) scale(1); }
-    .login-success-icon { width:58px; height:58px; margin:0 auto 14px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:#E8F7F0; color:#1E8449; font-size:30px; font-weight:800; }
-    .login-success-title { color:#12242B; font-size:20px; font-weight:800; }
-    .login-success-message { margin-top:7px; color:#6E7C82; font-size:13px; }
 
     #deenwallet-splash {
       position: fixed; inset: 0; z-index: 9999; display:flex; align-items:center; justify-content:center;
@@ -1650,19 +1643,6 @@
             if (!rateLimitedThisAttempt && !loginRateTimer) loginBtn.disabled = false;
           }
         }
-      }
-
-      // ==============================================================
-      // LOGIN SUCCESS POPUP
-      // ==============================================================
-      function showLoginSuccessPopup() {
-        const existing = document.getElementById('login-success-popup');
-        if (existing) existing.remove();
-        const popup = document.createElement('div');
-        popup.id = 'login-success-popup';
-        popup.innerHTML = '<div class="login-success-card"><div class="login-success-icon">✓</div><div class="login-success-title">Login successful</div><div class="login-success-message">Welcome back to DeenWallet Transfer.</div></div>';
-        document.body.appendChild(popup);
-        requestAnimationFrame(function () { popup.classList.add('visible'); });
       }
 
       // ==============================================================

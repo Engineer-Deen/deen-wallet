@@ -9633,8 +9633,6 @@
             ];
             var amState = { role: 'ADMIN', admins: [] };
             function amIsMain() { return !!(currentAdminUser && currentAdminUser.mainAdmin); }
-            function amTitle(role) { return role === 'SUPER_ADMIN' ? 'Super Admins' : 'Admins'; }
-
             function renderAdminManagement() {
                 var content = document.getElementById('admin-management-content');
                 if (!currentAdminUser || typeof currentAdminUser.mainAdmin === 'undefined') {

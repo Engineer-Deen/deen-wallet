@@ -58,6 +58,10 @@ public class SavedRecipient {
 
     private String label;
 
+    /** Which service this recipient belongs to: null = Send Money, BANK_WITHDRAW, CARD_WITHDRAW. */
+    @Column(name = "purpose", length = 20)
+    private String purpose;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
