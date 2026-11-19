@@ -5,6 +5,7 @@ import com.glr.deenwallet.transaction.TooManyRequestsException;
 import com.glr.deenwallet.user.User;
 import com.glr.deenwallet.user.UserRepository;
 import org.slf4j.Logger;
+import org.springframework.data.domain.PageRequest;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -64,7 +65,7 @@ public class UssdWalletFlow {
         String who = subscriber.isEmpty() ? session : subscriber;
         limit(who, 40);
 
-        User me = caller(subscriber, text(p.path("exportedData").path("phone")));
+        User me = caller(subscriber);
         if (me == null) {
             log.info("USSD wallet: caller not recognised as a super admin (subscriber ending {}, page {})", tail(subscriber), page);
             return stop("This service is only for DeenWallet Transfer super admins.");
@@ -171,9 +172,11 @@ public class UssdWalletFlow {
                             + ", fee SLE " + money(fee) + "). Enter a smaller amount (0 = cancel):"));
                 }
                 s.minor = minor;
-                String sumTxt = "Withdraw SLE " + money(minor) + " (fee " + money(fee) + ") from "
-                        + ("waec".equals(s.account) ? "WAEC" : "Main") + "\nto " + clip(s.holder, 22) + ", " + s.providerName + " "
-                        + s.destination.substring(4) + "\nEnter PIN to confirm, 0 to cancel:";
+                String head = ("waec".equals(s.account) ? "WAEC" : "Main") + " withdraw SLE " + money(minor) + " + fee " + money(fee) + "\n";
+                String tail = "\nEnter PIN (0 = cancel):";
+                String num = ", " + s.providerName + " " + s.destination.substring(4);
+                int room = Math.max(8, 126 - head.length() - tail.length() - num.length());
+                String sumTxt = head + clip(s.holder, room) + num + tail;
                 return navigate("confirm_pin", Map.of("summary", sumTxt));
             }
             case "confirm_pin": {
@@ -218,13 +221,43 @@ public class UssdWalletFlow {
                 + "\nWAEC: " + waec;
     }
 
-    /** The dialling number must belong to an active super admin. */
-    private User caller(String subscriber, String shared) {
-        String ph = phone(subscriber);
-        if (ph == null) ph = phone(shared);
-        if (ph == null) return null;
-        User u = users.findByPhoneAndRole(ph, "SUPER_ADMIN").orElse(null);
-        return u != null && u.isActive() && !u.isLocked() ? u : null;
+    /**
+     * The caller must be an active super admin. Monime does not send the phone number; it sends subscriberId, a UUID (version 5,
+     * URL namespace) made from the number in international form, so we compute the same ID from each super admin's registered phone.
+     */
+    private User caller(String subscriberId) {
+        if (subscriberId == null || subscriberId.isBlank()) return null;
+        for (User u : users.findByRole("SUPER_ADMIN", PageRequest.of(0, 50))) {
+            if (!u.isActive() || u.isLocked() || u.getPhone() == null) continue;
+            String ph = u.getPhone().trim();
+            if (!ph.startsWith("+")) ph = "+" + ph;
+            if (subscriberId.equalsIgnoreCase(uuidV5Url(ph))) return u;
+        }
+        return null;
+    }
+
+    private static final byte[] URL_NAMESPACE = {
+            0x6b, (byte) 0xa7, (byte) 0xb8, 0x11, (byte) 0x9d, (byte) 0xad, 0x11, (byte) 0xd1,
+            (byte) 0x80, (byte) 0xb4, 0x00, (byte) 0xc0, 0x4f, (byte) 0xd4, 0x30, (byte) 0xc8 };
+
+    /** UUID version 5 (SHA-1) in the URL namespace, the same way Monime makes subscriberId. */
+    static String uuidV5Url(String name) {
+        try {
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-1");
+            md.update(URL_NAMESPACE);
+            md.update(name.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            byte[] h = md.digest();
+            h[6] = (byte) ((h[6] & 0x0f) | 0x50);
+            h[8] = (byte) ((h[8] & 0x3f) | 0x80);
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < 16; i++) {
+                if (i == 4 || i == 6 || i == 8 || i == 10) sb.append('-');
+                sb.append(String.format("%02x", h[i] & 0xff));
+            }
+            return sb.toString();
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     // ---- helpers
@@ -254,13 +287,6 @@ public class UssdWalletFlow {
         if (full == null || full.isBlank()) return "";
         String f = full.trim().split("\\s+")[0];
         return f;
-    }
-
-    private static String phone(String raw) {
-        String d = raw == null ? "" : raw.replaceAll("\\D", "");
-        if (d.length() == 11 && d.startsWith("232")) return "+" + d;
-        if (d.length() == 8) return "+232" + d;
-        return null;
     }
 
     private void limit(String who, int max) {
