@@ -126,16 +126,18 @@ public class UssdWalletFlow {
                 else if ("2".equals(c)) {
                     if (!wallet.summary(me).waecConfigured()) return stop("The WAEC pin account is not set up.");
                     s.account = "waec";
+                } else if (isBack(c)) {
+                    return navigate("menu", Map.of("name", clip(firstName(me.getFullName()), 18)));
                 } else return stop("Cancelled. Nothing was withdrawn.");
                 return navigate("ask_number", Map.of("account", "waec".equals(s.account) ? "WAEC" : "Main"));
             }
             case "ask_number":
             case "number_retry": {
-                String raw = latest(flow, "number_retry", "ask_number");
-                if ("0".equals(raw)) return stop("Cancelled. Nothing was withdrawn.");
+                String raw = text(flow.path(page));
+                if (isBack(raw)) return navigate("pick_account", pickData(me));
                 WalletService.Detect dt = wallet.detect(me, raw);
                 if (!dt.ok()) {
-                    return navigate("number_retry", Map.of("error", clip(dt.message(), 80) + " Enter the number, or 0 to cancel:"));
+                    return navigate("number_retry", Map.of("error", clip(dt.message(), 80) + " Enter the number, or 0 to go back:"));
                 }
                 String digits = raw.replaceAll("\\D", "");
                 if (digits.startsWith("232") && digits.length() > 8) digits = digits.substring(3);
@@ -152,28 +154,28 @@ public class UssdWalletFlow {
             }
             case "ask_amount":
             case "amount_retry": {
-                String raw = latest(flow, "amount_retry", "ask_amount");
-                if ("0".equals(raw)) return stop("Cancelled. Nothing was withdrawn.");
+                String raw = text(flow.path(page));
                 if (s.destination == null) return stop("Session expired. Please dial again.");
+                if (isBack(raw)) return navigate("ask_number", Map.of("account", "waec".equals(s.account) ? "WAEC" : "Main"));
                 long minor;
                 try {
                     minor = amountMinor(raw);
                 } catch (IllegalArgumentException e) {
-                    return navigate("amount_retry", Map.of("error", "Enter 1 to " + (maxMinor / 100) + " SLE, up to 2 decimals (0 = cancel):"));
+                    return navigate("amount_retry", Map.of("error", "Enter 1 to " + (maxMinor / 100) + " SLE, up to 2 decimals (0 = back):"));
                 }
                 if (minor > maxMinor) {
-                    return navigate("amount_retry", Map.of("error", "USSD limit is SLE " + (maxMinor / 100) + " per withdrawal. Enter a smaller amount (0 = cancel):"));
+                    return navigate("amount_retry", Map.of("error", "USSD limit is SLE " + (maxMinor / 100) + " per withdrawal. Enter a smaller amount (0 = back):"));
                 }
                 WalletService.Summary sum = wallet.summary(me);
                 Long free = "waec".equals(s.account) ? sum.waecWithdrawable() : sum.withdrawable();
                 long fee = WalletService.feeOf(minor);
                 if (free == null || minor + fee > free) {
                     return navigate("amount_retry", Map.of("error", "Not enough free money (available SLE " + money(free == null ? 0 : free)
-                            + ", fee SLE " + money(fee) + "). Enter a smaller amount (0 = cancel):"));
+                            + ", fee SLE " + money(fee) + "). Enter a smaller amount (0 = back):"));
                 }
                 s.minor = minor;
                 String head = ("waec".equals(s.account) ? "WAEC" : "Main") + " withdraw SLE " + money(minor) + " + fee " + money(fee) + "\n";
-                String tail = "\nEnter PIN (0 = cancel):";
+                String tail = "\nEnter PIN (0 = back):";
                 String num = ", " + s.providerName + " " + s.destination.substring(4);
                 int room = Math.max(8, 126 - head.length() - tail.length() - num.length());
                 String sumTxt = head + clip(s.holder, room) + num + tail;
@@ -181,8 +183,16 @@ public class UssdWalletFlow {
             }
             case "confirm_pin": {
                 String pin = text(flow.path("confirm_pin"));
-                if ("0".equals(pin)) return stop("Cancelled. Nothing was withdrawn.");
-                if (s.destination == null || s.minor <= 0) return stop("Session expired. Please dial again.");
+                if (s.destination == null) return stop("Session expired. Please dial again.");
+                if (isBack(pin)) {
+                    s.minor = 0;
+                    Map<String, Object> d = new LinkedHashMap<>();
+                    d.put("holder", clip(s.holder, 24));
+                    d.put("network", s.providerName);
+                    d.put("max", String.valueOf(maxMinor / 100));
+                    return navigate("ask_amount", d);
+                }
+                if (s.minor <= 0) return stop("Session expired. Please dial again.");
                 try {
                     wallet.assertPinUsableForUssd(me);
                     wallet.withdraw(me, "momo", s.provider, s.destination, BigDecimal.valueOf(s.minor, 2), pin, false, s.account);
@@ -203,6 +213,19 @@ public class UssdWalletFlow {
             default:
                 return stop("Sorry, this option is not available.");
         }
+    }
+
+    /** 0 or 00 on any step means "go back one step". */
+    private static boolean isBack(String v) {
+        return "0".equals(v) || "00".equals(v);
+    }
+
+    private Map<String, Object> pickData(User me) {
+        WalletService.Summary sum = wallet.summary(me);
+        Map<String, Object> d = new LinkedHashMap<>();
+        d.put("main", money(sum.withdrawable() == null ? 0 : sum.withdrawable()));
+        d.put("waec", sum.waecConfigured() && sum.waecWithdrawable() != null ? money(sum.waecWithdrawable()) : "not set up");
+        return d;
     }
 
     private static boolean wrongPin(RuntimeException e) {
